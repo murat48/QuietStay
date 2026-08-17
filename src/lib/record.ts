@@ -1,0 +1,205 @@
+/**
+ * The off-chain ownership record.
+ *
+ * This is the document that never reaches the ledger. It holds the owner's
+ * identity, the resort and unit, the deed reference, and the maintenance fee
+ * history — everything a buyer needs to see once and nobody else should see at
+ * all. The ledger holds only `SHA-256(canonical(record))`.
+ *
+ * Two fields exist purely to make the commitment safe:
+ *
+ * - `salt` — 32 random bytes. Without it, the record's contents are low entropy
+ *   (a date, a resort from a short list, a name) and anyone could confirm a guess
+ *   by hashing it. The salt turns the commitment from "reversible by brute force"
+ *   into "reveals nothing".
+ * - `record_id` — makes each record unique, so one document cannot be committed
+ *   for two different rights and re-presented interchangeably.
+ */
+
+import { canonicalText, commit, type JsonValue } from "./canonical";
+
+export const RECORD_SCHEMA = "quietstay.ownership-record.v1";
+
+export interface OwnershipRecord {
+  schema: typeof RECORD_SCHEMA;
+  /** Unique per record. Two rights never share a record. */
+  record_id: string;
+  /** 32 random bytes as 64 lowercase hex characters. Blinds the commitment. */
+  salt: string;
+  owner: {
+    /** Legal name as it appears on the deed. */
+    name: string;
+    /** Contact of record. */
+    email: string;
+    /** The Stellar account the owner will hold the right with. */
+    stellar_account: string;
+  };
+  resort: {
+    name: string;
+    country: string;
+    /** Unit or villa identifier. */
+    unit: string;
+    bedrooms: number;
+  };
+  week: {
+    /** ISO date, first night. */
+    check_in: string;
+    /** ISO date, departure. */
+    check_out: string;
+    /** The use year this week belongs to. */
+    use_year: number;
+    /** Resort calendar week number. */
+    week_number: number;
+  };
+  title: {
+    /** Deed or membership certificate reference. */
+    deed_reference: string;
+    registry: string;
+    /** ISO date the interest was recorded. */
+    recorded_on: string;
+  };
+  maintenance_fees: {
+    annual_amount: string;
+    currency: string;
+    /** ISO date fees are paid through. */
+    paid_through: string;
+    /** Amount still owed. "0.00" means the week is clean. */
+    outstanding: string;
+  };
+}
+
+/** Unix seconds for an ISO date at 00:00:00 UTC. */
+export function isoDateToUnix(isoDate: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+    throw new Error(`expected an ISO date (YYYY-MM-DD), got: ${isoDate}`);
+  }
+  const ms = Date.parse(`${isoDate}T00:00:00Z`);
+  if (Number.isNaN(ms)) throw new Error(`not a valid date: ${isoDate}`);
+  return Math.floor(ms / 1000);
+}
+
+export function unixToIsoDate(unix: number): string {
+  return new Date(unix * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * The on-chain period and validity window derived from a record.
+ *
+ * The occupancy window is the week itself. The validity window is the use year
+ * that contains it: the right exists, and can be transferred, for that year. The
+ * contract enforces both, and neither reveals anything the listing does not
+ * already have to say — the resort, the unit, the deed, and the owner's identity
+ * stay in the record.
+ */
+export function onChainWindows(record: OwnershipRecord): {
+  period: { start: number; end: number };
+  validity: { from: number; until: number };
+} {
+  return {
+    period: {
+      start: isoDateToUnix(record.week.check_in),
+      end: isoDateToUnix(record.week.check_out),
+    },
+    validity: {
+      from: isoDateToUnix(`${record.week.use_year}-01-01`),
+      until: isoDateToUnix(`${record.week.use_year + 1}-01-01`),
+    },
+  };
+}
+
+export class RecordValidationError extends Error {}
+
+/**
+ * Check a record is well formed before it is committed. A record that is
+ * malformed after the fact is a record whose commitment can never be reproduced,
+ * so this runs before anything is hashed or issued.
+ */
+export function validateRecord(value: unknown): OwnershipRecord {
+  const fail = (message: string): never => {
+    throw new RecordValidationError(message);
+  };
+  if (typeof value !== "object" || value === null) return fail("record must be a JSON object");
+  const record = value as Record<string, unknown>;
+
+  if (record.schema !== RECORD_SCHEMA) {
+    return fail(`schema must be "${RECORD_SCHEMA}", got ${JSON.stringify(record.schema)}`);
+  }
+  if (typeof record.record_id !== "string" || record.record_id.length === 0) {
+    return fail("record_id must be a non-empty string");
+  }
+  if (typeof record.salt !== "string" || !/^[0-9a-f]{64}$/.test(record.salt)) {
+    return fail("salt must be 64 lowercase hex characters (32 bytes)");
+  }
+
+  const owner = record.owner as OwnershipRecord["owner"] | undefined;
+  if (!owner || typeof owner.name !== "string" || typeof owner.email !== "string") {
+    return fail("owner.name and owner.email are required");
+  }
+  if (typeof owner.stellar_account !== "string" || !/^G[A-Z2-7]{55}$/.test(owner.stellar_account)) {
+    return fail("owner.stellar_account must be a Stellar public key (G...)");
+  }
+
+  const resort = record.resort as OwnershipRecord["resort"] | undefined;
+  if (!resort || typeof resort.name !== "string" || typeof resort.unit !== "string") {
+    return fail("resort.name and resort.unit are required");
+  }
+
+  const week = record.week as OwnershipRecord["week"] | undefined;
+  if (!week) return fail("week is required");
+  const checkIn = isoDateToUnix(week.check_in);
+  const checkOut = isoDateToUnix(week.check_out);
+  if (checkIn >= checkOut) return fail("week.check_out must be after week.check_in");
+  if (!Number.isInteger(week.use_year)) return fail("week.use_year must be an integer");
+
+  const yearStart = isoDateToUnix(`${week.use_year}-01-01`);
+  const yearEnd = isoDateToUnix(`${week.use_year + 1}-01-01`);
+  if (checkIn < yearStart || checkOut > yearEnd) {
+    return fail(
+      `the week ${week.check_in}..${week.check_out} falls outside use year ${week.use_year}; ` +
+        "the contract requires the validity window to enclose the occupancy period",
+    );
+  }
+
+  const fees = record.maintenance_fees as OwnershipRecord["maintenance_fees"] | undefined;
+  if (!fees || typeof fees.outstanding !== "string") {
+    return fail("maintenance_fees.outstanding is required");
+  }
+  const title = record.title as OwnershipRecord["title"] | undefined;
+  if (!title || typeof title.deed_reference !== "string") {
+    return fail("title.deed_reference is required");
+  }
+
+  return record as unknown as OwnershipRecord;
+}
+
+/** Whether the record itself says the week carries no unpaid maintenance fees. */
+export function feesAreCurrent(record: OwnershipRecord): boolean {
+  return Number.parseFloat(record.maintenance_fees.outstanding) === 0;
+}
+
+export function recordCanonicalText(record: OwnershipRecord): string {
+  return canonicalText(record as unknown as JsonValue);
+}
+
+/** The commitment that goes on the ledger for this record. */
+export function recordCommitment(record: OwnershipRecord): Promise<string> {
+  return commit(record as unknown as JsonValue);
+}
+
+/**
+ * The subset of a record that a listing may show publicly: the week on offer and
+ * how many bedrooms. Never the resort, the unit, the deed, or the owner.
+ */
+export function publicSummary(record: OwnershipRecord): {
+  check_in: string;
+  check_out: string;
+  bedrooms: number;
+  use_year: number;
+} {
+  return {
+    check_in: record.week.check_in,
+    check_out: record.week.check_out,
+    bedrooms: record.resort.bedrooms,
+    use_year: record.week.use_year,
+  };
+}

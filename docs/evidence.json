@@ -1,0 +1,77 @@
+{
+  "generated_by": "npm run evidence",
+  "network": "Test SDF Network ; September 2015",
+  "contract": "CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS",
+  "contract_explorer": "https://stellar.expert/explorer/testnet/contract/CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS",
+  "accounts": {
+    "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "owner": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+    "renter": "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+    "buyer": "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"
+  },
+  "rights_issued_for_this_run": {
+    "rental": {
+      "right_id": 14,
+      "commitment": "44b0a8ef76a1a0aa05b86352ce67d11615ba71d040083dfe67135ff6d6c76855",
+      "issue_tx": "5771add9dc3af2911dc2fd424ad7a016056b30407c156aec0da2af11d9cceca4"
+    },
+    "sale": {
+      "right_id": 15,
+      "commitment": "7c5136b8aad7f995f8b2994efc12fa206924d32552e1c59416ef34a8eba10e50",
+      "issue_tx": "b25f89bb0d652c8f190d96e974d192ffa0f6aebffe75a00a2a66289dcc90be1f"
+    },
+    "rejections": {
+      "right_id": 16,
+      "commitment": "a0f1464fc42f70ab26457dc05f99dcb400aaa86aa9035341aa42497e72679bab",
+      "issue_tx": "1523e2cbbaf06855532ff0440bbcc4ac4986988452fd045ec0534ed2261bef9a"
+    }
+  },
+  "transactions": [
+    {
+      "id": "rental",
+      "title": "Rental — one transfer primitive, carrying a term",
+      "what": "The holder transfers right #14 to the renter with `expires_at = 1792800000` (2026-10-24). Title does not move: the renter holds the week until that timestamp, after which it reverts with no return transaction.",
+      "expected": "succeeds",
+      "right_id": 14,
+      "hash": "f24d10c505fe834c242255baad1986b847eeddd1b83c7aaca0a71bb58cbb0eab",
+      "successful": true,
+      "reached_ledger": true,
+      "explorer": "https://stellar.expert/explorer/testnet/tx/f24d10c505fe834c242255baad1986b847eeddd1b83c7aaca0a71bb58cbb0eab"
+    },
+    {
+      "id": "sale",
+      "title": "Sale — the same primitive, no term",
+      "what": "The holder transfers right #15 to the buyer with `expires_at = None`. The holding chain collapses to the buyer alone: title moves and the seller keeps no claim.",
+      "expected": "succeeds",
+      "right_id": 15,
+      "hash": "5ac52a0acff1a41d8bf820ab63aaad2e9205184340d3e6943ac40c990974cac6",
+      "successful": true,
+      "reached_ledger": true,
+      "explorer": "https://stellar.expert/explorer/testnet/tx/5ac52a0acff1a41d8bf820ab63aaad2e9205184340d3e6943ac40c990974cac6"
+    },
+    {
+      "id": "rejected-no-approval",
+      "title": "Transfer without issuer approval — rejected on chain",
+      "what": "Identical to the sale above, submitted with the issuer's authorization entry removed. The holder signed it and paid the fee; the contract refused it. Verification is enforced in the contract, not suggested by the interface.",
+      "expected": "rejected by the contract",
+      "right_id": 16,
+      "hash": "d0e67efacfbd8547dc5362af19e9dfbbb19b8ab59b57e9c9d146105ac3896d85",
+      "successful": false,
+      "reached_ledger": true,
+      "failure": "The contract rejected this transfer because a required authorization was missing. A transfer needs both the holder's signature and the issuer's approval.",
+      "explorer": "https://stellar.expert/explorer/testnet/tx/d0e67efacfbd8547dc5362af19e9dfbbb19b8ab59b57e9c9d146105ac3896d85"
+    },
+    {
+      "id": "rejected-seizure",
+      "title": "Issuer attempting to seize a held right — rejected on chain",
+      "what": "The issuer builds, signs, and pays for a transfer of right #16 from its holder to itself. It can supply its own approval; it cannot supply the holder's authorization. Approving transfers never becomes the power to take one.",
+      "expected": "rejected by the contract",
+      "right_id": 16,
+      "hash": "350e8f69949b3102af4dd95ad24a5c2b04121979e2a3cb6d26c351ac9b738034",
+      "successful": false,
+      "reached_ledger": true,
+      "failure": "The contract rejected this transfer because a required authorization was missing. A transfer needs both the holder's signature and the issuer's approval.",
+      "explorer": "https://stellar.expert/explorer/testnet/tx/350e8f69949b3102af4dd95ad24a5c2b04121979e2a3cb6d26c351ac9b738034"
+    }
+  ]
+}

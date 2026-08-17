@@ -1,0 +1,33 @@
+{
+  "schema": "quietstay.ownership-record.v1",
+  "record_id": "7d659ea0-dccd-4643-bef2-c800957a58bd",
+  "salt": "a65572ffc15e46a1fc73f42670848fd7b57d35195cdc54fd3d8a8a1b768c4536",
+  "owner": {
+    "name": "Ayla Demir",
+    "email": "ayla.demir@example.invalid",
+    "stellar_account": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"
+  },
+  "resort": {
+    "name": "Cliffside Bay Club",
+    "country": "Portugal",
+    "unit": "Villa 14B",
+    "bedrooms": 2
+  },
+  "week": {
+    "check_in": "2026-10-03",
+    "check_out": "2026-10-10",
+    "use_year": 2026,
+    "week_number": 40
+  },
+  "title": {
+    "deed_reference": "CBC-2019-04471",
+    "registry": "Cliffside Bay Club Members Registry",
+    "recorded_on": "2019-03-22"
+  },
+  "maintenance_fees": {
+    "annual_amount": "820.00",
+    "currency": "EUR",
+    "paid_through": "2026-12-31",
+    "outstanding": "0.00"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "payload": {
+    "schema": "quietstay.attestation.v1",
+    "network": "Test SDF Network ; September 2015",
+    "contract": "CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS",
+    "right_id": 7,
+    "commitment": "cf5cb0a736b8828102f8e50ff79e844279164cb3e31f6fd440e1451ae4297331",
+    "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "week_valid": true,
+    "maintenance_fees_current": true,
+    "fees_paid_through": "2026-12-31",
+    "issued_at": "2026-08-13T09:59:24.156Z",
+    "not_before": "2026-08-13T09:59:24.156Z",
+    "expires_at": "2027-08-13T09:59:24.156Z"
+  },
+  "signature": {
+    "alg": "ed25519",
+    "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "value": "C6XojmhoZ2sDasIcibPA8GK1a2rRWzAGx9DOMwVW47mlV1jnFByLSJmiG/o/blEd4Li1kscSCwsIT3B7Gs0PBg=="
+  }
+}

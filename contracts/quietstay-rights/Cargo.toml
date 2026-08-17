@@ -1,0 +1,17 @@
+[package]
+name = "quietstay-rights"
+version = "0.1.0"
+edition = "2021"
+description = "QuietStay Phase 1 — tokenized vacation usage rights with issuer-approved transfer"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }

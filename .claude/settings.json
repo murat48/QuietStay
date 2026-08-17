@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//tmp/**)",
+      "Bash(timeout 20 curl -s https://crates.io/api/v1/crates/soroban-sdk)",
+      "Bash(node -e 'let s=\"\";process.stdin.on\\(\"data\",d=>s+=d\\).on\\(\"end\",\\(\\)=>{const j=JSON.parse\\(s\\);console.log\\(\"max_stable:\",j.crate.max_stable_version,\"max:\",j.crate.max_version\\);console.log\\(\"recent:\",j.versions.slice\\(0,12\\).map\\(v=>v.num\\).join\\(\", \"\\)\\)}\\)')",
+      "Bash(timeout 20 curl -sL -H \"User-Agent: quietstay-build/0.1 \\(muratkeskin1988@gmail.com\\)\" https://crates.io/api/v1/crates/soroban-sdk)",
+      "Bash(node -e ' *)",
+      "Bash(cargo test *)"
+    ]
+  }
+}

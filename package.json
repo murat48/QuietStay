@@ -1,0 +1,36 @@
+{
+  "name": "quietstay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "QuietStay Phase 1 — a marketplace for tokenized vacation usage rights on Stellar testnet",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "commit-record": "tsx scripts/commit-record.ts",
+    "attest": "tsx scripts/attest.ts",
+    "verify-record": "tsx scripts/verify-record.ts",
+    "seed": "tsx scripts/seed-inventory.ts",
+    "evidence": "tsx scripts/produce-evidence.ts && tsx scripts/write-evidence-doc.ts",
+    "check-privacy": "tsx scripts/check-privacy.ts",
+    "e2e": "tsx scripts/e2e.ts",
+    "evidence-doc": "tsx scripts/write-evidence-doc.ts"
+  },
+  "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "^2.5.0",
+    "@stellar/stellar-sdk": "^16.2.0",
+    "canonicalize": "^2.1.0",
+    "jose": "^6.1.0",
+    "next": "^16.3.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

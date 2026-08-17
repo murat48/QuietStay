@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /home/murat/QuietStay -maxdepth 3 -iname \"*quietstay_phase1*\" 2>/dev/null; echo \"---\"; ls -la /home/murat/QuietStay/QuietStay)",
+      "Read(//home/murat/QuietStay/**)",
+      "Bash(rustc --version)",
+      "Bash(cargo --version)",
+      "Bash(rustup target *)",
+      "Bash(stellar --version)",
+      "Bash(soroban --version)",
+      "Bash(npm --version)",
+      "Bash(git --version)",
+      "Bash(timeout 8 curl -s -o /dev/null -w \"%{http_code}\" https://soroban-testnet.stellar.org)",
+      "Bash(timeout 8 curl -s -o /dev/null -w \"%{http_code}\" https://crates.io)"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Secrets. The issuer signing key lives here — never commit it.
+.env
+.env.local
+.env*.local
+
+# Rust build output
+contracts/target/
+
+# Generated evidence and canonical files are committed deliberately; see
+# docs/EVIDENCE.md. Nothing else in these directories is.
