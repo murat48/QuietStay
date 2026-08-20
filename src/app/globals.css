@@ -371,6 +371,69 @@ legend {
   margin-bottom: 0.85rem;
 }
 
+.field .muted {
+  margin: 0.3rem 0 0;
+}
+
+/* Fields that read as a set — a resort, a week — rather than a column. */
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.85rem;
+}
+
+.field-row .field {
+  margin-bottom: 0;
+}
+
+/* A value the screen generated: shown so it can be checked, not typed into. */
+.generated {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.generated input {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  background: var(--surface-2);
+}
+
+.generated button {
+  flex: none;
+}
+
+/* --- tabs --------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  margin: -0.2rem 0 1.1rem;
+}
+
+.tabs button {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--text-dim);
+  padding: 0.4rem 0.8rem;
+  margin-bottom: -1px;
+}
+
+.tabs button:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.tabs button[aria-selected="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
 /* --- verification checklist -------------------------------------------- */
 
 ul.checks {

@@ -12,13 +12,20 @@
  *
  * - **Owner (kiraya veren)** — holds title. May rent the week out for a term, or
  *   sell it outright. The term may run to the end of the use year.
- * - **Renter (kiracı)** — holds the week on a term. May sublet within that term,
- *   and may not sell at all, because an open-ended grant would outlast the term
- *   they hold.
+ * - **Renter (kiracı)** — holds the week on a term, and may pass it on to nobody.
+ *   They may use it until their term lapses; that is all.
  *
- * Both limits are enforced by the contract (`ExpiryBeyondSenderTerm`). Reflecting
- * them here only stops the form offering something that would be refused after a
- * signature and a fee.
+ * Those two limits come from different places, and the difference matters. That a
+ * renter cannot **sell** is the contract's rule: an open-ended grant would outlast
+ * the term they hold, and `ExpiryBeyondSenderTerm` rejects it. That a renter
+ * cannot **sub-let** is this issuer's *policy*: the contract permits a sub-grant
+ * inside the renter's own term, and this deployment declines to approve one,
+ * because the account holding title is not consulted by `transfer` and would have
+ * no say. `/api/approve-transfer` is where that policy lives; a different issuer
+ * could approve sub-lets without touching the contract.
+ *
+ * Reflecting both here only stops the form offering something that would be
+ * refused after a signature and a fee.
  *
  * The sequence is the SEP-8 approval model in Soroban's native authorization:
  * the holder states terms, `/api/approve-transfer` applies the issuer's policy and
@@ -103,14 +110,22 @@ function TransferForm() {
   const validate = useCallback((): string | null => {
     const requested = terms();
     if (!requested) return "choose a week, a recipient, and — for a rental — a date the term ends";
+    // Only the title holder may grant. The contract would let a renter sub-let
+    // inside their own term; this deployment's issuer declines to approve one, so
+    // the refusal is stated here rather than after a signature and a fee.
+    if (selected && !selected.maySell) {
+      return (
+        `you hold this week until ${formatDate(selected.maxTermEnds)} but do not hold title to ` +
+        "it, so it is not yours to pass on — this issuer approves neither a sale nor a sub-let " +
+        "of a rented week"
+      );
+    }
     if (!/^G[A-Z2-7]{55}$/.test(requested.to)) return "the recipient must be a Stellar account (G…)";
     if (requested.to === requested.from) return "sender and recipient are the same account";
     if (requested.expiresAt !== null && selected) {
       if (requested.expiresAt <= Math.floor(Date.now() / 1000)) return "the term must end in the future";
       if (requested.expiresAt > selected.maxTermEnds) {
-        return selected.maySell
-          ? `the term cannot run past the end of the use year (${formatDate(selected.maxTermEnds)})`
-          : `you hold this week only until ${formatDate(selected.maxTermEnds)}, and cannot sublet past that`;
+        return `the term cannot run past the end of the use year (${formatDate(selected.maxTermEnds)})`;
       }
     }
     return null;
@@ -309,9 +324,11 @@ function TransferForm() {
             ) : (
               <>
                 You are <strong>renting</strong> this week until{" "}
-                {formatDate(selected.maxTermEnds)}. You can sublet it up to that date, but you
-                cannot sell it — an open-ended transfer would outlast the term you hold, and the
-                contract rejects it.
+                {formatDate(selected.maxTermEnds)}, so it is not yours to pass on. You cannot sell
+                it — an open-ended transfer would outlast the term you hold and the contract
+                rejects it — and this issuer does not approve sub-lets either, because the account
+                holding title is not party to that decision. The week is yours to use until the
+                date above.
               </>
             )}
           </div>
@@ -328,7 +345,7 @@ function TransferForm() {
                 onChange={() => setMode("rent")}
                 style={{ width: "auto" }}
               />
-              {selected?.maySell ? "Rent out" : "Sublet"} — a term that lapses
+              Rent out — a term that lapses
             </label>
             <label
               style={{
@@ -382,19 +399,21 @@ function TransferForm() {
         </div>
 
         <div className="row">
-          <button className="primary" onClick={() => void transfer()} disabled={busy || !selected}>
+          <button
+            className="primary"
+            onClick={() => void transfer()}
+            disabled={busy || !selected || !selected.maySell}
+          >
             {busy
               ? "working…"
               : mode === "sell"
                 ? "Sell this week"
-                : selected?.maySell
-                  ? "Rent this week out"
-                  : "Sublet this week"}
+                : "Rent this week out"}
           </button>
           <button
             className="danger"
             onClick={() => void transferWithoutApproval()}
-            disabled={busy || !selected}
+            disabled={busy || !selected || !selected.maySell}
           >
             Try it without issuer approval
           </button>

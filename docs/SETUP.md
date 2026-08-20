@@ -46,7 +46,7 @@ dropping those integrations upstream.
 ## Run against the existing deployment
 
 The contract at
-[`CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS`](https://stellar.expert/explorer/testnet/contract/CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS)
+[`CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M`](https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M)
 is live with sample inventory already issued. You can read all of it with no
 configuration at all:
 

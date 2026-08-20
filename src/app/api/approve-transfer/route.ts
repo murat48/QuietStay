@@ -122,13 +122,31 @@ export async function POST(request: Request): Promise<Response> {
           validity_until: right.validity.until,
         });
       }
-      if (holding.expiresAt !== null && expiresAt > holding.expiresAt) {
-        return decline("you cannot grant a longer term than the one you hold", {
-          your_term_ends: holding.expiresAt,
-        });
-      }
-    } else if (holding.expiresAt !== null) {
-      return decline("a rented week is not yours to sell; only the title holder can");
+    }
+
+    // --- 3b. only the title holder may grant ------------------------------
+    //
+    // Issuer policy, not a contract rule. The contract permits a renter to
+    // sub-let inside their own term, and enforces that the sub-grant cannot
+    // outlast it — so the title holder's week always comes back on the date they
+    // set, however many hands it passed through. What the contract does not do is
+    // ask the title holder whether they wanted it passed on at all: `transfer`
+    // consults the effective holder and the issuer, and nobody else.
+    //
+    // This deployment declines to approve that. Sub-letting was never part of
+    // what the contract was specified to do; it fell out of modelling holdings as
+    // a chain, and with it came a consent question nobody had answered. Declining
+    // is a power the issuer openly has (see `docs/DESIGN.md`), so exercising it
+    // here is policy rather than a claim about what the contract permits — the
+    // contract still permits it, and a different issuer could approve it.
+    if (holding.expiresAt !== null) {
+      return decline(
+        expiresAt !== null
+          ? "this issuer does not approve sub-lets: a week you hold on a term is not yours to " +
+              "pass on, because the account that holds title to it is not party to that decision"
+          : "a rented week is not yours to sell; only the title holder can",
+        { your_term_ends: holding.expiresAt, title_holder: right.holdings[0]?.holder ?? null },
+      );
     }
 
     // --- 4. the week is one the issuer still stands behind -----------------

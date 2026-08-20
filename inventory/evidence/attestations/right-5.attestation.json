@@ -2,20 +2,20 @@
   "payload": {
     "schema": "quietstay.attestation.v1",
     "network": "Test SDF Network ; September 2015",
-    "contract": "CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS",
+    "contract": "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M",
     "right_id": 5,
-    "commitment": "46877c7480ba90e57eda2caeacd1153a0920223d4d6b505f3321a6bc4dcec4ef",
+    "commitment": "aa9e7db80c861ca2d9a546a07340066aa547d1bd219befb4aea11d94fe4605c9",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "week_valid": true,
     "maintenance_fees_current": true,
     "fees_paid_through": "2026-12-31",
-    "issued_at": "2026-08-13T09:59:13.987Z",
-    "not_before": "2026-08-13T09:59:13.987Z",
-    "expires_at": "2027-08-13T09:59:13.987Z"
+    "issued_at": "2026-08-20T22:29:17.200Z",
+    "not_before": "2026-08-20T22:29:17.200Z",
+    "expires_at": "2027-08-20T22:29:17.200Z"
   },
   "signature": {
     "alg": "ed25519",
     "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
-    "value": "y+lfqfgL9W9UzL3NC/petRd82wAFO7FTBm6opgCgHBLkg4cS4p1ZyufrLzC11YroOjH+DlT0OU5DdWaWV5FlBQ=="
+    "value": "JPdgOwI+Okb3vU6Et+REOQEaOlI94UGtRXAde9dbU08zFaoqeF+rizMZn9DbHH/6dm4NFUdRcnuxJSwXXy57Dw=="
   }
 }

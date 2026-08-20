@@ -21,11 +21,19 @@
 //! ## What the issuer can and cannot do
 //!
 //! The issuer approves transfers that holders initiate, following the approval
-//! model of SEP-8 regulated assets (see [`auth`]). It cannot move, reassign,
-//! freeze, or burn a right that a holder already holds. `issue` is the only
-//! privileged entry point in this contract, it can only create rights at unused
-//! ids, and there is no upgrade, admin, seize, freeze, or clawback function to
-//! find — `docs/DESIGN.md` enumerates the privileged surface in full.
+//! model of SEP-8 regulated assets (see [`auth`]). Under the code running now it
+//! cannot move, reassign, freeze, or burn a right that a holder already holds,
+//! and there is no seize, freeze, or clawback function to find.
+//!
+//! There are **two** privileged entry points: `issue`, which can only create
+//! rights at ids a counter has never handed out, and `upgrade`, which replaces
+//! this code. The second one qualifies the first list: those limits describe the
+//! deployed WASM, not a permanent guarantee, because the issuer can deploy a WASM
+//! with different ones. An upgrade is authorized by the issuer alone and is
+//! published as an event, so it is visible but not vetoable.
+//!
+//! `docs/DESIGN.md` enumerates the privileged surface in full and says plainly
+//! what this trade costs.
 //!
 //! ## Relationship to SEP-41
 //!
@@ -47,10 +55,10 @@ pub mod types;
 mod test;
 
 use error::Error;
-use events::{Burned, Issued, Listed, Transferred, Unlisted};
+use events::{Burned, Issued, Listed, Transferred, Unlisted, Upgraded};
 use types::{Config, Holding, Listing, Period, Right, Validity};
 
-contractmeta!(key = "binver", val = "0.1.0");
+contractmeta!(key = "binver", val = "0.2.0");
 contractmeta!(
     key = "desc",
     val = "QuietStay Phase 1 tokenized vacation usage rights (testnet)"
@@ -327,6 +335,46 @@ impl QuietStayRights {
         .publish(&env);
 
         Ok(())
+    }
+
+    // --- upgrade ----------------------------------------------------------
+
+    /// Replace this contract's code with the WASM at `new_wasm_hash`.
+    ///
+    /// **This entry point changes what "the issuer cannot" means.** Every other
+    /// limit in this contract is a property of the deployed code — no seize, no
+    /// freeze, no clawback, no admin. An upgrade replaces that code, so those
+    /// limits hold for the WASM running now rather than permanently. A holder
+    /// relying on them is relying on the issuer not shipping a version that
+    /// removes them.
+    ///
+    /// That is a real transfer of power to the issuer and it is stated here
+    /// rather than buried: `docs/DESIGN.md` records exactly what it does and does
+    /// not reach.
+    ///
+    /// Two things bound it. The upgrade is **authorized by the issuer alone**, so
+    /// it is exactly as trusted as the issuer already is for attestations — and
+    /// it is **published as an [`Upgraded`] event**, so it cannot happen quietly:
+    /// anyone watching this contract sees the hash and can fetch and diff the new
+    /// code.
+    ///
+    /// What an upgrade does *not* touch: storage. Existing rights keep their ids,
+    /// commitments, periods, validity windows, and holding chains. Only the code
+    /// that reads and writes them is replaced, which is why there is no migration
+    /// step here — a version that needed one would have to add its own.
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) {
+        let config = store::config(&env);
+        config.issuer.require_auth();
+
+        env.deployer()
+            .update_current_contract_wasm(new_wasm_hash.clone());
+        store::bump_instance(&env);
+
+        Upgraded {
+            issuer: config.issuer,
+            new_wasm_hash,
+        }
+        .publish(&env);
     }
 
     // --- views -----------------------------------------------------------

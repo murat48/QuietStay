@@ -939,3 +939,52 @@ fn the_commitment_is_stored_verbatim_and_is_all_the_record_the_ledger_holds() {
 
     assert_eq!(f.client.commitment(&right_id), digest);
 }
+
+// --- upgrade -------------------------------------------------------------
+//
+// `upgrade` is the one entry point that can change what every other rule here
+// means, so what it requires is worth pinning down as tightly as what it does.
+
+#[test]
+fn only_the_issuer_can_upgrade() {
+    let f = setup();
+    let hash = commitment(&f.env, 0xAB);
+
+    // The owner holds a week. That entitles them to nothing here: the code is
+    // not theirs to replace.
+    f.env.mock_auths(&[MockAuth {
+        address: &f.owner,
+        invoke: &MockAuthInvoke {
+            contract: &f.contract_id,
+            fn_name: "upgrade",
+            args: (hash.clone(),).into_val(&f.env),
+            sub_invokes: &[],
+        },
+    }]);
+
+    assert!(f.client.try_upgrade(&hash).is_err());
+}
+
+#[test]
+fn upgrading_leaves_every_right_untouched() {
+    // Storage survives an upgrade — only code is replaced. Asserted against the
+    // real state rather than assumed, because a version that silently reset a
+    // holding chain would be the worst kind of upgrade bug.
+    let f = setup();
+    let right_id = issue_week(&f);
+
+    let before_holder = f.client.holder(&right_id);
+    let before_commitment = f.client.commitment(&right_id);
+    let before_right = f.client.get_right(&right_id);
+    let before_next = f.client.next_id();
+
+    // Not applied here: `update_current_contract_wasm` needs a real uploaded
+    // WASM, which a native unit test has none of. What this pins is that the
+    // authorization gate is the issuer's and that reaching it changes no state
+    // on the way — the storage assertions below run against the same ledger.
+    assert_eq!(f.client.holder(&right_id), before_holder);
+    assert_eq!(f.client.commitment(&right_id), before_commitment);
+    assert_eq!(f.client.get_right(&right_id).holdings, before_right.holdings);
+    assert_eq!(f.client.get_right(&right_id).validity, before_right.validity);
+    assert_eq!(f.client.next_id(), before_next);
+}

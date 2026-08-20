@@ -9,7 +9,7 @@ let it.
 
 | | |
 | --- | --- |
-| Contract | [`CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS`](https://stellar.expert/explorer/testnet/contract/CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS) |
+| Contract | [`CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M`](https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M) |
 | Network | `Test SDF Network ; September 2015` |
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
 | Tests | 32 unit tests — `cd contracts && cargo test` |
@@ -63,13 +63,19 @@ Phase 1 rests on a trusted issuer signature for *attestation*, and that is delib
 But "trusted to attest honestly" must not become "able to take your week."
 
 **Cannot** — enforced by the contract, not by good behaviour: move, reassign, freeze,
-or burn a right someone holds; claw back; overwrite an existing right; alter a
-commitment after issuance; or upgrade the contract to add any of that. There is no
-admin function, and no `upgrade`.
+or burn a right someone holds; claw back; overwrite an existing right; or alter a
+commitment after issuance.
 
 Demonstrated on chain: the issuer builds, signs, and pays for a transfer of a held
 right to itself, and the contract rejects it. Hash in
 [EVIDENCE.md](./docs/EVIDENCE.md).
+
+**One qualifier, stated up front:** the contract has an `upgrade` function, so that
+list describes the code running now rather than a permanent guarantee — a version
+the issuer deploys through it could add any of those powers. It publishes an event
+so no upgrade is silent, and it does not touch stored state, but the holder has no
+veto and there is no timelock. The reasoning, and what was traded for what, is in
+[DESIGN.md](./docs/DESIGN.md#the-qualifier-that-governs-that-whole-table-upgrade).
 
 **Can, and this is stated rather than glossed over:** decline a transfer it should
 have approved, and attest falsely. Verification proves the issuer *said* something,

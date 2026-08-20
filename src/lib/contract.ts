@@ -407,6 +407,17 @@ export async function approveTransferAsIssuer(
   );
 
   if (approvedEntries.length === 0) {
+    // The issuer transferring a week it holds itself — a resort selling its own
+    // unsold inventory. `buildTransferTx` makes `from` the source account, so
+    // when `from` is the issuer both `from.require_auth()` and the issuer's
+    // approval are satisfied by the envelope signature, and Soroban emits no
+    // separate address-credentials entry for either. There is genuinely nothing
+    // to co-sign, and the transfer is fully authorized once the envelope is
+    // signed — so this returns the prepared transaction rather than refusing a
+    // transfer the contract would accept.
+    if (tx.source === issuer.publicKey()) {
+      return { tx: rpc.assembleTransaction(tx, sim).build(), approvedEntries, validUntilLedger };
+    }
     throw new ContractCallError(
       "this transaction does not ask for the issuer's approval — nothing to sign",
       entries.map(entryAddress),

@@ -1,8 +1,8 @@
 {
   "generated_by": "npm run evidence",
   "network": "Test SDF Network ; September 2015",
-  "contract": "CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS",
-  "contract_explorer": "https://stellar.expert/explorer/testnet/contract/CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS",
+  "contract": "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M",
+  "contract_explorer": "https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M",
   "accounts": {
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "owner": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
@@ -11,67 +11,67 @@
   },
   "rights_issued_for_this_run": {
     "rental": {
-      "right_id": 14,
-      "commitment": "44b0a8ef76a1a0aa05b86352ce67d11615ba71d040083dfe67135ff6d6c76855",
-      "issue_tx": "5771add9dc3af2911dc2fd424ad7a016056b30407c156aec0da2af11d9cceca4"
+      "right_id": 5,
+      "commitment": "aa9e7db80c861ca2d9a546a07340066aa547d1bd219befb4aea11d94fe4605c9",
+      "issue_tx": "cd388a59e4697bf32a4c95f1a24c284e50c5bf8db3c193ff559cd77d2fb2e990"
     },
     "sale": {
-      "right_id": 15,
-      "commitment": "7c5136b8aad7f995f8b2994efc12fa206924d32552e1c59416ef34a8eba10e50",
-      "issue_tx": "b25f89bb0d652c8f190d96e974d192ffa0f6aebffe75a00a2a66289dcc90be1f"
+      "right_id": 6,
+      "commitment": "542a223c6a1276ef3b3914609d131dfd14a441b73c8a8f4890decd5aa111ec33",
+      "issue_tx": "3b7bb5666c11cf2183789fcde9c5065db5c5483704ee91010bf9bd49a101887f"
     },
     "rejections": {
-      "right_id": 16,
-      "commitment": "a0f1464fc42f70ab26457dc05f99dcb400aaa86aa9035341aa42497e72679bab",
-      "issue_tx": "1523e2cbbaf06855532ff0440bbcc4ac4986988452fd045ec0534ed2261bef9a"
+      "right_id": 7,
+      "commitment": "56681a82f7ca87428cba1f1472d90747b5f9bf7ed10fd30fe4b132b322d04119",
+      "issue_tx": "e958aa99bbe4f5e2c89fe9d2661cd887f69067a235feae35d732ce10cc7b8ca7"
     }
   },
   "transactions": [
     {
       "id": "rental",
       "title": "Rental — one transfer primitive, carrying a term",
-      "what": "The holder transfers right #14 to the renter with `expires_at = 1792800000` (2026-10-24). Title does not move: the renter holds the week until that timestamp, after which it reverts with no return transaction.",
+      "what": "The holder transfers right #5 to the renter with `expires_at = 1792800000` (2026-10-24). Title does not move: the renter holds the week until that timestamp, after which it reverts with no return transaction.",
       "expected": "succeeds",
-      "right_id": 14,
-      "hash": "f24d10c505fe834c242255baad1986b847eeddd1b83c7aaca0a71bb58cbb0eab",
+      "right_id": 5,
+      "hash": "222bc7c9bfa37c997e5e4ba83541ca0736d048048b3daa3ec52501961f40542d",
       "successful": true,
       "reached_ledger": true,
-      "explorer": "https://stellar.expert/explorer/testnet/tx/f24d10c505fe834c242255baad1986b847eeddd1b83c7aaca0a71bb58cbb0eab"
+      "explorer": "https://stellar.expert/explorer/testnet/tx/222bc7c9bfa37c997e5e4ba83541ca0736d048048b3daa3ec52501961f40542d"
     },
     {
       "id": "sale",
       "title": "Sale — the same primitive, no term",
-      "what": "The holder transfers right #15 to the buyer with `expires_at = None`. The holding chain collapses to the buyer alone: title moves and the seller keeps no claim.",
+      "what": "The holder transfers right #6 to the buyer with `expires_at = None`. The holding chain collapses to the buyer alone: title moves and the seller keeps no claim.",
       "expected": "succeeds",
-      "right_id": 15,
-      "hash": "5ac52a0acff1a41d8bf820ab63aaad2e9205184340d3e6943ac40c990974cac6",
+      "right_id": 6,
+      "hash": "b19b0a0a8d938f2bd963f74d2869f331687aecd5f698e9f81852a1180687ee03",
       "successful": true,
       "reached_ledger": true,
-      "explorer": "https://stellar.expert/explorer/testnet/tx/5ac52a0acff1a41d8bf820ab63aaad2e9205184340d3e6943ac40c990974cac6"
+      "explorer": "https://stellar.expert/explorer/testnet/tx/b19b0a0a8d938f2bd963f74d2869f331687aecd5f698e9f81852a1180687ee03"
     },
     {
       "id": "rejected-no-approval",
       "title": "Transfer without issuer approval — rejected on chain",
       "what": "Identical to the sale above, submitted with the issuer's authorization entry removed. The holder signed it and paid the fee; the contract refused it. Verification is enforced in the contract, not suggested by the interface.",
       "expected": "rejected by the contract",
-      "right_id": 16,
-      "hash": "d0e67efacfbd8547dc5362af19e9dfbbb19b8ab59b57e9c9d146105ac3896d85",
+      "right_id": 7,
+      "hash": "0f968e8b850f31c6679a246f2302a1d042dfac9c31519619b35e6e4f59da951d",
       "successful": false,
       "reached_ledger": true,
       "failure": "The contract rejected this transfer because a required authorization was missing. A transfer needs both the holder's signature and the issuer's approval.",
-      "explorer": "https://stellar.expert/explorer/testnet/tx/d0e67efacfbd8547dc5362af19e9dfbbb19b8ab59b57e9c9d146105ac3896d85"
+      "explorer": "https://stellar.expert/explorer/testnet/tx/0f968e8b850f31c6679a246f2302a1d042dfac9c31519619b35e6e4f59da951d"
     },
     {
       "id": "rejected-seizure",
       "title": "Issuer attempting to seize a held right — rejected on chain",
-      "what": "The issuer builds, signs, and pays for a transfer of right #16 from its holder to itself. It can supply its own approval; it cannot supply the holder's authorization. Approving transfers never becomes the power to take one.",
+      "what": "The issuer builds, signs, and pays for a transfer of right #7 from its holder to itself. It can supply its own approval; it cannot supply the holder's authorization. Approving transfers never becomes the power to take one.",
       "expected": "rejected by the contract",
-      "right_id": 16,
-      "hash": "350e8f69949b3102af4dd95ad24a5c2b04121979e2a3cb6d26c351ac9b738034",
+      "right_id": 7,
+      "hash": "95c61c8a84544d369f90f492d92fa2d4c7d6bd80d300e1d74331ab1b8cb5bcc3",
       "successful": false,
       "reached_ledger": true,
       "failure": "The contract rejected this transfer because a required authorization was missing. A transfer needs both the holder's signature and the issuer's approval.",
-      "explorer": "https://stellar.expert/explorer/testnet/tx/350e8f69949b3102af4dd95ad24a5c2b04121979e2a3cb6d26c351ac9b738034"
+      "explorer": "https://stellar.expert/explorer/testnet/tx/95c61c8a84544d369f90f492d92fa2d4c7d6bd80d300e1d74331ab1b8cb5bcc3"
     }
   ]
 }

@@ -16,11 +16,11 @@ they were not typed in.
 | | |
 | --- | --- |
 | **Network** | `Test SDF Network ; September 2015` (testnet) |
-| **Contract address** | [`CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS`](https://stellar.expert/explorer/testnet/contract/CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS) |
-| **Explorer** | https://stellar.expert/explorer/testnet/contract/CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS |
+| **Contract address** | [`CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M`](https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M) |
+| **Explorer** | https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M |
 | **Source** | [`contracts/quietstay-rights/src/`](../contracts/quietstay-rights/src/) |
-| **Tests** | [`src/test.rs`](../contracts/quietstay-rights/src/test.rs) — 32 tests, `cd contracts && cargo test` |
-| **WASM size** | 19,420 bytes (limit 65,536) |
+| **Tests** | [`src/test.rs`](../contracts/quietstay-rights/src/test.rs) — 34 tests, `cd contracts && cargo test` |
+| **WASM size** | 21,275 bytes (limit 65,536) |
 
 The transfer design is one primitive with a duration parameter: an open-ended
 transfer is a sale, a transfer carrying an expiry is a rental, and there is no
@@ -51,15 +51,15 @@ submission leaves nothing to open.
 
 | What | Outcome | Transaction | On ledger |
 | --- | --- | --- | --- |
-| Rental — one transfer primitive, carrying a term | succeeded | [`f24d10c505fe834c…`](https://stellar.expert/explorer/testnet/tx/f24d10c505fe834c242255baad1986b847eeddd1b83c7aaca0a71bb58cbb0eab) | yes |
-| Sale — the same primitive, no term | succeeded | [`5ac52a0acff1a41d…`](https://stellar.expert/explorer/testnet/tx/5ac52a0acff1a41d8bf820ab63aaad2e9205184340d3e6943ac40c990974cac6) | yes |
-| Transfer without issuer approval — rejected on chain | **rejected by the contract** | [`d0e67efacfbd8547…`](https://stellar.expert/explorer/testnet/tx/d0e67efacfbd8547dc5362af19e9dfbbb19b8ab59b57e9c9d146105ac3896d85) | yes |
-| Issuer attempting to seize a held right — rejected on chain | **rejected by the contract** | [`350e8f69949b3102…`](https://stellar.expert/explorer/testnet/tx/350e8f69949b3102af4dd95ad24a5c2b04121979e2a3cb6d26c351ac9b738034) | yes |
+| Rental — one transfer primitive, carrying a term | succeeded | [`222bc7c9bfa37c99…`](https://stellar.expert/explorer/testnet/tx/222bc7c9bfa37c997e5e4ba83541ca0736d048048b3daa3ec52501961f40542d) | yes |
+| Sale — the same primitive, no term | succeeded | [`b19b0a0a8d938f2b…`](https://stellar.expert/explorer/testnet/tx/b19b0a0a8d938f2bd963f74d2869f331687aecd5f698e9f81852a1180687ee03) | yes |
+| Transfer without issuer approval — rejected on chain | **rejected by the contract** | [`0f968e8b850f31c6…`](https://stellar.expert/explorer/testnet/tx/0f968e8b850f31c6679a246f2302a1d042dfac9c31519619b35e6e4f59da951d) | yes |
+| Issuer attempting to seize a held right — rejected on chain | **rejected by the contract** | [`95c61c8a84544d36…`](https://stellar.expert/explorer/testnet/tx/95c61c8a84544d369f90f492d92fa2d4c7d6bd80d300e1d74331ab1b8cb5bcc3) | yes |
 
 **The two required hashes**, stated plainly:
 
-- Transfer **with** issuer approval, succeeds: [`5ac52a0acff1a41d8bf820ab63aaad2e9205184340d3e6943ac40c990974cac6`](https://stellar.expert/explorer/testnet/tx/5ac52a0acff1a41d8bf820ab63aaad2e9205184340d3e6943ac40c990974cac6)
-- Transfer **without** issuer approval, rejected by the contract: [`d0e67efacfbd8547dc5362af19e9dfbbb19b8ab59b57e9c9d146105ac3896d85`](https://stellar.expert/explorer/testnet/tx/d0e67efacfbd8547dc5362af19e9dfbbb19b8ab59b57e9c9d146105ac3896d85)
+- Transfer **with** issuer approval, succeeds: [`b19b0a0a8d938f2bd963f74d2869f331687aecd5f698e9f81852a1180687ee03`](https://stellar.expert/explorer/testnet/tx/b19b0a0a8d938f2bd963f74d2869f331687aecd5f698e9f81852a1180687ee03)
+- Transfer **without** issuer approval, rejected by the contract: [`0f968e8b850f31c6679a246f2302a1d042dfac9c31519619b35e6e4f59da951d`](https://stellar.expert/explorer/testnet/tx/0f968e8b850f31c6679a246f2302a1d042dfac9c31519619b35e6e4f59da951d)
 
 Both are the same transfer of the same right by the same holder. The only difference
 is the issuer's authorization entry. The contract's refusal: _The contract rejected this transfer because a required authorization was missing. A transfer needs both the holder's signature and the issuer's approval._
@@ -70,7 +70,7 @@ The reviewer's condition on approval was that issuer-approved transfers must not
 the issuer seize or freeze anything. This transaction is the issuer attempting exactly
 that — building, signing, and paying for a transfer of a held right to itself:
 
-**[`350e8f69949b3102af4dd95ad24a5c2b04121979e2a3cb6d26c351ac9b738034`](https://stellar.expert/explorer/testnet/tx/350e8f69949b3102af4dd95ad24a5c2b04121979e2a3cb6d26c351ac9b738034)** — rejected by the contract.
+**[`95c61c8a84544d369f90f492d92fa2d4c7d6bd80d300e1d74331ab1b8cb5bcc3`](https://stellar.expert/explorer/testnet/tx/95c61c8a84544d369f90f492d92fa2d4c7d6bd80d300e1d74331ab1b8cb5bcc3)** — rejected by the contract.
 
 The issuer can supply its own approval; it cannot supply the holder's authorization,
 which `transfer` requires independently. See
@@ -93,7 +93,7 @@ The successful **sale** transaction's contract call, decoded in full:
 transfer(
   from       = "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"
   to         = "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"
-  right_id   = 15
+  right_id   = 6
   expires_at = null        // a sale carries no timestamp at all
 )
 ```

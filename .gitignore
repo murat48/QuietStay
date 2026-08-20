@@ -14,3 +14,9 @@ contracts/target/
 
 # Generated evidence and canonical files are committed deliberately; see
 # docs/EVIDENCE.md. Nothing else in these directories is.
+
+# Engagement paperwork. The SOW carries a contact email, the budget, and the
+# chapter lead's name; the build prompt is internal. This repository is published
+# as deliverable evidence, so neither belongs in it.
+2.pdf
+quietstay_phase1_build_prompt.md

@@ -57,7 +57,7 @@ See [`src/lib/attestation.ts`](../src/lib/attestation.ts).
   "payload": {
     "schema": "quietstay.attestation.v1",
     "network": "Test SDF Network ; September 2015",
-    "contract": "CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS",
+    "contract": "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M",
     "right_id": 1,
     "commitment": "e8ad1bb9deff0137565e22278ed2e42d9b894b442930bf03b9db050e98b0d991",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",

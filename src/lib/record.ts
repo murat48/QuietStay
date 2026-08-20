@@ -58,12 +58,26 @@ export interface OwnershipRecord {
     /** ISO date the interest was recorded. */
     recorded_on: string;
   };
+  /**
+   * Fee position **as at issuance**, not the live figure.
+   *
+   * The commitment is immutable, so nothing in this record can ever be edited
+   * without it ceasing to hash to what the ledger holds. That makes this block a
+   * snapshot by construction: it says what was owed on the day the right was
+   * issued, and it goes on saying that forever.
+   *
+   * The current position lives in the issuer's attestation, which is re-signable
+   * and expires. A verifier and the approval service both read fee status from
+   * there — see `maintenance_fees_current` in `src/lib/attestation.ts` — so a week
+   * whose arrears are later settled becomes transferable without reissuing
+   * anything.
+   */
   maintenance_fees: {
     annual_amount: string;
     currency: string;
-    /** ISO date fees are paid through. */
+    /** ISO date fees were paid through at issuance. */
     paid_through: string;
-    /** Amount still owed. "0.00" means the week is clean. */
+    /** Amount owed at issuance. "0.00" means the week was clean then. */
     outstanding: string;
   };
 }
@@ -172,7 +186,13 @@ export function validateRecord(value: unknown): OwnershipRecord {
   return record as unknown as OwnershipRecord;
 }
 
-/** Whether the record itself says the week carries no unpaid maintenance fees. */
+/**
+ * Whether the record says the week carried no unpaid fees **at issuance**.
+ *
+ * This is the default an attestation is signed from, not the live answer. Once a
+ * right exists, the current position is whatever the issuer has most recently
+ * attested; ask the attestation, not the record.
+ */
 export function feesAreCurrent(record: OwnershipRecord): boolean {
   return Number.parseFloat(record.maintenance_fees.outstanding) === 0;
 }

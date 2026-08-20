@@ -10,11 +10,19 @@ export const RPC_URL = process.env.STELLAR_RPC_URL ?? "https://soroban-testnet.s
 export const HORIZON_URL = process.env.STELLAR_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
 export const FRIENDBOT_URL = "https://friendbot.stellar.org";
 
-/** The deployed QuietStay rights registry. */
+/**
+ * The deployed QuietStay rights registry.
+ *
+ * The literal is the live deployment, not a placeholder, and it has to stay in
+ * step with `.env.local`: the CLI scripts call `loadEnv()` in their own file
+ * body, which runs *after* their imports have already evaluated this module, so
+ * a script reads whatever this default says rather than what the env file holds.
+ * Changing the deployment means changing both.
+ */
 export const CONTRACT_ID =
   process.env.NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID ??
   process.env.QUIETSTAY_CONTRACT_ID ??
-  "CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS";
+  "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M";
 
 /** Explorer links, for evidence a reviewer can open without tooling. */
 export const explorer = {

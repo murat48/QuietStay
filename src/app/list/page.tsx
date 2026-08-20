@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@/components/WalletProvider";
 import { explorer } from "@/lib/config";
 import { formatDate, formatDays, shortAddress } from "@/lib/format";
+import { unixToIsoDate } from "@/lib/record";
 
 interface RightRow {
   id: number;
@@ -30,6 +31,8 @@ interface RightRow {
   chain_depth: number;
   active: boolean;
   listing: { by: string; term_secs: number | null; listed_at: number } | null;
+  /** From the issuer's attestation, not the ledger. `null` = never attested. */
+  fees: { current: boolean; paid_through: string } | null;
 }
 
 interface Inventory {
@@ -48,6 +51,9 @@ export default function ListScreen() {
   const [busyRight, setBusyRight] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [termDays, setTermDays] = useState("7");
+  // The date the issuer is settling fees through, per right. Keyed rather than
+  // held once, so two cards on screen cannot share one input.
+  const [paidThrough, setPaidThrough] = useState<Record<number, string>>({});
 
   const load = useCallback(async () => {
     setError(null);
@@ -107,6 +113,41 @@ export default function ListScreen() {
     [address, authFetch, sign, load],
   );
 
+  /**
+   * Record that a week's maintenance fees have been settled.
+   *
+   * No transaction and no signature from the holder: this re-signs the issuer's
+   * attestation and touches neither the record nor the ledger. The commitment
+   * stands, the right is untouched, and what changes is only what the issuer
+   * currently vouches for — which is the thing a transfer approval reads.
+   */
+  const settleFees = useCallback(
+    async (rightId: number, through: string, current: boolean) => {
+      setBusyRight(rightId);
+      setMessage(null);
+      setError(null);
+      try {
+        const response = await authFetch("/api/settle-fees", {
+          method: "POST",
+          body: JSON.stringify({
+            right_id: rightId,
+            paid_through: through,
+            fees_current: current,
+          }),
+        });
+        const body = (await response.json()) as { note?: string; error?: string };
+        if (!response.ok) throw new Error(body.error ?? "could not record the settlement");
+        setMessage(`Right #${rightId} — ${body.note ?? "attestation re-signed"}`);
+        await load();
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : String(caught));
+      } finally {
+        setBusyRight(null);
+      }
+    },
+    [authFetch, load],
+  );
+
   return (
     <>
       <h1>The registry — every week, and what is on offer</h1>
@@ -160,6 +201,15 @@ export default function ListScreen() {
               // Title held by this account but occupied by someone else: still
               // "yours", and worth distinguishing from a week you can act on.
               const ownedButRentedOut = isTitleHolder && !mine;
+              // You hold the week, but on a term someone else granted you.
+              const iAmTheRenter = mine && !isTitleHolder;
+              const isIssuer = address !== null && address === inventory.issuer;
+              // A week nothing vouches for is as untransferable as one in
+              // arrears, so the two are treated alike rather than only the loud
+              // one being shown.
+              const blocked = right.fees === null || !right.fees.current;
+              // The dues year runs to the day before the use year closes.
+              const defaultThrough = unixToIsoDate(right.validity.until - 86_400);
 
               return (
                 <div className="card" key={right.id}>
@@ -167,7 +217,20 @@ export default function ListScreen() {
                     <h3 style={{ margin: 0 }}>Right #{right.id}</h3>
                     <div className="row" style={{ gap: "0.3rem" }}>
                       {right.active ? null : <span className="tag bad">expired</span>}
-                      {right.rented_out ? <span className="tag warn">rented out</span> : null}
+                      {right.fees !== null && !right.fees.current ? (
+                        <span className="tag bad">fees due</span>
+                      ) : null}
+                      {right.fees === null ? <span className="tag warn">not attested</span> : null}
+                      {/*
+                        "rented out" is said from the title holder's side, so it
+                        contradicts itself when the reader is the renter — the
+                        week is not out to someone else, it is out to them. The
+                        tag below says the same thing more precisely, so this one
+                        stands down rather than both appearing.
+                      */}
+                      {right.rented_out && !iAmTheRenter ? (
+                        <span className="tag warn">rented out</span>
+                      ) : null}
                       {right.listing ? (
                         <span className="tag accent">
                           {right.listing.term_secs === null
@@ -176,9 +239,7 @@ export default function ListScreen() {
                         </span>
                       ) : null}
                       {mine && isTitleHolder ? <span className="tag ok">you own it</span> : null}
-                      {mine && !isTitleHolder ? (
-                        <span className="tag ok">you are renting it</span>
-                      ) : null}
+                      {iAmTheRenter ? <span className="tag ok">you are renting it</span> : null}
                       {ownedButRentedOut ? <span className="tag ok">yours, on loan</span> : null}
                     </div>
                   </div>
@@ -210,9 +271,101 @@ export default function ListScreen() {
                         </dd>
                       </>
                     ) : null}
+                    <dt>Maintenance fees</dt>
+                    <dd>
+                      {right.fees === null ? (
+                        <span className="muted">the issuer has attested nothing for this week</span>
+                      ) : right.fees.current ? (
+                        <>
+                          current{" "}
+                          <span className="muted">— paid through {right.fees.paid_through}</span>
+                        </>
+                      ) : (
+                        <>
+                          <strong>outstanding</strong>{" "}
+                          <span className="muted">
+                            — paid only through {right.fees.paid_through}
+                          </span>
+                        </>
+                      )}
+                    </dd>
                     <dt>Commitment</dt>
                     <dd className="hash">{right.commitment}</dd>
                   </dl>
+
+                  {blocked ? (
+                    <div className="note warn">
+                      {right.fees === null
+                        ? "The issuer has signed no attestation for this week, so it will not approve a transfer of it."
+                        : "The issuer will decline a transfer of this week until the arrears are settled."}{" "}
+                      The holder keeps it either way — declining is not seizing. The amount owed is
+                      in the off-chain record and is not published here.
+                    </div>
+                  ) : null}
+
+                  {/*
+                    The issuer's own control. Money moves with the resort the way
+                    it always has; what happens here is the issuer recording that
+                    it did, by re-signing its attestation. Nothing is written to
+                    the ledger and the commitment is untouched.
+                  */}
+                  {isIssuer && authenticated ? (
+                    <fieldset style={{ marginTop: "0.85rem", marginBottom: 0 }}>
+                      <legend>Issuer — fee status</legend>
+                      <div className="row" style={{ alignItems: "flex-end" }}>
+                        <div style={{ maxWidth: "11rem" }}>
+                          <label htmlFor={`paid-through-${right.id}`}>Paid through</label>
+                          <input
+                            id={`paid-through-${right.id}`}
+                            type="date"
+                            value={paidThrough[right.id] ?? defaultThrough}
+                            onChange={(event) =>
+                              setPaidThrough((current) => ({
+                                ...current,
+                                [right.id]: event.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+                        {right.fees?.current === true ? (
+                          <button
+                            disabled={busyRight === right.id}
+                            onClick={() =>
+                              void settleFees(
+                                right.id,
+                                paidThrough[right.id] ?? defaultThrough,
+                                false,
+                              )
+                            }
+                          >
+                            {busyRight === right.id ? "working…" : "Mark fees outstanding"}
+                          </button>
+                        ) : (
+                          <button
+                            className="primary"
+                            disabled={busyRight === right.id || right.fees === null}
+                            onClick={() =>
+                              void settleFees(right.id, paidThrough[right.id] ?? defaultThrough, true)
+                            }
+                          >
+                            {busyRight === right.id ? "working…" : "Mark fees settled"}
+                          </button>
+                        )}
+                      </div>
+                      {right.fees === null ? (
+                        <p className="muted" style={{ margin: "0.4rem 0 0" }}>
+                          There is no attestation to update. Sign the first one at issuance or with{" "}
+                          <code>npm run attest</code> — <code>week_valid</code> is a claim about the
+                          week itself that this control has no basis to originate.
+                        </p>
+                      ) : (
+                        <p className="muted" style={{ margin: "0.4rem 0 0" }}>
+                          Re-signs the attestation. The ownership record and the on-chain commitment
+                          do not change, and no transaction is submitted.
+                        </p>
+                      )}
+                    </fieldset>
+                  ) : null}
 
                   {mine && authenticated ? (
                     <div className="row" style={{ marginTop: "0.85rem" }}>

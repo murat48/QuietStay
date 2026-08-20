@@ -1,7 +1,7 @@
 {
   "note": "Maps issued rights to their off-chain records. The records themselves are sample data and are published here only so reviewers can recompute commitments; in a real deployment they would never leave the parties who hold them.",
   "network": "Test SDF Network ; September 2015",
-  "contract": "CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS",
+  "contract": "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M",
   "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
   "rights": [
     {
@@ -11,7 +11,7 @@
       "commitment": "e8ad1bb9deff0137565e22278ed2e42d9b894b442930bf03b9db050e98b0d991",
       "attestation_file": "inventory/attestations/right-1.attestation.json",
       "attested": true,
-      "issue_tx": "d5a4dc658e80123ff326809cc34cb73855f9f59ab38a133a0ac4140a3b963d24",
+      "issue_tx": "027768863417c07d32f9022645429a317dd20ebd0240fef31e37c81c3dabf78c",
       "week": {
         "check_in": "2026-10-03",
         "check_out": "2026-10-10",
@@ -26,7 +26,7 @@
       "commitment": "6de53b97af0c27c67c4c96f6b5e165d60471c40b9dc1f8fcb83fadc0166e6789",
       "attestation_file": "inventory/attestations/right-2.attestation.json",
       "attested": true,
-      "issue_tx": "b8dc8a2ccfb64498afe87964007462e0cc05d4248e5cfcaa9ac5e85bb7032520",
+      "issue_tx": "cee52475e315b03dd9c712cc1c0ce4dace67e3a58ff242dfb12751ca415873a9",
       "week": {
         "check_in": "2026-09-05",
         "check_out": "2026-09-12",
@@ -41,7 +41,7 @@
       "commitment": "d1e56562ea6f41073e50158da2cb122df01e7f6aee3ab7845669f0955f5ffc4c",
       "attestation_file": "inventory/attestations/right-3.attestation.json",
       "attested": true,
-      "issue_tx": "1d97130c5d2be5f980a95e4da7a8cb1471dfdc890d9b85f76ef276f197cba2bd",
+      "issue_tx": "8dc78cacc972aabd46d75dfc0fd6c780190a23358a97a0e14ec7725cb3caae28",
       "week": {
         "check_in": "2026-11-21",
         "check_out": "2026-11-28",
@@ -56,7 +56,7 @@
       "commitment": "f50768340ae7065a4c7314c4064e6605feef598d9223f4b11a822cb3adc04f38",
       "attestation_file": "inventory/attestations/right-4.attestation.json",
       "attested": false,
-      "issue_tx": "97ceab0ff2e7824037d583b804165c473640d7a1e281b36248f284243c0d7c8c",
+      "issue_tx": "f9779ae90120593204baab1bbceab765dce9c9f10d16ac0ca937782a9e999558",
       "week": {
         "check_in": "2026-12-19",
         "check_out": "2026-12-26",
