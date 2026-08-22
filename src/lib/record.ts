@@ -86,6 +86,13 @@ export interface OwnershipRecord {
   /**
    * Fee position **as at issuance**, not the live figure.
    *
+   * Owed by whoever holds title — `holdings[0].holder` — to the resort, because
+   * the charge follows the deed. A renter holds a finite term granted from that
+   * title and never became a party to it, so arrears are never theirs; the
+   * issuer neither owes nor collects, and `settle-fees` moves no money. A buyer
+   * would inherit them, which is why a transfer is declined until they are
+   * cleared: that protects the buyer, and gives the seller the reason to pay.
+   *
    * The commitment is immutable, so nothing in this record can ever be edited
    * without it ceasing to hash to what the ledger holds. That makes this block a
    * snapshot by construction: it says what was owed on the day the right was

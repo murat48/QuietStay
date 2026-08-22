@@ -472,6 +472,23 @@ export default function ListScreen() {
                         : "The issuer will decline a transfer of this week until the arrears are settled."}{" "}
                       The holder keeps it either way — declining is not seizing. The amount owed is
                       in the off-chain record and is not published here.
+                      {/*
+                        Who owes is the question anyone reading this warning has,
+                        and the card did not answer it. Arrears follow the deed,
+                        so they are the title holder's — a renter holds a term
+                        granted from that title and never became a party to it,
+                        and might otherwise read this as a bill of their own.
+                      */}
+                      {right.fees === null ? null : (
+                        <>
+                          {" "}
+                          Maintenance fees are owed to the resort by whoever holds title —{" "}
+                          <code>{shortAddress(right.title_holder)}</code>
+                          {iAmTheRenter ? ", not by you: you hold a term, not the deed" : null}
+                          {isTitleHolder ? " — that is you" : null}. Settle them with the resort as
+                          usual, then ask the issuer to record it; no money moves through this app.
+                        </>
+                      )}
                     </div>
                   ) : null}
 
