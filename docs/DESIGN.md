@@ -298,6 +298,19 @@ without orphaning the registry. A deployment that valued the unconditional
 guarantee more should delete this function and accept redeployment as the
 migration path.
 
+**A consequence, not the reason.** Because the trust assumption lives behind
+[one function](#the-authorization-boundary), replacing the issuer's signature with
+verification of a cryptographic proof means rewriting that function's body — and
+with `upgrade` present, that substitution can now be applied to *this* deployment
+instead of requiring a new one. Every week issued here would keep its id, its
+commitment, and its attestation across that change.
+
+This is worth stating because it makes an existing claim concrete, but it is not
+why the function exists and it should not be read as preparation for Phase 2. No
+proof machinery is in this repository, none is scaffolded, and Phase 2 does not
+depend on this: it is separately funded and could deploy fresh with new inventory.
+What `upgrade` buys there is continuity, not capability.
+
 ### The issuer still can
 
 Stated plainly, because understating it would be the most damaging thing this
