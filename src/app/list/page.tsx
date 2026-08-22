@@ -142,9 +142,25 @@ export default function ListScreen() {
     setFilter("yours");
   }, [address, counts.yours]);
 
+  /**
+   * A week the issuer will not approve a transfer of, whatever its offer says.
+   *
+   * Listing needs nobody's approval — the contract asks only the holder — so a
+   * week can be advertised while every transfer of it would be declined. That is
+   * the right division of power, but it puts a dead offer in the shop window.
+   */
+  const isBlocked = (right: RightRow): boolean => right.fees === null || !right.fees.current;
+
   // Filtering to a set that turns out to be empty leaves a blank page with no
   // explanation, so the empty case is rendered rather than fallen into.
-  const shown = (inventory?.rights ?? []).filter((right) => matches(right, filter));
+  const shown = (inventory?.rights ?? [])
+    .filter((right) => matches(right, filter))
+    // Blocked weeks sort last rather than being hidden. Hiding them would be a
+    // second kind of dishonesty — they are genuinely in the registry, and their
+    // holder needs to see the card in order to act on it.
+    .sort((a, b) => Number(isBlocked(a)) - Number(isBlocked(b)));
+
+  const blockedShown = shown.filter(isBlocked).length;
 
   const changeOffer = useCallback(
     async (rightId: number, action: "list" | "unlist", termSecs: number | null) => {
@@ -303,6 +319,16 @@ export default function ListScreen() {
             ))}
           </div>
 
+          {blockedShown > 0 ? (
+            <div className="note warn">
+              {blockedShown === 1 ? "One week here cannot" : `${blockedShown} weeks here cannot`}{" "}
+              change hands yet: the issuer will decline a transfer until its maintenance fees are
+              settled, or until it has an attestation at all. Publishing an offer needs nobody&apos;s
+              approval, so a week can be advertised before it is transferable —{" "}
+              {blockedShown === 1 ? "it is" : "they are"} sorted last and tagged on the card.
+            </div>
+          ) : null}
+
           {shown.length === 0 ? (
             <div className="note">
               {filter === "yours"
@@ -331,7 +357,7 @@ export default function ListScreen() {
               // A week nothing vouches for is as untransferable as one in
               // arrears, so the two are treated alike rather than only the loud
               // one being shown.
-              const blocked = right.fees === null || !right.fees.current;
+              const blocked = isBlocked(right);
               // The dues year runs to the day before the use year closes.
               const defaultThrough = unixToIsoDate(right.validity.until - 86_400);
 
