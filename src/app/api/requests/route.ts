@@ -17,10 +17,16 @@
  * Checked: the right exists, it is currently offered, and the asker is not
  * already its holder. All three are read from the contract, not from the body.
  *
- * Not checked: whether the issuer would approve the resulting transfer. A week in
- * arrears can be asked for, because the holder may settle the fees precisely
- * *because* somebody asked. Refusing here would make the arrears self-fulfilling.
- * The registry already marks such weeks, and the transfer itself would decline.
+ * Also refused: an offer on a week that is out on a term. Only the account holding
+ * that term can have listed it, so the offer is a sub-let, which this issuer
+ * declines to approve — the account holding title is not consulted by `transfer`
+ * and would have no say. Such a request could never be accepted.
+ *
+ * Not checked: whether the issuer would approve the resulting transfer on fee
+ * grounds. A week in arrears **can** be asked for, because the holder may settle
+ * the fees precisely *because* somebody asked. Refusing there would make the
+ * arrears self-fulfilling. The registry marks such weeks, and the transfer itself
+ * would decline until they are paid.
  */
 
 import { randomUUID } from "node:crypto";
@@ -70,6 +76,23 @@ export async function POST(request: Request): Promise<Response> {
     }
     if (row.holding.holder === caller) {
       return Response.json({ error: "you already hold this week" }, { status: 409 });
+    }
+    // A week out on a term can only have been listed by the account holding that
+    // term, so any offer on one is a sub-let. The contract permits it and this
+    // issuer declines to approve it, which means such a request could never be
+    // accepted — recording one would only invite an ask that goes nowhere. The
+    // screen hides the control; this is what enforces it.
+    if (row.holding.expiresAt !== null) {
+      return Response.json(
+        {
+          error:
+            "this offer is a sub-let — the account offering it holds the week on a term, not " +
+            "by title, and this issuer does not approve sub-lets",
+          term_ends: row.holding.expiresAt,
+          title_holder: row.right.holdings[0]?.holder ?? null,
+        },
+        { status: 409 },
+      );
     }
 
     const existing = openRequestBy(rightId, caller);

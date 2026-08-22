@@ -182,6 +182,21 @@ export default function ListScreen() {
     setFilter("yours");
   }, [address, counts.yours]);
 
+  /** Arrears, or no attestation at all: the issuer will decline a transfer. */
+  const feesBlock = (right: RightRow): boolean => right.fees === null || !right.fees.current;
+
+  /**
+   * An offer that is a sub-let, and so will be declined whoever asks.
+   *
+   * A week out on a term can only be listed by the account holding that term —
+   * `list` asks the contract for the effective holder — so an offer on a
+   * rented-out week is always the renter passing it on. The contract permits
+   * that; this issuer does not approve it, because the account holding title is
+   * not consulted by `transfer` and would have no say. Sub-letting is a question
+   * for a later phase, so nobody should be invited to ask for one.
+   */
+  const isSublet = (right: RightRow): boolean => right.rented_out && right.listing !== null;
+
   /**
    * A week the issuer will not approve a transfer of, whatever its offer says.
    *
@@ -189,7 +204,7 @@ export default function ListScreen() {
    * week can be advertised while every transfer of it would be declined. That is
    * the right division of power, but it puts a dead offer in the shop window.
    */
-  const isBlocked = (right: RightRow): boolean => right.fees === null || !right.fees.current;
+  const isBlocked = (right: RightRow): boolean => feesBlock(right) || isSublet(right);
 
   // Filtering to a set that turns out to be empty leaves a blank page with no
   // explanation, so the empty case is rendered rather than fallen into.
@@ -479,10 +494,11 @@ export default function ListScreen() {
           {blockedShown > 0 ? (
             <div className="note warn">
               {blockedShown === 1 ? "One week here cannot" : `${blockedShown} weeks here cannot`}{" "}
-              change hands yet: the issuer will decline a transfer until its maintenance fees are
-              settled, or until it has an attestation at all. Publishing an offer needs nobody&apos;s
-              approval, so a week can be advertised before it is transferable —{" "}
-              {blockedShown === 1 ? "it is" : "they are"} sorted last and tagged on the card.
+              change hands: the issuer declines a transfer while maintenance fees are outstanding,
+              while it has attested nothing at all, or when the offer is a sub-let. Publishing an
+              offer needs nobody&apos;s approval, so a week can be advertised whether or not it is
+              transferable — {blockedShown === 1 ? "it is" : "they are"} sorted last, and each card
+              says which it is.
             </div>
           ) : null}
 
@@ -514,7 +530,10 @@ export default function ListScreen() {
               // A week nothing vouches for is as untransferable as one in
               // arrears, so the two are treated alike rather than only the loud
               // one being shown.
-              const blocked = isBlocked(right);
+              const blocked = feesBlock(right);
+              // An offer on a week that is out on a term is a sub-let, which this
+              // issuer declines and which no later phase has committed to.
+              const sublet = isSublet(right);
               // Asks for this week that are still open: incoming when it is
               // yours, outgoing when it is not.
               const asks = requests.incoming.filter(
@@ -726,7 +745,16 @@ export default function ListScreen() {
                     given to a stranger, and by design nobody — the issuer least of
                     all — can bring it back.
                   */}
-                  {right.listing && !mine && authenticated ? (
+                  {sublet && !mine ? (
+                    <div className="note warn" style={{ marginTop: "0.7rem" }}>
+                      This offer is a sub-let: the account offering it holds the week on a term
+                      rather than by title. The contract permits that, but this issuer does not
+                      approve it — the account holding title is not consulted by a transfer and
+                      would have no say in it. Nothing to ask for here.
+                    </div>
+                  ) : null}
+
+                  {right.listing && !sublet && !mine && authenticated ? (
                     <div style={{ marginTop: "0.7rem" }}>
                       {myRequest ? (
                         <div className="row" style={{ gap: "0.5rem", alignItems: "center" }}>
@@ -776,7 +804,7 @@ export default function ListScreen() {
                           </span>
                           <button
                             className="primary"
-                            disabled={busyRight === right.id || blocked}
+                            disabled={busyRight === right.id || blocked || sublet}
                             onClick={() => void acceptRequest(req)}
                           >
                             Accept
@@ -789,10 +817,11 @@ export default function ListScreen() {
                           </button>
                         </div>
                       ))}
-                      {blocked ? (
+                      {blocked || sublet ? (
                         <p className="muted" style={{ marginBottom: 0 }}>
-                          Accepting is disabled while this week cannot change hands — the issuer
-                          would decline the transfer. Settle the fees first; the requests keep.
+                          {sublet
+                            ? "Accepting is disabled because passing on a week you hold on a term is a sub-let, which this issuer does not approve."
+                            : "Accepting is disabled while this week cannot change hands — the issuer would decline the transfer. Settle the fees first; the requests keep."}
                         </p>
                       ) : null}
                     </fieldset>
