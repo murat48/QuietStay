@@ -68,6 +68,8 @@ const TEMPLATE = {
     country: "Portugal",
     unit: "Villa 14B",
     bedrooms: 2,
+    sleeps: 4,
+    features: ["sea view", "pool", "wifi"],
   },
   week: {
     check_in: "2026-10-03",
@@ -210,6 +212,20 @@ export default function IssueScreen() {
   const setNumberField = useCallback(
     (path: string, raw: string) => {
       setField(path, raw.trim() === "" ? null : Number(raw));
+    },
+    [setField],
+  );
+
+  // Features are a list in the record but a single box on the form, because
+  // typing "sea view, pool" is how anyone would write it. An emptied box drops
+  // the key rather than committing an empty array to the record forever.
+  const setListField = useCallback(
+    (path: string, raw: string) => {
+      const items = raw
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      setField(path, items.length > 0 ? items : undefined);
     },
     [setField],
   );
@@ -445,12 +461,43 @@ export default function IssueScreen() {
                         onChange={(event) => setNumberField("resort.bedrooms", event.target.value)}
                       />
                     </div>
+                    <div className="field">
+                      <label htmlFor="resort_sleeps">Sleeps</label>
+                      <input
+                        id="resort_sleeps"
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={text("resort.sleeps")}
+                        // Optional, so an emptied box drops the key rather than
+                        // writing null and failing validation on a field the
+                        // schema does not require.
+                        onChange={(event) =>
+                          setField(
+                            "resort.sleeps",
+                            event.target.value.trim() === ""
+                              ? undefined
+                              : Number(event.target.value),
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="resort_features">Features — comma separated</label>
+                    <input
+                      id="resort_features"
+                      value={text("resort.features").split(",").join(", ")}
+                      onChange={(event) => setListField("resort.features", event.target.value)}
+                    />
                   </div>
                   <p className="muted">
-                    The town and country are published on the listing, signed by you, because a
-                    registry that cannot say where a week is is one nobody can shop. The resort name
-                    and the unit are not — those name one apartment, and through the registry one
-                    person. They stay in the record and go to a buyer once, on request.
+                    The town, the size and the features are published on the listing, signed by you,
+                    because nobody takes a week without knowing where it is, how many it sleeps and
+                    what it offers. The resort name and the unit are not — those name one apartment,
+                    and through the registry one person. They stay in the record and go to a buyer
+                    once, on request. Keep the features to what the place offers: no address, no
+                    building name.
                   </p>
                 </fieldset>
 

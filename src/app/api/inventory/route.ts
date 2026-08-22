@@ -17,15 +17,17 @@
  * is declined, and discovering that only at signing time would be a poor way to
  * learn it.
  *
- * `region`, because a commitment is a hash of the whole record: nothing in it can
- * be revealed piecemeal, so a listing built from the ledger alone cannot say
- * where the week is. A buyer who cannot tell Portugal from Florida cannot decide
- * whose record to ask for, and the reveal step never begins.
+ * `property`, because a commitment is a hash of the whole record: nothing in it
+ * can be revealed piecemeal, so a listing built from the ledger alone can say
+ * when a week is and nothing else — not where, not how many it sleeps, not what
+ * it offers. Nobody takes a week on those terms, and the reveal step that would
+ * answer those questions never begins, because a buyer cannot tell which week to
+ * ask about.
  *
  * What is deliberately not served with either: the amount owed, and the resort or
- * unit. Both live in the off-chain record, which has no endpoint. A boolean, a
- * date, and a country are what a counterparty needs in order to ask; the rest is
- * disclosed once, to them, in exchange for their interest.
+ * unit. Both live in the off-chain record, which has no endpoint. What a
+ * counterparty needs in order to ask is a town, a size, a boolean and a date; the
+ * rest is disclosed once, to them, in exchange for their interest.
  */
 
 import { loadAttestation } from "@/lib/attestation-store";
@@ -79,11 +81,13 @@ export async function GET(): Promise<Response> {
                 paid_through: attestation.payload.fees_paid_through,
               }
             : null,
-          // Also from the attestation, and also deliberately coarse. Without it a
-          // buyer cannot tell one week from another well enough to know whose
-          // record to ask for; with more than it, the listing would identify the
-          // unit and defeat the point of keeping the record off the ledger.
-          region: attestation?.payload.region ?? null,
+          // Also from the attestation: where the week is, how many it sleeps, and
+          // what it offers. Without this a buyer cannot tell one week from
+          // another well enough to know whose record to ask for; with more than
+          // this the listing would name the apartment and defeat the point of
+          // keeping the record off the ledger. Named `property` so it is not
+          // confused with `listing` above, which is the offer, not the place.
+          property: attestation?.payload.property ?? null,
         };
       }),
     });

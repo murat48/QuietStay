@@ -33,8 +33,17 @@ interface RightRow {
   listing: { by: string; term_secs: number | null; listed_at: number } | null;
   /** From the issuer's attestation, not the ledger. `null` = never attested. */
   fees: { current: boolean; paid_through: string } | null;
-  /** Also from the attestation, and coarse on purpose. `null` = never attested. */
-  region: string | null;
+  /**
+   * What the issuer publishes about the place, from the attestation rather than
+   * the ledger. `null` = never attested, which is the state a week is in before
+   * anyone has vouched for it and which blocks its transfer anyway.
+   */
+  property: {
+    region: string;
+    bedrooms: number;
+    sleeps?: number;
+    features?: string[];
+  } | null;
 }
 
 interface Inventory {
@@ -160,12 +169,13 @@ export default function ListScreen() {
         is.
       </p>
       <p className="lede" style={{ marginTop: "-1rem" }}>
-        <strong>Where a week is comes from the issuer, not the chain.</strong> A commitment covers
-        the whole record, so no single field of it can be revealed and checked on its own — and a
-        listing that cannot say what country it is in is not one anybody can shop. So the issuer
-        signs a coarse location alongside the fee status. The resort, the unit and the deed stay in
-        the record, and the seller discloses those once, to a buyer, who can then check the whole
-        document against the hash below.
+        <strong>What the place is comes from the issuer, not the chain.</strong> A commitment covers
+        the whole record, so no single field of it can be revealed and checked on its own — which
+        would leave a registry that says when a week is and nothing else. Nobody takes a week
+        without knowing where it is, how many it sleeps, and what it offers, so the issuer signs
+        those alongside the fee status. The town but not the resort, what the place is but not which
+        apartment: the resort, the unit and the deed stay in the record, and the seller discloses
+        those once, to a buyer, who can then check the whole document against the hash below.
       </p>
       <p className="lede" style={{ marginTop: "-1rem" }}>
         <strong>Publishing an offer needs nobody&apos;s approval.</strong> If a week below is yours,
@@ -256,20 +266,56 @@ export default function ListScreen() {
 
                   <dl className="facts" style={{ marginTop: "0.6rem" }}>
                     {/*
-                      First, because it is the first thing anyone shopping asks
-                      and the one fact the ledger cannot supply — a commitment
-                      hashes the whole record, so no part of it can be revealed
-                      on its own. This comes from the issuer's signed attestation
-                      instead, which is why it is a country and not an address.
+                      First, because these are the first things anyone shopping
+                      asks and none of them can come from the ledger — a
+                      commitment hashes the whole record, so no part of it can be
+                      revealed on its own. They come from the issuer's signed
+                      attestation instead, which is why it is a town and not an
+                      address.
                     */}
                     <dt>Where</dt>
                     <dd>
-                      {right.region === null ? (
-                        <span className="muted">the issuer has attested no location</span>
+                      {right.property !== null ? (
+                        right.property.region
+                      ) : right.fees === null ? (
+                        // No attestation at all. Already reported by the tag and
+                        // the note below, and the reason a transfer would be
+                        // declined, so this only needs to not claim otherwise.
+                        <span className="muted">
+                          nothing has been attested for this week yet
+                        </span>
                       ) : (
-                        right.region
+                        // Attested, but before the issuer published descriptions.
+                        // A different thing from the above, and worth saying so:
+                        // this week can still change hands.
+                        <span className="muted">
+                          the issuer has vouched for this week but never described it
+                        </span>
                       )}
                     </dd>
+                    {right.property === null ? null : (
+                      <>
+                        <dt>Sleeps</dt>
+                        <dd>
+                          {right.property.sleeps === undefined ? (
+                            <span className="muted">not stated</span>
+                          ) : (
+                            `${right.property.sleeps} people`
+                          )}
+                          <span className="muted">
+                            {" "}
+                            · {right.property.bedrooms}{" "}
+                            {right.property.bedrooms === 1 ? "bedroom" : "bedrooms"}
+                          </span>
+                        </dd>
+                        {right.property.features?.length ? (
+                          <>
+                            <dt>Features</dt>
+                            <dd>{right.property.features.join(" · ")}</dd>
+                          </>
+                        ) : null}
+                      </>
+                    )}
                     <dt>Week</dt>
                     <dd>
                       {formatDate(right.week.start)} → {formatDate(right.week.end)}

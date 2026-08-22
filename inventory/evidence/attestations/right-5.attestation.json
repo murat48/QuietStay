@@ -7,15 +7,25 @@
     "commitment": "aa9e7db80c861ca2d9a546a07340066aa547d1bd219befb4aea11d94fe4605c9",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "week_valid": true,
+    "property": {
+      "region": "Lagos, Portugal",
+      "bedrooms": 2,
+      "sleeps": 4,
+      "features": [
+        "sea view",
+        "pool",
+        "wifi"
+      ]
+    },
     "maintenance_fees_current": true,
     "fees_paid_through": "2026-12-31",
-    "issued_at": "2026-08-20T22:29:17.200Z",
-    "not_before": "2026-08-20T22:29:17.200Z",
-    "expires_at": "2027-08-20T22:29:17.200Z"
+    "issued_at": "2026-08-22T09:26:24.018Z",
+    "not_before": "2026-08-22T09:26:24.018Z",
+    "expires_at": "2027-08-22T09:26:24.018Z"
   },
   "signature": {
     "alg": "ed25519",
     "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
-    "value": "JPdgOwI+Okb3vU6Et+REOQEaOlI94UGtRXAde9dbU08zFaoqeF+rizMZn9DbHH/6dm4NFUdRcnuxJSwXXy57Dw=="
+    "value": "ARi3ul6fy0knFF/mQeJkzbLUQuxgU1ex3rQYNwAGjThTvWNhuSXWneFCmqJx6oZx5twl6hqwcveV7uhG6J0TBA=="
   }
 }

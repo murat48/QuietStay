@@ -34,13 +34,13 @@ verifies exactly what needs verifying — that the seller is the authorized hold
 that the week is clean — and no document, name, or resort ever reaches the public
 ledger.
 
-The attestation also carries a **coarse region** — the town and country, `"Lagos,
-Portugal"` — because a hash covers the whole record and so no part of it can be
-revealed on its own: a registry built from the ledger alone cannot say where a week
-is, and one nobody can search is not a marketplace. The town is public and signed;
-the resort, the unit and the deed are disclosed once, to a buyer, who checks the
-whole document against the hash. A town shares its name with thousands of owners; a
-resort plus a unit names one apartment.
+The attestation also carries a **public description** — town and country, bedrooms,
+how many it sleeps, what it offers — because a hash covers the whole record and so
+no part of it can be revealed on its own. A registry built from the ledger alone can
+say when a week is and nothing else, and nobody takes a week on those terms. The
+line falls at the town: a town shares its name with thousands of owners, while a
+resort plus a unit names one apartment. So the resort, the unit and the deed are
+disclosed once, to a buyer, who checks the whole document against the hash.
 
 A successful sale transaction shows, in full: two account addresses, an integer id,
 `null`, and a 32-byte hash. That is checked against the real chain by

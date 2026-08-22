@@ -7,16 +7,26 @@
     "commitment": "f50768340ae7065a4c7314c4064e6605feef598d9223f4b11a822cb3adc04f38",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "week_valid": true,
-    "region": "Schladming, Austria",
+    "property": {
+      "region": "Schladming, Austria",
+      "bedrooms": 2,
+      "sleeps": 6,
+      "features": [
+        "ski-in ski-out",
+        "sauna",
+        "fireplace",
+        "wifi"
+      ]
+    },
     "maintenance_fees_current": false,
     "fees_paid_through": "2025-12-31",
-    "issued_at": "2026-08-22T09:14:12.068Z",
-    "not_before": "2026-08-22T09:14:12.068Z",
-    "expires_at": "2027-08-22T09:14:12.068Z"
+    "issued_at": "2026-08-22T09:25:27.975Z",
+    "not_before": "2026-08-22T09:25:27.975Z",
+    "expires_at": "2027-08-22T09:25:27.975Z"
   },
   "signature": {
     "alg": "ed25519",
     "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
-    "value": "rGM5Cu+9tjJTxthC2pUjjA6SfrPswk2m7PsV+HYEo37z+w6GOdLF7/8q3rycmkcskJPWYey132etEX1v4YY9CQ=="
+    "value": "tgXPW+iGUDYznsTpgnEUafh9acRCXWWabEMP/NKCPllyxgqhcnJVnmqYJC0HrDQbs18+masuB1cwih+pMc77Cw=="
   }
 }

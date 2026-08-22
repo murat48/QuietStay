@@ -1,7 +1,8 @@
 # Issuer attestations: schema, signing key, and verification procedure
 
 An attestation is the issuer saying, in a form anyone can check: *this usage right
-is a real week, and it carries no unpaid maintenance fees.*
+is a real week, it carries no unpaid maintenance fees, and this is the place it
+gets you.*
 
 It is the one place Phase 1 rests on trusting the issuer, and it does so
 explicitly. Verifying an attestation proves the issuer **said** something. It does
@@ -62,7 +63,12 @@ See [`src/lib/attestation.ts`](../src/lib/attestation.ts).
     "commitment": "e8ad1bb9deff0137565e22278ed2e42d9b894b442930bf03b9db050e98b0d991",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "week_valid": true,
-    "region": "Lagos, Portugal",
+    "property": {
+      "region": "Lagos, Portugal",
+      "bedrooms": 2,
+      "sleeps": 4,
+      "features": ["sea view", "pool", "wifi"]
+    },
     "maintenance_fees_current": true,
     "fees_paid_through": "2026-12-31",
     "issued_at": "2026-08-13T12:53:04.000Z",
@@ -85,47 +91,52 @@ See [`src/lib/attestation.ts`](../src/lib/attestation.ts).
 | `commitment` | The specific off-chain record, as lowercase hex SHA-256. |
 | `issuer` | The issuer's account, which is also the signing key. |
 | `week_valid` | The issuer asserts this is a real, allocated interval. |
-| `region` | Coarse location, for the listing. Optional — see below. |
+| `property` | What the listing may publish about the place. Optional — see below. |
 | `maintenance_fees_current` | The issuer asserts no fees are outstanding. |
 | `fees_paid_through` | ISO date fees are settled through. |
 | `not_before` / `expires_at` | When the attestation may be relied on. |
 
-### Why the region is in here
+### Why the property description is in here
 
 A commitment is a hash of the whole record, so no single field of it can be
 revealed and checked on its own: to verify that a week is in Portugal you must be
 given the deed, the unit and the owner's name as well. A registry built from the
-ledger alone therefore cannot say where anything is, and a buyer who cannot tell
-one week from another has no way to know whose record to ask for.
+ledger alone can therefore say *when* a week is and nothing else — not where, not
+how many it sleeps, not what it offers. Nobody takes a week on those terms, and
+the disclosure that would answer those questions never begins, because a buyer
+cannot tell which week to ask about.
 
-So the region rides in the attestation, where it is signed and bound to one right
-— the same standing as the fee claim a buyer already relies on.
+So the description rides in the attestation, where it is signed and bound to one
+right — the same standing as the fee claim a buyer already relies on.
 
-It names the **town and the country**, and stops there. That is the line: a town
-is enough to shop in and shares its name with thousands of owners, whereas the
-resort plus the unit names one apartment and, through the members' registry, one
-person. The resort, the unit and the deed stay in the record and are disclosed
-once, to a counterparty, at the point of sale.
+**Where the line falls.** `region` is the town and the country, and stops there: a
+town shares its name with thousands of owners, whereas the resort plus the unit
+names one apartment and, through the members' registry, one person. `bedrooms`,
+`sleeps` and `features` say what the place *is*, which every rental listing in the
+world says out loud and which identifies nobody. The resort name, the unit, the
+deed and the owner stay in the record and are disclosed once, to a counterparty,
+at the point of sale. Nothing in `features` may narrow the property to one
+apartment — no address, no building name.
 
-`npm run attest` derives the value from the record's `resort.city` and
-`resort.country`, so what is published cannot drift from the committed document by
-inattention, and a buyer later shown the record can confirm the two agree.
-`--region "Town, Country"` overrides it. That override is signed but **not covered
-by the commitment**, so the script warns when it is used: it is the issuer's word
-alone. Its one legitimate use is a record committed before `resort.city` existed,
-which cannot gain the field — editing it would break the commitment — and which
-would otherwise be stuck at a bare country. The four sample weeks are exactly that
-case.
+`npm run attest` derives the whole block from the record via `propertyFacts()`, so
+what is published cannot drift from the committed document by inattention, and a
+buyer later shown the record can confirm the two agree. `--region`, `--sleeps` and
+`--features` override it. An override is signed but **not covered by the
+commitment**, so the script warns every time it is used: it is the issuer's word
+alone. Its one legitimate use is a record committed before these fields existed,
+which cannot gain them — editing it would break the commitment — and which would
+otherwise be listed as a bare country with nothing else said about it. The four
+sample weeks and the three evidence weeks are exactly that case.
 
-It is optional, and absence is authentic rather than ambiguous: an attestation
-signed before the field existed has no `region` key and still verifies, while
-stripping the key from one that has it breaks the signature. A verifier that finds
-no region should read it as *the issuer vouched for no location* — which, as with
-fees, is not the same as there being none.
+The block is optional, and absence is authentic rather than ambiguous: an
+attestation signed before it existed has no `property` key and still verifies,
+while stripping the key from one that has it breaks the signature. A verifier that
+finds none should read it as *the issuer described nothing* — which, as with fees,
+is not the same as there being nothing to describe.
 
-Phase 2's per-field commitments would let a seller prove the region against the
-ledger directly, with no issuer to trust. Until then this is the honest version,
-and it names whose word it rests on.
+Phase 2's per-field commitments would let a seller prove these against the ledger
+directly, with no issuer to trust. Until then this is the honest version, and it
+names whose word it rests on.
 
 ### Binding — why one attestation cannot be presented for another week
 

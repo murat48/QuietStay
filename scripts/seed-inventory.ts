@@ -26,8 +26,8 @@ import { buildIssueTx, prepare, readNextId, signWith, submit } from "../src/lib/
 import {
   feesAreCurrent,
   onChainWindows,
+  propertyFacts,
   recordCommitment,
-  regionLabel,
   unixToIsoDate,
   validateRecord,
   type OwnershipRecord,
@@ -110,7 +110,7 @@ async function main(): Promise<void> {
       rightId,
       commitment,
       weekValid: true,
-      region: regionLabel(record),
+      property: propertyFacts(record),
       feesCurrent: clean,
       feesPaidThrough: record.maintenance_fees.paid_through,
       validForDays: 365,

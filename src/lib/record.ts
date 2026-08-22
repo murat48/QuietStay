@@ -50,6 +50,21 @@ export interface OwnershipRecord {
     /** Unit or villa identifier. */
     unit: string;
     bedrooms: number;
+    /**
+     * How many the unit sleeps. Optional, for the same reason `city` is.
+     *
+     * Bedrooms alone does not answer the question anyone booking actually asks,
+     * because a two-bedroom villa may sleep four or eight.
+     */
+    sleeps?: number;
+    /**
+     * Short public descriptors — `["sea view", "pool", "wifi"]`.
+     *
+     * What the place offers, never where it is: no address, no building name, no
+     * unit number. These are published, so anything that narrows the property to
+     * one apartment does not belong here.
+     */
+    features?: string[];
   };
   week: {
     /** ISO date, first night. */
@@ -203,6 +218,18 @@ export function validateRecord(value: unknown): OwnershipRecord {
   if (resort.city !== undefined && (typeof resort.city !== "string" || !resort.city.trim())) {
     return fail("resort.city, when given, must be a non-empty string");
   }
+  if (
+    resort.sleeps !== undefined &&
+    (!Number.isInteger(resort.sleeps) || (resort.sleeps as number) < 1)
+  ) {
+    return fail("resort.sleeps, when given, must be a whole number of people, at least 1");
+  }
+  if (resort.features !== undefined) {
+    if (!Array.isArray(resort.features)) return fail("resort.features, when given, must be a list");
+    if (resort.features.some((f) => typeof f !== "string" || !f.trim())) {
+      return fail("every entry in resort.features must be a non-empty string");
+    }
+  }
 
   const week = record.week as OwnershipRecord["week"] | undefined;
   if (!week) return fail("week is required");
@@ -253,20 +280,44 @@ export function recordCommitment(record: OwnershipRecord): Promise<string> {
 }
 
 /**
- * The coarse location a listing may publish, drawn from the committed record.
+ * What a listing may publish about the property, drawn from the committed record.
  *
- * `"Faro, Portugal"`, or just `"Portugal"` for a record predating `resort.city`.
- * Deliberately stops short of the resort: a town is enough to find a week in and
- * shares its name with many owners, whereas the resort plus the unit names one
- * apartment and, through the registry, one person.
+ * Somebody deciding whether to take a week needs three things the ledger cannot
+ * give them: where it is, how many it sleeps, and what it offers. None of it is
+ * on chain, because a commitment hashes the whole record and no field of it can
+ * be revealed and checked alone — so the issuer signs this block instead, and it
+ * travels in the attestation.
  *
- * The published value comes from here rather than from the issuer's imagination
- * so that it cannot drift from the document the ledger committed to. A buyer who
- * is later shown the record can confirm the two agree.
+ * Where the line falls. `region` is the town and country, not the resort: a town
+ * shares its name with thousands of owners, while the resort plus the unit names
+ * one apartment and, through the members' registry, one person. `bedrooms`,
+ * `sleeps` and `features` describe what the place is, which every rental listing
+ * in the world says out loud and which identifies nobody. The resort name, the
+ * unit, the deed and the owner stay in the record.
+ *
+ * Deriving it here, rather than letting an issuer type it beside the record, is
+ * what keeps the published facts from drifting from the document the ledger
+ * committed to: a buyer later shown the record can confirm the two agree.
  */
-export function regionLabel(record: OwnershipRecord): string {
+export interface PropertyFacts {
+  /** `"Lagos, Portugal"`, or just `"Portugal"` for a record predating `city`. */
+  region: string;
+  bedrooms: number;
+  sleeps?: number;
+  features?: string[];
+}
+
+export function propertyFacts(record: OwnershipRecord): PropertyFacts {
   const city = record.resort.city?.trim();
-  return city ? `${city}, ${record.resort.country}` : record.resort.country;
+  const features = record.resort.features?.map((f) => f.trim()).filter(Boolean);
+  return {
+    region: city ? `${city}, ${record.resort.country}` : record.resort.country,
+    bedrooms: record.resort.bedrooms,
+    // Omitted rather than sent as `undefined`: canonical JSON has no
+    // representation for it, and these values are about to be signed.
+    ...(record.resort.sleeps ? { sleeps: record.resort.sleeps } : {}),
+    ...(features?.length ? { features } : {}),
+  };
 }
 
 /**

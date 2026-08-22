@@ -26,8 +26,8 @@ import {
   RecordValidationError,
   feesAreCurrent,
   onChainWindows,
+  propertyFacts,
   recordCommitment,
-  regionLabel,
   validateRecord,
 } from "@/lib/record";
 import { authenticatedAccount } from "@/lib/sep10";
@@ -90,9 +90,9 @@ export async function POST(request: Request): Promise<Response> {
       rightId,
       commitment,
       weekValid: true,
-      // The town and country, not the resort: enough to find the week, not
-      // enough to identify the unit or its owner.
-      region: regionLabel(record),
+      // Where it is, how big it is, what it offers — everything someone
+      // deciding to take the week needs, and nothing that names the apartment.
+      property: propertyFacts(record),
       feesCurrent: clean,
       feesPaidThrough: record.maintenance_fees.paid_through,
       validForDays: 365,

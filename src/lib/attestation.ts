@@ -6,25 +6,26 @@
  * part of the world.* It is the one place Phase 1 rests on trusting the issuer,
  * and it does so explicitly.
  *
- * ## Why the region is here and not in the listing
+ * ## Why the property description is here and not in the listing
  *
  * A commitment is a hash of the whole record, so revealing one field of it proves
  * nothing: a buyer cannot check `"Portugal"` against a digest without being given
- * everything the digest covers. That leaves a marketplace where nobody can tell
- * where anything is until they have already asked the seller for the deed.
+ * everything the digest covers. A registry built from the ledger alone can say
+ * when a week is and nothing else — not where, not how many it sleeps, not what
+ * it offers. Nobody takes a week on those terms.
  *
- * So the region rides here instead, where it is signed, bound to one right, and
- * verifiable — the same standing as the fee claim a buyer already relies on.
+ * So the public description rides here instead, where it is signed, bound to one
+ * right, and verifiable — the same standing as the fee claim a buyer already
+ * relies on. `propertyFacts()` derives it from the committed record, so what is
+ * published cannot drift from the document, and a buyer later shown the record
+ * can confirm the two agree.
  *
- * It names the town and the country and stops there. A town is enough to shop in
- * and shares its name with thousands of owners; the resort plus the unit names one
- * apartment and, through the members' registry, one person. The resort, the unit,
- * and the deed stay in the record and are disclosed once, to a counterparty, at
- * the point of sale.
+ * Where the line falls is set out on `PropertyFacts` in `record.ts`: the town but
+ * not the resort, what the place is but not which apartment it is.
  *
- * Phase 2's per-field commitments would let a seller prove the region against the
- * ledger without the issuer vouching for it at all; until then this is the honest
- * version, and it says out loud whose word it rests on.
+ * Phase 2's per-field commitments would let a seller prove these against the
+ * ledger without the issuer vouching for them at all; until then this is the
+ * honest version, and it says out loud whose word it rests on.
  *
  * ## What it is not
  *
@@ -62,6 +63,7 @@
 import { Keypair } from "@stellar/stellar-sdk";
 
 import { canonicalBytes, digestsMatch, type JsonValue } from "./canonical";
+import type { PropertyFacts } from "./record";
 
 export const ATTESTATION_SCHEMA = "quietstay.attestation.v1";
 export const SIGNING_PREFIX = "QuietStay-Attestation-v1:";
@@ -81,14 +83,14 @@ export interface AttestationPayload {
   /** The issuer asserts the week is a real, allocated interval. */
   week_valid: boolean;
   /**
-   * Town and country — `"Lagos, Portugal"` — public so a week can be found
-   * without disclosing the resort, the unit, or the deed.
+   * What a listing may publish about the property: town and country, bedrooms,
+   * how many it sleeps, what it offers. Never the resort, the unit, or the deed.
    *
    * Optional because attestations signed before this field existed must keep
    * verifying: absence is authentic — stripping the key from a payload that had
    * one breaks the signature.
    */
-  region?: string;
+  property?: PropertyFacts;
   /** The issuer asserts no maintenance fees are outstanding. */
   maintenance_fees_current: boolean;
   /** ISO date fees are settled through. */
@@ -126,8 +128,8 @@ export interface AttestationTerms {
   rightId: number;
   commitment: string;
   weekValid: boolean;
-  /** Coarse location. Omitted rather than signed empty when there is none. */
-  region?: string;
+  /** Public property description. Omitted, not blank, when there is none. */
+  property?: PropertyFacts;
   feesCurrent: boolean;
   feesPaidThrough: string;
   /** How long the attestation may be relied on. */
@@ -150,8 +152,8 @@ export function signAttestation(issuer: Keypair, terms: AttestationTerms): Attes
     issuer: issuer.publicKey(),
     week_valid: terms.weekValid,
     // Spread rather than assigned: canonical JSON has no representation for
-    // `undefined`, so an absent region has to be an absent key.
-    ...(terms.region ? { region: terms.region } : {}),
+    // `undefined`, so an absent description has to be an absent key.
+    ...(terms.property ? { property: terms.property } : {}),
     maintenance_fees_current: terms.feesCurrent,
     fees_paid_through: terms.feesPaidThrough,
     issued_at: now.toISOString(),

@@ -19,8 +19,8 @@ import { buildIssueTx, prepare, readNextId, signWith, submit } from "../../src/l
 import {
   feesAreCurrent,
   onChainWindows,
+  propertyFacts,
   recordCommitment,
-  regionLabel,
   validateRecord,
   type OwnershipRecord,
 } from "../../src/lib/record";
@@ -81,7 +81,7 @@ export async function issueFromRecord(
     rightId,
     commitment,
     weekValid: true,
-    region: regionLabel(record),
+    property: propertyFacts(record),
     feesCurrent: clean,
     feesPaidThrough: record.maintenance_fees.paid_through,
     validForDays: 365,
@@ -131,6 +131,8 @@ export function evidenceRecord(params: {
       country: "Portugal",
       unit: params.unit,
       bedrooms: 2,
+      sleeps: 4,
+      features: ["sea view", "pool", "wifi"],
     },
     week: {
       check_in: params.checkIn,

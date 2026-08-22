@@ -33,15 +33,22 @@
  *
  * The same restatement is available to the issuer in the app, on the list screen.
  *
- * ## The region
+ * ## The public description
  *
- * Defaults to the record's country and needs no flag. `--region "Algarve,
- * Portugal"` publishes something narrower, which is worth doing where a country
- * is too big to shop in and too many resorts share it to identify one.
+ * Where the week is, how many it sleeps and what it offers are derived from the
+ * record and need no flags. The overrides exist for one case: a record committed
+ * before those fields were in the schema cannot gain them, because editing it
+ * would break its commitment, and such a week would otherwise be listed as a
+ * bare country with nothing else said about it.
  *
- *   --region <text>             the coarse location shown on the listing
+ *   --region <text>             town and country, e.g. "Lagos, Portugal"
+ *   --sleeps <n>                how many people the unit sleeps
+ *   --features <a, b, c>        what it offers, comma separated
  *
- * Do not put the resort or the unit here: this is the field a buyer reads
+ * An overridden value is signed but not covered by the commitment, so a buyer
+ * holding the record cannot check it. The script says so every time.
+ *
+ * Do not put the resort or the unit in any of them: this is what a buyer reads
  * *before* being trusted with the record, and it is public to everyone.
  */
 
@@ -50,7 +57,7 @@ import { saveAttestation } from "../src/lib/attestation-store";
 import { digestsMatch } from "../src/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, issuerSecret } from "../src/lib/config";
 import { readRight } from "../src/lib/contract";
-import { feesAreCurrent, recordCommitment, regionLabel, validateRecord } from "../src/lib/record";
+import { feesAreCurrent, propertyFacts, recordCommitment, validateRecord } from "../src/lib/record";
 import { fatal, loadEnv, log, readJson } from "./lib/cli";
 import { Keypair } from "@stellar/stellar-sdk";
 
@@ -75,6 +82,8 @@ async function main(): Promise<void> {
 
   const paidThroughOverride = valued("--fees-paid-through");
   const regionOverride = valued("--region");
+  const rawSleeps = valued("--sleeps");
+  const rawFeatures = valued("--features");
 
   const positional = args.filter((a, i) => !a.startsWith("--") && !valueSlots.has(i));
   const [rawId, recordPath] = positional;
@@ -83,7 +92,7 @@ async function main(): Promise<void> {
     console.error(
       "usage: npm run attest -- <right_id> <record.json> " +
         "[--fees-current | --fees-outstanding] [--fees-paid-through YYYY-MM-DD] " +
-        "[--region <text>]",
+        "[--region <text>] [--sleeps <n>] [--features <a, b, c>]",
     );
     process.exit(1);
   }
@@ -94,7 +103,18 @@ async function main(): Promise<void> {
     throw new Error("--fees-paid-through needs an ISO date (YYYY-MM-DD)");
   }
   if (flags.has("--region") && !regionOverride?.trim()) {
-    throw new Error("--region needs a value, e.g. --region \"Algarve, Portugal\"");
+    throw new Error('--region needs a value, e.g. --region "Lagos, Portugal"');
+  }
+  const sleepsOverride = rawSleeps === undefined ? undefined : Number(rawSleeps);
+  if (flags.has("--sleeps") && (!Number.isInteger(sleepsOverride) || (sleepsOverride ?? 0) < 1)) {
+    throw new Error("--sleeps needs a whole number of people, at least 1");
+  }
+  const featuresOverride = rawFeatures
+    ?.split(",")
+    .map((f) => f.trim())
+    .filter(Boolean);
+  if (flags.has("--features") && !featuresOverride?.length) {
+    throw new Error('--features needs a comma-separated list, e.g. --features "pool, wifi"');
   }
 
   const rightId = Number(rawId);
@@ -168,23 +188,37 @@ async function main(): Promise<void> {
     );
   }
 
-  // Town and country from the record by default, so the published region cannot
+  // Everything the listing publishes, derived from the record so that it cannot
   // drift from the document the ledger committed to by mere inattention.
-  const derived = regionLabel(record);
-  const region = regionOverride?.trim() || derived;
-  if (regionOverride !== undefined) {
-    log.warn(`--region given: publishing "${region}", not "${derived}" as the record has it`);
+  const derived = propertyFacts(record);
+  const property = {
+    ...derived,
+    ...(regionOverride ? { region: regionOverride.trim() } : {}),
+    ...(sleepsOverride !== undefined ? { sleeps: sleepsOverride } : {}),
+    ...(featuresOverride ? { features: featuresOverride } : {}),
+  };
+
+  const overridden = (["region", "sleeps", "features"] as const).filter(
+    (key) => JSON.stringify(property[key]) !== JSON.stringify(derived[key]),
+  );
+  if (overridden.length > 0) {
+    log.warn(`overridden by flag: ${overridden.join(", ")}`);
     log.warn(
-      "an overridden region is the issuer's word alone — it is signed, but it is not covered " +
+      "an overridden value is the issuer's word alone — it is signed, but it is not covered " +
         "by the commitment, so a buyer holding the record cannot check it",
     );
-  } else if (record.resort.city === undefined) {
-    // Records committed before `resort.city` existed cannot gain one: editing
-    // them would break the commitment. Naming the town is still worth doing, and
-    // this is the flag that does it.
+  }
+
+  // Records committed before these fields existed cannot gain them: editing one
+  // would break its commitment. The flags are how such a week still gets a
+  // description worth reading.
+  const missing = (["city", "sleeps", "features"] as const).filter(
+    (key) => record.resort[key] === undefined,
+  );
+  if (missing.length > 0 && overridden.length === 0) {
     log.warn(
-      `this record predates resort.city, so only "${derived}" can be derived from it — ` +
-        'pass --region "Town, Country" to publish the town as well',
+      `this record predates resort.${missing.join(", resort.")} — pass ` +
+        "--region / --sleeps / --features to publish what it cannot supply",
     );
   }
 
@@ -194,7 +228,7 @@ async function main(): Promise<void> {
     rightId,
     commitment,
     weekValid: true,
-    region,
+    property,
     feesCurrent: clean,
     feesPaidThrough,
     validForDays: 365,
@@ -204,7 +238,9 @@ async function main(): Promise<void> {
 
   log.step("Signed");
   log.ok(`${path}`);
-  log.info(`region            ${region}`);
+  log.info(`region            ${property.region}`);
+  log.info(`sleeps            ${property.sleeps ?? "not stated"}`);
+  log.info(`features          ${property.features?.join(" · ") ?? "not stated"}`);
   log.info(`fees current      ${clean}`);
   log.info(`paid through      ${attestation.payload.fees_paid_through}`);
   log.info(`valid until       ${attestation.payload.expires_at}`);
