@@ -251,7 +251,7 @@ attest honestly" must not silently become "able to take a holder's week away."
 | Move or reassign a held right | `transfer` calls `from.require_auth()` independently of the approval. The issuer cannot produce the holder's signature. |
 | Freeze a right | There is no freeze, pause, lock, or blocklist function. |
 | Burn a holder's right | `burn` requires the title holder's own authorization. |
-| Claw back | This is a Soroban contract token, not a classic asset, so no clawback flag exists to enable. There is no equivalent function. Verify it yourself: the [contract interface](#privileged-surface-enumerated) has 19 functions and none of them is one. |
+| Claw back | This is a Soroban contract token, not a classic asset, so no clawback flag exists to enable. There is no equivalent function. Verify it yourself with `stellar contract info interface --id <CONTRACT_ID> --network testnet`: it lists 20 entry points, one of which is the constructor, and none of them is a clawback. |
 | Overwrite an existing right | `issue` takes its id from a monotonic counter the caller does not control, so it can only write to an id never used before. |
 | Alter a commitment, week, or validity window after issuance | No function writes those fields on an existing right. |
 Demonstrated on chain, not merely asserted: the issuer builds, signs, and pays for
