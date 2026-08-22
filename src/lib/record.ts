@@ -36,6 +36,16 @@ export interface OwnershipRecord {
   };
   resort: {
     name: string;
+    /**
+     * Town or city the resort is in.
+     *
+     * Optional in the type, required by the issue form. A record's commitment can
+     * never be recomputed once it is on the ledger, so records committed before
+     * this field existed cannot gain it — requiring it here would make those
+     * records fail validation and stop verifying, which is precisely the outcome
+     * the commitment exists to prevent. Everything issued from now on has one.
+     */
+    city?: string;
     country: string;
     /** Unit or villa identifier. */
     unit: string;
@@ -187,6 +197,12 @@ export function validateRecord(value: unknown): OwnershipRecord {
   if (!resort || typeof resort.name !== "string" || typeof resort.unit !== "string") {
     return fail("resort.name and resort.unit are required");
   }
+  // Absent is allowed — see the note on the field. Present but empty is not: a
+  // blank city would be published as "…, Portugal" with a dangling comma, and a
+  // record cannot be corrected after it is committed.
+  if (resort.city !== undefined && (typeof resort.city !== "string" || !resort.city.trim())) {
+    return fail("resort.city, when given, must be a non-empty string");
+  }
 
   const week = record.week as OwnershipRecord["week"] | undefined;
   if (!week) return fail("week is required");
@@ -234,6 +250,23 @@ export function recordCanonicalText(record: OwnershipRecord): string {
 /** The commitment that goes on the ledger for this record. */
 export function recordCommitment(record: OwnershipRecord): Promise<string> {
   return commit(record as unknown as JsonValue);
+}
+
+/**
+ * The coarse location a listing may publish, drawn from the committed record.
+ *
+ * `"Faro, Portugal"`, or just `"Portugal"` for a record predating `resort.city`.
+ * Deliberately stops short of the resort: a town is enough to find a week in and
+ * shares its name with many owners, whereas the resort plus the unit names one
+ * apartment and, through the registry, one person.
+ *
+ * The published value comes from here rather than from the issuer's imagination
+ * so that it cannot drift from the document the ledger committed to. A buyer who
+ * is later shown the record can confirm the two agree.
+ */
+export function regionLabel(record: OwnershipRecord): string {
+  const city = record.resort.city?.trim();
+  return city ? `${city}, ${record.resort.country}` : record.resort.country;
 }
 
 /**

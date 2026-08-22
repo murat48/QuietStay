@@ -62,7 +62,7 @@ See [`src/lib/attestation.ts`](../src/lib/attestation.ts).
     "commitment": "e8ad1bb9deff0137565e22278ed2e42d9b894b442930bf03b9db050e98b0d991",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "week_valid": true,
-    "region": "Portugal",
+    "region": "Lagos, Portugal",
     "maintenance_fees_current": true,
     "fees_paid_through": "2026-12-31",
     "issued_at": "2026-08-13T12:53:04.000Z",
@@ -99,11 +99,23 @@ ledger alone therefore cannot say where anything is, and a buyer who cannot tell
 one week from another has no way to know whose record to ask for.
 
 So the region rides in the attestation, where it is signed and bound to one right
-— the same standing as the fee claim a buyer already relies on. It is deliberately
-coarse: `npm run attest` defaults it to the record's `resort.country`, so it
-cannot drift from the committed document by inattention, and `--region` narrows it
-only as a deliberate, signed act. The resort, the unit and the deed stay in the
-record and are disclosed once, to a counterparty, at the point of sale.
+— the same standing as the fee claim a buyer already relies on.
+
+It names the **town and the country**, and stops there. That is the line: a town
+is enough to shop in and shares its name with thousands of owners, whereas the
+resort plus the unit names one apartment and, through the members' registry, one
+person. The resort, the unit and the deed stay in the record and are disclosed
+once, to a counterparty, at the point of sale.
+
+`npm run attest` derives the value from the record's `resort.city` and
+`resort.country`, so what is published cannot drift from the committed document by
+inattention, and a buyer later shown the record can confirm the two agree.
+`--region "Town, Country"` overrides it. That override is signed but **not covered
+by the commitment**, so the script warns when it is used: it is the issuer's word
+alone. Its one legitimate use is a record committed before `resort.city` existed,
+which cannot gain the field — editing it would break the commitment — and which
+would otherwise be stuck at a bare country. The four sample weeks are exactly that
+case.
 
 It is optional, and absence is authentic rather than ambiguous: an attestation
 signed before the field existed has no `region` key and still verifies, while

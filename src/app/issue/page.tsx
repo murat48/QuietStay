@@ -64,6 +64,7 @@ const TEMPLATE = {
   },
   resort: {
     name: "Cliffside Bay Club",
+    city: "Lagos",
     country: "Portugal",
     unit: "Villa 14B",
     bedrooms: 2,
@@ -410,6 +411,14 @@ export default function IssueScreen() {
                       />
                     </div>
                     <div className="field">
+                      <label htmlFor="resort_city">Town or city</label>
+                      <input
+                        id="resort_city"
+                        value={text("resort.city")}
+                        onChange={(event) => setField("resort.city", event.target.value)}
+                      />
+                    </div>
+                    <div className="field">
                       <label htmlFor="resort_country">Country</label>
                       <input
                         id="resort_country"
@@ -437,6 +446,12 @@ export default function IssueScreen() {
                       />
                     </div>
                   </div>
+                  <p className="muted">
+                    The town and country are published on the listing, signed by you, because a
+                    registry that cannot say where a week is is one nobody can shop. The resort name
+                    and the unit are not — those name one apartment, and through the registry one
+                    person. They stay in the record and go to a buyer once, on request.
+                  </p>
                 </fieldset>
 
                 <fieldset>

@@ -7,16 +7,16 @@
     "commitment": "d1e56562ea6f41073e50158da2cb122df01e7f6aee3ab7845669f0955f5ffc4c",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "week_valid": true,
-    "region": "Austria",
+    "region": "Schladming, Austria",
     "maintenance_fees_current": true,
     "fees_paid_through": "2026-12-31",
-    "issued_at": "2026-08-22T09:04:35.272Z",
-    "not_before": "2026-08-22T09:04:35.272Z",
-    "expires_at": "2027-08-22T09:04:35.272Z"
+    "issued_at": "2026-08-22T09:14:11.109Z",
+    "not_before": "2026-08-22T09:14:11.109Z",
+    "expires_at": "2027-08-22T09:14:11.109Z"
   },
   "signature": {
     "alg": "ed25519",
     "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
-    "value": "tzhdOon95TBq6da36fDtSDQvDHxP30DHimhsaqwQIOxGplXVEpzEcOYo/aYv54ix9OrVVzx/g7KHWHL3CybDDw=="
+    "value": "VyZtzhvCKBrj1LL9qZcdsUwbjnlIkTIU2PK2Jtj4U8xWhXznA0MGJJeRNa9LbDYqm0tXBjhOHAeUO+cZOIRyAg=="
   }
 }

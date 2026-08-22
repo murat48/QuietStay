@@ -20,6 +20,7 @@ import {
   feesAreCurrent,
   onChainWindows,
   recordCommitment,
+  regionLabel,
   validateRecord,
   type OwnershipRecord,
 } from "../../src/lib/record";
@@ -80,7 +81,7 @@ export async function issueFromRecord(
     rightId,
     commitment,
     weekValid: true,
-    region: record.resort.country,
+    region: regionLabel(record),
     feesCurrent: clean,
     feesPaidThrough: record.maintenance_fees.paid_through,
     validForDays: 365,
@@ -126,6 +127,7 @@ export function evidenceRecord(params: {
     },
     resort: {
       name: "Cliffside Bay Club",
+      city: "Lagos",
       country: "Portugal",
       unit: params.unit,
       bedrooms: 2,

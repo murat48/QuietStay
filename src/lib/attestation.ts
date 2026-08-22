@@ -14,9 +14,13 @@
  * where anything is until they have already asked the seller for the deed.
  *
  * So the region rides here instead, where it is signed, bound to one right, and
- * verifiable — the same standing as the fee claim a buyer already relies on. It
- * is deliberately coarse. The resort, the unit, and the deed stay in the record
- * and are disclosed once, to a counterparty, at the point of sale.
+ * verifiable — the same standing as the fee claim a buyer already relies on.
+ *
+ * It names the town and the country and stops there. A town is enough to shop in
+ * and shares its name with thousands of owners; the resort plus the unit names one
+ * apartment and, through the members' registry, one person. The resort, the unit,
+ * and the deed stay in the record and are disclosed once, to a counterparty, at
+ * the point of sale.
  *
  * Phase 2's per-field commitments would let a seller prove the region against the
  * ledger without the issuer vouching for it at all; until then this is the honest
@@ -77,7 +81,8 @@ export interface AttestationPayload {
   /** The issuer asserts the week is a real, allocated interval. */
   week_valid: boolean;
   /**
-   * Coarse location, public so a week can be found without disclosing the deed.
+   * Town and country — `"Lagos, Portugal"` — public so a week can be found
+   * without disclosing the resort, the unit, or the deed.
    *
    * Optional because attestations signed before this field existed must keep
    * verifying: absence is authentic — stripping the key from a payload that had

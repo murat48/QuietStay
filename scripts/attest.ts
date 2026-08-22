@@ -50,7 +50,7 @@ import { saveAttestation } from "../src/lib/attestation-store";
 import { digestsMatch } from "../src/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, issuerSecret } from "../src/lib/config";
 import { readRight } from "../src/lib/contract";
-import { feesAreCurrent, recordCommitment, validateRecord } from "../src/lib/record";
+import { feesAreCurrent, recordCommitment, regionLabel, validateRecord } from "../src/lib/record";
 import { fatal, loadEnv, log, readJson } from "./lib/cli";
 import { Keypair } from "@stellar/stellar-sdk";
 
@@ -168,12 +168,24 @@ async function main(): Promise<void> {
     );
   }
 
-  // The record's country by default, so the published region cannot drift from
-  // the document the ledger committed to by mere inattention. Naming somewhere
-  // more useful than a country is then a deliberate act, and a signed one.
-  const region = regionOverride?.trim() || record.resort.country;
+  // Town and country from the record by default, so the published region cannot
+  // drift from the document the ledger committed to by mere inattention.
+  const derived = regionLabel(record);
+  const region = regionOverride?.trim() || derived;
   if (regionOverride !== undefined) {
-    log.warn(`--region given: publishing "${region}", not "${record.resort.country}"`);
+    log.warn(`--region given: publishing "${region}", not "${derived}" as the record has it`);
+    log.warn(
+      "an overridden region is the issuer's word alone — it is signed, but it is not covered " +
+        "by the commitment, so a buyer holding the record cannot check it",
+    );
+  } else if (record.resort.city === undefined) {
+    // Records committed before `resort.city` existed cannot gain one: editing
+    // them would break the commitment. Naming the town is still worth doing, and
+    // this is the flag that does it.
+    log.warn(
+      `this record predates resort.city, so only "${derived}" can be derived from it — ` +
+        'pass --region "Town, Country" to publish the town as well',
+    );
   }
 
   const attestation = signAttestation(issuer, {
