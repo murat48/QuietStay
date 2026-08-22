@@ -75,6 +75,9 @@ export default function ListScreen() {
   // held once, so two cards on screen cannot share one input.
   const [paidThrough, setPaidThrough] = useState<Record<number, string>>({});
   const [filter, setFilter] = useState<Filter>("all");
+  // Which card is showing the placeholder's explanation. Per right, so two cards
+  // with arrears cannot share one open notice.
+  const [payNotice, setPayNotice] = useState<number | null>(null);
   // One-shot, so landing on your own weeks does not fight a filter you picked.
   const autoSelected = useRef(false);
 
@@ -489,6 +492,36 @@ export default function ListScreen() {
                           usual, then ask the issuer to record it; no money moves through this app.
                         </>
                       )}
+
+                      {/*
+                        A placeholder, and it must stay one. Settling for real
+                        would mean either moving money — which Phase 1 excludes —
+                        or flipping the fee state without any, which is both a
+                        lie and a power that belongs to the issuer alone. So it
+                        marks where payment will go and says why it is not there,
+                        rather than doing a convincing nothing.
+                      */}
+                      {right.fees === null ? null : (
+                        <div className="row" style={{ marginTop: "0.6rem", gap: "0.5rem" }}>
+                          <button onClick={() => setPayNotice(payNotice === right.id ? null : right.id)}>
+                            Pay maintenance fees
+                          </button>
+                          <span className="tag warn">Phase 2</span>
+                        </div>
+                      )}
+                      {payNotice === right.id ? (
+                        <div className="note bad" style={{ marginTop: "0.6rem" }}>
+                          <strong>Not implemented, and deliberately so.</strong> Payment, escrow and
+                          settlement of consideration are out of scope for Phase 1 — this app
+                          transfers rights and never money, which is why a listing carries a term
+                          but no price. This button marks where settlement will go in Phase 2.
+                          <br />
+                          <br />
+                          Today: the title holder pays the resort directly, as they always have, and
+                          the issuer records that it happened. Nothing about this week has changed
+                          by clicking.
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
 

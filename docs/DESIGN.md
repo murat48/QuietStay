@@ -433,7 +433,12 @@ surprises:
    demo will need reseeding after that.
 4. **No price anywhere.** Payment, escrow, and settlement of consideration are out
    of scope, so an offer records availability and term only, and the parties settle
-   however they already do.
+   however they already do. A week showing arrears carries a **"Pay maintenance
+   fees" button that is inert** — it opens a note saying payment is Phase 2 work
+   and changes nothing. It is there to mark where settlement will attach, because
+   the question it answers ("someone has to pay this — who?") is the first one
+   anyone asks of that warning. Today the title holder pays the resort directly
+   and the issuer records that it happened.
 5. **Attestations are files on disk.** Appropriate for a reference deployment and
    it keeps them inspectable; a production issuer would use a database behind
    [the same two functions](../src/lib/attestation-store.ts).
