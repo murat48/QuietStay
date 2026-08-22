@@ -12,7 +12,7 @@
  * offering a button that cannot work.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useWallet } from "@/components/WalletProvider";
 import { explorer } from "@/lib/config";
@@ -46,6 +46,15 @@ interface RightRow {
   } | null;
 }
 
+/**
+ * What the registry is being narrowed to.
+ *
+ * Deliberately four, and all four answer a question somebody actually arrives
+ * with. "Yours" appears only for a connected account, because for everyone else
+ * it would always be empty.
+ */
+type Filter = "all" | "rent" | "sale" | "yours";
+
 interface Inventory {
   contract: string;
   contract_explorer: string;
@@ -65,6 +74,9 @@ export default function ListScreen() {
   // The date the issuer is settling fees through, per right. Keyed rather than
   // held once, so two cards on screen cannot share one input.
   const [paidThrough, setPaidThrough] = useState<Record<number, string>>({});
+  const [filter, setFilter] = useState<Filter>("all");
+  // One-shot, so landing on your own weeks does not fight a filter you picked.
+  const autoSelected = useRef(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -81,6 +93,55 @@ export default function ListScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /**
+   * Whether one right belongs in one filter.
+   *
+   * "Yours" is held either way round: the week you own and the week you are
+   * renting are both yours to be shown, and a renter arriving at the registry is
+   * looking for the one they took, not the one they hold title to — they hold
+   * title to nothing.
+   */
+  const matches = useCallback(
+    (right: RightRow, which: Filter): boolean => {
+      switch (which) {
+        case "rent":
+          return right.listing?.term_secs != null;
+        case "sale":
+          return right.listing !== null && right.listing.term_secs === null;
+        case "yours":
+          return (
+            address !== null &&
+            (right.effective_holder === address || right.title_holder === address)
+          );
+        default:
+          return true;
+      }
+    },
+    [address],
+  );
+
+  const counts = useMemo(() => {
+    const rights = inventory?.rights ?? [];
+    return {
+      all: rights.length,
+      rent: rights.filter((r) => matches(r, "rent")).length,
+      sale: rights.filter((r) => matches(r, "sale")).length,
+      yours: rights.filter((r) => matches(r, "yours")).length,
+    };
+  }, [inventory, matches]);
+
+  // Someone who holds a week almost always came to look at it. Done once, and
+  // only when they hold something, so a visitor is never moved off "all".
+  useEffect(() => {
+    if (autoSelected.current || address === null || counts.yours === 0) return;
+    autoSelected.current = true;
+    setFilter("yours");
+  }, [address, counts.yours]);
+
+  // Filtering to a set that turns out to be empty leaves a blank page with no
+  // explanation, so the empty case is rendered rather than fallen into.
+  const shown = (inventory?.rights ?? []).filter((right) => matches(right, filter));
 
   const changeOffer = useCallback(
     async (rightId: number, action: "list" | "unlist", termSecs: number | null) => {
@@ -214,8 +275,48 @@ export default function ListScreen() {
             </div>
           )}
 
+          {/*
+            Counts are on the labels rather than discovered by clicking: a filter
+            that turns out to be empty has wasted the click, and "for sale 0" is
+            itself the answer to what someone came to ask.
+          */}
+          <div className="tabs" role="tablist" aria-label="Filter the registry">
+            {([
+              ["all", "All", counts.all],
+              ["rent", "For rent", counts.rent],
+              ["sale", "For sale", counts.sale],
+              // Only for a connected account. For anyone else it is always empty,
+              // and a permanently empty control is just a question mark.
+              ...(address !== null ? ([["yours", "Yours", counts.yours]] as const) : []),
+            ] as const).map(([key, label, count]) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={filter === key}
+                onClick={() => setFilter(key)}
+              >
+                {label} <span className="muted">{count}</span>
+              </button>
+            ))}
+          </div>
+
+          {shown.length === 0 ? (
+            <div className="note">
+              {filter === "yours"
+                ? "You hold no weeks on this contract — neither owned nor rented."
+                : filter === "rent"
+                  ? "No week is offered for rent right now."
+                  : filter === "sale"
+                    ? "No week is offered for sale right now."
+                    : "The registry is empty."}{" "}
+              {filter === "all" ? null : (
+                <button onClick={() => setFilter("all")}>Show all {counts.all}</button>
+              )}
+            </div>
+          ) : null}
+
           <div className="grid">
-            {inventory.rights.map((right) => {
+            {shown.map((right) => {
               const mine = address !== null && right.effective_holder === address;
               const isTitleHolder = address !== null && right.title_holder === address;
               // Title held by this account but occupied by someone else: still
