@@ -434,7 +434,7 @@ surprises:
 4. **No price anywhere.** Payment, escrow, and settlement of consideration are out
    of scope, so an offer records availability and term only, and the parties settle
    however they already do. A week showing arrears carries a **"Pay maintenance
-   fees" button that is inert** — it opens a note saying payment is Phase 2 work
+   fees" button that is inert** — it opens a note saying payment is out of scope
    and changes nothing. It is there to mark where settlement will attach, because
    the question it answers ("someone has to pay this — who?") is the first one
    anyone asks of that warning. Today the title holder pays the resort directly

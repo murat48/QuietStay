@@ -532,7 +532,7 @@ export default function ListScreen() {
                           <button onClick={() => setPayNotice(payNotice === right.id ? null : right.id)}>
                             Pay maintenance fees
                           </button>
-                          <span className="tag warn">Phase 2</span>
+                          <span className="tag warn">out of scope</span>
                         </div>
                       )}
                       {payNotice === right.id ? (
@@ -540,7 +540,9 @@ export default function ListScreen() {
                           <strong>Not implemented, and deliberately so.</strong> Payment, escrow and
                           settlement of consideration are out of scope for Phase 1 — this app
                           transfers rights and never money, which is why a listing carries a term
-                          but no price. This button marks where settlement will go in Phase 2.
+                          but no price. This button marks where settlement would attach if a later
+                          phase funds it; unlike swaps, an audit and mainnet, nothing has promised
+                          that it will.
                           <br />
                           <br />
                           Today: the title holder pays the resort directly, as they always have, and
