@@ -12,8 +12,28 @@ next-env.d.ts
 # Rust build output
 contracts/target/
 
-# Generated evidence and canonical files are committed deliberately; see
-# docs/EVIDENCE.md. Nothing else in these directories is.
+# Ownership records, and the canonical bytes they hash to.
+#
+# A record carries the owner's name, their email, the resort, the unit, the deed
+# reference and the fee history — everything the commitment exists to keep off the
+# public ledger. The four sample weeks and the evidence fixtures are published
+# deliberately (see docs/EVIDENCE.md) and are fictional, down to the .invalid email
+# domain; they are named individually below.
+#
+# Everything else here is ignored by default, so a real record dropped into these
+# directories is not published by an absent-minded `git add .`. Publishing one is
+# then a deliberate `git add -f`, which is the right amount of friction for a
+# document that cannot be unpublished.
+inventory/records/*
+!inventory/records/week-0[1-4].json
+inventory/canonical/*
+!inventory/canonical/week-0[1-4].canonical.json
+inventory/evidence/canonical/*
+!inventory/evidence/canonical/evidence-*.canonical.json
+
+# Attestations carry no identity — no name, no email, no resort, no unit, no deed,
+# no fee amount — and are served publicly at /api/attestation/<id> because they are
+# self-verifying. They are committed as evidence and need no rule.
 
 # Engagement paperwork. The SOW carries a contact email, the budget, and the
 # chapter lead's name; the build prompt is internal. This repository is published
