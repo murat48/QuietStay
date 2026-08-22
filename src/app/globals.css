@@ -386,18 +386,29 @@ legend {
   margin-bottom: 0;
 }
 
-/* A value the screen generated: shown so it can be checked, not typed into. */
+/* Values the screen worked out rather than asked for — generated identifiers,
+   derived fields. Shown so they can be checked, but not typed into, so they
+   carry the flatter background that says "this one is not yours to edit". */
+input[readonly] {
+  background: var(--surface-2);
+  color: var(--text-dim);
+  cursor: default;
+}
+
+input[readonly]:focus {
+  outline-color: var(--border-strong);
+}
+
 .generated {
   display: flex;
   gap: 0.5rem;
   align-items: center;
 }
 
+/* Long hex — the identity fields, not every read-only box. */
 .generated input {
   font-family: var(--mono);
   font-size: 0.78rem;
-  color: var(--text-dim);
-  background: var(--surface-2);
 }
 
 .generated button {

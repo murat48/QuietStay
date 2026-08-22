@@ -72,7 +72,9 @@ const TEMPLATE = {
     check_in: "2026-10-03",
     check_out: "2026-10-10",
     use_year: 2026,
-    week_number: 40,
+    // Derived here too, so editing the date above cannot leave a stale number
+    // behind — the form derives it from that moment on.
+    week_number: isoWeekNumber("2026-10-03"),
   },
   title: {
     deed_reference: "CBC-2019-04471",
@@ -468,12 +470,22 @@ export default function IssueScreen() {
                         onChange={(event) => setNumberField("week.use_year", event.target.value)}
                       />
                     </div>
+                    {/*
+                      Shown because it is committed and a reader should be able
+                      to see everything that is; read-only because it is derived,
+                      and a number a person could edit away from its own date is
+                      a contradiction waiting to be committed.
+                    */}
+                    <div className="field">
+                      <label htmlFor="week_number">Week number — from the date</label>
+                      <input id="week_number" value={text("week.week_number")} readOnly />
+                    </div>
                   </div>
                   <p className="muted">
                     The week must fall inside its use year — the contract requires the validity
                     window to enclose the occupancy period, and rejects a record where it does not.
-                    The resort week number is set from the check-in date (ISO 8601) rather than
-                    typed, so it cannot disagree with it.
+                    The resort week number is the ISO 8601 week of the check-in date, set for you so
+                    it cannot disagree with it.
                   </p>
                 </fieldset>
 
