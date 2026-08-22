@@ -745,15 +745,6 @@ export default function ListScreen() {
                     given to a stranger, and by design nobody — the issuer least of
                     all — can bring it back.
                   */}
-                  {sublet && !mine ? (
-                    <div className="note warn" style={{ marginTop: "0.7rem" }}>
-                      This offer is a sub-let: the account offering it holds the week on a term
-                      rather than by title. The contract permits that, but this issuer does not
-                      approve it — the account holding title is not consulted by a transfer and
-                      would have no say in it. Nothing to ask for here.
-                    </div>
-                  ) : null}
-
                   {right.listing && !sublet && !mine && authenticated ? (
                     <div style={{ marginTop: "0.7rem" }}>
                       {myRequest ? (
