@@ -153,7 +153,7 @@ impersonation:
 
 ```
 npm run build && npm run start     # one terminal
-npm run e2e                        # another → 24 checks
+npm run e2e                        # another → 34 checks
 ```
 
 ## Accounts used
@@ -168,7 +168,7 @@ npm run e2e                        # another → 24 checks
 ## Reproducing all of it
 
 ```bash
-cd contracts && cargo test          # 32 unit tests
+cd contracts && cargo test          # 34 unit tests
 ./scripts/deploy.sh                 # build, test, deploy to testnet
 npm run seed                        # issue the sample inventory, write attestations
 npm run evidence                    # produce the four transactions above

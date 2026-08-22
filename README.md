@@ -12,7 +12,7 @@ let it.
 | Contract | [`CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M`](https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M) |
 | Network | `Test SDF Network ; September 2015` |
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
-| Tests | 32 unit tests — `cd contracts && cargo test` |
+| Tests | 34 unit tests — `cd contracts && cargo test` |
 | Demo video | _add link after recording — see [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)_ |
 
 **Reviewing this?** Start at [**docs/EVIDENCE.md**](./docs/EVIDENCE.md). It is links
@@ -146,8 +146,8 @@ npm run dev          # http://localhost:3000/list — reads need no configuratio
 Issuing and transferring need keys: see [SETUP.md](./docs/SETUP.md).
 
 ```bash
-cd contracts && cargo test    # 32 unit tests
-npm run e2e                   # 24 checks against a running app
+cd contracts && cargo test    # 34 unit tests
+npm run e2e                   # 34 checks against a running app
 npm run check-privacy         # confirm nothing leaked, against the real chain
 ```
 
@@ -172,7 +172,7 @@ contracts/quietstay-rights/src/
   store.rs      storage, TTL, and the holding-chain rules
   types.rs      Right, Holding, Period, Validity, Listing
   events.rs     what may appear on the ledger, and what may not
-  test.rs       32 tests
+  test.rs       34 tests
 src/lib/        canonical serialization, commitments, attestations, contract client, SEP-10
 src/app/        four screens and the API routes
 scripts/        deploy, seed, evidence, privacy check, verification CLI, e2e
