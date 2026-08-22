@@ -34,6 +34,12 @@ verifies exactly what needs verifying — that the seller is the authorized hold
 that the week is clean — and no document, name, or resort ever reaches the public
 ledger.
 
+The attestation also carries a **coarse region**, because a hash covers the whole
+record and so no part of it can be revealed on its own: a registry built from the
+ledger alone cannot say what country a week is in, and one nobody can search is not a
+marketplace. The country is public and signed; the resort, the unit and the deed are
+disclosed once, to a buyer, who checks the whole document against the hash.
+
 A successful sale transaction shows, in full: two account addresses, an integer id,
 `null`, and a 32-byte hash. That is checked against the real chain by
 `npm run check-privacy`, not asserted.

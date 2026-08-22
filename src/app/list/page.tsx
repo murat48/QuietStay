@@ -33,6 +33,8 @@ interface RightRow {
   listing: { by: string; term_secs: number | null; listed_at: number } | null;
   /** From the issuer's attestation, not the ledger. `null` = never attested. */
   fees: { current: boolean; paid_through: string } | null;
+  /** Also from the attestation, and coarse on purpose. `null` = never attested. */
+  region: string | null;
 }
 
 interface Inventory {
@@ -158,6 +160,14 @@ export default function ListScreen() {
         is.
       </p>
       <p className="lede" style={{ marginTop: "-1rem" }}>
+        <strong>Where a week is comes from the issuer, not the chain.</strong> A commitment covers
+        the whole record, so no single field of it can be revealed and checked on its own — and a
+        listing that cannot say what country it is in is not one anybody can shop. So the issuer
+        signs a coarse location alongside the fee status. The resort, the unit and the deed stay in
+        the record, and the seller discloses those once, to a buyer, who can then check the whole
+        document against the hash below.
+      </p>
+      <p className="lede" style={{ marginTop: "-1rem" }}>
         <strong>Publishing an offer needs nobody&apos;s approval.</strong> If a week below is yours,
         the controls to offer or withdraw it appear on its card and go straight to the contract. The
         issuer is not involved in listing at all — its approval is required only later, at the
@@ -245,6 +255,21 @@ export default function ListScreen() {
                   </div>
 
                   <dl className="facts" style={{ marginTop: "0.6rem" }}>
+                    {/*
+                      First, because it is the first thing anyone shopping asks
+                      and the one fact the ledger cannot supply — a commitment
+                      hashes the whole record, so no part of it can be revealed
+                      on its own. This comes from the issuer's signed attestation
+                      instead, which is why it is a country and not an address.
+                    */}
+                    <dt>Where</dt>
+                    <dd>
+                      {right.region === null ? (
+                        <span className="muted">the issuer has attested no location</span>
+                      ) : (
+                        right.region
+                      )}
+                    </dd>
                     <dt>Week</dt>
                     <dd>
                       {formatDate(right.week.start)} → {formatDate(right.week.end)}

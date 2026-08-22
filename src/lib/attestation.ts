@@ -2,8 +2,25 @@
  * Issuer-signed attestations.
  *
  * An attestation is the issuer saying, in a form anyone can check: *this usage
- * right is a real week, and it carries no unpaid maintenance fees.* It is the one
- * place Phase 1 rests on trusting the issuer, and it does so explicitly.
+ * right is a real week, it carries no unpaid maintenance fees, and it is in this
+ * part of the world.* It is the one place Phase 1 rests on trusting the issuer,
+ * and it does so explicitly.
+ *
+ * ## Why the region is here and not in the listing
+ *
+ * A commitment is a hash of the whole record, so revealing one field of it proves
+ * nothing: a buyer cannot check `"Portugal"` against a digest without being given
+ * everything the digest covers. That leaves a marketplace where nobody can tell
+ * where anything is until they have already asked the seller for the deed.
+ *
+ * So the region rides here instead, where it is signed, bound to one right, and
+ * verifiable — the same standing as the fee claim a buyer already relies on. It
+ * is deliberately coarse. The resort, the unit, and the deed stay in the record
+ * and are disclosed once, to a counterparty, at the point of sale.
+ *
+ * Phase 2's per-field commitments would let a seller prove the region against the
+ * ledger without the issuer vouching for it at all; until then this is the honest
+ * version, and it says out loud whose word it rests on.
  *
  * ## What it is not
  *
@@ -59,6 +76,14 @@ export interface AttestationPayload {
   issuer: string;
   /** The issuer asserts the week is a real, allocated interval. */
   week_valid: boolean;
+  /**
+   * Coarse location, public so a week can be found without disclosing the deed.
+   *
+   * Optional because attestations signed before this field existed must keep
+   * verifying: absence is authentic — stripping the key from a payload that had
+   * one breaks the signature.
+   */
+  region?: string;
   /** The issuer asserts no maintenance fees are outstanding. */
   maintenance_fees_current: boolean;
   /** ISO date fees are settled through. */
@@ -96,6 +121,8 @@ export interface AttestationTerms {
   rightId: number;
   commitment: string;
   weekValid: boolean;
+  /** Coarse location. Omitted rather than signed empty when there is none. */
+  region?: string;
   feesCurrent: boolean;
   feesPaidThrough: string;
   /** How long the attestation may be relied on. */
@@ -117,6 +144,9 @@ export function signAttestation(issuer: Keypair, terms: AttestationTerms): Attes
     commitment: terms.commitment.toLowerCase(),
     issuer: issuer.publicKey(),
     week_valid: terms.weekValid,
+    // Spread rather than assigned: canonical JSON has no representation for
+    // `undefined`, so an absent region has to be an absent key.
+    ...(terms.region ? { region: terms.region } : {}),
     maintenance_fees_current: terms.feesCurrent,
     fees_paid_through: terms.feesPaidThrough,
     issued_at: now.toISOString(),

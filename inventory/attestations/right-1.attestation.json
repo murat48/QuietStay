@@ -7,15 +7,16 @@
     "commitment": "e8ad1bb9deff0137565e22278ed2e42d9b894b442930bf03b9db050e98b0d991",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "week_valid": true,
+    "region": "Portugal",
     "maintenance_fees_current": true,
     "fees_paid_through": "2026-12-31",
-    "issued_at": "2026-08-20T22:28:41.846Z",
-    "not_before": "2026-08-20T22:28:41.846Z",
-    "expires_at": "2027-08-20T22:28:41.846Z"
+    "issued_at": "2026-08-22T09:04:33.428Z",
+    "not_before": "2026-08-22T09:04:33.428Z",
+    "expires_at": "2027-08-22T09:04:33.428Z"
   },
   "signature": {
     "alg": "ed25519",
     "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
-    "value": "YTGLNcntYQotmczu+3UcV1KfwPkiheCWad6kuypvJ0iD9ehLaX5pbFYu6PltGpYs6/HGNMbr+PKiQphFnv4TCQ=="
+    "value": "fXRfnPXDElRtxQjiLGvAXjpyE8dw7giMnvzeGezAs1rMjwJBEOJg3lUoRQNfwDhGn6LoCLolx3hfb5IAnrGxDA=="
   }
 }

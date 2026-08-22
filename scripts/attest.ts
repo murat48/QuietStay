@@ -32,6 +32,17 @@
  *   --fees-paid-through <date>  the date fees are now settled through
  *
  * The same restatement is available to the issuer in the app, on the list screen.
+ *
+ * ## The region
+ *
+ * Defaults to the record's country and needs no flag. `--region "Algarve,
+ * Portugal"` publishes something narrower, which is worth doing where a country
+ * is too big to shop in and too many resorts share it to identify one.
+ *
+ *   --region <text>             the coarse location shown on the listing
+ *
+ * Do not put the resort or the unit here: this is the field a buyer reads
+ * *before* being trusted with the record, and it is public to everyone.
  */
 
 import { signAttestation } from "../src/lib/attestation";
@@ -49,28 +60,41 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const flags = new Set(args.filter((a) => a.startsWith("--")));
 
-  // `--fees-paid-through <date>` takes a value, so its argument is not a
-  // positional one.
-  const throughIndex = args.indexOf("--fees-paid-through");
-  const paidThroughOverride = throughIndex === -1 ? undefined : args[throughIndex + 1];
-  // Guard on the flag being present at all: `indexOf` returns -1 when it is not,
-  // and -1 + 1 addresses the first positional argument rather than nothing.
-  const valueIndex = throughIndex === -1 ? -1 : throughIndex + 1;
-  const positional = args.filter((a, i) => !a.startsWith("--") && i !== valueIndex);
+  // Some flags take a value, and that value must not be mistaken for one of the
+  // two positional arguments. Reading them through here records where each value
+  // sat, so the positional filter below can skip exactly those slots — the
+  // alternative, testing indices by hand, gets subtly wrong the moment a second
+  // valued flag is added.
+  const valueSlots = new Set<number>();
+  const valued = (flag: string): string | undefined => {
+    const at = args.indexOf(flag);
+    if (at === -1) return undefined;
+    valueSlots.add(at + 1);
+    return args[at + 1];
+  };
+
+  const paidThroughOverride = valued("--fees-paid-through");
+  const regionOverride = valued("--region");
+
+  const positional = args.filter((a, i) => !a.startsWith("--") && !valueSlots.has(i));
   const [rawId, recordPath] = positional;
 
   if (!rawId || !recordPath) {
     console.error(
       "usage: npm run attest -- <right_id> <record.json> " +
-        "[--fees-current | --fees-outstanding] [--fees-paid-through YYYY-MM-DD]",
+        "[--fees-current | --fees-outstanding] [--fees-paid-through YYYY-MM-DD] " +
+        "[--region <text>]",
     );
     process.exit(1);
   }
   if (flags.has("--fees-current") && flags.has("--fees-outstanding")) {
     throw new Error("--fees-current and --fees-outstanding contradict each other");
   }
-  if (throughIndex !== -1 && !/^\d{4}-\d{2}-\d{2}$/.test(paidThroughOverride ?? "")) {
+  if (flags.has("--fees-paid-through") && !/^\d{4}-\d{2}-\d{2}$/.test(paidThroughOverride ?? "")) {
     throw new Error("--fees-paid-through needs an ISO date (YYYY-MM-DD)");
+  }
+  if (flags.has("--region") && !regionOverride?.trim()) {
+    throw new Error("--region needs a value, e.g. --region \"Algarve, Portugal\"");
   }
 
   const rightId = Number(rawId);
@@ -144,12 +168,21 @@ async function main(): Promise<void> {
     );
   }
 
+  // The record's country by default, so the published region cannot drift from
+  // the document the ledger committed to by mere inattention. Naming somewhere
+  // more useful than a country is then a deliberate act, and a signed one.
+  const region = regionOverride?.trim() || record.resort.country;
+  if (regionOverride !== undefined) {
+    log.warn(`--region given: publishing "${region}", not "${record.resort.country}"`);
+  }
+
   const attestation = signAttestation(issuer, {
     contract: CONTRACT_ID,
     network: NETWORK_PASSPHRASE,
     rightId,
     commitment,
     weekValid: true,
+    region,
     feesCurrent: clean,
     feesPaidThrough,
     validForDays: 365,
@@ -159,6 +192,7 @@ async function main(): Promise<void> {
 
   log.step("Signed");
   log.ok(`${path}`);
+  log.info(`region            ${region}`);
   log.info(`fees current      ${clean}`);
   log.info(`paid through      ${attestation.payload.fees_paid_through}`);
   log.info(`valid until       ${attestation.payload.expires_at}`);

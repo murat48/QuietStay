@@ -145,8 +145,10 @@ export async function POST(request: Request): Promise<Response> {
       rightId,
       commitment: right.commitment,
       // Carried over rather than re-asserted: this route knows nothing new about
-      // whether the week is a real, allocated interval.
+      // whether the week is a real, allocated interval, or where it is. Dropping
+      // either would quietly un-attest it on the way through.
       weekValid: existing.payload.week_valid,
+      region: existing.payload.region,
       feesCurrent,
       feesPaidThrough: paidThrough,
       validForDays: 365,

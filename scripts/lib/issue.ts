@@ -80,6 +80,7 @@ export async function issueFromRecord(
     rightId,
     commitment,
     weekValid: true,
+    region: record.resort.country,
     feesCurrent: clean,
     feesPaidThrough: record.maintenance_fees.paid_through,
     validForDays: 365,

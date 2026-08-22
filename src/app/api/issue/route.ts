@@ -89,6 +89,9 @@ export async function POST(request: Request): Promise<Response> {
       rightId,
       commitment,
       weekValid: true,
+      // The country, not the resort: enough to find the week, not enough to
+      // identify the unit or its owner.
+      region: record.resort.country,
       feesCurrent: clean,
       feesPaidThrough: record.maintenance_fees.paid_through,
       validForDays: 365,

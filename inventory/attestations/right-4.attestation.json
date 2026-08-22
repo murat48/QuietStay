@@ -7,15 +7,16 @@
     "commitment": "f50768340ae7065a4c7314c4064e6605feef598d9223f4b11a822cb3adc04f38",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "week_valid": true,
+    "region": "Austria",
     "maintenance_fees_current": false,
     "fees_paid_through": "2025-12-31",
-    "issued_at": "2026-08-20T22:28:56.645Z",
-    "not_before": "2026-08-20T22:28:56.645Z",
-    "expires_at": "2027-08-20T22:28:56.645Z"
+    "issued_at": "2026-08-22T09:04:36.138Z",
+    "not_before": "2026-08-22T09:04:36.138Z",
+    "expires_at": "2027-08-22T09:04:36.138Z"
   },
   "signature": {
     "alg": "ed25519",
     "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
-    "value": "8/2AkwUDF1dFRpYtGJ+9I0iv8dfcRZKzXcz4a7LpUtD8FBFYhy9OLrQNhZWsdBo2r34D30yivzO8vcxiBbiLBA=="
+    "value": "OsfDnRyMPglWQbP1C5y5Ekp2lsU90Z4ePvLTDPopEcZuQAdEjL3HG2+XmYwVvsqREuYyMvJS7LfQK1Ua1ZA5CA=="
   }
 }

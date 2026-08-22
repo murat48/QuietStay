@@ -62,6 +62,7 @@ See [`src/lib/attestation.ts`](../src/lib/attestation.ts).
     "commitment": "e8ad1bb9deff0137565e22278ed2e42d9b894b442930bf03b9db050e98b0d991",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "week_valid": true,
+    "region": "Portugal",
     "maintenance_fees_current": true,
     "fees_paid_through": "2026-12-31",
     "issued_at": "2026-08-13T12:53:04.000Z",
@@ -84,9 +85,35 @@ See [`src/lib/attestation.ts`](../src/lib/attestation.ts).
 | `commitment` | The specific off-chain record, as lowercase hex SHA-256. |
 | `issuer` | The issuer's account, which is also the signing key. |
 | `week_valid` | The issuer asserts this is a real, allocated interval. |
+| `region` | Coarse location, for the listing. Optional — see below. |
 | `maintenance_fees_current` | The issuer asserts no fees are outstanding. |
 | `fees_paid_through` | ISO date fees are settled through. |
 | `not_before` / `expires_at` | When the attestation may be relied on. |
+
+### Why the region is in here
+
+A commitment is a hash of the whole record, so no single field of it can be
+revealed and checked on its own: to verify that a week is in Portugal you must be
+given the deed, the unit and the owner's name as well. A registry built from the
+ledger alone therefore cannot say where anything is, and a buyer who cannot tell
+one week from another has no way to know whose record to ask for.
+
+So the region rides in the attestation, where it is signed and bound to one right
+— the same standing as the fee claim a buyer already relies on. It is deliberately
+coarse: `npm run attest` defaults it to the record's `resort.country`, so it
+cannot drift from the committed document by inattention, and `--region` narrows it
+only as a deliberate, signed act. The resort, the unit and the deed stay in the
+record and are disclosed once, to a counterparty, at the point of sale.
+
+It is optional, and absence is authentic rather than ambiguous: an attestation
+signed before the field existed has no `region` key and still verifies, while
+stripping the key from one that has it breaks the signature. A verifier that finds
+no region should read it as *the issuer vouched for no location* — which, as with
+fees, is not the same as there being none.
+
+Phase 2's per-field commitments would let a seller prove the region against the
+ledger directly, with no issuer to trust. Until then this is the honest version,
+and it names whose word it rests on.
 
 ### Binding — why one attestation cannot be presented for another week
 

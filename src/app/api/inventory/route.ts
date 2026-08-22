@@ -8,16 +8,24 @@
  * convenience — it holds no state of its own and could be replaced by the browser
  * talking to the RPC directly. Nothing here is authoritative; the contract is.
  *
- * **One block is not from the ledger.** `fees` comes from the issuer's
- * attestation store, because fee status is off-chain by design and changes over
- * the life of a right. It is served here so that a buyer sees, on the same card
- * as the offer, whether the week can actually change hands — a transfer of a week
- * with arrears is declined, and discovering that only at signing time would be a
- * poor way to learn it.
+ * **Two fields are not from the ledger.** `fees` and `region` come from the
+ * issuer's attestation store — signed, but not on chain.
  *
- * What is deliberately not served with it: the amount owed. That figure lives in
- * the off-chain record, which has no endpoint. A boolean and a date are what a
- * counterparty needs; the sum is between the holder and the resort.
+ * `fees`, because fee status is off-chain by design and changes over the life of
+ * a right. It is served here so that a buyer sees, on the same card as the offer,
+ * whether the week can actually change hands — a transfer of a week with arrears
+ * is declined, and discovering that only at signing time would be a poor way to
+ * learn it.
+ *
+ * `region`, because a commitment is a hash of the whole record: nothing in it can
+ * be revealed piecemeal, so a listing built from the ledger alone cannot say
+ * where the week is. A buyer who cannot tell Portugal from Florida cannot decide
+ * whose record to ask for, and the reveal step never begins.
+ *
+ * What is deliberately not served with either: the amount owed, and the resort or
+ * unit. Both live in the off-chain record, which has no endpoint. A boolean, a
+ * date, and a country are what a counterparty needs in order to ask; the rest is
+ * disclosed once, to them, in exchange for their interest.
  */
 
 import { loadAttestation } from "@/lib/attestation-store";
@@ -71,6 +79,11 @@ export async function GET(): Promise<Response> {
                 paid_through: attestation.payload.fees_paid_through,
               }
             : null,
+          // Also from the attestation, and also deliberately coarse. Without it a
+          // buyer cannot tell one week from another well enough to know whose
+          // record to ask for; with more than it, the listing would identify the
+          // unit and defeat the point of keeping the record off the ledger.
+          region: attestation?.payload.region ?? null,
         };
       }),
     });
