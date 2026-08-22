@@ -215,7 +215,6 @@ export default function ListScreen() {
     // holder needs to see the card in order to act on it.
     .sort((a, b) => Number(isBlocked(a)) - Number(isBlocked(b)));
 
-  const blockedShown = shown.filter(isBlocked).length;
 
   const changeOffer = useCallback(
     async (rightId: number, action: "list" | "unlist", termSecs: number | null) => {
@@ -490,17 +489,6 @@ export default function ListScreen() {
               </button>
             ))}
           </div>
-
-          {blockedShown > 0 ? (
-            <div className="note warn">
-              {blockedShown === 1 ? "One week here cannot" : `${blockedShown} weeks here cannot`}{" "}
-              change hands: the issuer declines a transfer while maintenance fees are outstanding,
-              while it has attested nothing at all, or when the offer is a sub-let. Publishing an
-              offer needs nobody&apos;s approval, so a week can be advertised whether or not it is
-              transferable — {blockedShown === 1 ? "it is" : "they are"} sorted last, and each card
-              says which it is.
-            </div>
-          ) : null}
 
           {shown.length === 0 ? (
             <div className="note">
