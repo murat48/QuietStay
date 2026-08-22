@@ -291,23 +291,27 @@ button:hover:not(:disabled),
   background: var(--surface-2);
 }
 
-button.primary {
+button.primary,
+.btn.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
 
 @media (prefers-color-scheme: dark) {
-  button.primary {
+  button.primary,
+  .btn.primary {
     color: #0f1a17;
   }
 }
 
-button.primary:hover:not(:disabled) {
+button.primary:hover:not(:disabled),
+.btn.primary:hover {
   filter: brightness(1.08);
 }
 
-button.danger {
+button.danger,
+.btn.danger {
   border-color: var(--bad);
   color: var(--bad);
 }

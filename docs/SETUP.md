@@ -132,6 +132,7 @@ verify screen and the approval service something real to refuse.
 | `npm run commit-record -- <record.json>` | Compute a commitment; write canonical bytes for `sha256sum`. |
 | `npm run verify-record -- <id> <attestation.json> [record.json]` | The verify screen's checks, on the command line. The record is optional. |
 | `npm run attest -- <id> <record.json>` | Re-sign an attestation, e.g. once arrears are settled. |
+| `npm run describe -- <id> --region "Town, Country" --bedrooms <n>` | Describe a week whose record you no longer hold. Last resort — nothing is derived, so nothing can be checked. |
 
 ## Troubleshooting
 

@@ -134,6 +134,13 @@ while stripping the key from one that has it breaks the signature. A verifier th
 finds none should read it as *the issuer described nothing* — which, as with fees,
 is not the same as there being nothing to describe.
 
+`npm run describe -- <right_id> --region "Town, Country" --bedrooms <n>` is the
+last resort, for a week whose record the issuer no longer holds at all. It restates
+an attestation that already exists — carrying `week_valid` and the fee position
+over untouched, and refusing if the attestation on file does not commit to the
+record the ledger holds — but every value it publishes is the issuer's word with no
+document behind it. Prefer `npm run attest` whenever the record survives.
+
 Phase 2's per-field commitments would let a seller prove these against the ledger
 directly, with no issuer to trust. Until then this is the honest version, and it
 names whose word it rests on.

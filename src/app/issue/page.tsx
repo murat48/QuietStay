@@ -735,6 +735,29 @@ export default function IssueScreen() {
               </dd>
             </dl>
 
+            {/*
+              The record is offered back before the attestation, and said to be
+              the thing to keep, because nothing else stores it. It exists in this
+              browser and nowhere else: no endpoint serves it, by design. An
+              issuer who closes this tab without it can never re-attest the week,
+              never restate its fee position from the document, and never show a
+              buyer what the commitment above was taken over.
+            */}
+            <h3>Keep the record</h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              This is the only copy. It is not stored anywhere and no endpoint serves it — that is
+              what keeps it off the public ledger, and it means losing it is permanent.
+            </p>
+            <p>
+              <a
+                className="btn primary"
+                download={`right-${result.right_id}.record.json`}
+                href={`data:application/json,${encodeURIComponent(recordText)}`}
+              >
+                Save record for right #{result.right_id}
+              </a>
+            </p>
+
             <h3>Issuer attestation</h3>
             <p className="muted" style={{ marginTop: 0 }}>
               Give this to a counterparty along with the record. They can check both on the{" "}
