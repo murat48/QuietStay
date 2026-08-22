@@ -584,3 +584,140 @@ td {
   border-bottom: 1px solid var(--border);
   vertical-align: top;
 }
+
+/* --- landing page ------------------------------------------------------- */
+
+/*
+ * The home screen has to explain a protocol before it asks for a wallet, so it
+ * carries a few shapes no other screen needs: a hero, a numbered flow, and a
+ * two-column contrast between what reaches the ledger and what does not.
+ */
+
+.hero {
+  padding: 2.4rem 0 1.6rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+
+.hero h1 {
+  font-size: clamp(1.9rem, 4.5vw, 2.9rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.7rem;
+  max-width: 20ch;
+}
+
+.hero .lede {
+  max-width: 62ch;
+  margin-bottom: 1.3rem;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 650;
+  color: var(--accent);
+  margin: 0 0 0.7rem;
+}
+
+.section-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 650;
+  color: var(--text-faint);
+  margin: 2.4rem 0 0.9rem;
+}
+
+/* Numbered steps. The counter is drawn rather than typed, so a step cannot be
+   inserted with a stale number beside it. */
+.steps {
+  counter-reset: step;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.step {
+  counter-increment: step;
+  position: relative;
+  padding: 1rem 1rem 1rem 2.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.step::before {
+  content: counter(step);
+  position: absolute;
+  left: 0.85rem;
+  top: 0.95rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.step h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.94rem;
+}
+
+.step p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* What reaches the ledger, beside what never does. */
+.split {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.split ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.split li {
+  font-size: 0.87rem;
+  color: var(--text-dim);
+  margin-bottom: 0.3rem;
+}
+
+.split li strong {
+  color: var(--text);
+  font-weight: 550;
+}
+
+/* The one-line shape of a transfer, shown as a chain rather than prose. */
+.chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  overflow-x: auto;
+}
+
+.chain span {
+  white-space: nowrap;
+}
+
+.chain .arrow {
+  color: var(--text-faint);
+}

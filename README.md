@@ -111,7 +111,7 @@ rejection after a fee.
 | Issuer | ihraççı | equals `issuer()` on the contract | issue, attest, approve or decline |
 | Owner | kiraya veren | holds **title** to a week | rent it out for a term, or sell it |
 | Renter | kiracı | holds a week on a **finite term** | sublet within that term; **not** sell |
-| Visitor | ziyaretçi | holds nothing | browse and verify — no account needed |
+| Visitor | ziyaretçi | holds nothing | verify a week — no account needed. Browsing the registry asks for a wallet: a product decision, not a lock, since the contract answers anyone. |
 
 Not exclusive: owning one week and renting another makes you both, and the app shows
 both. An owner and a renter land on different content, see different nav, and get a
@@ -140,7 +140,7 @@ one import each, as a deliberate decision.
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000/list — reads need no configuration
+npm run dev          # http://localhost:3000 — the landing page needs no configuration
 ```
 
 Issuing and transferring need keys: see [SETUP.md](./docs/SETUP.md).

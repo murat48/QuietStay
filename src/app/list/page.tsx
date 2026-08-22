@@ -10,9 +10,18 @@
  * The holder of a week can publish or withdraw an offer here. That needs their
  * signature, so it needs a SEP-10 session — the page will say so rather than
  * offering a button that cannot work.
+ *
+ * **A connected wallet is required to see the registry at all.** Reading it needs
+ * no key and the contract would answer anyone, so this is a product decision
+ * rather than a security one: a shop window is for people who might take
+ * something from it. Verification stays open to everybody, because a design whose
+ * whole claim is that a counterparty can check a week without trusting anyone
+ * cannot then require them to sign in first.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import Link from "next/link";
 
 import { useWallet } from "@/components/WalletProvider";
 import { explorer } from "@/lib/config";
@@ -76,7 +85,7 @@ interface Inventory {
 }
 
 export default function ListScreen() {
-  const { address, authenticated, sign, authFetch } = useWallet();
+  const { address, authenticated, sign, authFetch, connect, busy } = useWallet();
   const [inventory, setInventory] = useState<Inventory | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyRight, setBusyRight] = useState<number | null>(null);
@@ -409,6 +418,32 @@ export default function ListScreen() {
     },
     [authFetch, load],
   );
+
+  if (!address) {
+    return (
+      <>
+        <h1>The registry</h1>
+        <p className="lede">
+          Connect a wallet to browse the weeks on offer. Reading needs no key — the contract would
+          answer anyone — so this is a doorway, not a lock.
+        </p>
+        <div className="row">
+          <button className="primary" onClick={() => void connect()} disabled={busy}>
+            {busy ? "connecting…" : "Connect a wallet"}
+          </button>
+          <Link className="btn" href="/verify">
+            Verify a week instead — no account needed
+          </Link>
+        </div>
+        <div className="note" style={{ marginTop: "1.5rem" }}>
+          <strong>Reviewing this without a wallet?</strong> The contract, an approved transfer, one
+          the contract rejected, and the issuer&apos;s attempt to seize a week being refused are all
+          explorer links in <code>docs/EVIDENCE.md</code>, with nothing to install. The verify
+          screen also runs entirely in your browser and asks for no account.
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
