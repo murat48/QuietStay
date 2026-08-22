@@ -37,8 +37,10 @@ import { formatDate } from "@/lib/format";
 import {
   isoWeekNumber,
   onChainWindows,
+  propertyFacts,
   validateRecord,
   type OwnershipRecord,
+  type PropertyFacts,
 } from "@/lib/record";
 
 /**
@@ -152,6 +154,8 @@ interface Preview {
   canonicalBytes: number;
   windows: ReturnType<typeof onChainWindows>;
   feesOutstanding: string;
+  /** What the issuer will sign into the attestation, and a shopper will read. */
+  property: PropertyFacts;
 }
 
 interface IssueResult {
@@ -201,6 +205,16 @@ export default function IssueScreen() {
       return null;
     }
   }, [recordText]);
+
+  // Which of the public description's optional parts the record leaves unsaid.
+  const thin = useMemo(() => {
+    if (!preview) return [];
+    const missing: string[] = [];
+    if (!preview.property.region.includes(",")) missing.push("a town");
+    if (preview.property.sleeps === undefined) missing.push("how many it sleeps");
+    if (!preview.property.features?.length) missing.push("any features");
+    return missing;
+  }, [preview]);
 
   const setField = useCallback((path: string, value: unknown) => {
     setRecordText((current) => writePath(current, path, value));
@@ -268,6 +282,7 @@ export default function IssueScreen() {
           canonicalBytes: new TextEncoder().encode(canonical).length,
           windows: onChainWindows(record),
           feesOutstanding: record.maintenance_fees.outstanding,
+          property: propertyFacts(record),
         });
         setPreviewError(null);
       } catch (caught) {
@@ -681,11 +696,53 @@ export default function IssueScreen() {
                 {formatDate(preview.windows.validity.from)} →{" "}
                 {formatDate(preview.windows.validity.until)}
               </dd>
+              <dt>Where</dt>
+              <dd>{preview.property.region}</dd>
+              <dt>Sleeps</dt>
+              <dd>
+                {preview.property.sleeps === undefined ? (
+                  <span className="muted">not stated</span>
+                ) : (
+                  `${preview.property.sleeps} people`
+                )}
+                <span className="muted">
+                  {" "}
+                  · {preview.property.bedrooms}{" "}
+                  {preview.property.bedrooms === 1 ? "bedroom" : "bedrooms"}
+                </span>
+              </dd>
+              <dt>Features</dt>
+              <dd>
+                {preview.property.features?.length ? (
+                  preview.property.features.join(" · ")
+                ) : (
+                  <span className="muted">not stated</span>
+                )}
+              </dd>
             </dl>
 
+            {/*
+              A record is only valid once, and this is the last moment anything in
+              it can change. The three optional fields validate when absent, so
+              without this the record commits silently and the week is listed with
+              nothing said about the place — recoverable afterwards only by the
+              issuer asserting it unbacked, through `npm run describe`. Pasting an
+              older record into the JSON tab is the way this happens.
+            */}
+            {thin.length > 0 ? (
+              <div className="note warn">
+                <strong>This week will be listed without {thin.join(", ")}.</strong> Those are
+                published from the record, and the record cannot be edited once it is committed —
+                only asserted again by the issuer, with nothing behind it. Fill them in above before
+                issuing.
+              </div>
+            ) : null}
+
             <div className="note">
-              Staying off chain: the owner&apos;s name and email, the resort, the country, the unit,
-              the deed reference and registry, the fee amounts, the record id, and the salt.
+              Staying off chain: the owner&apos;s name and email, the resort, the unit, the deed
+              reference and registry, the fee amounts, the record id, and the salt. The town and
+              country are published, as is what the place offers — a listing has to say where it is
+              and what it is.
             </div>
 
             {feesOutstanding ? (
