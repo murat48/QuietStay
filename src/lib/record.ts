@@ -97,6 +97,36 @@ export function unixToIsoDate(unix: number): string {
 }
 
 /**
+ * The ISO 8601 week number a date falls in.
+ *
+ * Derived rather than typed: a week number that disagrees with the check-in date
+ * makes a record self-contradictory, and it is the one field of the week block a
+ * person cannot check by eye. Every sample record already agrees with this
+ * calculation, so committing to a derived value changes no existing commitment.
+ *
+ * ISO weeks start on Monday and are numbered by the year containing their
+ * Thursday, which is why the date is shifted to its Thursday before counting —
+ * a naive "days since January 1, divided by seven" is wrong for the first and
+ * last week of most years.
+ */
+export function isoWeekNumber(isoDate: string): number {
+  const ms = Date.parse(`${isoDate}T00:00:00Z`);
+  if (Number.isNaN(ms)) throw new Error(`not a valid date: ${isoDate}`);
+
+  const thursday = new Date(ms);
+  // Monday = 0 … Sunday = 6, so +3 lands on this ISO week's Thursday.
+  const weekday = (thursday.getUTCDay() + 6) % 7;
+  thursday.setUTCDate(thursday.getUTCDate() - weekday + 3);
+
+  // January 4th is always in ISO week 1; walk it to its own Thursday to anchor.
+  const firstThursday = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 4));
+  const anchorWeekday = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - anchorWeekday + 3);
+
+  return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * 86_400_000));
+}
+
+/**
  * The on-chain period and validity window derived from a record.
  *
  * The occupancy window is the week itself. The validity window is the use year

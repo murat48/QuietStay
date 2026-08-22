@@ -34,7 +34,12 @@ import { useWallet } from "@/components/WalletProvider";
 import { canonicalText, commit } from "@/lib/canonical";
 import { explorer } from "@/lib/config";
 import { formatDate } from "@/lib/format";
-import { onChainWindows, validateRecord, type OwnershipRecord } from "@/lib/record";
+import {
+  isoWeekNumber,
+  onChainWindows,
+  validateRecord,
+  type OwnershipRecord,
+} from "@/lib/record";
 
 /**
  * The starting document.
@@ -205,6 +210,26 @@ export default function IssueScreen() {
     },
     [setField],
   );
+
+  /**
+   * Check-in also fixes the week number, so the two can never disagree.
+   *
+   * The number is the one field of the week block nobody can check by eye, and a
+   * record whose number contradicts its dates is committed to that contradiction
+   * forever. Written in a single update so the document is never briefly
+   * inconsistent.
+   */
+  const setCheckIn = useCallback((value: string) => {
+    setRecordText((current) => {
+      const withDate = writePath(current, "week.check_in", value);
+      try {
+        return writePath(withDate, "week.week_number", isoWeekNumber(value));
+      } catch {
+        // A half-typed date. Keep what was entered and leave the number alone.
+        return withDate;
+      }
+    });
+  }, []);
 
   // Recompute the commitment as the record is edited, so the hash is never a
   // surprise produced by a server.
@@ -421,7 +446,7 @@ export default function IssueScreen() {
                         id="week_in"
                         type="date"
                         value={text("week.check_in")}
-                        onChange={(event) => setField("week.check_in", event.target.value)}
+                        onChange={(event) => setCheckIn(event.target.value)}
                       />
                     </div>
                     <div className="field">
@@ -443,22 +468,12 @@ export default function IssueScreen() {
                         onChange={(event) => setNumberField("week.use_year", event.target.value)}
                       />
                     </div>
-                    <div className="field">
-                      <label htmlFor="week_number">Week number</label>
-                      <input
-                        id="week_number"
-                        type="number"
-                        min={1}
-                        max={53}
-                        step={1}
-                        value={text("week.week_number")}
-                        onChange={(event) => setNumberField("week.week_number", event.target.value)}
-                      />
-                    </div>
                   </div>
                   <p className="muted">
                     The week must fall inside its use year — the contract requires the validity
                     window to enclose the occupancy period, and rejects a record where it does not.
+                    The resort week number is set from the check-in date (ISO 8601) rather than
+                    typed, so it cannot disagree with it.
                   </p>
                 </fieldset>
 
