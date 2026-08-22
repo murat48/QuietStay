@@ -439,11 +439,22 @@ surprises:
    the question it answers ("someone has to pay this — who?") is the first one
    anyone asks of that warning. Today the title holder pays the resort directly
    and the issuer records that it happened.
-5. **Attestations are files on disk.** Appropriate for a reference deployment and
+5. **Transfer requests are off chain and bind nobody.** A visitor asks for a
+   listed week and the holder accepts or declines; the ask is a message the
+   deployment keeps, not a state the contract knows. It exists to make the
+   marketplace two-sided and to stop anyone typing an account by hand — a week
+   sent to a wrong-but-valid address is unrecoverable, which is the cost of the
+   issuer being unable to claw anything back. Accepting runs the ordinary
+   transfer, unchanged. **The issuer is deliberately not in this path:** letting
+   it suppress interest in a week as well as decline its transfer is, between
+   them, what freezing an asset would mean. Making the ask itself authorized —
+   `to.require_auth()` on transfer — is the honest version and needs multi-party
+   signing, which is a later phase.
+6. **Attestations are files on disk.** Appropriate for a reference deployment and
    it keeps them inspectable; a production issuer would use a database behind
    [the same two functions](../src/lib/attestation-store.ts).
-6. **Sub-grant depth is capped at 4.** A resource bound, not a market rule.
-7. **The evidence run appends rights.** `npm run evidence` issues its own weeks each
+7. **Sub-grant depth is capped at 4.** A resource bound, not a market rule.
+8. **The evidence run appends rights.** `npm run evidence` issues its own weeks each
    time rather than reusing the sample inventory, because a sale is permanent and
    reusing them would make the script work once. The registry therefore grows on
    each run.

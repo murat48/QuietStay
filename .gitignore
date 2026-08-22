@@ -31,6 +31,11 @@ inventory/canonical/*
 inventory/evidence/canonical/*
 !inventory/evidence/canonical/evidence-*.canonical.json
 
+# Transfer requests. Each one names an account that wants a particular week —
+# more than the registry discloses about anybody — and they are messages between
+# two parties, not evidence. None of them belongs in a published repository.
+inventory/requests/
+
 # Attestations carry no identity — no name, no email, no resort, no unit, no deed,
 # no fee amount — and are served publicly at /api/attestation/<id> because they are
 # self-verifying. They are committed as evidence and need no rule.

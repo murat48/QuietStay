@@ -46,6 +46,17 @@ interface RightRow {
   } | null;
 }
 
+interface TransferRequest {
+  id: string;
+  right_id: number;
+  by: string;
+  to_holder: string;
+  term_secs: number | null;
+  requested_at: string;
+  status: "open" | "accepted" | "declined" | "withdrawn";
+  reason?: string;
+}
+
 /**
  * What the registry is being narrowed to.
  *
@@ -78,6 +89,9 @@ export default function ListScreen() {
   // Which card is showing the placeholder's explanation. Per right, so two cards
   // with arrears cannot share one open notice.
   const [payNotice, setPayNotice] = useState<number | null>(null);
+  const [requests, setRequests] = useState<{ incoming: TransferRequest[]; outgoing: TransferRequest[] }>(
+    { incoming: [], outgoing: [] },
+  );
   // One-shot, so landing on your own weeks does not fight a filter you picked.
   const autoSelected = useRef(false);
 
@@ -93,9 +107,35 @@ export default function ListScreen() {
     }
   }, []);
 
+  /**
+   * The asks this account is party to. Served only to the two parties, so this
+   * returns an empty pair for a visitor rather than failing.
+   */
+  const loadRequests = useCallback(async () => {
+    if (!authenticated) {
+      setRequests({ incoming: [], outgoing: [] });
+      return;
+    }
+    try {
+      const response = await authFetch("/api/requests", { method: "GET" });
+      const body = (await response.json()) as {
+        incoming?: TransferRequest[];
+        outgoing?: TransferRequest[];
+      };
+      setRequests({ incoming: body.incoming ?? [], outgoing: body.outgoing ?? [] });
+    } catch {
+      // A registry that still reads is worth more than an error banner about a
+      // side panel, so this stays quiet.
+    }
+  }, [authenticated, authFetch]);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void loadRequests();
+  }, [loadRequests]);
 
   /**
    * Whether one right belongs in one filter.
@@ -202,6 +242,123 @@ export default function ListScreen() {
       }
     },
     [address, authFetch, sign, load],
+  );
+
+  /** Ask for a week on the terms its holder published. */
+  const askFor = useCallback(
+    async (rightId: number) => {
+      setBusyRight(rightId);
+      setMessage(null);
+      setError(null);
+      try {
+        const response = await authFetch("/api/requests", {
+          method: "POST",
+          body: JSON.stringify({ right_id: rightId }),
+        });
+        const body = (await response.json()) as { note?: string; error?: string };
+        if (!response.ok) throw new Error(body.error ?? "could not record the request");
+        setMessage(`Right #${rightId} — ${body.note ?? "request sent"}`);
+        await loadRequests();
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : String(caught));
+      } finally {
+        setBusyRight(null);
+      }
+    },
+    [authFetch, loadRequests],
+  );
+
+  /** Decline an ask, or take your own back. Neither touches the chain. */
+  const answerRequest = useCallback(
+    async (req: TransferRequest, action: "decline" | "withdraw") => {
+      setBusyRight(req.right_id);
+      setMessage(null);
+      setError(null);
+      try {
+        const response = await authFetch(`/api/requests/${req.id}`, {
+          method: "POST",
+          body: JSON.stringify({ right_id: req.right_id, action }),
+        });
+        const body = (await response.json()) as { note?: string; error?: string };
+        if (!response.ok) throw new Error(body.error ?? "could not answer the request");
+        setMessage(`Right #${req.right_id} — ${body.note ?? "answered"}`);
+        await loadRequests();
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : String(caught));
+      } finally {
+        setBusyRight(null);
+      }
+    },
+    [authFetch, loadRequests],
+  );
+
+  /**
+   * Accept an ask: run the transfer that was always there, then record it.
+   *
+   * The recipient comes from the request, which carried it from the asker's own
+   * SEP-10 session — nobody types an address, and a week sent to a wrong-but-valid
+   * account cannot be recovered by anyone, including the issuer.
+   *
+   * Nothing here bypasses anything. This is the same approve-sign-submit path the
+   * transfer screen uses, so the issuer's policy still runs and the contract still
+   * requires both signatures. Recording the acceptance happens afterwards and is
+   * checked against the chain, so it cannot log a transfer that did not happen.
+   */
+  const acceptRequest = useCallback(
+    async (req: TransferRequest) => {
+      if (!address) return;
+      setBusyRight(req.right_id);
+      setMessage(null);
+      setError(null);
+      try {
+        const expiresAt =
+          req.term_secs === null ? null : Math.floor(Date.now() / 1000) + req.term_secs;
+
+        const approval = await authFetch("/api/approve-transfer", {
+          method: "POST",
+          body: JSON.stringify({
+            from: address,
+            to: req.by,
+            rightId: req.right_id,
+            expiresAt,
+          }),
+        });
+        const approvalBody = (await approval.json()) as { xdr?: string; error?: string };
+        if (!approval.ok || !approvalBody.xdr) {
+          throw new Error(approvalBody.error ?? "the issuer declined to approve this transfer");
+        }
+
+        const signed = await sign(approvalBody.xdr);
+        const sent = await authFetch("/api/tx/submit", {
+          method: "POST",
+          body: JSON.stringify({ xdr: signed }),
+        });
+        const result = (await sent.json()) as {
+          hash?: string;
+          successful?: boolean;
+          failure?: string;
+          error?: string;
+        };
+        if (!sent.ok) throw new Error(result.error ?? "submission failed");
+        if (!result.successful) throw new Error(result.failure ?? "the contract rejected it");
+
+        await authFetch(`/api/requests/${req.id}`, {
+          method: "POST",
+          body: JSON.stringify({ right_id: req.right_id, action: "accepted", tx: result.hash }),
+        });
+
+        setMessage(
+          `Right #${req.right_id} — ${req.term_secs === null ? "sold" : "rented out"} to ` +
+            `${shortAddress(req.by)}. ${result.hash}`,
+        );
+        await Promise.all([load(), loadRequests()]);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : String(caught));
+      } finally {
+        setBusyRight(null);
+      }
+    },
+    [address, authFetch, sign, load, loadRequests],
   );
 
   /**
@@ -358,6 +515,14 @@ export default function ListScreen() {
               // arrears, so the two are treated alike rather than only the loud
               // one being shown.
               const blocked = isBlocked(right);
+              // Asks for this week that are still open: incoming when it is
+              // yours, outgoing when it is not.
+              const asks = requests.incoming.filter(
+                (r) => r.right_id === right.id && r.status === "open",
+              );
+              const myRequest =
+                requests.outgoing.find((r) => r.right_id === right.id && r.status === "open") ??
+                null;
               // The dues year runs to the day before the use year closes.
               const defaultThrough = unixToIsoDate(right.validity.until - 86_400);
 
@@ -551,6 +716,86 @@ export default function ListScreen() {
                         </div>
                       ) : null}
                     </div>
+                  ) : null}
+
+                  {/*
+                    The two sides of an ask, on the same card.
+
+                    A visitor who wants the week says so here rather than sending
+                    the holder an address to type: a mistyped account is a week
+                    given to a stranger, and by design nobody — the issuer least of
+                    all — can bring it back.
+                  */}
+                  {right.listing && !mine && authenticated ? (
+                    <div style={{ marginTop: "0.7rem" }}>
+                      {myRequest ? (
+                        <div className="row" style={{ gap: "0.5rem", alignItems: "center" }}>
+                          <span className="tag accent">you asked for this</span>
+                          <button
+                            disabled={busyRight === right.id}
+                            onClick={() => void answerRequest(myRequest, "withdraw")}
+                          >
+                            Withdraw request
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          className="primary"
+                          disabled={busyRight === right.id}
+                          onClick={() => void askFor(right.id)}
+                        >
+                          {right.listing.term_secs === null
+                            ? "Ask to buy this week"
+                            : `Ask to rent it for ${formatDays(right.listing.term_secs)}`}
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {asks.length > 0 && mine ? (
+                    <fieldset style={{ marginTop: "0.8rem" }}>
+                      <legend>
+                        {asks.length === 1 ? "One account is asking" : `${asks.length} accounts are asking`}
+                      </legend>
+                      <p className="muted" style={{ marginTop: 0 }}>
+                        Accepting runs the ordinary transfer — your signature, the issuer&apos;s
+                        approval, the contract checking both. The address comes from the request, so
+                        there is none to type.
+                      </p>
+                      {asks.map((req) => (
+                        <div
+                          key={req.id}
+                          className="row"
+                          style={{ gap: "0.5rem", alignItems: "center", marginTop: "0.4rem" }}
+                        >
+                          <code>{shortAddress(req.by)}</code>
+                          <span className="muted">
+                            {req.term_secs === null
+                              ? "wants to buy it"
+                              : `wants it for ${formatDays(req.term_secs)}`}
+                          </span>
+                          <button
+                            className="primary"
+                            disabled={busyRight === right.id || blocked}
+                            onClick={() => void acceptRequest(req)}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            disabled={busyRight === right.id}
+                            onClick={() => void answerRequest(req, "decline")}
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      ))}
+                      {blocked ? (
+                        <p className="muted" style={{ marginBottom: 0 }}>
+                          Accepting is disabled while this week cannot change hands — the issuer
+                          would decline the transfer. Settle the fees first; the requests keep.
+                        </p>
+                      ) : null}
+                    </fieldset>
                   ) : null}
 
                   {/*
