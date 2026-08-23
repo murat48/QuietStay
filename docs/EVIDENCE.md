@@ -198,6 +198,35 @@ npm run e2e                        # another → 34 checks
 | Renter | [`GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN`](https://stellar.expert/explorer/testnet/account/GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN) |
 | Buyer | [`GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ`](https://stellar.expert/explorer/testnet/account/GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ) |
 
+### Why the renter's account is mostly failed transactions
+
+Open that account and most of what is there was rejected. That is the test suite, not
+a broken build, and it is worth saying exactly what produces it.
+
+Step 6 of `npm run e2e` rebuilds the rental transfer with the issuer's authorization
+entry stripped out and submits it from the renter's account. The contract refuses it.
+The check is that the refusal happened **and** that the week did not move. Every run of
+the suite leaves one more refusal on the ledger, and the suite is run often.
+
+Decode their result codes and they are one thing, without exception:
+
+```
+txFailed / invokeHostFunctionTrapped
+```
+
+Not one is a malformed transaction, an underfunded account, a bad sequence number, or a
+bug. Every one is the contract enforcing the rule this project exists to demonstrate.
+Count them yourself — Horizon hides failed transactions unless asked for them:
+
+```bash
+curl -s "https://horizon-testnet.stellar.org/accounts/GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN/transactions?limit=200&include_failed=true"
+```
+
+The suite could submit that step only behind a flag and keep the account tidy. It does
+not, because the check would then be absent from the default run, and a green
+"34 checks passed" that never actually asked the chain is the kind of assurance this
+repository is arguing against.
+
 ## Reproducing all of it
 
 ```bash
