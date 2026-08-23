@@ -4,10 +4,15 @@
  * The one control that turns a visitor into a participant.
  *
  * Two jobs, and the second is the reason this is a component rather than a
- * button: it knows whether the wallet is already connected, so the landing page
- * says "Open the registry" to someone who has been here before and "Connect a
- * wallet" to someone who has not. A call to action that ignores what the reader
- * has already done reads as a page that is not paying attention.
+ * button: it knows how far along the reader already is, so the landing page
+ * asks for the next step rather than repeating the first. A call to action that
+ * ignores what the reader has already done reads as a page that is not paying
+ * attention.
+ *
+ * Three states, because connecting and verifying are two different things and
+ * the nav appears only after the second. This is the one control on the page,
+ * so if it stopped at "connected" it would leave somebody mid-handshake looking
+ * at a landing page with no way onward and no menu.
  */
 
 import Link from "next/link";
@@ -15,9 +20,9 @@ import Link from "next/link";
 import { useWallet } from "@/components/WalletProvider";
 
 export function ConnectGate() {
-  const { address, busy, connect } = useWallet();
+  const { address, authenticated, busy, connect } = useWallet();
 
-  if (address) {
+  if (address && authenticated) {
     return (
       <Link className="btn primary" href="/list">
         Open the registry
@@ -27,7 +32,13 @@ export function ConnectGate() {
 
   return (
     <button className="primary" onClick={() => void connect()} disabled={busy}>
-      {busy ? "connecting…" : "Connect a wallet to browse"}
+      {address
+        ? busy
+          ? "signing…"
+          : "Sign in to open the registry"
+        : busy
+          ? "connecting…"
+          : "Connect a wallet to browse"}
     </button>
   );
 }

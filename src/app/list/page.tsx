@@ -7,16 +7,19 @@
  * when, and what is on offer. Everything on this page is a simulated read from the
  * deployed contract; none of it is a local cache.
  *
- * The holder of a week can publish or withdraw an offer here. That needs their
- * signature, so it needs a SEP-10 session — the page will say so rather than
- * offering a button that cannot work.
+ * The holder of a week can publish or withdraw an offer here.
  *
- * **A connected wallet is required to see the registry at all.** Reading it needs
- * no key and the contract would answer anyone, so this is a product decision
- * rather than a security one: a shop window is for people who might take
- * something from it. Verification stays open to everybody, because a design whose
- * whole claim is that a counterparty can check a week without trusting anyone
- * cannot then require them to sign in first.
+ * **A verified account is required to see the registry at all** — a SEP-10
+ * session, not merely a connected wallet, because connecting claims an address
+ * and only the signature proves it. Reading needs no key and the contract would
+ * answer anyone, so this is a product decision rather than a security one: a shop
+ * window is for people who might take something from it. Everything past the gate
+ * can therefore assume a proven account, which is why the controls below test
+ * only *who* the account is and not whether it signed in.
+ *
+ * Verification stays open to everybody, because a design whose whole claim is
+ * that a counterparty can check a week without trusting anyone cannot then
+ * require them to sign in first. The gate links it by name.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -427,17 +430,23 @@ export default function ListScreen() {
     [authFetch, load],
   );
 
-  if (!address) {
+  // Connected is not verified: an address can be claimed without proving it, and
+  // the nav appears only once SEP-10 has. The registry holds to the same line, so
+  // that "signed in" means one thing across the app rather than two.
+  if (!address || !authenticated) {
     return (
       <>
         <h1>The registry</h1>
         <p className="lede">
-          Connect a wallet to browse the weeks on offer. Reading needs no key — the contract would
-          answer anyone — so this is a doorway, not a lock.
+          {address
+            ? "Sign in to browse the weeks on offer. Your wallet is connected, but connecting only claims an address — one signature proves it."
+            : "Connect a wallet to browse the weeks on offer."}{" "}
+          Reading needs no key — the contract would answer anyone — so this is a doorway, not a
+          lock.
         </p>
         <div className="row">
           <button className="primary" onClick={() => void connect()} disabled={busy}>
-            {busy ? "connecting…" : "Connect a wallet"}
+            {address ? (busy ? "signing…" : "Sign in") : busy ? "connecting…" : "Connect a wallet"}
           </button>
           <Link className="btn" href="/verify">
             Verify a week instead — no account needed
@@ -500,13 +509,6 @@ export default function ListScreen() {
               <dd>{inventory.rights.length}</dd>
             </dl>
           </div>
-
-          {authenticated ? null : (
-            <div className="note">
-              Connect and sign in to publish or withdraw an offer on a week you hold. Reading needs
-              nothing.
-            </div>
-          )}
 
           {/*
             Counts are on the labels rather than discovered by clicking: a filter
@@ -776,7 +778,7 @@ export default function ListScreen() {
                     given to a stranger, and by design nobody — the issuer least of
                     all — can bring it back.
                   */}
-                  {right.listing && !sublet && !mine && authenticated ? (
+                  {right.listing && !sublet && !mine ? (
                     <div style={{ marginTop: "0.7rem" }}>
                       {myRequest ? (
                         <div className="row" style={{ gap: "0.5rem", alignItems: "center" }}>
@@ -855,7 +857,7 @@ export default function ListScreen() {
                     it did, by re-signing its attestation. Nothing is written to
                     the ledger and the commitment is untouched.
                   */}
-                  {isIssuer && authenticated ? (
+                  {isIssuer ? (
                     <fieldset style={{ marginTop: "0.85rem", marginBottom: 0 }}>
                       <legend>Issuer — fee status</legend>
                       <div className="row" style={{ alignItems: "flex-end" }}>
@@ -913,7 +915,7 @@ export default function ListScreen() {
                     </fieldset>
                   ) : null}
 
-                  {mine && authenticated ? (
+                  {mine ? (
                     <div className="row" style={{ marginTop: "0.85rem" }}>
                       {right.listing ? (
                         <button
