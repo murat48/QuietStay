@@ -25,7 +25,7 @@ import Link from "next/link";
 
 import { useWallet } from "@/components/WalletProvider";
 import { explorer } from "@/lib/config";
-import { formatDate, formatDays, shortAddress } from "@/lib/format";
+import { describeError, formatDate, formatDays, shortAddress } from "@/lib/format";
 import { unixToIsoDate } from "@/lib/record";
 
 interface RightRow {
@@ -112,7 +112,7 @@ export default function ListScreen() {
       if (!response.ok) throw new Error(body.error ?? "could not read the registry");
       setInventory(body);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(describeError(caught));
     }
   }, []);
 
@@ -259,7 +259,7 @@ export default function ListScreen() {
         );
         await load();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(describeError(caught));
       } finally {
         setBusyRight(null);
       }
@@ -283,7 +283,7 @@ export default function ListScreen() {
         setMessage(`Right #${rightId} — ${body.note ?? "request sent"}`);
         await loadRequests();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(describeError(caught));
       } finally {
         setBusyRight(null);
       }
@@ -307,7 +307,7 @@ export default function ListScreen() {
         setMessage(`Right #${req.right_id} — ${body.note ?? "answered"}`);
         await loadRequests();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(describeError(caught));
       } finally {
         setBusyRight(null);
       }
@@ -376,7 +376,7 @@ export default function ListScreen() {
         );
         await Promise.all([load(), loadRequests()]);
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(describeError(caught));
       } finally {
         setBusyRight(null);
       }
@@ -411,7 +411,7 @@ export default function ListScreen() {
         setMessage(`Right #${rightId} — ${body.note ?? "attestation re-signed"}`);
         await load();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        setError(describeError(caught));
       } finally {
         setBusyRight(null);
       }

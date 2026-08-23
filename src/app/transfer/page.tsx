@@ -40,7 +40,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { RoleGate } from "@/components/RoleGate";
 import { useWallet } from "@/components/WalletProvider";
 import { explorer } from "@/lib/config";
-import { formatDate, shortAddress } from "@/lib/format";
+import { describeError, formatDate, shortAddress } from "@/lib/format";
 import { transferableRights } from "@/lib/roles";
 
 interface Outcome {
@@ -211,7 +211,7 @@ function TransferForm() {
       // The account's standing has changed — a sold week leaves, a rented one moves.
       await refreshStanding();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(describeError(caught));
     } finally {
       setBusy(false);
     }
@@ -271,7 +271,7 @@ function TransferForm() {
             },
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(describeError(caught));
     } finally {
       setBusy(false);
     }

@@ -38,6 +38,7 @@ import {
   walletNetwork,
 } from "@/lib/wallet-kit";
 import type { AccountStanding, Role, RightSummary } from "@/lib/roles";
+import { describeError } from "@/lib/format";
 
 interface StandingResponse {
   account: string;
@@ -114,7 +115,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       await loadStanding(token);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(describeError(caught));
     }
   }, [token, loadStanding]);
 
@@ -161,7 +162,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       await loadStanding(session.token);
     } catch (caught) {
       if (caught instanceof NetworkMismatch) setError(caught.message);
-      else setError(caught instanceof Error ? caught.message : String(caught));
+      else setError(describeError(caught));
     } finally {
       setBusy(false);
     }

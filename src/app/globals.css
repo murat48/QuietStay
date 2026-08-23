@@ -286,9 +286,17 @@ button,
   display: inline-block;
 }
 
-button:hover:not(:disabled),
-.btn:hover {
+/*
+ * Variants opt out of the plain hover rather than fighting it.
+ *
+ * `button:hover:not(:disabled)` is (0,2,1) and `button.primary` is only (0,1,1),
+ * so without this the primary button took the plain surface on hover while
+ * keeping its white text — white on near-white, and the label vanished.
+ */
+button:hover:not(:disabled):not(.primary):not(.danger),
+.btn:hover:not(.primary):not(.danger) {
   background: var(--surface-2);
+  border-color: var(--border-strong);
 }
 
 button.primary,
@@ -305,13 +313,23 @@ button.primary,
   }
 }
 
+/* Stated outright, not left to a filter over an inherited background. */
 button.primary:hover:not(:disabled),
 .btn.primary:hover {
-  filter: brightness(1.08);
+  background: var(--accent);
+  border-color: var(--accent);
+  filter: brightness(1.12);
 }
 
 button.danger,
 .btn.danger {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+button.danger:hover:not(:disabled),
+.btn.danger:hover {
+  background: var(--bad-soft);
   border-color: var(--bad);
   color: var(--bad);
 }

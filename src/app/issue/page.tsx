@@ -33,7 +33,7 @@ import { RoleGate } from "@/components/RoleGate";
 import { useWallet } from "@/components/WalletProvider";
 import { canonicalText, commit } from "@/lib/canonical";
 import { explorer } from "@/lib/config";
-import { formatDate } from "@/lib/format";
+import { describeError, formatDate } from "@/lib/format";
 import {
   isoWeekNumber,
   onChainWindows,
@@ -288,7 +288,7 @@ export default function IssueScreen() {
       } catch (caught) {
         if (cancelled) return;
         setPreview(null);
-        setPreviewError(caught instanceof Error ? caught.message : String(caught));
+        setPreviewError(describeError(caught));
       }
     })();
     return () => {
@@ -309,7 +309,7 @@ export default function IssueScreen() {
       if (!response.ok) throw new Error(body.error ?? "issuance failed");
       setResult(body);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(describeError(caught));
     } finally {
       setBusy(false);
     }

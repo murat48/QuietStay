@@ -49,7 +49,7 @@ import { useWallet } from "@/components/WalletProvider";
 import { verifyAttestation, type Check } from "@/lib/attestation";
 import { commit, digestsMatch } from "@/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, explorer } from "@/lib/config";
-import { formatDate, shortAddress } from "@/lib/format";
+import { describeError, formatDate, shortAddress } from "@/lib/format";
 import { validateRecord, type OwnershipRecord } from "@/lib/record";
 
 interface OnChainRight {
@@ -143,7 +143,7 @@ export default function VerifyScreen() {
             id: "record",
             label: "Record is well formed",
             ok: false,
-            detail: caught instanceof Error ? caught.message : String(caught),
+            detail: describeError(caught),
           });
         }
       }
@@ -176,7 +176,7 @@ export default function VerifyScreen() {
             id: "attestation",
             label: "Attestation parses",
             ok: false,
-            detail: caught instanceof Error ? caught.message : String(caught),
+            detail: describeError(caught),
           });
         }
       }
@@ -234,7 +234,7 @@ export default function VerifyScreen() {
       setClaimedHolder(body.effective_holder ?? "");
       return body;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(describeError(caught));
       return null;
     } finally {
       setLoading(false);
@@ -272,7 +272,7 @@ export default function VerifyScreen() {
         }),
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(describeError(caught));
     } finally {
       setLoading(false);
     }
