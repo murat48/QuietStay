@@ -76,13 +76,35 @@ interface TransferRequest {
  * "Yours" and "Awaiting approval" — are about the reader rather than the
  * registry, and both would be permanently empty without an account.
  *
+ * "For rent" and "Rented out" sound alike and are opposites: the first is what
+ * can be taken, the second what already has been. A week is in exactly one of
+ * them, never both, and separating them is the whole reason the shopping
+ * filters stopped returning sub-let offers.
+ *
  * "Awaiting approval" earns its place because an ask is the only thing here
  * that is *waiting on a person*. An offer sits until someone takes it, but a
  * request has somebody on the other end who cannot proceed until this account
  * answers — and buried among a holder's own weeks, each already carrying its
  * facts, fees and offer controls, it was easy to miss entirely.
  */
-type Filter = "all" | "rent" | "sale" | "yours" | "pending";
+type Filter = "all" | "rent" | "sale" | "rented" | "yours" | "pending";
+
+/**
+ * What an empty result means, which is different enough per filter to be worth
+ * saying — "nothing here" and "nothing available" are not the same news.
+ *
+ * A record rather than the nested ternary this outgrew, so adding a filter is a
+ * type error until its empty case is written.
+ */
+const EMPTY: Record<Filter, string> = {
+  all: "The registry is empty.",
+  rent: "No week is available to rent right now.",
+  sale: "No week is available to buy right now.",
+  rented: "No week is out on a term — every one of them is with whoever holds title.",
+  yours: "You hold no weeks on this contract — neither owned nor rented.",
+  pending:
+    "Nothing is waiting on an answer. Asks appear here in both directions — one you sent and are waiting on, or one sent to you about a week you hold.",
+};
 
 /** Arrears, or no attestation at all: the issuer will decline a transfer. */
 const feesBlock = (right: RightRow): boolean => right.fees === null || !right.fees.current;
@@ -201,6 +223,11 @@ export default function ListScreen() {
           return right.listing?.term_secs != null && !isBlocked(right);
         case "sale":
           return right.listing !== null && right.listing.term_secs === null && !isBlocked(right);
+        // Occupied on a finite term, whoever holds it. The card's own tags say
+        // which side of it the reader is on, so this stays registry-wide rather
+        // than quietly becoming a second "Yours".
+        case "rented":
+          return right.rented_out;
         case "yours":
           return (
             address !== null &&
@@ -227,6 +254,7 @@ export default function ListScreen() {
       all: rights.length,
       rent: rights.filter((r) => matches(r, "rent")).length,
       sale: rights.filter((r) => matches(r, "sale")).length,
+      rented: rights.filter((r) => matches(r, "rented")).length,
       yours: rights.filter((r) => matches(r, "yours")).length,
       pending: rights.filter((r) => matches(r, "pending")).length,
     };
@@ -551,6 +579,7 @@ export default function ListScreen() {
               ["all", "All", counts.all],
               ["rent", "For rent", counts.rent],
               ["sale", "For sale", counts.sale],
+              ["rented", "Rented out", counts.rented],
               // Only for a connected account. For anyone else it is always empty,
               // and a permanently empty control is just a question mark.
               ...(address !== null
@@ -581,15 +610,7 @@ export default function ListScreen() {
 
           {shown.length === 0 ? (
             <div className="note">
-              {filter === "yours"
-                ? "You hold no weeks on this contract — neither owned nor rented."
-                : filter === "pending"
-                  ? "Nothing is waiting on an answer. Asks appear here in both directions — one you sent and are waiting on, or one sent to you about a week you hold."
-                  : filter === "rent"
-                    ? "No week is available to rent right now."
-                    : filter === "sale"
-                      ? "No week is available to buy right now."
-                      : "The registry is empty."}{" "}
+              {EMPTY[filter]}{" "}
               {filter === "all" ? null : (
                 <button onClick={() => setFilter("all")}>Show all {counts.all}</button>
               )}
