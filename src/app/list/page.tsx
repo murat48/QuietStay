@@ -75,6 +75,30 @@ interface TransferRequest {
  */
 type Filter = "all" | "rent" | "sale" | "yours";
 
+/** Arrears, or no attestation at all: the issuer will decline a transfer. */
+const feesBlock = (right: RightRow): boolean => right.fees === null || !right.fees.current;
+
+/**
+ * An offer that is a sub-let, and so will be declined whoever asks.
+ *
+ * A week out on a term can only be listed by the account holding that term —
+ * `list` asks the contract for the effective holder — so an offer on a
+ * rented-out week is always the renter passing it on. The contract permits
+ * that; this issuer does not approve it, because the account holding title is
+ * not consulted by `transfer` and would have no say. Sub-letting is a question
+ * for a later phase, so nobody should be invited to ask for one.
+ */
+const isSublet = (right: RightRow): boolean => right.rented_out && right.listing !== null;
+
+/**
+ * A week the issuer will not approve a transfer of, whatever its offer says.
+ *
+ * Listing needs nobody's approval — the contract asks only the holder — so a
+ * week can be advertised while every transfer of it would be declined. That is
+ * the right division of power, but it puts a dead offer in the shop window.
+ */
+const isBlocked = (right: RightRow): boolean => feesBlock(right) || isSublet(right);
+
 interface Inventory {
   contract: string;
   contract_explorer: string;
@@ -153,14 +177,21 @@ export default function ListScreen() {
    * renting are both yours to be shown, and a renter arriving at the registry is
    * looking for the one they took, not the one they hold title to — they hold
    * title to nothing.
+   *
+   * "For rent" and "For sale" are shopping filters, and so they answer *can I
+   * take this one*, not *does it carry an offer*. A week already rented out
+   * carries the renter's sub-let offer; a week in arrears carries an offer the
+   * issuer would decline. Both are real entries in the registry and both stay
+   * visible under "All" and "Yours" — where their holder needs to find them —
+   * but neither is available, so neither belongs in a list of what is.
    */
   const matches = useCallback(
     (right: RightRow, which: Filter): boolean => {
       switch (which) {
         case "rent":
-          return right.listing?.term_secs != null;
+          return right.listing?.term_secs != null && !isBlocked(right);
         case "sale":
-          return right.listing !== null && right.listing.term_secs === null;
+          return right.listing !== null && right.listing.term_secs === null && !isBlocked(right);
         case "yours":
           return (
             address !== null &&
@@ -191,37 +222,14 @@ export default function ListScreen() {
     setFilter("yours");
   }, [address, counts.yours]);
 
-  /** Arrears, or no attestation at all: the issuer will decline a transfer. */
-  const feesBlock = (right: RightRow): boolean => right.fees === null || !right.fees.current;
-
-  /**
-   * An offer that is a sub-let, and so will be declined whoever asks.
-   *
-   * A week out on a term can only be listed by the account holding that term —
-   * `list` asks the contract for the effective holder — so an offer on a
-   * rented-out week is always the renter passing it on. The contract permits
-   * that; this issuer does not approve it, because the account holding title is
-   * not consulted by `transfer` and would have no say. Sub-letting is a question
-   * for a later phase, so nobody should be invited to ask for one.
-   */
-  const isSublet = (right: RightRow): boolean => right.rented_out && right.listing !== null;
-
-  /**
-   * A week the issuer will not approve a transfer of, whatever its offer says.
-   *
-   * Listing needs nobody's approval — the contract asks only the holder — so a
-   * week can be advertised while every transfer of it would be declined. That is
-   * the right division of power, but it puts a dead offer in the shop window.
-   */
-  const isBlocked = (right: RightRow): boolean => feesBlock(right) || isSublet(right);
-
   // Filtering to a set that turns out to be empty leaves a blank page with no
   // explanation, so the empty case is rendered rather than fallen into.
   const shown = (inventory?.rights ?? [])
     .filter((right) => matches(right, filter))
-    // Blocked weeks sort last rather than being hidden. Hiding them would be a
-    // second kind of dishonesty — they are genuinely in the registry, and their
-    // holder needs to see the card in order to act on it.
+    // Under "All" and "Yours" a blocked week sorts last rather than vanishing:
+    // it is genuinely in the registry, and its holder has to see the card to
+    // clear whatever is blocking it. The shopping filters exclude it instead —
+    // there it would be an offer nobody can take.
     .sort((a, b) => Number(isBlocked(a)) - Number(isBlocked(b)));
 
 
@@ -530,9 +538,9 @@ export default function ListScreen() {
               {filter === "yours"
                 ? "You hold no weeks on this contract — neither owned nor rented."
                 : filter === "rent"
-                  ? "No week is offered for rent right now."
+                  ? "No week is available to rent right now."
                   : filter === "sale"
-                    ? "No week is offered for sale right now."
+                    ? "No week is available to buy right now."
                     : "The registry is empty."}{" "}
               {filter === "all" ? null : (
                 <button onClick={() => setFilter("all")}>Show all {counts.all}</button>
