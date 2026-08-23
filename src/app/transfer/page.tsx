@@ -10,8 +10,9 @@
  * What *does* differ is who is using it, and the form is built from the account's
  * standing on the registry rather than from a role the user picks:
  *
- * - **Owner (kiraya veren)** — holds title. May rent the week out for a term, or
- *   sell it outright. The term may run to the end of the use year.
+ * - **Owner (kiraya veren)** — holds title. May rent the week out, or sell it
+ *   outright. A rental ends when the week does; there is no term to choose,
+ *   because a stay has fixed dates and half a week is not a thing to hold.
  * - **Renter (kiracı)** — holds the week on a term, and may pass it on to nobody.
  *   They may use it until their term lapses; that is all.
  *
@@ -75,19 +76,18 @@ function TransferForm() {
   const [rightId, setRightId] = useState<string>("");
   const [recipient, setRecipient] = useState("");
   const [mode, setMode] = useState<"rent" | "sell">("rent");
-  const [until, setUntil] = useState("");
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const selected = options.find((option) => String(option.right.id) === rightId) ?? null;
 
-  // Default to the first transferable week, and to a term that fits it.
+  // Default to the first transferable week. There is no term to default, because
+  // there is no term to choose.
   useEffect(() => {
     if (rightId !== "" || options.length === 0) return;
     const first = options[0]!;
     setRightId(String(first.right.id));
-    setUntil(formatDate(Math.min(first.right.week.end, first.maxTermEnds)));
     if (!first.maySell) setMode("rent");
   }, [options, rightId]);
 
@@ -102,10 +102,19 @@ function TransferForm() {
     if (mode === "sell") {
       return { from: address, to: recipient.trim(), rightId: selected.right.id, expiresAt: null };
     }
-    const expiresAt = Math.floor(Date.parse(`${until}T00:00:00Z`) / 1000);
-    if (!Number.isFinite(expiresAt)) return null;
+    /*
+     * A rental runs to the end of the week, and that is not a decision anybody
+     * on this form gets to make: the stay has fixed dates, and a right to half
+     * of somebody's week is not a thing that exists.
+     *
+     * A renter passing the week on is capped again by their own term, which is
+     * the same date unless a shorter grant put it earlier. The contract enforces
+     * that independently — `ExpiryBeyondSenderTerm` — so this is the honest
+     * value rather than the safe one.
+     */
+    const expiresAt = Math.min(selected.right.week.end, selected.maxTermEnds);
     return { from: address, to: recipient.trim(), rightId: selected.right.id, expiresAt };
-  }, [selected, address, mode, until, recipient]);
+  }, [selected, address, mode, recipient]);
 
   const validate = useCallback((): string | null => {
     const requested = terms();
@@ -297,10 +306,7 @@ function TransferForm() {
             onChange={(event) => {
               setRightId(event.target.value);
               const next = options.find((o) => String(o.right.id) === event.target.value);
-              if (next) {
-                setUntil(formatDate(Math.min(next.right.week.end, next.maxTermEnds)));
-                if (!next.maySell) setMode("rent");
-              }
+              if (next && !next.maySell) setMode("rent");
             }}
           >
             {options.map((option) => (
@@ -317,9 +323,9 @@ function TransferForm() {
           <div className={`note ${selected.maySell ? "accent" : "warn"}`} style={{ marginTop: 0 }}>
             {selected.maySell ? (
               <>
-                You hold <strong>title</strong> to this week. You can rent it out for a term, or
-                sell it outright. A rental may run to {formatDate(selected.maxTermEnds)}, the end of
-                the use year.
+                You hold <strong>title</strong> to this week. You can rent it out, or sell it
+                outright. A rental runs to {formatDate(selected.right.week.end)}, the end of the
+                week — the dates are the week&apos;s, not yours to set.
               </>
             ) : (
               <>
@@ -369,21 +375,15 @@ function TransferForm() {
             </label>
           </div>
 
-          {mode === "rent" ? (
-            <div className="field" style={{ marginTop: "0.75rem", maxWidth: "14rem" }}>
-              <label htmlFor="until">Term ends</label>
-              <input
-                id="until"
-                type="date"
-                value={until}
-                max={selected ? formatDate(selected.maxTermEnds) : undefined}
-                onChange={(event) => setUntil(event.target.value)}
-              />
-              <p className="muted" style={{ margin: "0.3rem 0 0" }}>
-                Must be in the future and no later than{" "}
-                {selected ? formatDate(selected.maxTermEnds) : "your own term"}.
-              </p>
-            </div>
+          {mode === "rent" && selected ? (
+            <p className="muted" style={{ marginTop: "0.75rem", marginBottom: 0 }}>
+              The term runs to{" "}
+              <strong>
+                {formatDate(Math.min(selected.right.week.end, selected.maxTermEnds))}
+              </strong>
+              , the end of this week. It lapses there on its own — no return transaction, and
+              nothing for either of you to remember.
+            </p>
           ) : null}
         </fieldset>
 

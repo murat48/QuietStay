@@ -145,7 +145,6 @@ export default function ListScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busyRight, setBusyRight] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [termDays, setTermDays] = useState("7");
   // The date the issuer is settling fees through, per right. Keyed rather than
   // held once, so two cards on screen cannot share one input.
   const [paidThrough, setPaidThrough] = useState<Record<number, string>>({});
@@ -404,8 +403,22 @@ export default function ListScreen() {
       setMessage(null);
       setError(null);
       try {
-        const expiresAt =
-          req.term_secs === null ? null : Math.floor(Date.now() / 1000) + req.term_secs;
+        /*
+         * A rental ends when the *week* ends, not a stretch of days measured
+         * from whenever the owner got round to accepting. Those are different
+         * dates in every real case: a week is booked in advance, so `now + 7
+         * days` would hand the renter a term that lapses before their stay
+         * begins — the ledger would say they held it, in August, for a stay in
+         * December.
+         *
+         * The listing's `term_secs` is the length of the stay and is what the
+         * card advertises. It is not where the expiry comes from.
+         */
+        const week = inventory?.rights.find((r) => r.id === req.right_id)?.week ?? null;
+        if (req.term_secs !== null && week === null) {
+          throw new Error("this week is no longer in the registry — reload and try again");
+        }
+        const expiresAt = req.term_secs === null ? null : week!.end;
 
         const approval = await authFetch("/api/approve-transfer", {
           method: "POST",
@@ -451,7 +464,7 @@ export default function ListScreen() {
         setBusyRight(null);
       }
     },
-    [address, authFetch, sign, load, loadRequests],
+    [address, inventory, authFetch, sign, load, loadRequests],
   );
 
   /**
@@ -1007,29 +1020,20 @@ export default function ListScreen() {
                               Offer for sale
                             </button>
                           ) : null}
-                          <div className="row" style={{ gap: "0.35rem" }}>
-                            <input
-                              style={{ width: "4.5rem" }}
-                              type="number"
-                              min="1"
-                              value={termDays}
-                              onChange={(event) => setTermDays(event.target.value)}
-                              aria-label="rental term in days"
-                            />
-                            <span className="muted">days</span>
-                            <button
-                              disabled={busyRight === right.id || !right.active}
-                              onClick={() =>
-                                void changeOffer(
-                                  right.id,
-                                  "list",
-                                  Math.max(1, Number(termDays) || 1) * 86_400,
-                                )
-                              }
-                            >
-                              Offer for rent
-                            </button>
-                          </div>
+                          {/*
+                            No term to choose. The week is the week: a renter
+                            takes those dates or takes nothing, and there is no
+                            such thing as four days of it.
+                          */}
+                          <button
+                            disabled={busyRight === right.id || !right.active}
+                            onClick={() =>
+                              void changeOffer(right.id, "list", right.week.end - right.week.start)
+                            }
+                          >
+                            Offer for rent — {formatDate(right.week.start)} to{" "}
+                            {formatDate(right.week.end)}
+                          </button>
                         </>
                       )}
                     </div>
