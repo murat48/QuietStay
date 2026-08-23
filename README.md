@@ -109,14 +109,16 @@ rejection after a fee.
 | Role | Turkish | Derived from | May |
 | --- | --- | --- | --- |
 | Issuer | ihraççı | equals `issuer()` on the contract | issue, attest, approve or decline |
-| Owner | kiraya veren | holds **title** to a week | rent it out for a term, or sell it |
-| Renter | kiracı | holds a week on a **finite term** | sublet within that term; **not** sell |
+| Owner | kiraya veren | holds **title** to a week | rent the week out, or sell it |
+| Renter | kiracı | holds a week on a **finite term** | use it until the term lapses. Not sell — the contract refuses it — and the registry offers no sub-let, because this issuer approves none |
 | Visitor | ziyaretçi | holds nothing | verify a week — no account needed. Browsing the registry asks for a signed-in wallet: a product decision, not a lock, since the contract answers anyone. |
 
 Not exclusive: owning one week and renting another makes you both, and the app shows
 both. An owner and a renter land on different content, see different nav, and get a
 different transfer form — the renter's sell option is disabled with the reason
-stated, and their date picker stops at their own checkout.
+stated, and the registry offers them no way to publish the week they are staying in.
+Neither of them picks a term: a rental runs to the end of the week, because the week
+is the thing being let.
 
 None of this grants anything. Every limit is enforced again server-side and again on
 chain; the role layer exists so a refusal arrives before a signature.

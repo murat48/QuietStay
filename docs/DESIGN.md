@@ -199,8 +199,8 @@ from the registry ([`src/lib/roles.ts`](../src/lib/roles.ts), served by
 | Role | Turkish | Derived from | May |
 | --- | --- | --- | --- |
 | Issuer | ihraççı | the account equals `issuer()` on the contract | issue rights, attest weeks, approve or decline transfers |
-| Owner | kiraya veren | holds **title** — `holdings[0]` — to ≥1 right | rent the week out for a term, or sell it outright |
-| Renter | kiracı | is the effective holder of ≥1 right on a **finite term** | sublet within their own term; **not** sell |
+| Owner | kiraya veren | holds **title** — `holdings[0]` — to ≥1 right | rent the week out, or sell it outright |
+| Renter | kiracı | is the effective holder of ≥1 right on a **finite term** | use the week until their term lapses; **not** sell, and no sub-let this issuer would approve |
 | Visitor | ziyaretçi | none of the above | browse the registry and verify any week |
 
 The roles are not exclusive. An account that owns one week and rents another is
@@ -232,9 +232,13 @@ lives inside the existing screens:
 - **Nav** — Issue is hidden from non-issuers rather than shown as a link to a
   refusal.
 - **Transfer** — the form is built from the account's transferable rights. An owner
-  gets rent-out and sell; a renter gets sublet only, with the sell option disabled
-  and the reason stated, and with the date picker capped at their own checkout
-  rather than the end of the use year.
+  gets rent-out and sell. A renter gets neither usefully: the sell option is disabled
+  with the reason stated, and the sub-let the contract would allow is one this issuer
+  declines — the screen says so before they spend a fee finding out.
+- **List** — only the title holder is offered *Offer for sale* and *Offer for rent*.
+  A renter publishing the week they are staying in would be advertising a sub-let:
+  kept out of the shopping filters by `isSublet`, shown to no buyer, and refused if
+  anyone asked. The card explains that instead of showing a button.
 - **List** and **Verify** — open to everyone, no account required. Auditing the
   registry is the point; gating it would defeat the exercise.
 

@@ -653,6 +653,22 @@ export default function ListScreen() {
               // decision about somebody else's plans, and the surrounding
               // machinery is what made it easy to overlook. Both are one tab away.
               const answering = filter === "pending";
+              /*
+               * Who may publish an offer at all: the title holder, and nobody
+               * else. A renter listing the week they are staying in is a
+               * sub-let. The contract permits it — `list` asks only the
+               * effective holder — but this issuer declines every transfer of
+               * one, so the offer would be dead the moment it appeared: kept
+               * out of "For rent" by `isSublet`, shown to no buyer, and refused
+               * if anyone asked anyway. Offering the button was inviting
+               * somebody to pay a fee for a listing nothing could come of.
+               *
+               * `!rented_out` is redundant here — a title holder whose week is
+               * out on a term is not the effective holder, so `mine` is already
+               * false — and is kept because the rule is easier to read than to
+               * re-derive.
+               */
+              const mayOffer = isTitleHolder && !right.rented_out;
               // Asks for this week that are still open: incoming when it is
               // yours, outgoing when it is not.
               const asks = requests.incoming.filter(
@@ -1010,16 +1026,14 @@ export default function ListScreen() {
                         >
                           {busyRight === right.id ? "working…" : "Withdraw offer"}
                         </button>
-                      ) : (
+                      ) : mayOffer ? (
                         <>
-                          {isTitleHolder && !right.rented_out ? (
-                            <button
-                              disabled={busyRight === right.id || !right.active}
-                              onClick={() => void changeOffer(right.id, "list", null)}
-                            >
-                              Offer for sale
-                            </button>
-                          ) : null}
+                          <button
+                            disabled={busyRight === right.id || !right.active}
+                            onClick={() => void changeOffer(right.id, "list", null)}
+                          >
+                            Offer for sale
+                          </button>
                           {/*
                             No term to choose. The week is the week: a renter
                             takes those dates or takes nothing, and there is no
@@ -1035,6 +1049,12 @@ export default function ListScreen() {
                             {formatDate(right.week.end)}
                           </button>
                         </>
+                      ) : (
+                        <p className="muted" style={{ margin: 0 }}>
+                          You hold this week until {formatDate(right.week.end)} and it is yours to
+                          use. Passing it on would be a sub-let, which this issuer does not approve,
+                          so there is nothing to publish.
+                        </p>
                       )}
                     </div>
                   ) : null}
