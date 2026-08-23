@@ -72,11 +72,17 @@ interface TransferRequest {
 /**
  * What the registry is being narrowed to.
  *
- * Deliberately four, and all four answer a question somebody actually arrives
- * with. "Yours" appears only for a connected account, because for everyone else
- * it would always be empty.
+ * Each one answers a question somebody actually arrives with. Two of them —
+ * "Yours" and "Awaiting approval" — are about the reader rather than the
+ * registry, and both would be permanently empty without an account.
+ *
+ * "Awaiting approval" earns its place because an ask is the only thing here
+ * that is *waiting on a person*. An offer sits until someone takes it, but a
+ * request has somebody on the other end who cannot proceed until this account
+ * answers — and buried among a holder's own weeks, each already carrying its
+ * facts, fees and offer controls, it was easy to miss entirely.
  */
-type Filter = "all" | "rent" | "sale" | "yours";
+type Filter = "all" | "rent" | "sale" | "yours" | "pending";
 
 /** Arrears, or no attestation at all: the issuer will decline a transfer. */
 const feesBlock = (right: RightRow): boolean => right.fees === null || !right.fees.current;
@@ -200,11 +206,19 @@ export default function ListScreen() {
             address !== null &&
             (right.effective_holder === address || right.title_holder === address)
           );
+        // Both directions, because both are unfinished business: one is waiting
+        // on this account to answer, the other on somebody else. The API serves
+        // only the two parties to a request, so anything here is already ours.
+        case "pending":
+          return (
+            requests.incoming.some((r) => r.right_id === right.id && r.status === "open") ||
+            requests.outgoing.some((r) => r.right_id === right.id && r.status === "open")
+          );
         default:
           return true;
       }
     },
-    [address],
+    [address, requests],
   );
 
   const counts = useMemo(() => {
@@ -214,16 +228,33 @@ export default function ListScreen() {
       rent: rights.filter((r) => matches(r, "rent")).length,
       sale: rights.filter((r) => matches(r, "sale")).length,
       yours: rights.filter((r) => matches(r, "yours")).length,
+      pending: rights.filter((r) => matches(r, "pending")).length,
     };
   }, [inventory, matches]);
 
-  // Someone who holds a week almost always came to look at it. Done once, and
-  // only when they hold something, so a visitor is never moved off "all".
+  /**
+   * How many of those are waiting on *this* account, which is a different number
+   * from the tab's: a request you sent is pending too, but there is nothing for
+   * you to do about it. Only this one is worth pulling somebody towards.
+   */
+  const awaitingYou = useMemo(
+    () => new Set(requests.incoming.filter((r) => r.status === "open").map((r) => r.right_id)).size,
+    [requests],
+  );
+
+  // Someone who holds a week almost always came to look at it — unless somebody
+  // is waiting on them, which comes first. Done once either way, so a filter you
+  // picked is never overruled, and a visitor with nothing is left on "all".
   useEffect(() => {
-    if (autoSelected.current || address === null || counts.yours === 0) return;
-    autoSelected.current = true;
-    setFilter("yours");
-  }, [address, counts.yours]);
+    if (autoSelected.current || address === null) return;
+    if (awaitingYou > 0) {
+      autoSelected.current = true;
+      setFilter("pending");
+    } else if (counts.yours > 0) {
+      autoSelected.current = true;
+      setFilter("yours");
+    }
+  }, [address, awaitingYou, counts.yours]);
 
   // Filtering to a set that turns out to be empty leaves a blank page with no
   // explanation, so the empty case is rendered rather than fallen into.
@@ -522,7 +553,12 @@ export default function ListScreen() {
               ["sale", "For sale", counts.sale],
               // Only for a connected account. For anyone else it is always empty,
               // and a permanently empty control is just a question mark.
-              ...(address !== null ? ([["yours", "Yours", counts.yours]] as const) : []),
+              ...(address !== null
+                ? ([
+                    ["yours", "Yours", counts.yours],
+                    ["pending", "Awaiting approval", counts.pending],
+                  ] as const)
+                : []),
             ] as const).map(([key, label, count]) => (
               <button
                 key={key}
@@ -530,7 +566,15 @@ export default function ListScreen() {
                 aria-selected={filter === key}
                 onClick={() => setFilter(key)}
               >
-                {label} <span className="muted">{count}</span>
+                {label}{" "}
+                {/*
+                  The count on this one tab stops being a footnote when somebody
+                  is waiting on an answer, because then it is the only number on
+                  the strip that is asking the reader for something.
+                */}
+                <span className={key === "pending" && awaitingYou > 0 ? "tag accent" : "muted"}>
+                  {count}
+                </span>
               </button>
             ))}
           </div>
@@ -539,11 +583,13 @@ export default function ListScreen() {
             <div className="note">
               {filter === "yours"
                 ? "You hold no weeks on this contract — neither owned nor rented."
-                : filter === "rent"
-                  ? "No week is available to rent right now."
-                  : filter === "sale"
-                    ? "No week is available to buy right now."
-                    : "The registry is empty."}{" "}
+                : filter === "pending"
+                  ? "Nothing is waiting on an answer. Asks appear here in both directions — one you sent and are waiting on, or one sent to you about a week you hold."
+                  : filter === "rent"
+                    ? "No week is available to rent right now."
+                    : filter === "sale"
+                      ? "No week is available to buy right now."
+                      : "The registry is empty."}{" "}
               {filter === "all" ? null : (
                 <button onClick={() => setFilter("all")}>Show all {counts.all}</button>
               )}
@@ -567,6 +613,12 @@ export default function ListScreen() {
               // An offer on a week that is out on a term is a sub-let, which this
               // issuer declines and which no later phase has committed to.
               const sublet = isSublet(right);
+              // Under "Awaiting approval" the card is on screen for exactly one
+              // reason, so the controls for *running* a week — the issuer's fee
+              // entry, the holder's own offer — stand down. Answering an ask is a
+              // decision about somebody else's plans, and the surrounding
+              // machinery is what made it easy to overlook. Both are one tab away.
+              const answering = filter === "pending";
               // Asks for this week that are still open: incoming when it is
               // yours, outgoing when it is not.
               const asks = requests.incoming.filter(
@@ -857,7 +909,7 @@ export default function ListScreen() {
                     it did, by re-signing its attestation. Nothing is written to
                     the ledger and the commitment is untouched.
                   */}
-                  {isIssuer ? (
+                  {isIssuer && !answering ? (
                     <fieldset style={{ marginTop: "0.85rem", marginBottom: 0 }}>
                       <legend>Issuer — fee status</legend>
                       <div className="row" style={{ alignItems: "flex-end" }}>
@@ -915,7 +967,7 @@ export default function ListScreen() {
                     </fieldset>
                   ) : null}
 
-                  {mine ? (
+                  {mine && !answering ? (
                     <div className="row" style={{ marginTop: "0.85rem" }}>
                       {right.listing ? (
                         <button
