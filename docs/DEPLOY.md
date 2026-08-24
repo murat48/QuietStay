@@ -175,3 +175,24 @@ registry comes from the chain rather than from a local cache.
 
 The one thing it will not see is a new attestation, which lives in the issuing
 machine's `inventory/attestations`. Copy it to the volume, or rebuild.
+
+## Attestations the registry will not show
+
+`/api/inventory` verifies an attestation's **provenance** before displaying it —
+that the issuer signed it, for this right, on this contract and network, and
+that the signature still covers the bytes. It does not require the news to be
+good: sample week 04 says the fees are unpaid and the registry says so too.
+Suppressing that behind "not attested" would replace a true statement with a
+false one.
+
+The reason is the workflow above rather than an attacker. Attestations reach a
+deployment by being copied into a volume by hand as new weeks are issued, and a
+file saved under the wrong name — `right-28` as `right-27` — would otherwise be
+shown as that week's town and fee state with nothing anywhere saying it was
+wrong. It now reads as never attested, which is visible and prompts a fix.
+
+Fail-closed, and worth knowing: a bad file in the volume shadows the good copy in
+the image rather than falling through to it. Someone with write access to `/data`
+can make a week *look* unattested; they cannot make one look attested that is not.
+A transfer was never at risk either way — `/api/approve-transfer` has always run
+the full verification, including the commitment against the ledger.

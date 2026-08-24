@@ -347,3 +347,47 @@ export function verifyAttestation(
 
   return { ok: checks.every((c) => c.ok), checks };
 }
+
+/**
+ * The checks that answer "is this attestation genuine", as distinct from "is the
+ * news good".
+ *
+ * `verifyAttestation` reports both in one `ok`, which is right for the verify
+ * screen: a counterparty asking whether to take a week wants a single answer,
+ * and an authentic attestation saying the fees are unpaid is still a no.
+ *
+ * The registry needs the two separated. It has to *display* what the issuer said
+ * — including that fees are due, which is the whole point of sample week 04 —
+ * while refusing to display anything it cannot show the issuer actually signed.
+ * Using `ok` there would hide a week in arrears behind "not attested", which is
+ * a different and worse claim.
+ */
+const PROVENANCE_CHECKS = new Set([
+  "shape",
+  "schema",
+  "network",
+  "contract",
+  "right",
+  "signer",
+  "signature",
+  "window",
+]);
+
+/**
+ * Whether the issuer really signed this, for this right, on this contract and
+ * network — saying nothing about what it signed.
+ *
+ * A file placed under the wrong name fails `right`; one edited after signing
+ * fails `signature`; one from another deployment fails `contract` or `network`.
+ */
+export function attestationIsAuthentic(
+  attestation: unknown,
+  expect: AttestationExpectation,
+): boolean {
+  const { checks } = verifyAttestation(attestation, expect);
+  const seen = checks.filter((check) => PROVENANCE_CHECKS.has(check.id));
+  // Every provenance check must have run and passed. `verifyAttestation` returns
+  // early on a malformed payload, so a short list means it never got far enough
+  // to judge — which is not the same as passing.
+  return seen.length === PROVENANCE_CHECKS.size && seen.every((check) => check.ok);
+}

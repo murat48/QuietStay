@@ -46,6 +46,7 @@ RUN npm ci --ignore-scripts
 COPY next.config.ts tsconfig.json ./
 COPY src ./src
 COPY inventory/attestations ./inventory/attestations
+COPY inventory/evidence/attestations ./inventory/evidence/attestations
 
 # NEXT_PUBLIC_* values are read at build time, so the domain SEP-10 will name has
 # to be known here. Getting it wrong does not break the handshake — the server
@@ -95,6 +96,9 @@ COPY --from=build --chown=quietstay:quietstay /app/.next/static ./.next/static
 # commitment and a signature. The ownership records they commit to are not here
 # and never enter the image.
 COPY --from=build --chown=quietstay:quietstay /app/inventory/attestations ./inventory/attestations
+# Rights 5-7 live here — see .dockerignore. The records under
+# inventory/evidence/canonical are not copied and are not in the context.
+COPY --from=build --chown=quietstay:quietstay /app/inventory/evidence/attestations ./inventory/evidence/attestations
 
 # The writable volume. Kept apart from ./inventory on purpose: mounting over that
 # directory would hide the attestations copied above behind an empty mount, and

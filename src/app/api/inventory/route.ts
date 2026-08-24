@@ -30,6 +30,7 @@
  * rest is disclosed once, to them, in exchange for their interest.
  */
 
+import { attestationIsAuthentic } from "@/lib/attestation";
 import { loadAttestation } from "@/lib/attestation-store";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, explorer } from "@/lib/config";
 import { readInventory, readIssuer, readName, readSymbol } from "@/lib/contract";
@@ -56,7 +57,33 @@ export async function GET(): Promise<Response> {
       issuer,
       now,
       rights: rows.map(({ right, listing, holding, active }) => {
-        const attestation = loadAttestation(right.id);
+        /*
+         * Read it, then prove it before showing it.
+         *
+         * The store is a directory, and in a deployment a mounted volume that
+         * attestations are copied into by hand as new weeks are issued. A file
+         * that lands under the wrong name — `right-28` saved as `right-27` —
+         * would otherwise be displayed as that week's town and fee state, with
+         * nothing anywhere saying it was wrong. That is a slip, not an attack,
+         * and it is the likely one given how the files get there.
+         *
+         * Provenance only. Whether the issuer says the fees are *paid* is
+         * content, and the registry's job is to report it, not to suppress it:
+         * hiding a week in arrears behind "not attested" would replace a true
+         * statement with a false one.
+         */
+        const onFile = loadAttestation(right.id);
+        const attestation =
+          onFile !== null &&
+          attestationIsAuthentic(onFile, {
+            contract: CONTRACT_ID,
+            network: NETWORK_PASSPHRASE,
+            rightId: right.id,
+            contractIssuer: right.issuer,
+            onChainCommitment: right.commitment,
+          })
+            ? onFile
+            : null;
         return {
           id: right.id,
           // The week on offer. Public because a listing has to say what it is

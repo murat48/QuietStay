@@ -25,6 +25,15 @@
 # signature. They are served by the app and the verify screen needs them.
 !inventory/attestations
 
+# Rights 5-7 were issued by `npm run evidence`, which files their attestations
+# apart so evidence runs stay disposable. They are on the same contract and in
+# the same registry, so an image without them shows three weeks as never
+# attested — and an unattested week is kept out of the shopping filters, so it
+# is not a cosmetic difference. Attestations only: `inventory/evidence/canonical`
+# alongside it holds the records themselves and must never ship.
+!inventory/evidence
+!inventory/evidence/attestations
+
 # --- and, explicitly, what must never be in an image ------------------------
 # Already covered by `*`. Repeated because these are the ones that would matter,
 # and a reader should be able to see the intent without re-deriving it.
