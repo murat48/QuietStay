@@ -38,6 +38,7 @@ import {
   walletNetwork,
 } from "@/lib/wallet-kit";
 import type { AccountStanding, Role, RightSummary } from "@/lib/roles";
+import { describeError } from "@/lib/format";
 
 interface StandingResponse {
   account: string;
@@ -46,6 +47,8 @@ interface StandingResponse {
   owned: RightSummary[];
   renting: RightSummary[];
   rented_out: RightSummary[];
+  read_only?: boolean;
+  can_request?: boolean;
   error?: string;
 }
 
@@ -56,6 +59,18 @@ interface WalletState {
   authenticated: boolean;
   /** Roles read off the registry. `null` until signed in. */
   standing: AccountStanding | null;
+  /**
+   * Whether this deployment holds the issuer key. A public one is not expected
+   * to, so screens hide what it could not sign. `false` until known, which is
+   * the safe way round: a control that appears late is better than one that
+   * flashes and disappears.
+   */
+  readOnly: boolean;
+  /**
+   * Whether this deployment can record a transfer request. False on a host with
+   * a read-only filesystem, where the ask would be taken and then lost.
+   */
+  canRequest: boolean;
   busy: boolean;
   error: string | null;
   connect: () => Promise<void>;
@@ -78,6 +93,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [standing, setStanding] = useState<AccountStanding | null>(null);
+  const [readOnly, setReadOnly] = useState(false);
+  // Assume it works until told otherwise: the alternative hides a working control.
+  const [canRequest, setCanRequest] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,6 +117,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const body = (await response.json()) as StandingResponse;
     if (!response.ok) throw new Error(body.error ?? "could not read your standing");
 
+    setReadOnly(body.read_only === true);
+    setCanRequest(body.can_request !== false);
     setStanding({
       account: body.account,
       roles: body.roles,
@@ -114,7 +134,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       await loadStanding(token);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(describeError(caught));
     }
   }, [token, loadStanding]);
 
@@ -161,7 +181,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       await loadStanding(session.token);
     } catch (caught) {
       if (caught instanceof NetworkMismatch) setError(caught.message);
-      else setError(caught instanceof Error ? caught.message : String(caught));
+      else setError(describeError(caught));
     } finally {
       setBusy(false);
     }
@@ -202,6 +222,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       token,
       authenticated: token !== null,
       standing,
+      readOnly,
+      canRequest,
       busy,
       error,
       connect,
@@ -210,7 +232,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       sign,
       authFetch,
     }),
-    [address, token, standing, busy, error, connect, disconnect, refreshStanding, sign, authFetch],
+    [address, token, standing, readOnly, canRequest, busy, error, connect, disconnect, refreshStanding, sign, authFetch],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

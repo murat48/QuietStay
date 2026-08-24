@@ -286,28 +286,50 @@ button,
   display: inline-block;
 }
 
-button:hover:not(:disabled),
-.btn:hover {
+/*
+ * Variants opt out of the plain hover rather than fighting it.
+ *
+ * `button:hover:not(:disabled)` is (0,2,1) and `button.primary` is only (0,1,1),
+ * so without this the primary button took the plain surface on hover while
+ * keeping its white text — white on near-white, and the label vanished.
+ */
+button:hover:not(:disabled):not(.primary):not(.danger),
+.btn:hover:not(.primary):not(.danger) {
   background: var(--surface-2);
+  border-color: var(--border-strong);
 }
 
-button.primary {
+button.primary,
+.btn.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
 
 @media (prefers-color-scheme: dark) {
-  button.primary {
+  button.primary,
+  .btn.primary {
     color: #0f1a17;
   }
 }
 
-button.primary:hover:not(:disabled) {
-  filter: brightness(1.08);
+/* Stated outright, not left to a filter over an inherited background. */
+button.primary:hover:not(:disabled),
+.btn.primary:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  filter: brightness(1.12);
 }
 
-button.danger {
+button.danger,
+.btn.danger {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+button.danger:hover:not(:disabled),
+.btn.danger:hover {
+  background: var(--bad-soft);
   border-color: var(--bad);
   color: var(--bad);
 }
@@ -371,6 +393,80 @@ legend {
   margin-bottom: 0.85rem;
 }
 
+.field .muted {
+  margin: 0.3rem 0 0;
+}
+
+/* Fields that read as a set — a resort, a week — rather than a column. */
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.85rem;
+}
+
+.field-row .field {
+  margin-bottom: 0;
+}
+
+/* Values the screen worked out rather than asked for — generated identifiers,
+   derived fields. Shown so they can be checked, but not typed into, so they
+   carry the flatter background that says "this one is not yours to edit". */
+input[readonly] {
+  background: var(--surface-2);
+  color: var(--text-dim);
+  cursor: default;
+}
+
+input[readonly]:focus {
+  outline-color: var(--border-strong);
+}
+
+.generated {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Long hex — the identity fields, not every read-only box. */
+.generated input {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+
+.generated button {
+  flex: none;
+}
+
+/* --- tabs --------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  margin: -0.2rem 0 1.1rem;
+}
+
+.tabs button {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--text-dim);
+  padding: 0.4rem 0.8rem;
+  margin-bottom: -1px;
+}
+
+.tabs button:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.tabs button[aria-selected="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
 /* --- verification checklist -------------------------------------------- */
 
 ul.checks {
@@ -418,6 +514,10 @@ ul.checks li:last-child {
   align-items: center;
   gap: 0.6rem;
   font-size: 0.85rem;
+  /* Pinned right on its own rather than by the nav's `flex: 1` pushing it there:
+     before a wallet is connected there is no nav to do the pushing, and the
+     control would otherwise sit against the brand. */
+  margin-left: auto;
 }
 
 .addr {
@@ -505,4 +605,141 @@ td {
   padding: 0.5rem 0.6rem 0.5rem 0;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
+}
+
+/* --- landing page ------------------------------------------------------- */
+
+/*
+ * The home screen has to explain a protocol before it asks for a wallet, so it
+ * carries a few shapes no other screen needs: a hero, a numbered flow, and a
+ * two-column contrast between what reaches the ledger and what does not.
+ */
+
+.hero {
+  padding: 2.4rem 0 1.6rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+
+.hero h1 {
+  font-size: clamp(1.9rem, 4.5vw, 2.9rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.7rem;
+  max-width: 20ch;
+}
+
+.hero .lede {
+  max-width: 62ch;
+  margin-bottom: 1.3rem;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 650;
+  color: var(--accent);
+  margin: 0 0 0.7rem;
+}
+
+.section-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 650;
+  color: var(--text-faint);
+  margin: 2.4rem 0 0.9rem;
+}
+
+/* Numbered steps. The counter is drawn rather than typed, so a step cannot be
+   inserted with a stale number beside it. */
+.steps {
+  counter-reset: step;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.step {
+  counter-increment: step;
+  position: relative;
+  padding: 1rem 1rem 1rem 2.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.step::before {
+  content: counter(step);
+  position: absolute;
+  left: 0.85rem;
+  top: 0.95rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.step h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.94rem;
+}
+
+.step p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* What reaches the ledger, beside what never does. */
+.split {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.split ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.split li {
+  font-size: 0.87rem;
+  color: var(--text-dim);
+  margin-bottom: 0.3rem;
+}
+
+.split li strong {
+  color: var(--text);
+  font-weight: 550;
+}
+
+/* The one-line shape of a transfer, shown as a chain rather than prose. */
+.chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  overflow-x: auto;
+}
+
+.chain span {
+  white-space: nowrap;
+}
+
+.chain .arrow {
+  color: var(--text-faint);
 }

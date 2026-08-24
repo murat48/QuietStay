@@ -1,0 +1,31 @@
+{
+  "payload": {
+    "schema": "quietstay.attestation.v1",
+    "network": "Test SDF Network ; September 2015",
+    "contract": "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M",
+    "right_id": 10,
+    "commitment": "c58ce56e886af37c17296c36c0652ce07adbc864876960f91efa9a6911760e4a",
+    "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "week_valid": true,
+    "property": {
+      "region": "Lagos, Portugal",
+      "bedrooms": 2,
+      "sleeps": 4,
+      "features": [
+        "sea view",
+        "pool",
+        "wifi"
+      ]
+    },
+    "maintenance_fees_current": true,
+    "fees_paid_through": "2026-12-31",
+    "issued_at": "2026-08-22T10:18:04.605Z",
+    "not_before": "2026-08-22T10:18:04.605Z",
+    "expires_at": "2027-08-22T10:18:04.605Z"
+  },
+  "signature": {
+    "alg": "ed25519",
+    "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "value": "Lo8tUc1wuMraixbaLv6Koyn8X8iiQbGCNA05RiPnJp0wKWjAuBGlyance/7TcNf+jbiqH77dQzlwdojgtpu+Bw=="
+  }
+}

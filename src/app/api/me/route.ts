@@ -15,9 +15,10 @@
  * `src/lib/roles.ts`.
  */
 
-import { CONTRACT_ID } from "@/lib/config";
+import { CONTRACT_ID, hasIssuerSecret } from "@/lib/config";
 import { readInventory, readIssuer } from "@/lib/contract";
 import { ROLE_LABELS, deriveStanding, summarize } from "@/lib/roles";
+import { requestStoreIsWritable } from "@/lib/requests";
 import { authenticatedAccount } from "@/lib/sep10";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,21 @@ export async function GET(request: Request): Promise<Response> {
       roles: standing.roles,
       role_labels: standing.roles.map((role) => ROLE_LABELS[role]),
       is_issuer: standing.isIssuer,
+      /*
+       * Whether this deployment can sign anything at all. A public one is not
+       * expected to hold the issuer key, so the interface has to stop offering
+       * issuing, fee entry and transfer approval — the alternative is a button
+       * that costs a signature to discover a 503.
+       */
+      read_only: !hasIssuerSecret(),
+      /*
+       * Separate from `read_only`, because they fail for different reasons and
+       * a deployment can have either without the other. No issuer key means no
+       * transfer can be approved; no writable store means an ask cannot even be
+       * recorded — which is what a serverless host gives you, its filesystem
+       * being read-only.
+       */
+      can_request: requestStoreIsWritable(),
       owned: standing.owned,
       renting: standing.renting,
       rented_out: standing.rentedOut,

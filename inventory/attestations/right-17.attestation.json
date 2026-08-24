@@ -2,20 +2,24 @@
   "payload": {
     "schema": "quietstay.attestation.v1",
     "network": "Test SDF Network ; September 2015",
-    "contract": "CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS",
+    "contract": "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M",
     "right_id": 17,
-    "commitment": "3b718aad31033ee698671da591ad74360c94fd7ef9ad0199b197d703c83be014",
+    "commitment": "67697365b99bfe15bbb95f616e3aa50729d0fba5c83003ac73f8f7cb2ca7f281",
     "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
     "week_valid": true,
+    "property": {
+      "region": "Portugal",
+      "bedrooms": 2
+    },
     "maintenance_fees_current": true,
     "fees_paid_through": "2026-12-31",
-    "issued_at": "2026-08-13T11:07:33.679Z",
-    "not_before": "2026-08-13T11:07:33.679Z",
-    "expires_at": "2027-08-13T11:07:33.679Z"
+    "issued_at": "2026-08-22T21:24:07.828Z",
+    "not_before": "2026-08-22T21:24:07.828Z",
+    "expires_at": "2027-08-22T21:24:07.828Z"
   },
   "signature": {
     "alg": "ed25519",
     "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
-    "value": "V0mo+p6dqR+fBhUPp2wVFtnE8apE8Ql9eVN3rx4Tm5cy3pv33Lzx2CPGWbxOHHRz+5PbUzjOFVTheP7broB0AQ=="
+    "value": "PCgYXwmjaL27x9BignYfl4ozS3i4HrkEBwecevDjFAjlNX9BA42n+IR5awFZ4cesaVrpNJjE3Ezo0uVywg0BBg=="
   }
 }

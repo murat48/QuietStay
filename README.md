@@ -9,11 +9,12 @@ let it.
 
 | | |
 | --- | --- |
-| Contract | [`CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS`](https://stellar.expert/explorer/testnet/contract/CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS) |
+| Contract | [`CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M`](https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M) |
 | Network | `Test SDF Network ; September 2015` |
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
-| Tests | 32 unit tests — `cd contracts && cargo test` |
+| Tests | 34 unit tests — `cd contracts && cargo test` |
 | Demo video | _add link after recording — see [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)_ |
+| Image | `docker pull patriotmurat/quietstay:phase1` — runs read-only, no issuer key. [DEPLOY.md](./docs/DEPLOY.md) |
 
 **Reviewing this?** Start at [**docs/EVIDENCE.md**](./docs/EVIDENCE.md). It is links
 to open — a contract address and four transactions. Nothing to clone or build.
@@ -33,6 +34,14 @@ an **issuer-signed attestation** that the week is valid and free of arrears. A b
 verifies exactly what needs verifying — that the seller is the authorized holder, and
 that the week is clean — and no document, name, or resort ever reaches the public
 ledger.
+
+The attestation also carries a **public description** — town and country, bedrooms,
+how many it sleeps, what it offers — because a hash covers the whole record and so
+no part of it can be revealed on its own. A registry built from the ledger alone can
+say when a week is and nothing else, and nobody takes a week on those terms. The
+line falls at the town: a town shares its name with thousands of owners, while a
+resort plus a unit names one apartment. So the resort, the unit and the deed are
+disclosed once, to a buyer, who checks the whole document against the hash.
 
 A successful sale transaction shows, in full: two account addresses, an integer id,
 `null`, and a 32-byte hash. That is checked against the real chain by
@@ -63,13 +72,19 @@ Phase 1 rests on a trusted issuer signature for *attestation*, and that is delib
 But "trusted to attest honestly" must not become "able to take your week."
 
 **Cannot** — enforced by the contract, not by good behaviour: move, reassign, freeze,
-or burn a right someone holds; claw back; overwrite an existing right; alter a
-commitment after issuance; or upgrade the contract to add any of that. There is no
-admin function, and no `upgrade`.
+or burn a right someone holds; claw back; overwrite an existing right; or alter a
+commitment after issuance.
 
 Demonstrated on chain: the issuer builds, signs, and pays for a transfer of a held
 right to itself, and the contract rejects it. Hash in
 [EVIDENCE.md](./docs/EVIDENCE.md).
+
+**One qualifier, stated up front:** the contract has an `upgrade` function, so that
+list describes the code running now rather than a permanent guarantee — a version
+the issuer deploys through it could add any of those powers. It publishes an event
+so no upgrade is silent, and it does not touch stored state, but the holder has no
+veto and there is no timelock. The reasoning, and what was traded for what, is in
+[DESIGN.md](./docs/DESIGN.md#the-qualifier-that-governs-that-whole-table-upgrade).
 
 **Can, and this is stated rather than glossed over:** decline a transfer it should
 have approved, and attest falsely. Verification proves the issuer *said* something,
@@ -95,14 +110,16 @@ rejection after a fee.
 | Role | Turkish | Derived from | May |
 | --- | --- | --- | --- |
 | Issuer | ihraççı | equals `issuer()` on the contract | issue, attest, approve or decline |
-| Owner | kiraya veren | holds **title** to a week | rent it out for a term, or sell it |
-| Renter | kiracı | holds a week on a **finite term** | sublet within that term; **not** sell |
-| Visitor | ziyaretçi | holds nothing | browse and verify — no account needed |
+| Owner | kiraya veren | holds **title** to a week | rent the week out, or sell it |
+| Renter | kiracı | holds a week on a **finite term** | use it until the term lapses. Not sell — the contract refuses it — and the registry offers no sub-let, because this issuer approves none |
+| Visitor | ziyaretçi | holds nothing | verify a week — no account needed. Browsing the registry asks for a signed-in wallet: a product decision, not a lock, since the contract answers anyone. |
 
 Not exclusive: owning one week and renting another makes you both, and the app shows
 both. An owner and a renter land on different content, see different nav, and get a
 different transfer form — the renter's sell option is disabled with the reason
-stated, and their date picker stops at their own checkout.
+stated, and the registry offers them no way to publish the week they are staying in.
+Neither of them picks a term: a rental runs to the end of the week, because the week
+is the thing being let.
 
 None of this grants anything. Every limit is enforced again server-side and again on
 chain; the role layer exists so a refusal arrives before a signature.
@@ -126,14 +143,14 @@ one import each, as a deliberate decision.
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000/list — reads need no configuration
+npm run dev          # http://localhost:3000 — the landing page needs no configuration
 ```
 
 Issuing and transferring need keys: see [SETUP.md](./docs/SETUP.md).
 
 ```bash
-cd contracts && cargo test    # 32 unit tests
-npm run e2e                   # 24 checks against a running app
+cd contracts && cargo test    # 34 unit tests
+npm run e2e                   # 34 checks against a running app
 npm run check-privacy         # confirm nothing leaked, against the real chain
 ```
 
@@ -147,6 +164,8 @@ npm run check-privacy         # confirm nothing leaked, against the real chain
 | [ATTESTATION.md](./docs/ATTESTATION.md) | Attestation schema, signing key, and the verification procedure. |
 | [SETUP.md](./docs/SETUP.md) | Requirements, configuration, every command, troubleshooting. |
 | [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md) | Shot list and narration for the ~2 minute video. |
+| [DEPLOY.md](./docs/DEPLOY.md) | Running it publicly **without the issuer key**, and why that is the design. |
+| [VERCEL.md](./docs/VERCEL.md) | The same, on Vercel: environment, what works, and why attestations come from git. |
 | [inventory/README.md](./inventory/README.md) | The sample weeks, and how to check a commitment with `sha256sum`. |
 
 ## Layout
@@ -158,7 +177,7 @@ contracts/quietstay-rights/src/
   store.rs      storage, TTL, and the holding-chain rules
   types.rs      Right, Holding, Period, Validity, Listing
   events.rs     what may appear on the ledger, and what may not
-  test.rs       32 tests
+  test.rs       34 tests
 src/lib/        canonical serialization, commitments, attestations, contract client, SEP-10
 src/app/        four screens and the API routes
 scripts/        deploy, seed, evidence, privacy check, verification CLI, e2e

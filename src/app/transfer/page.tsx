@@ -10,15 +10,23 @@
  * What *does* differ is who is using it, and the form is built from the account's
  * standing on the registry rather than from a role the user picks:
  *
- * - **Owner (kiraya veren)** — holds title. May rent the week out for a term, or
- *   sell it outright. The term may run to the end of the use year.
- * - **Renter (kiracı)** — holds the week on a term. May sublet within that term,
- *   and may not sell at all, because an open-ended grant would outlast the term
- *   they hold.
+ * - **Owner (kiraya veren)** — holds title. May rent the week out, or sell it
+ *   outright. A rental ends when the week does; there is no term to choose,
+ *   because a stay has fixed dates and half a week is not a thing to hold.
+ * - **Renter (kiracı)** — holds the week on a term, and may pass it on to nobody.
+ *   They may use it until their term lapses; that is all.
  *
- * Both limits are enforced by the contract (`ExpiryBeyondSenderTerm`). Reflecting
- * them here only stops the form offering something that would be refused after a
- * signature and a fee.
+ * Those two limits come from different places, and the difference matters. That a
+ * renter cannot **sell** is the contract's rule: an open-ended grant would outlast
+ * the term they hold, and `ExpiryBeyondSenderTerm` rejects it. That a renter
+ * cannot **sub-let** is this issuer's *policy*: the contract permits a sub-grant
+ * inside the renter's own term, and this deployment declines to approve one,
+ * because the account holding title is not consulted by `transfer` and would have
+ * no say. `/api/approve-transfer` is where that policy lives; a different issuer
+ * could approve sub-lets without touching the contract.
+ *
+ * Reflecting both here only stops the form offering something that would be
+ * refused after a signature and a fee.
  *
  * The sequence is the SEP-8 approval model in Soroban's native authorization:
  * the holder states terms, `/api/approve-transfer` applies the issuer's policy and
@@ -33,7 +41,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { RoleGate } from "@/components/RoleGate";
 import { useWallet } from "@/components/WalletProvider";
 import { explorer } from "@/lib/config";
-import { formatDate, shortAddress } from "@/lib/format";
+import { describeError, formatDate, shortAddress } from "@/lib/format";
 import { transferableRights } from "@/lib/roles";
 
 interface Outcome {
@@ -61,26 +69,25 @@ export default function TransferScreen() {
 }
 
 function TransferForm() {
-  const { address, standing, sign, authFetch, refreshStanding } = useWallet();
+  const { address, standing, readOnly, sign, authFetch, refreshStanding } = useWallet();
 
   const options = useMemo(() => transferableRights(standing), [standing]);
 
   const [rightId, setRightId] = useState<string>("");
   const [recipient, setRecipient] = useState("");
   const [mode, setMode] = useState<"rent" | "sell">("rent");
-  const [until, setUntil] = useState("");
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const selected = options.find((option) => String(option.right.id) === rightId) ?? null;
 
-  // Default to the first transferable week, and to a term that fits it.
+  // Default to the first transferable week. There is no term to default, because
+  // there is no term to choose.
   useEffect(() => {
     if (rightId !== "" || options.length === 0) return;
     const first = options[0]!;
     setRightId(String(first.right.id));
-    setUntil(formatDate(Math.min(first.right.week.end, first.maxTermEnds)));
     if (!first.maySell) setMode("rent");
   }, [options, rightId]);
 
@@ -95,22 +102,39 @@ function TransferForm() {
     if (mode === "sell") {
       return { from: address, to: recipient.trim(), rightId: selected.right.id, expiresAt: null };
     }
-    const expiresAt = Math.floor(Date.parse(`${until}T00:00:00Z`) / 1000);
-    if (!Number.isFinite(expiresAt)) return null;
+    /*
+     * A rental runs to the end of the week, and that is not a decision anybody
+     * on this form gets to make: the stay has fixed dates, and a right to half
+     * of somebody's week is not a thing that exists.
+     *
+     * A renter passing the week on is capped again by their own term, which is
+     * the same date unless a shorter grant put it earlier. The contract enforces
+     * that independently — `ExpiryBeyondSenderTerm` — so this is the honest
+     * value rather than the safe one.
+     */
+    const expiresAt = Math.min(selected.right.week.end, selected.maxTermEnds);
     return { from: address, to: recipient.trim(), rightId: selected.right.id, expiresAt };
-  }, [selected, address, mode, until, recipient]);
+  }, [selected, address, mode, recipient]);
 
   const validate = useCallback((): string | null => {
     const requested = terms();
     if (!requested) return "choose a week, a recipient, and — for a rental — a date the term ends";
+    // Only the title holder may grant. The contract would let a renter sub-let
+    // inside their own term; this deployment's issuer declines to approve one, so
+    // the refusal is stated here rather than after a signature and a fee.
+    if (selected && !selected.maySell) {
+      return (
+        `you hold this week until ${formatDate(selected.maxTermEnds)} but do not hold title to ` +
+        "it, so it is not yours to pass on — this issuer approves neither a sale nor a sub-let " +
+        "of a rented week"
+      );
+    }
     if (!/^G[A-Z2-7]{55}$/.test(requested.to)) return "the recipient must be a Stellar account (G…)";
     if (requested.to === requested.from) return "sender and recipient are the same account";
     if (requested.expiresAt !== null && selected) {
       if (requested.expiresAt <= Math.floor(Date.now() / 1000)) return "the term must end in the future";
       if (requested.expiresAt > selected.maxTermEnds) {
-        return selected.maySell
-          ? `the term cannot run past the end of the use year (${formatDate(selected.maxTermEnds)})`
-          : `you hold this week only until ${formatDate(selected.maxTermEnds)}, and cannot sublet past that`;
+        return `the term cannot run past the end of the use year (${formatDate(selected.maxTermEnds)})`;
       }
     }
     return null;
@@ -196,7 +220,7 @@ function TransferForm() {
       // The account's standing has changed — a sold week leaves, a rented one moves.
       await refreshStanding();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(describeError(caught));
     } finally {
       setBusy(false);
     }
@@ -256,7 +280,7 @@ function TransferForm() {
             },
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(describeError(caught));
     } finally {
       setBusy(false);
     }
@@ -282,10 +306,7 @@ function TransferForm() {
             onChange={(event) => {
               setRightId(event.target.value);
               const next = options.find((o) => String(o.right.id) === event.target.value);
-              if (next) {
-                setUntil(formatDate(Math.min(next.right.week.end, next.maxTermEnds)));
-                if (!next.maySell) setMode("rent");
-              }
+              if (next && !next.maySell) setMode("rent");
             }}
           >
             {options.map((option) => (
@@ -302,16 +323,18 @@ function TransferForm() {
           <div className={`note ${selected.maySell ? "accent" : "warn"}`} style={{ marginTop: 0 }}>
             {selected.maySell ? (
               <>
-                You hold <strong>title</strong> to this week. You can rent it out for a term, or
-                sell it outright. A rental may run to {formatDate(selected.maxTermEnds)}, the end of
-                the use year.
+                You hold <strong>title</strong> to this week. You can rent it out, or sell it
+                outright. A rental runs to {formatDate(selected.right.week.end)}, the end of the
+                week — the dates are the week&apos;s, not yours to set.
               </>
             ) : (
               <>
                 You are <strong>renting</strong> this week until{" "}
-                {formatDate(selected.maxTermEnds)}. You can sublet it up to that date, but you
-                cannot sell it — an open-ended transfer would outlast the term you hold, and the
-                contract rejects it.
+                {formatDate(selected.maxTermEnds)}, so it is not yours to pass on. You cannot sell
+                it — an open-ended transfer would outlast the term you hold and the contract
+                rejects it — and this issuer does not approve sub-lets either, because the account
+                holding title is not party to that decision. The week is yours to use until the
+                date above.
               </>
             )}
           </div>
@@ -328,7 +351,7 @@ function TransferForm() {
                 onChange={() => setMode("rent")}
                 style={{ width: "auto" }}
               />
-              {selected?.maySell ? "Rent out" : "Sublet"} — a term that lapses
+              Rent out — a term that lapses
             </label>
             <label
               style={{
@@ -352,21 +375,15 @@ function TransferForm() {
             </label>
           </div>
 
-          {mode === "rent" ? (
-            <div className="field" style={{ marginTop: "0.75rem", maxWidth: "14rem" }}>
-              <label htmlFor="until">Term ends</label>
-              <input
-                id="until"
-                type="date"
-                value={until}
-                max={selected ? formatDate(selected.maxTermEnds) : undefined}
-                onChange={(event) => setUntil(event.target.value)}
-              />
-              <p className="muted" style={{ margin: "0.3rem 0 0" }}>
-                Must be in the future and no later than{" "}
-                {selected ? formatDate(selected.maxTermEnds) : "your own term"}.
-              </p>
-            </div>
+          {mode === "rent" && selected ? (
+            <p className="muted" style={{ marginTop: "0.75rem", marginBottom: 0 }}>
+              The term runs to{" "}
+              <strong>
+                {formatDate(Math.min(selected.right.week.end, selected.maxTermEnds))}
+              </strong>
+              , the end of this week. It lapses there on its own — no return transaction, and
+              nothing for either of you to remember.
+            </p>
           ) : null}
         </fieldset>
 
@@ -381,20 +398,32 @@ function TransferForm() {
           />
         </div>
 
+        {readOnly ? (
+          <div className="note warn">
+            <strong>This deployment cannot approve a transfer.</strong> It does not hold the
+            issuer key, on purpose: the key authorizes every transfer and the contract fixed its
+            issuer at construction, so one that leaked could never be replaced. The registry,
+            verification, and asking for a week all work here — completing a transfer is done
+            from wherever the key already lives.
+          </div>
+        ) : null}
+
         <div className="row">
-          <button className="primary" onClick={() => void transfer()} disabled={busy || !selected}>
+          <button
+            className="primary"
+            onClick={() => void transfer()}
+            disabled={busy || !selected || !selected.maySell || readOnly}
+          >
             {busy
               ? "working…"
               : mode === "sell"
                 ? "Sell this week"
-                : selected?.maySell
-                  ? "Rent this week out"
-                  : "Sublet this week"}
+                : "Rent this week out"}
           </button>
           <button
             className="danger"
             onClick={() => void transferWithoutApproval()}
-            disabled={busy || !selected}
+            disabled={busy || !selected || !selected.maySell || readOnly}
           >
             Try it without issuer approval
           </button>

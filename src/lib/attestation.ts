@@ -2,8 +2,30 @@
  * Issuer-signed attestations.
  *
  * An attestation is the issuer saying, in a form anyone can check: *this usage
- * right is a real week, and it carries no unpaid maintenance fees.* It is the one
- * place Phase 1 rests on trusting the issuer, and it does so explicitly.
+ * right is a real week, it carries no unpaid maintenance fees, and it is in this
+ * part of the world.* It is the one place Phase 1 rests on trusting the issuer,
+ * and it does so explicitly.
+ *
+ * ## Why the property description is here and not in the listing
+ *
+ * A commitment is a hash of the whole record, so revealing one field of it proves
+ * nothing: a buyer cannot check `"Portugal"` against a digest without being given
+ * everything the digest covers. A registry built from the ledger alone can say
+ * when a week is and nothing else — not where, not how many it sleeps, not what
+ * it offers. Nobody takes a week on those terms.
+ *
+ * So the public description rides here instead, where it is signed, bound to one
+ * right, and verifiable — the same standing as the fee claim a buyer already
+ * relies on. `propertyFacts()` derives it from the committed record, so what is
+ * published cannot drift from the document, and a buyer later shown the record
+ * can confirm the two agree.
+ *
+ * Where the line falls is set out on `PropertyFacts` in `record.ts`: the town but
+ * not the resort, what the place is but not which apartment it is.
+ *
+ * Phase 2's per-field commitments would let a seller prove these against the
+ * ledger without the issuer vouching for them at all; until then this is the
+ * honest version, and it says out loud whose word it rests on.
  *
  * ## What it is not
  *
@@ -41,6 +63,7 @@
 import { Keypair } from "@stellar/stellar-sdk";
 
 import { canonicalBytes, digestsMatch, type JsonValue } from "./canonical";
+import type { PropertyFacts } from "./record";
 
 export const ATTESTATION_SCHEMA = "quietstay.attestation.v1";
 export const SIGNING_PREFIX = "QuietStay-Attestation-v1:";
@@ -59,6 +82,15 @@ export interface AttestationPayload {
   issuer: string;
   /** The issuer asserts the week is a real, allocated interval. */
   week_valid: boolean;
+  /**
+   * What a listing may publish about the property: town and country, bedrooms,
+   * how many it sleeps, what it offers. Never the resort, the unit, or the deed.
+   *
+   * Optional because attestations signed before this field existed must keep
+   * verifying: absence is authentic — stripping the key from a payload that had
+   * one breaks the signature.
+   */
+  property?: PropertyFacts;
   /** The issuer asserts no maintenance fees are outstanding. */
   maintenance_fees_current: boolean;
   /** ISO date fees are settled through. */
@@ -96,6 +128,8 @@ export interface AttestationTerms {
   rightId: number;
   commitment: string;
   weekValid: boolean;
+  /** Public property description. Omitted, not blank, when there is none. */
+  property?: PropertyFacts;
   feesCurrent: boolean;
   feesPaidThrough: string;
   /** How long the attestation may be relied on. */
@@ -117,6 +151,9 @@ export function signAttestation(issuer: Keypair, terms: AttestationTerms): Attes
     commitment: terms.commitment.toLowerCase(),
     issuer: issuer.publicKey(),
     week_valid: terms.weekValid,
+    // Spread rather than assigned: canonical JSON has no representation for
+    // `undefined`, so an absent description has to be an absent key.
+    ...(terms.property ? { property: terms.property } : {}),
     maintenance_fees_current: terms.feesCurrent,
     fees_paid_through: terms.feesPaidThrough,
     issued_at: now.toISOString(),
@@ -309,4 +346,48 @@ export function verifyAttestation(
   );
 
   return { ok: checks.every((c) => c.ok), checks };
+}
+
+/**
+ * The checks that answer "is this attestation genuine", as distinct from "is the
+ * news good".
+ *
+ * `verifyAttestation` reports both in one `ok`, which is right for the verify
+ * screen: a counterparty asking whether to take a week wants a single answer,
+ * and an authentic attestation saying the fees are unpaid is still a no.
+ *
+ * The registry needs the two separated. It has to *display* what the issuer said
+ * — including that fees are due, which is the whole point of sample week 04 —
+ * while refusing to display anything it cannot show the issuer actually signed.
+ * Using `ok` there would hide a week in arrears behind "not attested", which is
+ * a different and worse claim.
+ */
+const PROVENANCE_CHECKS = new Set([
+  "shape",
+  "schema",
+  "network",
+  "contract",
+  "right",
+  "signer",
+  "signature",
+  "window",
+]);
+
+/**
+ * Whether the issuer really signed this, for this right, on this contract and
+ * network — saying nothing about what it signed.
+ *
+ * A file placed under the wrong name fails `right`; one edited after signing
+ * fails `signature`; one from another deployment fails `contract` or `network`.
+ */
+export function attestationIsAuthentic(
+  attestation: unknown,
+  expect: AttestationExpectation,
+): boolean {
+  const { checks } = verifyAttestation(attestation, expect);
+  const seen = checks.filter((check) => PROVENANCE_CHECKS.has(check.id));
+  // Every provenance check must have run and passed. `verifyAttestation` returns
+  // early on a malformed payload, so a short list means it never got far enough
+  // to judge — which is not the same as passing.
+  return seen.length === PROVENANCE_CHECKS.size && seen.every((check) => check.ok);
 }

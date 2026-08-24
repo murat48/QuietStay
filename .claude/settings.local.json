@@ -11,7 +11,9 @@
       "Bash(npm --version)",
       "Bash(git --version)",
       "Bash(timeout 8 curl -s -o /dev/null -w \"%{http_code}\" https://soroban-testnet.stellar.org)",
-      "Bash(timeout 8 curl -s -o /dev/null -w \"%{http_code}\" https://crates.io)"
+      "Bash(timeout 8 curl -s -o /dev/null -w \"%{http_code}\" https://crates.io)",
+      "Bash(python3 -c ' *)",
+      "Bash(stellar contract *)"
     ]
   }
 }

@@ -70,3 +70,20 @@ pub struct Burned {
     pub right_id: u64,
     pub commitment: BytesN<32>,
 }
+
+/// The issuer replaced this contract's code.
+///
+/// The one event here that is not about a week. It exists because an upgrade is
+/// the single action that can change what every other rule in this contract
+/// means, and an upgrade nobody can see would be strictly worse than one
+/// anybody can. A holder watching this stream learns that the code changed, when
+/// it changed, and to which hash — enough to fetch the new WASM and compare it
+/// against the old one before relying on the contract again.
+#[contractevent(topics = ["upgrade"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Upgraded {
+    #[topic]
+    pub issuer: Address,
+    /// SHA-256 of the WASM now running.
+    pub new_wasm_hash: BytesN<32>,
+}

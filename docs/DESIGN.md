@@ -87,6 +87,40 @@ Two rules fall out of the chain and are enforced on every grant:
 Chain depth is capped at 4 (title plus three sub-grants) so reads and writes have a
 fixed worst-case cost.
 
+### Sub-letting: permitted by the contract, declined by this issuer
+
+The chain makes sub-letting possible, and it makes it *safe* in the sense that
+matters most: because a sub-grant can never outlast the grantor's term, and
+`prune_lapsed` drops the whole lapsed suffix at once, the title holder's week
+returns on exactly the date they set no matter how many hands it passed through.
+Nothing can be taken from them.
+
+What the contract does **not** do is ask them. `transfer` consults the effective
+holder and the issuer; the title holder is not a party to a sub-grant of their own
+week and has no veto. In ordinary rental arrangements consent to sub-let is
+precisely the thing a landlord retains, so this is a real gap rather than a
+stylistic one.
+
+It is a gap because the feature was never specified. Sub-granting is not in the
+statement of work and not in the build brief — both describe a single current
+holder with an optional expiry. It fell out of modelling holdings as a chain,
+which the chain needed in order to revert a lapsed sub-grant to the renter rather
+than to the owner, and the consent question arrived with it unanswered.
+
+**This deployment answers it by declining.** `/api/approve-transfer` refuses to
+approve a grant whose sender holds only a finite term. That is issuer policy, not
+a contract rule: the contract still permits sub-letting, and a different issuer
+running this same contract could approve it. Declining a transfer is a power the
+issuer openly has — see [the centralization section](#centralization-what-the-issuer-can-and-cannot-do) —
+so this uses an acknowledged power rather than claiming a restriction the contract
+does not have. The transfer screen states the refusal before a signature rather
+than after one.
+
+The alternative fixes were considered and rejected for Phase 1: capping chain
+depth at 2 would remove the capability but needs a contract change, and requiring
+the title holder's authorization on deep grants would add a second signer to the
+transfer primitive, which is the one thing this design keeps singular.
+
 ## Verification: three independent legs
 
 A counterparty checks three things, and no two of them rest on the same party. The
@@ -165,8 +199,8 @@ from the registry ([`src/lib/roles.ts`](../src/lib/roles.ts), served by
 | Role | Turkish | Derived from | May |
 | --- | --- | --- | --- |
 | Issuer | ihraççı | the account equals `issuer()` on the contract | issue rights, attest weeks, approve or decline transfers |
-| Owner | kiraya veren | holds **title** — `holdings[0]` — to ≥1 right | rent the week out for a term, or sell it outright |
-| Renter | kiracı | is the effective holder of ≥1 right on a **finite term** | sublet within their own term; **not** sell |
+| Owner | kiraya veren | holds **title** — `holdings[0]` — to ≥1 right | rent the week out, or sell it outright |
+| Renter | kiracı | is the effective holder of ≥1 right on a **finite term** | use the week until their term lapses; **not** sell, and no sub-let this issuer would approve |
 | Visitor | ziyaretçi | none of the above | browse the registry and verify any week |
 
 The roles are not exclusive. An account that owns one week and rents another is
@@ -198,9 +232,13 @@ lives inside the existing screens:
 - **Nav** — Issue is hidden from non-issuers rather than shown as a link to a
   refusal.
 - **Transfer** — the form is built from the account's transferable rights. An owner
-  gets rent-out and sell; a renter gets sublet only, with the sell option disabled
-  and the reason stated, and with the date picker capped at their own checkout
-  rather than the end of the use year.
+  gets rent-out and sell. A renter gets neither usefully: the sell option is disabled
+  with the reason stated, and the sub-let the contract would allow is one this issuer
+  declines — the screen says so before they spend a fee finding out.
+- **List** — only the title holder is offered *Offer for sale* and *Offer for rent*.
+  A renter publishing the week they are staying in would be advertising a sub-let:
+  kept out of the shopping filters by `isSublet`, shown to no buyer, and refused if
+  anyone asked. The card explains that instead of showing a button.
 - **List** and **Verify** — open to everyone, no account required. Auditing the
   registry is the point; gating it would defeat the exercise.
 
@@ -217,17 +255,65 @@ attest honestly" must not silently become "able to take a holder's week away."
 | Move or reassign a held right | `transfer` calls `from.require_auth()` independently of the approval. The issuer cannot produce the holder's signature. |
 | Freeze a right | There is no freeze, pause, lock, or blocklist function. |
 | Burn a holder's right | `burn` requires the title holder's own authorization. |
-| Claw back | This is a Soroban contract token, not a classic asset, so no clawback flag exists to enable. There is no equivalent function. Verify it yourself: the [contract interface](#privileged-surface-enumerated) has 18 functions and none of them is one. |
+| Claw back | This is a Soroban contract token, not a classic asset, so no clawback flag exists to enable. There is no equivalent function. Verify it yourself with `stellar contract info interface --id <CONTRACT_ID> --network testnet`: it lists 20 entry points, one of which is the constructor, and none of them is a clawback. |
 | Overwrite an existing right | `issue` takes its id from a monotonic counter the caller does not control, so it can only write to an id never used before. |
 | Alter a commitment, week, or validity window after issuance | No function writes those fields on an existing right. |
-| Upgrade the contract to add any of the above | There is no `upgrade` function and no admin. The deployed WASM is what runs, permanently. |
-
 Demonstrated on chain, not merely asserted: the issuer builds, signs, and pays for
 a transfer of a held right to itself, and the contract rejects it. Transaction hash
 in [`EVIDENCE.md`](./EVIDENCE.md). Also covered by unit tests
 `the_issuer_cannot_seize_a_held_right`,
 `the_issuer_cannot_seize_a_right_that_is_out_on_rental`, and
 `the_issuer_cannot_burn_a_holders_right`.
+
+### The qualifier that governs that whole table: `upgrade`
+
+**Every row above describes the code running now, not a permanent guarantee.**
+The contract has an `upgrade` function. It replaces this contract's WASM, it is
+authorized by the issuer alone, and a version deployed through it could add any
+of the things the table says are absent — seize, freeze, clawback, a forced
+transfer.
+
+This is stated first rather than last because burying it would make the rest of
+the section misleading. An earlier revision of this contract had no `upgrade`,
+and the table above was then unconditional. It is not any more.
+
+What bounds it:
+
+- **It is visible.** Every upgrade publishes an [`Upgraded`](../contracts/quietstay-rights/src/events.rs)
+  event carrying the new WASM hash, so an upgrade cannot happen quietly. Anyone
+  watching the contract can fetch the new code with `stellar contract fetch` and
+  diff it against the old.
+- **It does not reach stored state.** `update_current_contract_wasm` replaces
+  code, not storage. Ids, commitments, periods, validity windows, and holding
+  chains all survive an upgrade untouched — a new version inherits the registry
+  exactly as it stood.
+- **It is exactly as trusted as the issuer already was.** The issuer could
+  already decline any transfer indefinitely and attest falsely. Upgrade widens
+  that trust rather than introducing it.
+
+What it does **not** bound: the holder has no veto, and there is no timelock. An
+upgrade takes effect in the transaction that calls it.
+
+**Why it exists.** Phase 1 shipped bugs that needed contract-level fixes and no
+way to apply one without redeploying — which invalidates every issued
+attestation, since an attestation is bound to a contract address. The trade made
+here is a weaker permanence claim in exchange for being able to fix the contract
+without orphaning the registry. A deployment that valued the unconditional
+guarantee more should delete this function and accept redeployment as the
+migration path.
+
+**A consequence, not the reason.** Because the trust assumption lives behind
+[one function](#the-authorization-boundary), replacing the issuer's signature with
+verification of a cryptographic proof means rewriting that function's body — and
+with `upgrade` present, that substitution can now be applied to *this* deployment
+instead of requiring a new one. Every week issued here would keep its id, its
+commitment, and its attestation across that change.
+
+This is worth stating because it makes an existing claim concrete, but it is not
+why the function exists and it should not be read as preparation for Phase 2. No
+proof machinery is in this repository, none is scaffolded, and Phase 2 does not
+depend on this: it is separately funded and could deploy fresh with new inventory.
+What `upgrade` buys there is continuity, not capability.
 
 ### The issuer still can
 
@@ -259,7 +345,8 @@ deleted.
 | Function | Justification |
 | --- | --- |
 | `issue(owner, period, validity, commitment)` | Only the resort or issuer can create inventory. Writes to a counter-assigned id, so it cannot reach an existing right. |
-| `__constructor(issuer, name, symbol)` | Binds the contract to its issuer once at deployment. Runs only at creation and cannot be re-run. There is deliberately **no** `set_issuer`: rotating the key means redeploying, which keeps the privileged surface to one function. |
+| `upgrade(new_wasm_hash)` | Replaces this contract's code so a defect can be fixed without redeploying and orphaning every attestation bound to this address. The widest power the issuer has, and [qualified in full above](#the-qualifier-that-governs-that-whole-table-upgrade). Publishes an `Upgraded` event; does not touch stored state. |
+| `__constructor(issuer, name, symbol)` | Binds the contract to its issuer once at deployment. Runs only at creation and cannot be re-run. There is deliberately **no** `set_issuer`: rotating the key means redeploying, which keeps the privileged surface small. |
 
 **Holder-initiated — requires the holder, and the issuer for transfers:**
 
@@ -274,8 +361,10 @@ deleted.
 `next_id`, `get_right`, `commitment`, `holder`, `holding`, `holdings`,
 `is_active`, `get_listing`.
 
-There is no admin function of any kind — no upgrade, migrate, pause, freeze,
-seize, force-transfer, or fee switch.
+Beyond `upgrade` there is no admin function of any kind — no migrate, pause,
+freeze, seize, force-transfer, or fee switch. `upgrade` is the one that could
+introduce them, which is why it is enumerated here as a privileged entry point
+rather than treated as maintenance.
 
 ## What the ledger reveals
 
@@ -348,12 +437,28 @@ surprises:
    demo will need reseeding after that.
 4. **No price anywhere.** Payment, escrow, and settlement of consideration are out
    of scope, so an offer records availability and term only, and the parties settle
-   however they already do.
-5. **Attestations are files on disk.** Appropriate for a reference deployment and
+   however they already do. A week showing arrears carries a **"Pay maintenance
+   fees" button that is inert** — it opens a note saying payment is out of scope
+   and changes nothing. It is there to mark where settlement will attach, because
+   the question it answers ("someone has to pay this — who?") is the first one
+   anyone asks of that warning. Today the title holder pays the resort directly
+   and the issuer records that it happened.
+5. **Transfer requests are off chain and bind nobody.** A visitor asks for a
+   listed week and the holder accepts or declines; the ask is a message the
+   deployment keeps, not a state the contract knows. It exists to make the
+   marketplace two-sided and to stop anyone typing an account by hand — a week
+   sent to a wrong-but-valid address is unrecoverable, which is the cost of the
+   issuer being unable to claw anything back. Accepting runs the ordinary
+   transfer, unchanged. **The issuer is deliberately not in this path:** letting
+   it suppress interest in a week as well as decline its transfer is, between
+   them, what freezing an asset would mean. Making the ask itself authorized —
+   `to.require_auth()` on transfer — is the honest version and needs multi-party
+   signing, which is a later phase.
+6. **Attestations are files on disk.** Appropriate for a reference deployment and
    it keeps them inspectable; a production issuer would use a database behind
    [the same two functions](../src/lib/attestation-store.ts).
-6. **Sub-grant depth is capped at 4.** A resource bound, not a market rule.
-7. **The evidence run appends rights.** `npm run evidence` issues its own weeks each
+7. **Sub-grant depth is capped at 4.** A resource bound, not a market rule.
+8. **The evidence run appends rights.** `npm run evidence` issues its own weeks each
    time rather than reusing the sample inventory, because a sale is permanent and
    reusing them would make the script work once. The registry therefore grows on
    each run.

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "commit-record": "tsx scripts/commit-record.ts",
     "attest": "tsx scripts/attest.ts",
+    "describe": "tsx scripts/describe.ts",
     "verify-record": "tsx scripts/verify-record.ts",
     "seed": "tsx scripts/seed-inventory.ts",
     "evidence": "tsx scripts/produce-evidence.ts && tsx scripts/write-evidence-doc.ts",

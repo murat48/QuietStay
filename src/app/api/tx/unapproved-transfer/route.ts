@@ -22,7 +22,7 @@
 
 import { Keypair } from "@stellar/stellar-sdk";
 
-import { issuerSecret } from "@/lib/config";
+import { hasIssuerSecret, issuerSecret } from "@/lib/config";
 import { ContractCallError, buildTransferTx, prepareUnapprovedTransfer } from "@/lib/contract";
 import { authenticatedAccount } from "@/lib/sep10";
 
@@ -34,6 +34,19 @@ interface UnapprovedRequest {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // Needs the key only to strip its own signature, but needs it all the same.
+  if (!hasIssuerSecret()) {
+    return Response.json(
+      {
+        error:
+          "this deployment is read-only: it does not hold the issuer key, so it cannot " +
+          "issue, attest, or approve a transfer. Browsing and verification need no key.",
+        read_only: true,
+      },
+      { status: 503 },
+    );
+  }
+
   const caller = await authenticatedAccount(request);
   if (!caller) {
     return Response.json({ error: "not authenticated — sign in first" }, { status: 401 });

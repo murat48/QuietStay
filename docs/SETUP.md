@@ -46,7 +46,7 @@ dropping those integrations upstream.
 ## Run against the existing deployment
 
 The contract at
-[`CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS`](https://stellar.expert/explorer/testnet/contract/CDBPK4OOM43UCROSEDC2Q5NHR6L7GBKLESXP4GXXN4KHNL25FTM3DBXS)
+[`CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M`](https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M)
 is live with sample inventory already issued. You can read all of it with no
 configuration at all:
 
@@ -132,6 +132,7 @@ verify screen and the approval service something real to refuse.
 | `npm run commit-record -- <record.json>` | Compute a commitment; write canonical bytes for `sha256sum`. |
 | `npm run verify-record -- <id> <attestation.json> [record.json]` | The verify screen's checks, on the command line. The record is optional. |
 | `npm run attest -- <id> <record.json>` | Re-sign an attestation, e.g. once arrears are settled. |
+| `npm run describe -- <id> --region "Town, Country" --bedrooms <n>` | Describe a week whose record you no longer hold. Last resort — nothing is derived, so nothing can be checked. |
 
 ## Troubleshooting
 
