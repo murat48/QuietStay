@@ -102,7 +102,7 @@ async function main(): Promise<void> {
   // the fee position is the issuer's current statement about arrears; neither is
   // this script's to invent, so a week nothing has been signed for yet must go
   // through issuance or `npm run attest` first.
-  const existing = loadAttestation(rightId);
+  const existing = await loadAttestation(rightId);
   if (existing === null) {
     throw new Error(
       `no attestation exists for right #${rightId} to describe — ` +
@@ -169,7 +169,7 @@ async function main(): Promise<void> {
     validForDays: 365,
   });
 
-  const path = saveAttestation(rightId, attestation);
+  const path = await saveAttestation(rightId, attestation);
 
   log.step("Signed");
   log.ok(`${path}`);

@@ -39,8 +39,12 @@ import { accessSync, constants, mkdirSync, readFileSync, writeFileSync } from "n
 import { dirname, join, resolve } from "node:path";
 
 import { DATA_ROOT } from "./config";
+import { kvGet, kvIsConfigured, kvIsReachable, kvSet } from "./kv";
 
 export const REQUESTS_DIR = "inventory/requests";
+
+/** The store's key for a right's requests. Namespaced, since attestations share it. */
+const kvKey = (rightId: number) => `quietstay:requests:${rightId}`;
 
 export type RequestStatus = "open" | "accepted" | "declined" | "withdrawn";
 
@@ -74,8 +78,26 @@ function pathFor(rightId: number): string {
   return resolve(DATA_ROOT, REQUESTS_DIR, `right-${rightId}.requests.json`);
 }
 
-/** Every request ever made for one right, newest last. */
-export function loadRequests(rightId: number): TransferRequest[] {
+/**
+ * Every request ever made for one right, newest last.
+ *
+ * One location, not a search order: unlike attestations, nothing here ships with
+ * the build, so wherever this deployment writes is the only place a request has
+ * ever been.
+ */
+export async function loadRequests(rightId: number): Promise<TransferRequest[]> {
+  if (kvIsConfigured()) {
+    try {
+      const stored = await kvGet(kvKey(rightId));
+      return stored ? (JSON.parse(stored) as TransferRequest[]) : [];
+    } catch {
+      // Unreachable store. An empty list is the honest answer — it says nobody
+      // has asked, which is what the holder would see anyway, rather than
+      // failing a page that has other things to show.
+      return [];
+    }
+  }
+
   try {
     return JSON.parse(readFileSync(pathFor(rightId), "utf8")) as TransferRequest[];
   } catch {
@@ -96,15 +118,22 @@ export function loadRequests(rightId: number): TransferRequest[] {
 export class RequestStoreUnavailable extends Error {
   constructor(readonly cause: unknown) {
     super(
-      "this deployment cannot record transfer requests: it has no writable store. " +
-        "Browsing, verification, and publishing an offer all work here.",
+      "this deployment cannot record transfer requests: it has nowhere to keep them. " +
+        "A host with a read-only filesystem needs a key-value store configured — see docs/VERCEL.md.",
     );
     this.name = "RequestStoreUnavailable";
   }
 }
 
-/** Whether a request can be recorded at all. Cheap, and does not create a file. */
-export function requestStoreIsWritable(): boolean {
+/**
+ * Whether a request can be recorded at all.
+ *
+ * The store is pinged rather than assumed present, because credentials that are
+ * set but wrong look exactly like working ones from here, and this answer is
+ * what the interface uses to decide whether to offer the control at all.
+ */
+export async function requestStoreIsWritable(): Promise<boolean> {
+  if (kvIsConfigured()) return kvIsReachable();
   try {
     mkdirSync(resolve(DATA_ROOT, REQUESTS_DIR), { recursive: true });
     accessSync(resolve(DATA_ROOT, REQUESTS_DIR), constants.W_OK);
@@ -114,11 +143,25 @@ export function requestStoreIsWritable(): boolean {
   }
 }
 
-export function saveRequests(rightId: number, requests: TransferRequest[]): string {
+export async function saveRequests(
+  rightId: number,
+  requests: TransferRequest[],
+): Promise<string> {
+  const body = `${JSON.stringify(requests, null, 2)}\n`;
+
+  if (kvIsConfigured()) {
+    try {
+      await kvSet(kvKey(rightId), body);
+      return kvKey(rightId);
+    } catch (error) {
+      throw new RequestStoreUnavailable(error);
+    }
+  }
+
   const path = pathFor(rightId);
   try {
     mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, `${JSON.stringify(requests, null, 2)}\n`, "utf8");
+    writeFileSync(path, body, "utf8");
   } catch (error) {
     // EROFS, EACCES, ENOSPC — all the same answer to the caller: not here.
     throw new RequestStoreUnavailable(error);
@@ -127,29 +170,38 @@ export function saveRequests(rightId: number, requests: TransferRequest[]): stri
 }
 
 /**
- * Replace one request in a right's file, by id.
+ * Replace one request in a right's list, by id.
  *
- * Read-modify-write on a file, which is right for a reference deployment and
- * would be a row update in a production one. Returns `null` when the id is not
- * there, so a caller can answer 404 rather than writing a file that silently
- * changed nothing.
+ * Read-modify-write, which is right for a reference deployment and would be a
+ * row update in a production one. Returns `null` when the id is not there, so a
+ * caller can answer 404 rather than writing back a list that changed nothing.
+ *
+ * Two answers arriving for the same week in the same instant could still have
+ * the second overwrite the first. That is a narrow window — a holder answering
+ * their own requests, one at a time — and closing it properly means a compare-
+ * and-set on the store or a row lock in a database, not a lock this process
+ * could hold. Named rather than papered over.
  */
-export function updateRequest(
+export async function updateRequest(
   rightId: number,
   requestId: string,
   change: (request: TransferRequest) => TransferRequest,
-): TransferRequest | null {
-  const all = loadRequests(rightId);
+): Promise<TransferRequest | null> {
+  const all = await loadRequests(rightId);
   const index = all.findIndex((r) => r.id === requestId);
   if (index === -1) return null;
 
   const updated = change(all[index]!);
   all[index] = updated;
-  saveRequests(rightId, all);
+  await saveRequests(rightId, all);
   return updated;
 }
 
 /** The request this account has outstanding on a right, if any. */
-export function openRequestBy(rightId: number, account: string): TransferRequest | null {
-  return loadRequests(rightId).find((r) => r.by === account && r.status === "open") ?? null;
+export async function openRequestBy(
+  rightId: number,
+  account: string,
+): Promise<TransferRequest | null> {
+  const all = await loadRequests(rightId);
+  return all.find((r) => r.by === account && r.status === "open") ?? null;
 }

@@ -49,14 +49,15 @@ export async function GET(): Promise<Response> {
 
     const now = Math.floor(Date.now() / 1000);
 
-    return Response.json({
-      contract: CONTRACT_ID,
-      contract_explorer: explorer.contract(),
-      network: NETWORK_PASSPHRASE,
-      token: { name, symbol, decimals: 0 },
-      issuer,
-      now,
-      rights: rows.map(({ right, listing, holding, active }) => {
+    /*
+     * Built before the response rather than inside it, because looking an
+     * attestation up is now asynchronous — a configured store is over the
+     * network. Every row is fetched at once: they do not depend on each other,
+     * and doing them in sequence would make the registry's load time the sum of
+     * one round trip per week.
+     */
+    const rights = await Promise.all(
+      rows.map(async ({ right, listing, holding, active }) => {
         /*
          * Read it, then prove it before showing it.
          *
@@ -72,7 +73,7 @@ export async function GET(): Promise<Response> {
          * hiding a week in arrears behind "not attested" would replace a true
          * statement with a false one.
          */
-        const onFile = loadAttestation(right.id);
+        const onFile = await loadAttestation(right.id);
         const attestation =
           onFile !== null &&
           attestationIsAuthentic(onFile, {
@@ -117,6 +118,16 @@ export async function GET(): Promise<Response> {
           property: attestation?.payload.property ?? null,
         };
       }),
+    );
+
+    return Response.json({
+      contract: CONTRACT_ID,
+      contract_explorer: explorer.contract(),
+      network: NETWORK_PASSPHRASE,
+      token: { name, symbol, decimals: 0 },
+      issuer,
+      now,
+      rights,
     });
   } catch (error) {
     return Response.json(

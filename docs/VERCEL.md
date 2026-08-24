@@ -1,29 +1,40 @@
 # Deploying to Vercel
 
-The public deployment runs **without the issuer key**, and that is the design
-rather than a limitation being worked around.
+There are two ways to run this, and the difference is whether the deployment can
+act as the issuer. Both are supported; pick deliberately, because one of them
+puts a key on a host that can never be taken back.
 
-Three secrets exist and only one of them matters here. `QUIETSTAY_ISSUER_SECRET`
-signs every attestation and authorizes every transfer, and unlike the other two
-it **cannot be rotated** — the contract fixed its issuer at construction, so
-replacing it means a new contract, a new address, and every hash in
-[EVIDENCE.md](./EVIDENCE.md) pointing at a deployment nobody uses. It does not go
-on a host somebody else operates.
+| | Showcase | Full |
+| --- | --- | --- |
+| Browse, verify, sign in, list/unlist | ✅ | ✅ |
+| Ask for a week | needs a store | ✅ |
+| Issue, settle fees, approve a transfer | ✗ | ✅ |
+| `QUIETSTAY_ISSUER_SECRET` on the host | no | **yes** |
+| Where weeks are issued | locally, then git | in the app |
 
-The other two can. A forged session convinces the app you are someone else, and
-then `transfer` asks for the holder's wallet signature and gets nothing. Nothing
-moves. Worth stating plainly, because it is the project's own claim being cashed:
-even a host compromised completely could not **take** a week — `transfer` begins
-with `from.require_auth()`. The worst a stolen issuer key can do is **lie**, and
-closing that is what Phase 2 is for.
+## The one thing to understand before choosing
 
-## Attestations are not created on the server
+`QUIETSTAY_ISSUER_SECRET` signs every attestation and authorizes every transfer,
+and unlike the other two secrets it **cannot be rotated** — the contract fixed
+its issuer at construction. Replacing it means a new contract, a new address, and
+every hash in [EVIDENCE.md](./EVIDENCE.md) pointing at a deployment nobody uses.
+A key that leaks is leaked for the life of the deployment.
 
-This is the part worth getting straight before anything else. An attestation is
-signed by the issuer, and the issuer's key lives wherever it already lives — a
-laptop, not a host. The server only ever **reads** them.
+What it cannot do is worth stating just as plainly, because it is the project's
+own claim being cashed: **even a host compromised completely could not take a
+week.** `transfer` begins with `from.require_auth()`, and no server-side key
+satisfies that — only the holder's wallet does. The worst a stolen issuer key can
+do is **lie**: sign attestations for weeks that do not deserve them. Closing that
+is what Phase 2 is for.
 
-So the loop is:
+The other two secrets are rotatable and belong on the host either way. A forged
+session convinces the app you are someone else, and then `transfer` asks for the
+holder's wallet signature and gets nothing. Nothing moves.
+
+## Showcase: attestations reach the host through git
+
+The issuer's key stays where it already lives — a laptop, not a host — and the
+server only ever **reads** what it signed:
 
 ```
 1. issue a week locally          the key never leaves
@@ -37,6 +48,15 @@ the files are present at runtime. Committing them is what makes that work —
 **an attestation that is not in git does not exist as far as Vercel is
 concerned**, and its week shows as never attested, which also keeps it out of
 the "For rent" and "For sale" filters.
+
+## Full: the app issues, and needs somewhere to put the result
+
+Set `QUIETSTAY_ISSUER_SECRET` **and** a store. Both, or neither — see
+[the store section](#the-store-and-why-the-app-needs-one) for why the key alone
+is the one combination that actively breaks things.
+
+The git route above still works and still applies to everything issued before the
+store existed. The store is an overlay on top of it, not a replacement.
 
 ## The one thing in `next.config.ts` that makes this work
 
@@ -54,7 +74,7 @@ succeeded and then failed with `ENOENT`.
 
 ## Environment variables
 
-Set these in the Vercel project. Three of them, plus the domain.
+Both deployments need these:
 
 | Variable | Value |
 | --- | --- |
@@ -64,10 +84,21 @@ Set these in the Vercel project. Three of them, plus the domain.
 | `QUIETSTAY_SESSION_SECRET` | 32+ random characters |
 | `NEXT_PUBLIC_HOME_DOMAIN` | the deployment's host, e.g. `quietstay.vercel.app` |
 
-**Not** `QUIETSTAY_ISSUER_SECRET`. Not the `DEMO_*` keys either — those are read
-only by the scripts, which do not run on Vercel.
+The full deployment adds:
+
+| Variable | Value |
+| --- | --- |
+| `UPSTASH_REDIS_REST_URL` | set by the Upstash integration |
+| `UPSTASH_REDIS_REST_TOKEN` | set by the Upstash integration |
+| `QUIETSTAY_ISSUER_SECRET` | the issuer's `S...` seed — **un-rotatable, read the warning above** |
+
+Never the `DEMO_*` keys — those are read only by the scripts, which do not run on
+Vercel.
 
 `NEXT_PUBLIC_WEB_AUTH_DOMAIN` follows `NEXT_PUBLIC_HOME_DOMAIN` when unset.
+
+Paste values with no quotes and no trailing newline. A malformed seed is caught
+and named rather than failing somewhere further in.
 
 ### The domain is read at build time
 
@@ -104,41 +135,84 @@ invalidates nothing but in-flight challenges, and rotating the session key signs
 everyone out. Neither can move a week. That is `QUIETSTAY_ISSUER_SECRET`, which
 is not on this host.
 
+## The store, and why the app needs one
+
+Vercel has no disk. The app is served from its build output, mounted read-only,
+so `writeFileSync` fails with `EROFS`. That is fine for the attestations that
+shipped with the build and fatal for anything created once the app is running —
+which is two things: an attestation for a week issued from the deployed app, and
+a request to take a week off somebody.
+
+Without a store the deployment is a read-only showcase. With one it is the whole
+application.
+
+### Setting it up
+
+Vercel dashboard → **Storage** → **Marketplace** → **Upstash for Redis** →
+create, and connect it to the project. The integration sets
+`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` itself; nothing needs
+copying by hand. Redeploy afterwards.
+
+The free tier is far more than this uses: an attestation is about a kilobyte and
+there is one per week.
+
+### Why Redis and not blob storage
+
+Blob storage would have done for attestations, which are written once and read
+many times. Requests are read-modify-write — two people asking for the same week
+seconds apart — and blob reads come through a CDN whose cache **cannot be set
+below one minute**. That is a window in which the second writer reads a stale
+list and erases the first, and nobody would ever see it happen.
+
+### The store is an overlay, not a replacement
+
+`loadAttestation` reads the store first and the files second, never one instead
+of the other:
+
+| Layer | Holds |
+| --- | --- |
+| the store | weeks issued since the build |
+| `inventory/attestations/` | the weeks git carried, shipped with the build |
+
+That is what lets a fresh deployment with an empty store keep showing every week
+already attested, with no migration step. It also means an unreachable store
+degrades rather than breaks: the registry falls back to what shipped.
+
+### What it is not
+
+Not a source of truth. The contract is. The store holds what the issuer has
+vouched for and what people have asked for — both recoverable, neither able to
+move a week. A store that vanished entirely would cost the registry its
+verification badges and its pending asks, and cost nobody their property.
+
 ## What works, and what does not
 
-Vercel serves the app from a read-only filesystem. That is a limitation for one
-route and a guarantee everywhere else: nothing an attacker did could persist.
+| Route | No store | With a store |
+| --- | --- | --- |
+| `/api/auth` | works — SEP-10 | works |
+| `/api/inventory` | works — chain, plus attestations from the build | plus what was issued since |
+| `/api/attestation/[id]` | works | works |
+| `/api/me`, `/api/right/[id]` | works — chain only | works |
+| `/api/tx/build`, `/api/tx/submit` | works — no key, no writes | works |
+| `/api/requests` GET | works | works |
+| `/api/requests` POST | 503 — nowhere to keep an ask | **works** |
+| `/api/issue` | 503 | **works** — with the issuer key |
+| `/api/settle-fees` | 503 | **works** — with the issuer key |
+| `/api/approve-transfer` | 503 | works — with the issuer key |
+| `/api/tx/unapproved-transfer` | 503 | works — with the issuer key |
 
-| Route | On Vercel |
-| --- | --- |
-| `/api/auth` | works — SEP-10, both keys rotatable |
-| `/api/inventory` | works — chain, plus the attestations from the build |
-| `/api/attestation/[id]` | works |
-| `/api/me`, `/api/right/[id]` | works — chain only |
-| `/api/tx/build`, `/api/tx/submit` | works — no key, no writes |
-| `/api/issue` | 503 — needs the issuer key |
-| `/api/settle-fees` | 503 — needs the issuer key |
-| `/api/approve-transfer` | 503 — needs the issuer key |
-| `/api/tx/unapproved-transfer` | 503 — needs the issuer key |
-| `/api/requests` POST | 503 — nothing writable to keep an ask in |
-| `/api/requests` GET | works |
+Two separate requirements, and the routes say which one they are missing. A
+store with no issuer key still takes requests. An issuer key with no store is
+the worse of the two, and is refused up front — see below.
 
-In screen terms: browsing the registry, verifying a week, signing in, seeing
-your roles, and **publishing or withdrawing an offer** all work. `list` and
-`unlist` ask the contract for the holder's signature and nobody else's, so they
-need no key and no server-side storage.
+### Issuing checks the store before it touches the chain
 
-Issuing, recording a fee settlement, and completing a transfer do not — by
-design, not by accident.
+An issuance cannot be undone, and the attestation that goes with it is not
+optional: `approve-transfer` will not approve a week the issuer has never
+attested, so a right issued without one can never be transferred by anybody.
 
-### Why requests are refused rather than kept in `/tmp`
-
-`/tmp` is writable on Vercel, and using it would be the obvious dodge. Every
-invocation may land on a different instance, so the request would be accepted,
-acknowledged, and gone before the holder ever saw it. Losing somebody's ask
-silently is worse than declining to take it, so the interface hides the control
-and the route answers 503 with a reason.
-
-Making them work needs a store that outlives an invocation — Vercel KV or
-Postgres behind `src/lib/requests.ts`, which is two functions wide. That is a
-deliberate decision to take, not a gap to fall into.
+`/api/issue` used to submit first and write second. On a host with the issuer key
+and no store that produced exactly that — right #36 exists on chain, has no
+attestation, and is stuck. The check now runs first, and it actually pings the
+store rather than trusting that credentials which are present are credentials
+that work.

@@ -75,7 +75,7 @@ export async function POST(request: Request): Promise<Response> {
   // leaves the commitment alone — so failing at the write would cost nothing but
   // a bare `EROFS`. Asked up front anyway, so the answer names the reason and the
   // interface can stop offering the control.
-  if (!attestationStoreIsWritable()) {
+  if (!(await attestationStoreIsWritable())) {
     return Response.json(
       {
         error:
@@ -135,7 +135,7 @@ export async function POST(request: Request): Promise<Response> {
   // Re-signing means restating an attestation that already exists. Creating the
   // first one is issuance's job (or `npm run attest`), because `week_valid` is a
   // claim about the week itself that this route has no basis to originate.
-  const existing = loadAttestation(rightId);
+  const existing = await loadAttestation(rightId);
   if (existing === null) {
     return Response.json(
       {
@@ -188,7 +188,7 @@ export async function POST(request: Request): Promise<Response> {
       validForDays: 365,
     });
 
-    const path = saveAttestation(rightId, attestation);
+    const path = await saveAttestation(rightId, attestation);
 
     return Response.json({
       right_id: rightId,

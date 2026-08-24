@@ -234,7 +234,7 @@ async function main(): Promise<void> {
     validForDays: 365,
   });
 
-  const path = saveAttestation(rightId, attestation);
+  const path = await saveAttestation(rightId, attestation);
 
   log.step("Signed");
   log.ok(`${path}`);

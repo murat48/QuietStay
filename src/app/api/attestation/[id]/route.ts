@@ -39,7 +39,7 @@ export async function GET(
     return Response.json({ error: "right id must be a positive integer" }, { status: 400 });
   }
 
-  const attestation = loadAttestation(rightId);
+  const attestation = await loadAttestation(rightId);
   if (attestation === null) {
     return Response.json(
       {

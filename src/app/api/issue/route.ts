@@ -52,7 +52,7 @@ export async function POST(request: Request): Promise<Response> {
   // right nobody can transfer. A host holding the key but with nothing writable
   // — a serverless deployment given the key by mistake — used to get as far as
   // the ledger and fail on `EROFS` afterwards.
-  if (!attestationStoreIsWritable()) {
+  if (!(await attestationStoreIsWritable())) {
     return Response.json(
       {
         error:
@@ -133,7 +133,7 @@ export async function POST(request: Request): Promise<Response> {
     // Record it. The approval service will not approve a transfer of a week the
     // issuer has no attestation for, so a right issued without this step would be
     // untransferable — returning the attestation to the browser is not enough.
-    const attestationPath = saveAttestation(rightId, attestation);
+    const attestationPath = await saveAttestation(rightId, attestation);
 
     return Response.json({
       right_id: rightId,

@@ -96,7 +96,7 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const existing = openRequestBy(rightId, caller);
+    const existing = await openRequestBy(rightId, caller);
     if (existing) {
       return Response.json(
         { error: "you already have an open request for this week", request: existing },
@@ -116,9 +116,9 @@ export async function POST(request: Request): Promise<Response> {
       status: "open",
     };
 
-    const all = loadRequests(rightId);
+    const all = await loadRequests(rightId);
     all.push(record);
-    saveRequests(rightId, all);
+    await saveRequests(rightId, all);
 
     return Response.json({
       request: record,
@@ -162,7 +162,7 @@ export async function GET(request: Request): Promise<Response> {
 
     for (const row of rows) {
       const holder = row.holding.holder;
-      for (const req of loadRequests(row.right.id)) {
+      for (const req of await loadRequests(row.right.id)) {
         if (holder === caller && req.by !== caller) incoming.push(req);
         if (req.by === caller) outgoing.push(req);
       }

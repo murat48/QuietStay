@@ -164,7 +164,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // --- 4. the week is one the issuer still stands behind -----------------
-    const attestation = loadAttestation(rightId);
+    const attestation = await loadAttestation(rightId);
     if (!attestation) {
       return decline(
         `the issuer has no attestation on file for right #${rightId} and will not approve a ` +

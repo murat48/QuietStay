@@ -62,7 +62,7 @@ export async function POST(
     );
   }
 
-  const existing = loadRequests(rightId).find((r) => r.id === id);
+  const existing = (await loadRequests(rightId)).find((r) => r.id === id);
   if (!existing) {
     return Response.json({ error: "no such request for this right" }, { status: 404 });
   }
@@ -123,7 +123,7 @@ export async function POST(
     }
 
     const status = action === "withdraw" ? "withdrawn" : action === "decline" ? "declined" : "accepted";
-    const updated = updateRequest(rightId, id, (r) => ({
+    const updated = await updateRequest(rightId, id, (r) => ({
       ...r,
       status,
       answered_at: new Date().toISOString(),

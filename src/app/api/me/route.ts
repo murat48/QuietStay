@@ -57,7 +57,7 @@ export async function GET(request: Request): Promise<Response> {
        * nowhere to write is read-only too — more dangerous than one without the
        * key, because it gets as far as the ledger before finding out.
        */
-      read_only: !hasIssuerSecret() || !attestationStoreIsWritable(),
+      read_only: !hasIssuerSecret() || !(await attestationStoreIsWritable()),
       /*
        * Separate from `read_only`, because they fail for different reasons and
        * a deployment can have either without the other. No issuer key means no
@@ -65,7 +65,7 @@ export async function GET(request: Request): Promise<Response> {
        * recorded — which is what a serverless host gives you, its filesystem
        * being read-only.
        */
-      can_request: requestStoreIsWritable(),
+      can_request: await requestStoreIsWritable(),
       owned: standing.owned,
       renting: standing.renting,
       rented_out: standing.rentedOut,
