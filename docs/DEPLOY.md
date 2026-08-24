@@ -100,35 +100,39 @@ In the image: `inventory/attestations` — the issuer's *public* statements. A
 town, a bedroom count, a commitment and a signature. The documents those
 commitments are over are not there.
 
-## What was verified, and what was not
+## What was verified
 
-Docker is not installed on the machine this was written on, and installing it
-needs root, so **no image has been built**. What was verified is the thing that
-would make an image wrong.
-
-A build context holding exactly the files the Dockerfile copies — and nothing
-else — was assembled, built, and run:
+An image was built and run. Results, on Docker 29.1.3:
 
 | | |
 | --- | --- |
-| `next build` from those inputs alone | succeeds |
-| `.next/standalone` | **43 MB**, against 2.3 GB from the repository root |
-| the statement of work, records, canonical forms, requests, `.env*` | absent |
-| `inventory/` in the output | `attestations` only |
+| Image size | **292 MB** |
+| `2.pdf`, records, canonical forms, requests, `.env*` — anywhere on the filesystem | absent |
+| Secrets in the environment | none |
+| Process user | `uid=1001(quietstay)` — not root |
+| `/app` writable | no |
+| `/data` writable by that user | yes |
+| `inventory/` in the image | `attestations` only, 24 files |
+| `@trezor`, `usb`, `@coinbase` in the shipped `node_modules` | absent |
+| Docker's own `HEALTHCHECK` | healthy |
 
-The run stage's `COPY` list was then reproduced file by file and started with no
-`QUIETSTAY_ISSUER_SECRET` and an empty `/data`:
+Then, running with an **empty** `/data` volume and no `QUIETSTAY_ISSUER_SECRET`:
 
 | | |
 | --- | --- |
-| all five pages | 200 |
-| the registry, with fees and property | reads |
+| All five pages | 200 |
+| Registry | 27 rights, 24 attested with property |
+| `/api/attestation/1` | 200 |
+| SEP-10 challenge | built and signed, 388 bytes |
 | `issue`, `settle-fees`, `approve-transfer`, `unapproved-transfer` | 503, `read_only: true` |
-| the healthcheck's `wget` | passes |
 
-That covers the filesystem and the behaviour. It does not cover Alpine, `npm ci`
-in the image, the non-root user, or the `HEALTHCHECK` as Docker runs it. Build
-one and run the three checks below.
+The empty volume is the point of that second table: the attestations still read,
+which is what mounting at `/data` rather than over `inventory/` buys.
+
+Two things the build taught, both kept above: `npm ci` needs
+`--ignore-scripts`, and the tree-shaking claim in the README is now checked at
+the image rather than asserted — `@trezor` and its native `usb` dependency are
+installed during the build and do not survive into the runtime stage.
 
 ## Checking a built image
 

@@ -20,8 +20,20 @@ FROM node:24-alpine AS build
 WORKDIR /app
 
 # Dependencies first, so a source-only change does not reinstall them.
+#
+# `--ignore-scripts` is not a workaround, though it started as one. `npm ci`
+# fails here without it: `@creit.tech/stellar-wallets-kit` depends on
+# `@trezor/connect`, which depends on `usb`, which is a native module that wants
+# Python and a C++ toolchain to build. This app never touches a hardware wallet —
+# the kit is loaded with six named modules and Trezor is not among them — so the
+# alternative was installing a compiler to build a USB driver that would then sit
+# in the image, unused and compiled from source.
+#
+# Refusing to run install scripts is also the stronger position on its own terms:
+# no dependency executes arbitrary code while the image is being built. Nothing
+# in this project has an install script of its own, so nothing is lost.
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # Named inputs, never `COPY . .`.
 #
