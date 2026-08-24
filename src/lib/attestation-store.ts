@@ -24,39 +24,52 @@ const PRIMARY_DIR = "inventory/attestations";
 const EVIDENCE_DIR = "inventory/evidence/attestations";
 
 /**
- * Where to look, in order.
+ * The attestation on file for a right, or `null` if the issuer never signed one.
  *
- * The writable root comes first so a freshly signed attestation wins over an
- * older copy shipped with the build. Then the working directory, which in a
- * container is the image and in development is the repository.
+ * Three places, in order, and the order is the point: a freshly signed
+ * attestation in the writable root wins over an older copy that shipped with the
+ * build. Both are searched rather than one being chosen, because a deployment
+ * that mounts a volume would otherwise **hide** what shipped behind an empty
+ * directory, and every week would read as never attested.
  *
- * Both are searched rather than one being chosen, because a deployment that
- * mounts a volume would otherwise **hide** the attestations baked into the image
- * behind an empty directory, and every week would read as never attested. The
- * volume adds to what shipped; it does not replace it.
- *
- * Locally `DATA_ROOT` is the working directory and the first two entries are the
- * same path. Harmless: the first hit wins.
+ * The reads are written out one at a time rather than looping over a list of
+ * paths, which is not style. A build traces `readFileSync` to decide which files
+ * to deploy, and it can only do that when the folder is a literal — given
+ * `resolve(someVariable, …)` it gives up and copies the entire project into the
+ * output, source and all. Two of these three folders are literals for that
+ * reason. The third cannot be: it is an environment variable pointing at a
+ * volume that does not exist until the container runs, so it is hidden from the
+ * tracer instead, which costs nothing — there is nothing there at build time to
+ * find.
  */
-function candidates(rightId: number): string[] {
-  const name = `right-${rightId}.attestation.json`;
-  return [
-    resolve(DATA_ROOT, PRIMARY_DIR, name),
-    resolve(process.cwd(), PRIMARY_DIR, name),
-    resolve(process.cwd(), EVIDENCE_DIR, name),
-  ];
-}
-
-/** The attestation on file for a right, or `null` if the issuer never signed one. */
 export function loadAttestation(rightId: number): Attestation | null {
-  for (const path of candidates(rightId)) {
+  const name = `right-${rightId}.attestation.json`;
+
+  // The writable root, when a deployment has one that is not the project itself.
+  if (DATA_ROOT !== process.cwd()) {
     try {
-      return JSON.parse(readFileSync(path, "utf8")) as Attestation;
+      const path = resolve(DATA_ROOT, PRIMARY_DIR, name);
+      return JSON.parse(readFileSync(/* turbopackIgnore: true */ path, "utf8")) as Attestation;
     } catch {
-      // Not here; try the next location.
+      // Not there; fall through to what shipped.
     }
   }
-  return null;
+
+  try {
+    return JSON.parse(
+      readFileSync(join(process.cwd(), "inventory/attestations", name), "utf8"),
+    ) as Attestation;
+  } catch {
+    // Not here either; try the evidence run's own directory.
+  }
+
+  try {
+    return JSON.parse(
+      readFileSync(join(process.cwd(), "inventory/evidence/attestations", name), "utf8"),
+    ) as Attestation;
+  } catch {
+    return null;
+  }
 }
 
 /** Record an attestation. Returns the path, for the caller to report. */

@@ -26,6 +26,21 @@ the files are present at runtime. Committing them is what makes that work —
 concerned**, and its week shows as never attested, which also keeps it out of
 the "For rent" and "For sale" filters.
 
+## Two things in `next.config.ts` that make this work
+
+`output: "standalone"` is **off unless `QUIETSTAY_STANDALONE=1`**, which only the
+Dockerfile sets. Vercel runs its own pipeline over the ordinary build output and
+looks for `.next/next-server.js.nft.json`, which standalone does not write — the
+first deploy here failed on exactly that, with `ENOENT` after a build that
+otherwise succeeded.
+
+`outputFileTracingIncludes` names the attestation folders, and `loadAttestation`
+scopes its reads to literal folders so the build can follow them. Without that,
+Turbopack warns "Dynamic filesystem access causes tracing of the whole project"
+and does what it says: every source file is deployed as part of the server code.
+Both are needed — the first makes the files findable, the second guarantees they
+are there regardless.
+
 ## Environment variables
 
 Set these in the Vercel project. Three of them, plus the domain.

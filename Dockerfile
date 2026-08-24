@@ -60,6 +60,12 @@ ENV NEXT_PUBLIC_HOME_DOMAIN=$NEXT_PUBLIC_HOME_DOMAIN \
     NEXT_PUBLIC_WEB_AUTH_DOMAIN=$NEXT_PUBLIC_WEB_AUTH_DOMAIN \
     NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID=$NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID
 
+# Ask for the self-contained server. Off by default because a managed host runs
+# its own pipeline over the ordinary output and standalone breaks it — Vercel
+# looks for `.next/next-server.js.nft.json`, which standalone does not write.
+# Only a build that copies the result itself, like this one, wants it.
+ENV QUIETSTAY_STANDALONE=1
+
 RUN npm run build
 
 # --- run --------------------------------------------------------------------
