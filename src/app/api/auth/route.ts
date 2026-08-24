@@ -8,7 +8,27 @@
  * reference client can talk to it unchanged.
  */
 
+import { ConfigurationError } from "@/lib/config";
 import { buildChallenge, serverAccount, Sep10Error, verifyChallenge } from "@/lib/sep10";
+
+/**
+ * A deployment without its SEP-10 keys, told apart from a bad request.
+ *
+ * Both used to end up as 400 "could not build a challenge", which blames the
+ * caller for something only the operator can fix and names nothing they could
+ * act on. A missing key is a 502 in SEP-10's terms — the server cannot do its
+ * part — and the message says which variable, because the person who sees it in
+ * a browser console is usually the one who forgot to set it.
+ *
+ * Safe to repeat: the message names variables, never values.
+ */
+function configurationFault(error: unknown): Response | null {
+  if (!(error instanceof ConfigurationError)) return null;
+  return Response.json(
+    { error: `this deployment is not configured for sign-in: ${error.message}` },
+    { status: 502 },
+  );
+}
 
 export async function GET(request: Request): Promise<Response> {
   const account = new URL(request.url).searchParams.get("account");
@@ -19,6 +39,9 @@ export async function GET(request: Request): Promise<Response> {
   try {
     return Response.json({ ...buildChallenge(account), server_account: serverAccount() });
   } catch (error) {
+    const misconfigured = configurationFault(error);
+    if (misconfigured) return misconfigured;
+
     const message = error instanceof Sep10Error ? error.message : "could not build a challenge";
     return Response.json({ error: message }, { status: 400 });
   }
@@ -40,6 +63,11 @@ export async function POST(request: Request): Promise<Response> {
     const { account, token } = await verifyChallenge(body.transaction);
     return Response.json({ token, account });
   } catch (error) {
+    // Reachable here too: the session key is only touched once a challenge comes
+    // back signed, so a deployment missing it gets this far before failing.
+    const misconfigured = configurationFault(error);
+    if (misconfigured) return misconfigured;
+
     const message = error instanceof Sep10Error ? error.message : "authentication failed";
     return Response.json({ error: message }, { status: 401 });
   }

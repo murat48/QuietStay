@@ -27,6 +27,7 @@ import { Horizon, Keypair, WebAuth } from "@stellar/stellar-sdk";
 import { SignJWT, jwtVerify } from "jose";
 
 import {
+  ConfigurationError,
   HOME_DOMAIN,
   HORIZON_URL,
   NETWORK_PASSPHRASE,
@@ -42,8 +43,25 @@ const SESSION_LIFETIME = "1h";
 
 export class Sep10Error extends Error {}
 
+/**
+ * The challenge signing key.
+ *
+ * `fromSecret` rejects anything that is not a well-formed `S...` seed, and the
+ * ways that happens on a host are all the same mistake — a value pasted with
+ * quotes, a trailing newline, or the `G...` public key where the seed belongs.
+ * Reported as configuration rather than as a bad key, because the person who can
+ * fix it is looking at an environment variable, not at cryptography.
+ */
 function serverKeypair(): Keypair {
-  return Keypair.fromSecret(sep10ServerSecret());
+  const secret = sep10ServerSecret();
+  try {
+    return Keypair.fromSecret(secret);
+  } catch {
+    throw new ConfigurationError(
+      "QUIETSTAY_SEP10_SERVER_SECRET is set but is not a Stellar secret seed — it must " +
+        "start with S and be 56 characters, with no quotes or surrounding whitespace.",
+    );
+  }
 }
 
 /** The account a client must add as a signer trust anchor. Public information. */

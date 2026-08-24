@@ -71,14 +71,31 @@ export function hasIssuerSecret(): boolean {
   return (process.env.QUIETSTAY_ISSUER_SECRET ?? "").length > 0;
 }
 
+/**
+ * A secret the deployment needs and does not have.
+ *
+ * Distinct from every other failure because the cause is not the request: the
+ * caller did nothing wrong and cannot do anything differently. Routes answer it
+ * as a server fault and repeat the message, which names the variable — a
+ * deployment missing one of these otherwise fails in whatever code touched it
+ * first, and the operator reads a symptom instead of the cause.
+ */
+export class ConfigurationError extends Error {}
+
+/** Where to fill a missing variable in, phrased for whoever is reading it. */
+function missing(name: string, note: string): ConfigurationError {
+  return new ConfigurationError(
+    `${name} is not set — ${note} Locally that means .env.local (copy .env.example); ` +
+      "on a host it means the project's environment variables. " +
+      "See docs/SETUP.md, or docs/VERCEL.md for a deployment.",
+  );
+}
+
 /** Server-only. Absent in the browser bundle, and absent from the repository. */
 export function issuerSecret(): string {
   const secret = process.env.QUIETSTAY_ISSUER_SECRET;
   if (!secret) {
-    throw new Error(
-      "QUIETSTAY_ISSUER_SECRET is not set. Copy .env.example to .env.local and fill it in — " +
-        "see docs/SETUP.md.",
-    );
+    throw missing("QUIETSTAY_ISSUER_SECRET", "the issuer's signing key.");
   }
   return secret;
 }
@@ -91,8 +108,9 @@ export const WEB_AUTH_DOMAIN = process.env.NEXT_PUBLIC_WEB_AUTH_DOMAIN ?? HOME_D
 export function sep10ServerSecret(): string {
   const secret = process.env.QUIETSTAY_SEP10_SERVER_SECRET;
   if (!secret) {
-    throw new Error(
-      "QUIETSTAY_SEP10_SERVER_SECRET is not set. Copy .env.example to .env.local — see docs/SETUP.md.",
+    throw missing(
+      "QUIETSTAY_SEP10_SERVER_SECRET",
+      "the key that signs SEP-10 challenges, so nobody can sign in.",
     );
   }
   return secret;
@@ -100,9 +118,16 @@ export function sep10ServerSecret(): string {
 
 export function sessionSecret(): Uint8Array {
   const secret = process.env.QUIETSTAY_SESSION_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error(
-      "QUIETSTAY_SESSION_SECRET must be set to at least 32 characters — see docs/SETUP.md.",
+  if (!secret) {
+    throw missing(
+      "QUIETSTAY_SESSION_SECRET",
+      "the key that signs session tokens, so nobody can sign in.",
+    );
+  }
+  if (secret.length < 32) {
+    throw new ConfigurationError(
+      `QUIETSTAY_SESSION_SECRET is ${secret.length} characters; it must be at least 32. ` +
+        "See docs/SETUP.md.",
     );
   }
   return new TextEncoder().encode(secret);

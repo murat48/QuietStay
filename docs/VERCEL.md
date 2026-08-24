@@ -81,6 +81,29 @@ something quieter — the app asks people to sign a message naming a site they a
 not on, which is the one thing that field exists to prevent. No scheme, no
 trailing slash.
 
+### If sign-in fails on the deployed app
+
+Connecting the wallet succeeds and then the app says it could not build a
+challenge: the two SEP-10 variables above are missing or malformed. They are
+read when somebody signs in, not at build time, so the deploy is green and the
+failure waits for the first visitor.
+
+`/api/auth` answers **502** and names the variable — open it directly to see
+which:
+
+```
+https://<your-app>.vercel.app/api/auth?account=G...
+```
+
+A 502 is the server admitting it cannot do its part. A 400 there means the
+request was wrong instead; a challenge in the response means the keys are fine.
+The message names variables, never values.
+
+Both keys are safe to set here and both can be rotated — rotating the SEP-10 key
+invalidates nothing but in-flight challenges, and rotating the session key signs
+everyone out. Neither can move a week. That is `QUIETSTAY_ISSUER_SECRET`, which
+is not on this host.
+
 ## What works, and what does not
 
 Vercel serves the app from a read-only filesystem. That is a limitation for one
