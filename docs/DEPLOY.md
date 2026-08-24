@@ -1,4 +1,9 @@
-# Deploying
+# Self-hosting in a container
+
+**The deployment is [VERCEL.md](./VERCEL.md).** This page is for running the same
+thing on your own machine or host instead — the security reasoning below is
+identical, and a container gets you one thing Vercel cannot: a writable store, so
+the request flow works.
 
 A public deployment of this app is expected to run **without the issuer key**.
 That is the design of it, not a limitation being worked around.
@@ -59,6 +64,10 @@ docker run -p 3300:3000 -v quietstay-data:/data \
 ```
 
 `sha256:4383893d3441963a58a818ee74e30bc31233f146c52a2314acf3c8d416df5199`
+
+That tag is a snapshot, not a release: it predates the registry read fix and the
+attestation verification. Build from source for anything you intend to rely on —
+the point of this page is the Dockerfile, not the tag.
 
 That published tag is built for `localhost:3300` — see the note on the domain
 below. A tag for a real host is built the same way with different arguments.

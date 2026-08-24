@@ -178,7 +178,11 @@ Four screens, connected to the deployed contract:
 | [Verify](../src/app/verify/page.tsx) | A counterparty checks a disclosed record and attestation, entirely client-side. |
 | [Transfer](../src/app/transfer/page.tsx) | Rent or sell through one form, with issuer approval — plus a control that submits **without** approval so the refusal can be watched. |
 
-Running it: [SETUP.md](./SETUP.md). Demo walkthrough: [DEMO_SCRIPT.md](./DEMO_SCRIPT.md).
+Running it: [VERCEL.md](./VERCEL.md) deploys it publicly without the issuer key,
+which is the point — the key signs every attestation and authorizes every
+transfer, the contract fixed its issuer at construction, and a key that leaked
+could never be replaced. Locally: [SETUP.md](./SETUP.md). Demo walkthrough:
+[DEMO_SCRIPT.md](./DEMO_SCRIPT.md).
 
 End-to-end test against the running app — SEP-10, issuance, offers, an approved
 rental, a refused unapproved transfer, a declined approval, and an attempted

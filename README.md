@@ -14,7 +14,7 @@ let it.
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
 | Tests | 34 unit tests — `cd contracts && cargo test` |
 | Demo video | _add link after recording — see [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)_ |
-| Image | `docker pull patriotmurat/quietstay:phase1` — runs read-only, no issuer key. [DEPLOY.md](./docs/DEPLOY.md) |
+| Live app | _add link after deploying — see [VERCEL.md](./docs/VERCEL.md)_ |
 
 **Reviewing this?** Start at [**docs/EVIDENCE.md**](./docs/EVIDENCE.md). It is links
 to open — a contract address and four transactions. Nothing to clone or build.
@@ -164,8 +164,8 @@ npm run check-privacy         # confirm nothing leaked, against the real chain
 | [ATTESTATION.md](./docs/ATTESTATION.md) | Attestation schema, signing key, and the verification procedure. |
 | [SETUP.md](./docs/SETUP.md) | Requirements, configuration, every command, troubleshooting. |
 | [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md) | Shot list and narration for the ~2 minute video. |
-| [DEPLOY.md](./docs/DEPLOY.md) | Running it publicly **without the issuer key**, and why that is the design. |
-| [VERCEL.md](./docs/VERCEL.md) | The same, on Vercel: environment, what works, and why attestations come from git. |
+| [VERCEL.md](./docs/VERCEL.md) | Deploying it. Environment, what works without the issuer key, and why attestations come from git. |
+| [DEPLOY.md](./docs/DEPLOY.md) | Self-hosting the same thing in a container, if you would rather not use Vercel. |
 | [inventory/README.md](./inventory/README.md) | The sample weeks, and how to check a commitment with `sha256sum`. |
 
 ## Layout
