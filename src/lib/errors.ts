@@ -68,6 +68,24 @@ export const CONTRACT_ERRORS: Record<number, { name: string; message: string }> 
  * fails on authorization rather than on a contract rule is one where a required
  * signature was missing.
  */
+export function contractErrorCode(raw: unknown): number | null {
+  const text = typeof raw === "string" ? raw : ((raw as Error)?.message ?? JSON.stringify(raw));
+  const match = /Error\(Contract,\s*#(\d+)\)/.exec(text);
+  return match?.[1] ? Number(match[1]) : null;
+}
+
+/**
+ * Whether a failed read means "there is no such right" rather than "the read did
+ * not work".
+ *
+ * The difference is the whole of it. A caller sweeping the registry has to omit
+ * the first and must never omit the second: a week dropped because an RPC call
+ * timed out is a week nobody can find, and nothing anywhere says it is missing.
+ */
+export function isRightNotFound(raw: unknown): boolean {
+  return contractErrorCode(raw) === 1;
+}
+
 export function describeContractFailure(raw: unknown): string {
   const text = typeof raw === "string" ? raw : ((raw as Error)?.message ?? JSON.stringify(raw));
 

@@ -32,7 +32,7 @@ import {
 
 import { toHex } from "./canonical";
 import { APPROVAL_VALIDITY_LEDGERS, CONTRACT_ID, NETWORK_PASSPHRASE, RPC_URL } from "./config";
-import { describeContractFailure } from "./errors";
+import { describeContractFailure, isRightNotFound } from "./errors";
 
 export const server = new rpc.Server(RPC_URL);
 
@@ -228,8 +228,35 @@ export async function readInventory(contractId?: string): Promise<
   const next = await readNextId(contractId);
   const ids = Array.from({ length: Math.max(0, next - 1) }, (_, i) => i + 1);
 
-  const rows = await Promise.all(
-    ids.map(async (id) => {
+  /*
+   * Bounded concurrency, and only `RightNotFound` may remove a week.
+   *
+   * This used to be `catch { return null }` over every id at once, with a
+   * comment about burned rights. It did drop burned rights correctly, and it
+   * also dropped every right whose read happened to fail — and four reads per
+   * id, all fired together, is a burst that grows with the registry: at
+   * twenty-nine rights it is a hundred and sixteen simulated calls arriving at
+   * a public RPC endpoint simultaneously. Some are refused. Observed directly:
+   * the same registry answered 29 rights, then 28, then 17, with no error shown
+   * either time.
+   *
+   * A week silently absent is worse than an error. The owner sees their listing
+   * gone with nothing to act on; a buyer never learns it existed. So a read that
+   * fails for any other reason is retried, and if it still fails the whole call
+   * does — a page that says it could not read the registry is at least true.
+   *
+   * The limit is what makes the retries rarely needed rather than a crutch.
+   * Reading one id at a time fixed the truncation and cost nine seconds; five
+   * at a time is twenty calls in flight, which the endpoint serves without
+   * complaint.
+   */
+  const CONCURRENCY = 5;
+  type Row = { right: Right; listing: Listing | null; holding: Holding; active: boolean };
+  const rows: (Row | null)[] = new Array(ids.length).fill(null);
+
+  const readOne = async (id: number): Promise<Row | null> => {
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         const [right, listing, holding, active] = await Promise.all([
           readRight(id, contractId),
@@ -238,13 +265,34 @@ export async function readInventory(contractId?: string): Promise<
           readIsActive(id, contractId),
         ]);
         return { right, listing, holding, active };
-      } catch {
-        // Burned, or archived beyond its TTL. Not an error for a listing page.
-        return null;
+      } catch (error) {
+        // Burned, or never issued. Genuinely absent, so genuinely omitted.
+        if (isRightNotFound(error instanceof ContractCallError ? error.raw : error)) return null;
+        lastError = error;
+        // 150ms, then 300ms. Long enough for a rate limiter to forget us.
+        await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+      }
+    }
+    throw new ContractCallError(
+      `could not read right #${id} from the contract after 3 attempts — ` +
+        "the registry is not being shown incomplete",
+      lastError,
+    );
+  };
+
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, ids.length) }, async () => {
+      for (;;) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= ids.length) return;
+        rows[index] = await readOne(ids[index]!);
       }
     }),
   );
-  return rows.filter((row): row is NonNullable<typeof row> => row !== null);
+
+  return rows.filter((row): row is Row => row !== null);
 }
 
 // --- writes --------------------------------------------------------------
