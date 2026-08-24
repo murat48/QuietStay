@@ -23,7 +23,17 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY . .
+# Named inputs, never `COPY . .`.
+#
+# `.dockerignore` excludes everything and names these back in, so a `COPY . .`
+# would be equivalent *if the exclusion rules are right*. This does not depend on
+# their being right. Nothing can reach the image that is not listed here, whatever
+# a pattern does or does not match — and the file that would have leaked, the
+# statement of work, is exactly the kind that arrives later and matches no rule
+# anyone wrote in advance.
+COPY next.config.ts tsconfig.json ./
+COPY src ./src
+COPY inventory/attestations ./inventory/attestations
 
 # NEXT_PUBLIC_* values are read at build time, so the domain SEP-10 will name has
 # to be known here. Getting it wrong does not break the handshake — the server

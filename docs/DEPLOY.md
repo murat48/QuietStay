@@ -100,6 +100,36 @@ In the image: `inventory/attestations` — the issuer's *public* statements. A
 town, a bedroom count, a commitment and a signature. The documents those
 commitments are over are not there.
 
+## What was verified, and what was not
+
+Docker is not installed on the machine this was written on, and installing it
+needs root, so **no image has been built**. What was verified is the thing that
+would make an image wrong.
+
+A build context holding exactly the files the Dockerfile copies — and nothing
+else — was assembled, built, and run:
+
+| | |
+| --- | --- |
+| `next build` from those inputs alone | succeeds |
+| `.next/standalone` | **43 MB**, against 2.3 GB from the repository root |
+| the statement of work, records, canonical forms, requests, `.env*` | absent |
+| `inventory/` in the output | `attestations` only |
+
+The run stage's `COPY` list was then reproduced file by file and started with no
+`QUIETSTAY_ISSUER_SECRET` and an empty `/data`:
+
+| | |
+| --- | --- |
+| all five pages | 200 |
+| the registry, with fees and property | reads |
+| `issue`, `settle-fees`, `approve-transfer`, `unapproved-transfer` | 503, `read_only: true` |
+| the healthcheck's `wget` | passes |
+
+That covers the filesystem and the behaviour. It does not cover Alpine, `npm ci`
+in the image, the non-root user, or the `HEALTHCHECK` as Docker runs it. Build
+one and run the three checks below.
+
 ## Checking a built image
 
 ```bash
