@@ -1,0 +1,36 @@
+# An allowlist, not a denylist — deliberately.
+#
+# Next's file tracer, unable to resolve `resolve(process.cwd(), dir, …)`
+# statically, copies broadly: a build here swept the entire project root into
+# `.next/standalone`, including the statement of work and the private ownership
+# records. Nothing in the image needed either.
+#
+# A denylist would have had to name them, and would have to name the next such
+# file too — the one added months from now by somebody who never read this. So
+# everything is excluded and the build's actual inputs are named back in. A new
+# file in the repository root does not reach an image until someone says so.
+#
+# Check what a build would send, without building:
+#   git ls-files --others --cached --exclude-standard | git check-ignore -v --no-index --stdin
+*
+
+# --- what the build genuinely needs -----------------------------------------
+!package.json
+!package-lock.json
+!next.config.ts
+!tsconfig.json
+!src
+
+# The issuer's public statements: a town, a bedroom count, a commitment, a
+# signature. They are served by the app and the verify screen needs them.
+!inventory/attestations
+
+# --- and, explicitly, what must never be in an image ------------------------
+# Already covered by `*`. Repeated because these are the ones that would matter,
+# and a reader should be able to see the intent without re-deriving it.
+#
+#   2.pdf, quietstay_phase1_build_prompt.md   the statement of work
+#   .env, .env.local, .env*.local             every secret
+#   inventory/records, inventory/canonical    names, resorts, units, deeds, salts
+#   inventory/requests                        who asked whom for what
+#   .git                                      the history of all of the above

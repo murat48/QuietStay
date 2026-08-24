@@ -15,7 +15,7 @@
  * `src/lib/roles.ts`.
  */
 
-import { CONTRACT_ID } from "@/lib/config";
+import { CONTRACT_ID, hasIssuerSecret } from "@/lib/config";
 import { readInventory, readIssuer } from "@/lib/contract";
 import { ROLE_LABELS, deriveStanding, summarize } from "@/lib/roles";
 import { authenticatedAccount } from "@/lib/sep10";
@@ -43,6 +43,13 @@ export async function GET(request: Request): Promise<Response> {
       roles: standing.roles,
       role_labels: standing.roles.map((role) => ROLE_LABELS[role]),
       is_issuer: standing.isIssuer,
+      /*
+       * Whether this deployment can sign anything at all. A public one is not
+       * expected to hold the issuer key, so the interface has to stop offering
+       * issuing, fee entry and transfer approval — the alternative is a button
+       * that costs a signature to discover a 503.
+       */
+      read_only: !hasIssuerSecret(),
       owned: standing.owned,
       renting: standing.renting,
       rented_out: standing.rentedOut,

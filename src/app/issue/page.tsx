@@ -169,7 +169,7 @@ interface IssueResult {
 }
 
 export default function IssueScreen() {
-  const { standing, authFetch } = useWallet();
+  const { standing, readOnly, authFetch } = useWallet();
 
   const [tab, setTab] = useState<Tab>("form");
   const [recordText, setRecordText] = useState(() => JSON.stringify(TEMPLATE, null, 2));
@@ -763,13 +763,23 @@ export default function IssueScreen() {
         is gated.
       */}
       <RoleGate requires="issuer" action="Issuing a usage right">
-        <button
-          className="primary"
-          onClick={() => void issue()}
-          disabled={busy || !preview || !isIssuer}
-        >
-          {busy ? "issuing…" : "Issue on testnet"}
-        </button>
+        {readOnly ? (
+          <div className="note warn">
+            <strong>This deployment cannot issue.</strong> It does not hold the issuer key, on
+            purpose: the key signs every attestation and authorizes every transfer, and the
+            contract fixed its issuer at construction, so a key that leaked could never be
+            replaced. Everything above still works — the commitment is computed in your browser
+            and needs no key at all. Issuing is done from wherever the key already lives.
+          </div>
+        ) : (
+          <button
+            className="primary"
+            onClick={() => void issue()}
+            disabled={busy || !preview || !isIssuer}
+          >
+            {busy ? "issuing…" : "Issue on testnet"}
+          </button>
+        )}
       </RoleGate>
 
       {error ? <div className="note bad" style={{ marginTop: "1rem" }}>{error}</div> : null}

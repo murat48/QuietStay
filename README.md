@@ -163,6 +163,7 @@ npm run check-privacy         # confirm nothing leaked, against the real chain
 | [ATTESTATION.md](./docs/ATTESTATION.md) | Attestation schema, signing key, and the verification procedure. |
 | [SETUP.md](./docs/SETUP.md) | Requirements, configuration, every command, troubleshooting. |
 | [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md) | Shot list and narration for the ~2 minute video. |
+| [DEPLOY.md](./docs/DEPLOY.md) | Running it publicly **without the issuer key**, and why that is the design. |
 | [inventory/README.md](./inventory/README.md) | The sample weeks, and how to check a commitment with `sha256sum`. |
 
 ## Layout

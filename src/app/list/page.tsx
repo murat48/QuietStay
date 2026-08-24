@@ -140,7 +140,7 @@ interface Inventory {
 }
 
 export default function ListScreen() {
-  const { address, authenticated, sign, authFetch, connect, busy } = useWallet();
+  const { address, authenticated, readOnly, sign, authFetch, connect, busy } = useWallet();
   const [inventory, setInventory] = useState<Inventory | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyRight, setBusyRight] = useState<number | null>(null);
@@ -930,7 +930,7 @@ export default function ListScreen() {
                           </span>
                           <button
                             className="primary"
-                            disabled={busyRight === right.id || blocked || sublet}
+                            disabled={busyRight === right.id || blocked || sublet || readOnly}
                             onClick={() => void acceptRequest(req)}
                           >
                             Accept
@@ -943,7 +943,13 @@ export default function ListScreen() {
                           </button>
                         </div>
                       ))}
-                      {blocked || sublet ? (
+                      {readOnly ? (
+                        <p className="muted" style={{ marginBottom: 0 }}>
+                          Accepting needs the issuer&apos;s approval, and this deployment does not
+                          hold the issuer key — deliberately, because it cannot be rotated. The
+                          request keeps; answer it from a deployment that has the key.
+                        </p>
+                      ) : blocked || sublet ? (
                         <p className="muted" style={{ marginBottom: 0 }}>
                           {sublet
                             ? "Accepting is disabled because passing on a week you hold on a term is a sub-let, which this issuer does not approve."
@@ -959,7 +965,7 @@ export default function ListScreen() {
                     it did, by re-signing its attestation. Nothing is written to
                     the ledger and the commitment is untouched.
                   */}
-                  {isIssuer && !answering ? (
+                  {isIssuer && !answering && !readOnly ? (
                     <fieldset style={{ marginTop: "0.85rem", marginBottom: 0 }}>
                       <legend>Issuer — fee status</legend>
                       <div className="row" style={{ alignItems: "flex-end" }}>

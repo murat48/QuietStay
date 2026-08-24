@@ -37,7 +37,7 @@ import { Keypair } from "@stellar/stellar-sdk";
 import { verifyAttestation } from "@/lib/attestation";
 import { loadAttestation } from "@/lib/attestation-store";
 import { digestsMatch } from "@/lib/canonical";
-import { CONTRACT_ID, NETWORK_PASSPHRASE, issuerSecret } from "@/lib/config";
+import { CONTRACT_ID, NETWORK_PASSPHRASE, hasIssuerSecret, issuerSecret } from "@/lib/config";
 import {
   ContractCallError,
   approveTransferAsIssuer,
@@ -61,6 +61,20 @@ function decline(reason: string, detail?: unknown): Response {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // A deployment without the issuer key cannot sign, and says so rather than
+  // failing on a missing environment variable. See `hasIssuerSecret`.
+  if (!hasIssuerSecret()) {
+    return Response.json(
+      {
+        error:
+          "this deployment is read-only: it does not hold the issuer key, so it cannot " +
+          "issue, attest, or approve a transfer. Browsing and verification need no key.",
+        read_only: true,
+      },
+      { status: 503 },
+    );
+  }
+
   // Who is asking. The approval is for a transfer *this* account initiates, so an
   // unauthenticated caller cannot have one issued in someone else's name.
   const caller = await authenticatedAccount(request);

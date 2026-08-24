@@ -47,6 +47,7 @@ interface StandingResponse {
   owned: RightSummary[];
   renting: RightSummary[];
   rented_out: RightSummary[];
+  read_only?: boolean;
   error?: string;
 }
 
@@ -57,6 +58,13 @@ interface WalletState {
   authenticated: boolean;
   /** Roles read off the registry. `null` until signed in. */
   standing: AccountStanding | null;
+  /**
+   * Whether this deployment holds the issuer key. A public one is not expected
+   * to, so screens hide what it could not sign. `false` until known, which is
+   * the safe way round: a control that appears late is better than one that
+   * flashes and disappears.
+   */
+  readOnly: boolean;
   busy: boolean;
   error: string | null;
   connect: () => Promise<void>;
@@ -79,6 +87,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [standing, setStanding] = useState<AccountStanding | null>(null);
+  const [readOnly, setReadOnly] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +109,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const body = (await response.json()) as StandingResponse;
     if (!response.ok) throw new Error(body.error ?? "could not read your standing");
 
+    setReadOnly(body.read_only === true);
     setStanding({
       account: body.account,
       roles: body.roles,
@@ -203,6 +213,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       token,
       authenticated: token !== null,
       standing,
+      readOnly,
       busy,
       error,
       connect,
@@ -211,7 +222,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       sign,
       authFetch,
     }),
-    [address, token, standing, busy, error, connect, disconnect, refreshStanding, sign, authFetch],
+    [address, token, standing, readOnly, busy, error, connect, disconnect, refreshStanding, sign, authFetch],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

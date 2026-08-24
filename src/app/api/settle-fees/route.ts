@@ -46,13 +46,27 @@ import { Keypair } from "@stellar/stellar-sdk";
 import { signAttestation } from "@/lib/attestation";
 import { loadAttestation, saveAttestation } from "@/lib/attestation-store";
 import { digestsMatch } from "@/lib/canonical";
-import { CONTRACT_ID, NETWORK_PASSPHRASE, issuerSecret } from "@/lib/config";
+import { CONTRACT_ID, NETWORK_PASSPHRASE, hasIssuerSecret, issuerSecret } from "@/lib/config";
 import { ContractCallError, readRight } from "@/lib/contract";
 import { authenticatedAccount } from "@/lib/sep10";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<Response> {
+  // A deployment without the issuer key cannot sign, and says so rather than
+  // failing on a missing environment variable. See `hasIssuerSecret`.
+  if (!hasIssuerSecret()) {
+    return Response.json(
+      {
+        error:
+          "this deployment is read-only: it does not hold the issuer key, so it cannot " +
+          "issue, attest, or approve a transfer. Browsing and verification need no key.",
+        read_only: true,
+      },
+      { status: 503 },
+    );
+  }
+
   const issuer = Keypair.fromSecret(issuerSecret());
 
   const caller = await authenticatedAccount(request);

@@ -69,7 +69,7 @@ export default function TransferScreen() {
 }
 
 function TransferForm() {
-  const { address, standing, sign, authFetch, refreshStanding } = useWallet();
+  const { address, standing, readOnly, sign, authFetch, refreshStanding } = useWallet();
 
   const options = useMemo(() => transferableRights(standing), [standing]);
 
@@ -398,11 +398,21 @@ function TransferForm() {
           />
         </div>
 
+        {readOnly ? (
+          <div className="note warn">
+            <strong>This deployment cannot approve a transfer.</strong> It does not hold the
+            issuer key, on purpose: the key authorizes every transfer and the contract fixed its
+            issuer at construction, so one that leaked could never be replaced. The registry,
+            verification, and asking for a week all work here — completing a transfer is done
+            from wherever the key already lives.
+          </div>
+        ) : null}
+
         <div className="row">
           <button
             className="primary"
             onClick={() => void transfer()}
-            disabled={busy || !selected || !selected.maySell}
+            disabled={busy || !selected || !selected.maySell || readOnly}
           >
             {busy
               ? "working…"
@@ -413,7 +423,7 @@ function TransferForm() {
           <button
             className="danger"
             onClick={() => void transferWithoutApproval()}
-            disabled={busy || !selected || !selected.maySell}
+            disabled={busy || !selected || !selected.maySell || readOnly}
           >
             Try it without issuer approval
           </button>

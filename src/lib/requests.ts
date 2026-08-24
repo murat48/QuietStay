@@ -38,6 +38,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
+import { DATA_ROOT } from "./config";
+
 export const REQUESTS_DIR = "inventory/requests";
 
 export type RequestStatus = "open" | "accepted" | "declined" | "withdrawn";
@@ -64,8 +66,12 @@ export interface TransferRequest {
   answered_at?: string;
 }
 
+/*
+ * Unlike attestations, requests are only ever written here — nothing ships with
+ * the build — so there is one location rather than a search order.
+ */
 function pathFor(rightId: number): string {
-  return resolve(process.cwd(), REQUESTS_DIR, `right-${rightId}.requests.json`);
+  return resolve(DATA_ROOT, REQUESTS_DIR, `right-${rightId}.requests.json`);
 }
 
 /** Every request ever made for one right, newest last. */
