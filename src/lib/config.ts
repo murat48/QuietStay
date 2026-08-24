@@ -42,10 +42,14 @@ export const APPROVAL_VALIDITY_LEDGERS = 120;
 /**
  * Where this deployment may write.
  *
- * The repository in development; a mounted volume in a container, because an
- * image's own filesystem does not survive a restart. Files that shipped with the
- * build are still read from the working directory — see `attestation-store.ts`
- * on why both are searched rather than one replacing the other.
+ * The repository in development, and on a host with a disk that persists,
+ * wherever that disk is mounted. Files that shipped with the build are still
+ * read from the working directory — see `attestation-store.ts` on why both are
+ * searched rather than one replacing the other.
+ *
+ * A serverless host has no such place at all. `requests.ts` refuses to write
+ * there rather than using `/tmp`, which would take somebody's request and lose
+ * it before the holder saw it.
  */
 export const DATA_ROOT = process.env.QUIETSTAY_DATA_DIR ?? process.cwd();
 

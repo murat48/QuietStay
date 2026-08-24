@@ -13,7 +13,9 @@
       "Bash(timeout 8 curl -s -o /dev/null -w \"%{http_code}\" https://soroban-testnet.stellar.org)",
       "Bash(timeout 8 curl -s -o /dev/null -w \"%{http_code}\" https://crates.io)",
       "Bash(python3 -c ' *)",
-      "Bash(stellar contract *)"
+      "Bash(stellar contract *)",
+      "Bash(git rm *)",
+      "Bash(curl -s -m 60 -o /dev/null -w \"dev 3000: %{http_code}\\\\n\" http://localhost:3000/list)"
     ]
   }
 }

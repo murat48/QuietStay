@@ -37,10 +37,9 @@ const EVIDENCE_DIR = "inventory/evidence/attestations";
  * to deploy, and it can only do that when the folder is a literal — given
  * `resolve(someVariable, …)` it gives up and copies the entire project into the
  * output, source and all. Two of these three folders are literals for that
- * reason. The third cannot be: it is an environment variable pointing at a
- * volume that does not exist until the container runs, so it is hidden from the
- * tracer instead, which costs nothing — there is nothing there at build time to
- * find.
+ * reason. The third cannot be: it is an environment variable naming a directory
+ * that does not exist until the app runs, so it is hidden from the tracer
+ * instead, which costs nothing — there is nothing there at build time to find.
  */
 export function loadAttestation(rightId: number): Attestation | null {
   const name = `right-${rightId}.attestation.json`;

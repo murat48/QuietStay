@@ -10,21 +10,6 @@ const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: false },
 
   /**
-   * A self-contained server in `.next/standalone`, for the container only.
-   *
-   * It ships the traced dependencies rather than the whole of `node_modules` —
-   * a smaller image, and a smaller thing to have opinions about, since nothing
-   * is present that the app does not import.
-   *
-   * **Off by default, and that is not a preference.** A managed host runs its
-   * own build pipeline on top of this one and expects the ordinary output;
-   * Vercel's `onBuildComplete` looks for `.next/next-server.js.nft.json`, which
-   * standalone does not produce, and the build fails there rather than here.
-   * The Dockerfile opts in; nothing else should.
-   */
-  output: process.env.QUIETSTAY_STANDALONE === "1" ? "standalone" : undefined,
-
-  /**
    * The attestations the registry reads, named for the build rather than
    * inferred from a `readFileSync` argument.
    *
@@ -36,6 +21,10 @@ const nextConfig: NextConfig = {
    *
    * `/*` rather than a list of routes — five of them read attestations, and a
    * sixth added later should not silently ship without them.
+   *
+   * Without this the build warns "Dynamic filesystem access causes tracing of
+   * the whole project" and does what it says: every source file is deployed as
+   * part of the server code.
    */
   outputFileTracingIncludes: {
     "/*": ["./inventory/attestations/**", "./inventory/evidence/attestations/**"],

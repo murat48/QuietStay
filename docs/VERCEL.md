@@ -1,9 +1,21 @@
 # Deploying to Vercel
 
-The public deployment runs **without the issuer key**. The reasoning is in
-[DEPLOY.md](./DEPLOY.md) and applies here unchanged: the key signs every
-attestation and authorizes every transfer, and the contract fixed its issuer at
-construction, so a key that leaked could never be replaced.
+The public deployment runs **without the issuer key**, and that is the design
+rather than a limitation being worked around.
+
+Three secrets exist and only one of them matters here. `QUIETSTAY_ISSUER_SECRET`
+signs every attestation and authorizes every transfer, and unlike the other two
+it **cannot be rotated** — the contract fixed its issuer at construction, so
+replacing it means a new contract, a new address, and every hash in
+[EVIDENCE.md](./EVIDENCE.md) pointing at a deployment nobody uses. It does not go
+on a host somebody else operates.
+
+The other two can. A forged session convinces the app you are someone else, and
+then `transfer` asks for the holder's wallet signature and gets nothing. Nothing
+moves. Worth stating plainly, because it is the project's own claim being cashed:
+even a host compromised completely could not **take** a week — `transfer` begins
+with `from.require_auth()`. The worst a stolen issuer key can do is **lie**, and
+closing that is what Phase 2 is for.
 
 ## Attestations are not created on the server
 
@@ -26,20 +38,19 @@ the files are present at runtime. Committing them is what makes that work —
 concerned**, and its week shows as never attested, which also keeps it out of
 the "For rent" and "For sale" filters.
 
-## Two things in `next.config.ts` that make this work
-
-`output: "standalone"` is **off unless `QUIETSTAY_STANDALONE=1`**, which only the
-Dockerfile sets. Vercel runs its own pipeline over the ordinary build output and
-looks for `.next/next-server.js.nft.json`, which standalone does not write — the
-first deploy here failed on exactly that, with `ENOENT` after a build that
-otherwise succeeded.
+## The one thing in `next.config.ts` that makes this work
 
 `outputFileTracingIncludes` names the attestation folders, and `loadAttestation`
 scopes its reads to literal folders so the build can follow them. Without that,
 Turbopack warns "Dynamic filesystem access causes tracing of the whole project"
 and does what it says: every source file is deployed as part of the server code.
-Both are needed — the first makes the files findable, the second guarantees they
-are there regardless.
+Both are kept — the second makes the files findable, the first guarantees they
+are there regardless of how well static analysis does.
+
+There is no `output` setting. An earlier one, `"standalone"`, broke the first
+deploy: Vercel runs its own pipeline over the ordinary build output and opens
+`.next/next-server.js.nft.json`, which standalone does not write, so the build
+succeeded and then failed with `ENOENT`.
 
 ## Environment variables
 
