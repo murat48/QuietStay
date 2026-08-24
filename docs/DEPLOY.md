@@ -49,30 +49,7 @@ Routes that need the key answer **503** with `read_only: true` and say why. The
 interface reads the same flag from `/api/me` and stops offering those controls,
 so nobody spends a signature discovering it.
 
-## Pulling it
-
-The image is published, so there is nothing to clone or build:
-
-```bash
-docker pull patriotmurat/quietstay:phase1
-
-docker run -p 3300:3000 -v quietstay-data:/data \
-  -e QUIETSTAY_CONTRACT_ID=CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M \
-  -e QUIETSTAY_SEP10_SERVER_SECRET=S... \
-  -e QUIETSTAY_SESSION_SECRET=... \
-  patriotmurat/quietstay:phase1
-```
-
-`sha256:4383893d3441963a58a818ee74e30bc31233f146c52a2314acf3c8d416df5199`
-
-That tag is a snapshot, not a release: it predates the registry read fix and the
-attestation verification. Build from source for anything you intend to rely on —
-the point of this page is the Dockerfile, not the tag.
-
-That published tag is built for `localhost:3300` — see the note on the domain
-below. A tag for a real host is built the same way with different arguments.
-
-## Building it yourself
+## Building and running it
 
 ```bash
 docker build -t quietstay \
@@ -162,15 +139,16 @@ Two things the build taught, both kept above: `npm ci` needs
 the image rather than asserted — `@trezor` and its native `usb` dependency are
 installed during the build and do not survive into the runtime stage.
 
-## Checking the published image
+## Checking the image you built
 
-Run against the copy pulled back from Docker Hub, not the one built locally —
-the question is what a stranger receives, not what was made.
+There is no published tag. There was one, and it went four commits stale inside a
+day — a snapshot nobody maintains is worse than none, so it was taken down and
+the Dockerfile kept. Build from source and check what you built:
 
 ```bash
-docker run --rm patriotmurat/quietstay:phase1 find / -name '2.pdf' -o -name 'week-0*.json' 2>/dev/null
-docker run --rm patriotmurat/quietstay:phase1 env | grep -i secret
-docker run --rm patriotmurat/quietstay:phase1 id            # uid=1001(quietstay) — never root
+docker run --rm quietstay find / -name '2.pdf' -o -name 'week-0*.json' 2>/dev/null
+docker run --rm quietstay env | grep -i secret
+docker run --rm quietstay id            # uid=1001(quietstay) — never root
 ```
 
 The first two should print nothing.
