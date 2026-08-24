@@ -165,6 +165,7 @@ npm run check-privacy         # confirm nothing leaked, against the real chain
 | [SETUP.md](./docs/SETUP.md) | Requirements, configuration, every command, troubleshooting. |
 | [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md) | Shot list and narration for the ~2 minute video. |
 | [DEPLOY.md](./docs/DEPLOY.md) | Running it publicly **without the issuer key**, and why that is the design. |
+| [VERCEL.md](./docs/VERCEL.md) | The same, on Vercel: environment, what works, and why attestations come from git. |
 | [inventory/README.md](./inventory/README.md) | The sample weeks, and how to check a commitment with `sha256sum`. |
 
 ## Layout

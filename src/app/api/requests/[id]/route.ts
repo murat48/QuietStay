@@ -22,7 +22,11 @@
  */
 
 import { ContractCallError, readHolding } from "@/lib/contract";
-import { loadRequests, updateRequest } from "@/lib/requests";
+import {
+  RequestStoreUnavailable,
+  loadRequests,
+  updateRequest,
+} from "@/lib/requests";
 import { authenticatedAccount } from "@/lib/sep10";
 
 export const dynamic = "force-dynamic";
@@ -139,6 +143,11 @@ export async function POST(
             : "Recorded. The week is now held by the account that asked for it.",
     });
   } catch (error) {
+    // A deployment with no writable store says so, once, in words. Anything else
+    // falls through to the handler below.
+    if (error instanceof RequestStoreUnavailable) {
+      return Response.json({ error: error.message, read_only: true }, { status: 503 });
+    }
     if (error instanceof ContractCallError) {
       return Response.json({ error: error.message }, { status: 400 });
     }

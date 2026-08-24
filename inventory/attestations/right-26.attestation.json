@@ -1,0 +1,30 @@
+{
+  "payload": {
+    "schema": "quietstay.attestation.v1",
+    "network": "Test SDF Network ; September 2015",
+    "contract": "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M",
+    "right_id": 26,
+    "commitment": "78d617e586d60fefc6ef4c67291703d3bf11d3912b2179e7bd353d5d5d1ef23f",
+    "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "week_valid": true,
+    "property": {
+      "region": "Marmaris, Turkey",
+      "bedrooms": 2,
+      "sleeps": 4,
+      "features": [
+        "sea view",
+        "wifi"
+      ]
+    },
+    "maintenance_fees_current": true,
+    "fees_paid_through": "2026-12-31",
+    "issued_at": "2026-08-23T21:21:52.837Z",
+    "not_before": "2026-08-23T21:21:52.837Z",
+    "expires_at": "2027-08-23T21:21:52.837Z"
+  },
+  "signature": {
+    "alg": "ed25519",
+    "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "value": "jPce+5zTU57hFxv+T3dmTz2o4PTAHMiXJEpmQ+4Zyz+sc2DzQEO+gXQeWKfMpMj8+UJ/SCDqT031rU2aYKzhCw=="
+  }
+}

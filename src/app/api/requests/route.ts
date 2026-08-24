@@ -33,6 +33,7 @@ import { randomUUID } from "node:crypto";
 
 import { ContractCallError, readInventory } from "@/lib/contract";
 import {
+  RequestStoreUnavailable,
   loadRequests,
   openRequestBy,
   saveRequests,
@@ -128,6 +129,11 @@ export async function POST(request: Request): Promise<Response> {
             "nothing has moved.",
     });
   } catch (error) {
+    // A deployment with no writable store says so, once, in words. Anything else
+    // falls through to the handler below.
+    if (error instanceof RequestStoreUnavailable) {
+      return Response.json({ error: error.message, read_only: true }, { status: 503 });
+    }
     if (error instanceof ContractCallError) {
       return Response.json({ error: error.message }, { status: 400 });
     }

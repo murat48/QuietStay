@@ -1,0 +1,25 @@
+{
+  "payload": {
+    "schema": "quietstay.attestation.v1",
+    "network": "Test SDF Network ; September 2015",
+    "contract": "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M",
+    "right_id": 24,
+    "commitment": "1a1d75631b4f555d18097a1e507ba3b69ac9ba8fa9518c83dfb7694f87e9b627",
+    "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "week_valid": true,
+    "property": {
+      "region": "Portugal",
+      "bedrooms": 2
+    },
+    "maintenance_fees_current": true,
+    "fees_paid_through": "2026-12-31",
+    "issued_at": "2026-08-23T18:54:27.397Z",
+    "not_before": "2026-08-23T18:54:27.397Z",
+    "expires_at": "2027-08-23T18:54:27.397Z"
+  },
+  "signature": {
+    "alg": "ed25519",
+    "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "value": "gzn+HoIVlsFajmHx4E2vVZvbaxeX7ys4GZSoL0PQa0pAs6fgCEx6F1vorxtJ/955MkCenprEyojz2xMfxcV+CA=="
+  }
+}

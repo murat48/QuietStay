@@ -48,6 +48,7 @@ interface StandingResponse {
   renting: RightSummary[];
   rented_out: RightSummary[];
   read_only?: boolean;
+  can_request?: boolean;
   error?: string;
 }
 
@@ -65,6 +66,11 @@ interface WalletState {
    * flashes and disappears.
    */
   readOnly: boolean;
+  /**
+   * Whether this deployment can record a transfer request. False on a host with
+   * a read-only filesystem, where the ask would be taken and then lost.
+   */
+  canRequest: boolean;
   busy: boolean;
   error: string | null;
   connect: () => Promise<void>;
@@ -88,6 +94,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [standing, setStanding] = useState<AccountStanding | null>(null);
   const [readOnly, setReadOnly] = useState(false);
+  // Assume it works until told otherwise: the alternative hides a working control.
+  const [canRequest, setCanRequest] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,6 +118,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!response.ok) throw new Error(body.error ?? "could not read your standing");
 
     setReadOnly(body.read_only === true);
+    setCanRequest(body.can_request !== false);
     setStanding({
       account: body.account,
       roles: body.roles,
@@ -214,6 +223,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       authenticated: token !== null,
       standing,
       readOnly,
+      canRequest,
       busy,
       error,
       connect,
@@ -222,7 +232,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       sign,
       authFetch,
     }),
-    [address, token, standing, readOnly, busy, error, connect, disconnect, refreshStanding, sign, authFetch],
+    [address, token, standing, readOnly, canRequest, busy, error, connect, disconnect, refreshStanding, sign, authFetch],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

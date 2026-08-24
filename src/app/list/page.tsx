@@ -140,7 +140,7 @@ interface Inventory {
 }
 
 export default function ListScreen() {
-  const { address, authenticated, readOnly, sign, authFetch, connect, busy } = useWallet();
+  const { address, authenticated, readOnly, canRequest, sign, authFetch, connect, busy } = useWallet();
   const [inventory, setInventory] = useState<Inventory | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyRight, setBusyRight] = useState<number | null>(null);
@@ -880,7 +880,7 @@ export default function ListScreen() {
                     given to a stranger, and by design nobody — the issuer least of
                     all — can bring it back.
                   */}
-                  {right.listing && !sublet && !mine ? (
+                  {right.listing && !sublet && !mine && canRequest ? (
                     <div style={{ marginTop: "0.7rem" }}>
                       {myRequest ? (
                         <div className="row" style={{ gap: "0.5rem", alignItems: "center" }}>
@@ -904,6 +904,14 @@ export default function ListScreen() {
                         </button>
                       )}
                     </div>
+                  ) : null}
+
+                  {right.listing && !sublet && !mine && !canRequest ? (
+                    <p className="muted" style={{ marginTop: "0.7rem", marginBottom: 0 }}>
+                      This deployment cannot record a request — it has no writable store, so an ask
+                      would be taken and then lost. The week is really on offer; reach its holder
+                      another way, or use a deployment that can keep one.
+                    </p>
                   ) : null}
 
                   {asks.length > 0 && mine ? (
