@@ -44,7 +44,11 @@
 import { Keypair } from "@stellar/stellar-sdk";
 
 import { signAttestation } from "@/lib/attestation";
-import { loadAttestation, saveAttestation } from "@/lib/attestation-store";
+import {
+  attestationStoreIsWritable,
+  loadAttestation,
+  saveAttestation,
+} from "@/lib/attestation-store";
 import { digestsMatch } from "@/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, hasIssuerSecret, issuerSecret } from "@/lib/config";
 import { ContractCallError, readRight } from "@/lib/contract";
@@ -61,6 +65,22 @@ export async function POST(request: Request): Promise<Response> {
         error:
           "this deployment is read-only: it does not hold the issuer key, so it cannot " +
           "issue, attest, or approve a transfer. Browsing and verification need no key.",
+        read_only: true,
+      },
+      { status: 503 },
+    );
+  }
+
+  // Nothing here reaches the ledger — a settlement replaces the attestation and
+  // leaves the commitment alone — so failing at the write would cost nothing but
+  // a bare `EROFS`. Asked up front anyway, so the answer names the reason and the
+  // interface can stop offering the control.
+  if (!attestationStoreIsWritable()) {
+    return Response.json(
+      {
+        error:
+          "this deployment cannot record a fee settlement: it has nowhere to write the " +
+          "replacement attestation. Settle where the issuer key and its records live.",
         read_only: true,
       },
       { status: 503 },

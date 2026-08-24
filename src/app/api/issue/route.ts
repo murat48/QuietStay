@@ -18,7 +18,7 @@
 import { Keypair } from "@stellar/stellar-sdk";
 
 import { signAttestation } from "@/lib/attestation";
-import { saveAttestation } from "@/lib/attestation-store";
+import { attestationStoreIsWritable, saveAttestation } from "@/lib/attestation-store";
 import { canonicalText } from "@/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, hasIssuerSecret, issuerSecret } from "@/lib/config";
 import { ContractCallError, buildIssueTx, prepare, readNextId, signWith, submit } from "@/lib/contract";
@@ -41,6 +41,24 @@ export async function POST(request: Request): Promise<Response> {
         error:
           "this deployment is read-only: it does not hold the issuer key, so it cannot " +
           "issue, attest, or approve a transfer. Browsing and verification need no key.",
+        read_only: true,
+      },
+      { status: 503 },
+    );
+  }
+
+  // Asked here, before anything is submitted, because the issuance cannot be
+  // undone and the attestation is not optional: a right issued without one is a
+  // right nobody can transfer. A host holding the key but with nothing writable
+  // — a serverless deployment given the key by mistake — used to get as far as
+  // the ledger and fail on `EROFS` afterwards.
+  if (!attestationStoreIsWritable()) {
+    return Response.json(
+      {
+        error:
+          "this deployment cannot issue: it has nowhere to record the attestation, and a " +
+          "right issued without one could never be transferred. Issue where the issuer key " +
+          "and its records live.",
         read_only: true,
       },
       { status: 503 },

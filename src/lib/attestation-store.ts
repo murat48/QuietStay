@@ -12,7 +12,7 @@
  * to approve a transfer of a week it has never attested.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { accessSync, constants, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { DATA_ROOT } from "./config";
@@ -71,11 +71,59 @@ export function loadAttestation(rightId: number): Attestation | null {
   }
 }
 
+/**
+ * Whether an attestation could be written at all.
+ *
+ * Meant to be asked **before** anything reaches the ledger. Issuing and settling
+ * fees both put a transaction on chain and then record the attestation that goes
+ * with it, and the chain half cannot be taken back: a deployment that discovers
+ * its filesystem is read-only at the second step has already created a right
+ * nobody can transfer, because the approval service will not approve a week the
+ * issuer has no attestation for.
+ *
+ * Cheap, and writes nothing. `mkdirSync` on an existing directory is a no-op,
+ * and on a read-only filesystem it fails the same way the real write would.
+ */
+export function attestationStoreIsWritable(): boolean {
+  try {
+    const dir = resolve(DATA_ROOT, PRIMARY_DIR);
+    mkdirSync(dir, { recursive: true });
+    accessSync(dir, constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The answer a route gives when it cannot record what it is about to sign.
+ *
+ * Separate from "no issuer key": a host may hold the key and still have nowhere
+ * to put the result, which is exactly a serverless deployment given the key by
+ * mistake.
+ */
+export class AttestationStoreUnavailable extends Error {
+  constructor(readonly cause: unknown) {
+    super(
+      "this deployment cannot record attestations: it has no writable store. " +
+        "Issuing and settling fees are done where the issuer key and its records live.",
+    );
+    this.name = "AttestationStoreUnavailable";
+  }
+}
+
 /** Record an attestation. Returns the path, for the caller to report. */
 export function saveAttestation(rightId: number, attestation: Attestation): string {
   const name = `right-${rightId}.attestation.json`;
   const path = resolve(DATA_ROOT, PRIMARY_DIR, name);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(attestation, null, 2)}\n`, "utf8");
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, `${JSON.stringify(attestation, null, 2)}\n`, "utf8");
+  } catch (error) {
+    // EROFS, EACCES, ENOSPC. The caller has usually already touched the ledger by
+    // now, so this carries the attestation nowhere — it says so plainly instead
+    // of surfacing a bare errno.
+    throw new AttestationStoreUnavailable(error);
+  }
   return join(PRIMARY_DIR, name);
 }

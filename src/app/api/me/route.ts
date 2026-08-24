@@ -15,6 +15,7 @@
  * `src/lib/roles.ts`.
  */
 
+import { attestationStoreIsWritable } from "@/lib/attestation-store";
 import { CONTRACT_ID, hasIssuerSecret } from "@/lib/config";
 import { readInventory, readIssuer } from "@/lib/contract";
 import { ROLE_LABELS, deriveStanding, summarize } from "@/lib/roles";
@@ -45,12 +46,18 @@ export async function GET(request: Request): Promise<Response> {
       role_labels: standing.roles.map((role) => ROLE_LABELS[role]),
       is_issuer: standing.isIssuer,
       /*
-       * Whether this deployment can sign anything at all. A public one is not
-       * expected to hold the issuer key, so the interface has to stop offering
-       * issuing, fee entry and transfer approval — the alternative is a button
-       * that costs a signature to discover a 503.
+       * Whether this deployment can act as the issuer at all. A public one is
+       * not expected to, so the interface has to stop offering issuing, fee
+       * entry and transfer approval — the alternative is a button that costs a
+       * signature to discover a 503.
+       *
+       * Two ways to fall short, and holding the key is only the first. Issuing
+       * and settling both have to record the attestation they sign, and a right
+       * issued without one can never be transferred, so a host with the key and
+       * nowhere to write is read-only too — more dangerous than one without the
+       * key, because it gets as far as the ledger before finding out.
        */
-      read_only: !hasIssuerSecret(),
+      read_only: !hasIssuerSecret() || !attestationStoreIsWritable(),
       /*
        * Separate from `read_only`, because they fail for different reasons and
        * a deployment can have either without the other. No issuer key means no
