@@ -14,6 +14,7 @@ let it.
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
 | Tests | 34 unit tests — `cd contracts && cargo test` |
 | Demo video | _add link after recording — see [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)_ |
+| Image | `docker pull patriotmurat/quietstay:phase1` — runs read-only, no issuer key. [DEPLOY.md](./docs/DEPLOY.md) |
 
 **Reviewing this?** Start at [**docs/EVIDENCE.md**](./docs/EVIDENCE.md). It is links
 to open — a contract address and four transactions. Nothing to clone or build.
