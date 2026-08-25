@@ -821,6 +821,28 @@ export default function ListScreen() {
                   </dl>
 
                   {/*
+                    The question a card cannot leave unanswered once the week is
+                    yours: where am I actually staying?
+
+                    Only on a week you hold — somebody shopping has not earned
+                    the question yet. It points at the wallet rather than at the
+                    seller on purpose: the seller has been paid and has no reason
+                    left to answer, and a last step that depends on their goodwill
+                    is not a last step. See docs/DESIGN.md on the credential being
+                    the chain.
+                  */}
+                  {mine ? (
+                    <p className="muted" style={{ marginTop: "0.7rem", marginBottom: 0 }}>
+                      <strong>Staying here.</strong> The town is above; the resort and the unit are
+                      in the ownership record, which is not published. You do not need it to arrive
+                      — the issuer knows which unit this week is and can read from the contract that
+                      you hold it, so your wallet is the credential. Ask for the record only to see
+                      the full document, and check it on{" "}
+                      <Link href="/verify">Verify</Link>.
+                    </p>
+                  ) : null}
+
+                  {/*
                     The ledger's own view, folded away.
 
                     Not deleted. A registry that says a week is verified while

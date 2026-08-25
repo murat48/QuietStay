@@ -156,6 +156,48 @@ All of it runs in the counterparty's own browser on the
 `npm run verify-record`. A server that answered "verified" would be one more party
 to trust, which defeats the exercise.
 
+### The holder's credential is the chain, not a forwarded document
+
+An obvious objection follows from all of this: the attestation publishes a town,
+not an address. So how does somebody who has just taken a week actually turn up
+and stay in it?
+
+Not by being sent the record. That answer would make the buyer depend on the
+seller's goodwill *after* the seller has already been paid and has no reason left
+to answer an email — and a design whose last step relies on the counterparty
+staying helpful has no last step.
+
+The record moves **before** the transfer, not after, and that is where the
+incentive is: a seller who will not disclose what they are selling does not sell
+it. The buyer checks the document against the commitment on the verify screen,
+sees which resort and which unit, and only then goes ahead. That is Leg 3, and it
+is a tool for deciding — not for arriving.
+
+Arriving needs nothing from the seller at all:
+
+| | |
+| --- | --- |
+| Which unit right #35 is | the issuer already knows — it issued it |
+| Who holds it today | on chain, readable by anyone, no credentials |
+| That this person is that holder | their wallet signature — the SEP-10 handshake this app already runs |
+
+A wallet signature is a stronger credential than a forwarded PDF: it cannot be
+copied, it cannot go stale, and it does not depend on anyone's cooperation. A
+seller who vanishes the moment the transfer confirms costs the buyer nothing.
+
+**What Phase 1 builds and what it does not.** The chain carries what a check-in
+needs and anyone can read it — `GET /api/right/35` answers with the effective
+holder and the term, with no session and no wallet — and SEP-10 is implemented and
+in use. What does not exist is anything on the resort's side of the counter: no
+check-in flow, no front-desk screen, no resort integration, which is
+[out of scope](#what-phase-2-is-for) by name. The scenario above is one the
+architecture supports, not a feature that can be demonstrated.
+
+The residual limitation is the one already
+[enumerated](#the-issuer-still-can): an issuer can refuse. It cannot take the week
+back, but it can decline to open the door, and no part of this design prevents
+that.
+
 ## The authorization boundary
 
 Every transfer passes through exactly one function, and nothing else in the
