@@ -14,7 +14,7 @@ let it.
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
 | Tests | 34 unit tests — `cd contracts && cargo test` |
 | Demo video | _add link after recording — see [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)_ |
-| Live app | _add link after deploying — see [VERCEL.md](./docs/VERCEL.md)_ |
+| Live app | **[quietstay.vercel.app](https://quietstay.vercel.app)** — testnet, browse and verify without an account |
 
 **Reviewing this?** Start at [**docs/EVIDENCE.md**](./docs/EVIDENCE.md). It is links
 to open — a contract address and four transactions. Nothing to clone or build.

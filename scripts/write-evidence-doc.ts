@@ -269,11 +269,23 @@ Four screens, connected to the deployed contract:
 | [Verify](../src/app/verify/page.tsx) | A counterparty checks a disclosed record and attestation, entirely client-side. |
 | [Transfer](../src/app/transfer/page.tsx) | Rent or sell through one form, with issuer approval — plus a control that submits **without** approval so the refusal can be watched. |
 
-Running it: [VERCEL.md](./VERCEL.md) deploys it publicly without the issuer key,
-which is the point — the key signs every attestation and authorizes every
-transfer, the contract fixed its issuer at construction, and a key that leaked
-could never be replaced. Locally: [SETUP.md](./SETUP.md). Demo walkthrough:
-[DEMO_SCRIPT.md](./DEMO_SCRIPT.md).
+Live at **[quietstay.vercel.app](https://quietstay.vercel.app)**, on testnet.
+Browsing and verifying need no account and no wallet.
+
+That deployment holds the issuer key, so weeks can be issued from it directly.
+[VERCEL.md](./VERCEL.md) documents both that and the alternative — a public
+deployment with no key at all, which still browses, verifies, signs in and
+publishes offers, because none of those need one. The distinction is worth
+knowing: the key signs every attestation and authorizes every transfer, and
+because the contract fixed its issuer at construction it cannot be rotated, so a
+key that leaks is leaked for the life of the deployment.
+
+What it cannot do is the claim this whole document exists to support: even a host
+compromised completely could not **take** a week. \`transfer\` begins with
+\`from.require_auth()\`, which no server-side key satisfies — only the holder's
+wallet does. The worst a stolen issuer key can do is lie.
+
+Locally: [SETUP.md](./SETUP.md). Demo walkthrough: [DEMO_SCRIPT.md](./DEMO_SCRIPT.md).
 
 End-to-end test against the running app — SEP-10, issuance, offers, an approved
 rental, a refused unapproved transfer, a declined approval, and an attempted
