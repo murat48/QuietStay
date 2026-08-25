@@ -251,6 +251,57 @@ dl.facts dd {
   color: var(--text-dim);
 }
 
+/*
+ * The ledger's own view of a week: account addresses, the validity window, the
+ * commitment.
+ *
+ * Folded away rather than removed. Somebody deciding whether to take a week
+ * needs the town, the dates and the fee state; an account address and a 64-hex
+ * digest are noise to them, and putting noise beside the things that matter
+ * makes those harder to read too.
+ *
+ * They still have to be reachable. A registry that says a week is verified while
+ * hiding what it was verified against is asking to be taken on faith, which is
+ * the opposite of this project's claim — so it is one click, in the open, on
+ * every card.
+ */
+details.tech {
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+}
+
+details.tech > summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-faint);
+  list-style: none;
+}
+
+details.tech > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The triangle, drawn rather than inherited, so it turns with the disclosure. */
+details.tech > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 0.4rem;
+  transition: transform 0.12s ease;
+}
+
+details.tech[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+details.tech > summary:hover {
+  color: var(--text-dim);
+}
+
+details.tech > dl.facts {
+  margin-top: 0.55rem;
+}
+
 .tag {
   display: inline-block;
   font-size: 0.72rem;

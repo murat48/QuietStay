@@ -564,22 +564,38 @@ export default function ListScreen() {
 
       {inventory ? (
         <>
+          {/*
+            The count is the only line here anyone browsing needs; the token's
+            symbol and the issuer's account answer questions they have not asked.
+            Kept, one click down, because a reviewer opens this first.
+          */}
           <div className="card tight">
             <dl className="facts">
-              <dt>Token</dt>
-              <dd>
-                {inventory.token.name} (<code>{inventory.token.symbol}</code>), decimals{" "}
-                {inventory.token.decimals} — a week is not divisible
-              </dd>
-              <dt>Issuer</dt>
-              <dd>
-                <a href={explorer.account(inventory.issuer)} target="_blank" rel="noreferrer">
-                  <code>{inventory.issuer}</code>
-                </a>
-              </dd>
-              <dt>Rights</dt>
+              <dt>Weeks in the registry</dt>
               <dd>{inventory.rights.length}</dd>
             </dl>
+            <details className="tech">
+              <summary>Contract and issuer</summary>
+              <dl className="facts">
+                <dt>Token</dt>
+                <dd>
+                  {inventory.token.name} (<code>{inventory.token.symbol}</code>), decimals{" "}
+                  {inventory.token.decimals} — a week is not divisible
+                </dd>
+                <dt>Issuer</dt>
+                <dd>
+                  <a href={explorer.account(inventory.issuer)} target="_blank" rel="noreferrer">
+                    <code>{inventory.issuer}</code>
+                  </a>
+                </dd>
+                <dt>Contract</dt>
+                <dd>
+                  <a href={inventory.contract_explorer} target="_blank" rel="noreferrer">
+                    <code>{inventory.contract}</code>
+                  </a>
+                </dd>
+              </dl>
+            </details>
           </div>
 
           {/*
@@ -769,25 +785,18 @@ export default function ListScreen() {
                     <dd>
                       {formatDate(right.week.start)} → {formatDate(right.week.end)}
                     </dd>
-                    <dt>Use year</dt>
-                    <dd>
-                      {formatDate(right.validity.from)} → {formatDate(right.validity.until)}
-                    </dd>
-                    <dt>Held by</dt>
-                    <dd>
-                      <code>{shortAddress(right.effective_holder)}</code>
-                      {right.term_ends === null ? (
-                        " (outright)"
-                      ) : (
-                        <> until {formatDate(right.term_ends)}</>
-                      )}
-                    </dd>
-                    {right.rented_out ? (
+                    {/*
+                      Who holds it, said the way somebody shopping would ask it.
+                      The accounts themselves are below, under the fold: an
+                      address answers "which key" when the question was "can I
+                      have it, and when".
+                    */}
+                    {right.term_ends !== null ? (
                       <>
-                        <dt>Title</dt>
+                        <dt>Availability</dt>
                         <dd>
-                          <code>{shortAddress(right.title_holder)}</code>{" "}
-                          <span className="muted">— reverts here when the term lapses</span>
+                          taken until {formatDate(right.term_ends)}
+                          <span className="muted"> — then it returns to its owner</span>
                         </dd>
                       </>
                     ) : null}
@@ -809,9 +818,45 @@ export default function ListScreen() {
                         </>
                       )}
                     </dd>
-                    <dt>Commitment</dt>
-                    <dd className="hash">{right.commitment}</dd>
                   </dl>
+
+                  {/*
+                    The ledger's own view, folded away.
+
+                    Not deleted. A registry that says a week is verified while
+                    hiding what it was verified against is asking to be taken on
+                    faith, and that is the one thing this project does not ask
+                    for. One click, on every card, for anyone who wants it.
+                  */}
+                  <details className="tech">
+                    <summary>On the ledger</summary>
+                    <dl className="facts">
+                      <dt>Held by</dt>
+                      <dd>
+                        <code>{shortAddress(right.effective_holder)}</code>
+                        {right.term_ends === null ? (
+                          " (outright)"
+                        ) : (
+                          <> until {formatDate(right.term_ends)}</>
+                        )}
+                      </dd>
+                      {right.rented_out ? (
+                        <>
+                          <dt>Title</dt>
+                          <dd>
+                            <code>{shortAddress(right.title_holder)}</code>{" "}
+                            <span className="muted">— reverts here when the term lapses</span>
+                          </dd>
+                        </>
+                      ) : null}
+                      <dt>Use year</dt>
+                      <dd>
+                        {formatDate(right.validity.from)} → {formatDate(right.validity.until)}
+                      </dd>
+                      <dt>Commitment</dt>
+                      <dd className="hash">{right.commitment}</dd>
+                    </dl>
+                  </details>
 
                   {blocked ? (
                     <div className="note warn">
