@@ -100,9 +100,45 @@ export function issuerSecret(): string {
   return secret;
 }
 
-/** The SEP-10 home domain this deployment authenticates for. */
-export const HOME_DOMAIN = process.env.NEXT_PUBLIC_HOME_DOMAIN ?? "localhost:3000";
-export const WEB_AUTH_DOMAIN = process.env.NEXT_PUBLIC_WEB_AUTH_DOMAIN ?? HOME_DOMAIN;
+/**
+ * A host, as SEP-10 wants it: a domain, optionally with a port, and nothing else.
+ *
+ * The value gets pasted from a browser's address bar more often than it gets
+ * typed, so it arrives with a scheme, a trailing slash, or both. Those are
+ * unambiguous about what was meant — `https://example.com/` is the host
+ * `example.com` — and the spec admits only one spelling, so they are corrected
+ * rather than carried into a challenge nobody's wallet would recognise.
+ *
+ * The port survives: `localhost:3000` is a legitimate home domain and is what
+ * development uses.
+ */
+function asHost(value: string): string {
+  return value
+    .trim()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//i, "")
+    .replace(/\/.*$/, "");
+}
+
+/**
+ * The SEP-10 home domain this deployment authenticates for.
+ *
+ * Read at runtime, not baked into the bundle: `sep10.ts` is the only consumer and
+ * it never runs in a browser, so the value has no reason to ship to one. That
+ * also means changing the domain takes effect on the next request rather than
+ * requiring a rebuild — which matters, because on a host the URL is not known
+ * until the first deploy has already happened.
+ *
+ * `NEXT_PUBLIC_HOME_DOMAIN` still works, so a deployment configured before this
+ * keeps authenticating. It is not secret either way — the home domain is the site
+ * somebody is already looking at.
+ */
+export const HOME_DOMAIN = asHost(
+  process.env.QUIETSTAY_HOME_DOMAIN ?? process.env.NEXT_PUBLIC_HOME_DOMAIN ?? "localhost:3000",
+);
+
+export const WEB_AUTH_DOMAIN = asHost(
+  process.env.QUIETSTAY_WEB_AUTH_DOMAIN ?? process.env.NEXT_PUBLIC_WEB_AUTH_DOMAIN ?? HOME_DOMAIN,
+);
 
 /** Server-only: the SEP-10 challenge signing key and session secret. */
 export function sep10ServerSecret(): string {

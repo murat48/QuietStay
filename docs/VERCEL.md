@@ -82,7 +82,7 @@ Both deployments need these:
 | `NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID` | the same |
 | `QUIETSTAY_SEP10_SERVER_SECRET` | the SEP-10 challenge key — rotatable, safe here |
 | `QUIETSTAY_SESSION_SECRET` | 32+ random characters |
-| `NEXT_PUBLIC_HOME_DOMAIN` | the deployment's host, e.g. `quietstay.vercel.app` |
+| `QUIETSTAY_HOME_DOMAIN` | the deployment's host, e.g. `quietstay.vercel.app` |
 
 The full deployment adds:
 
@@ -95,22 +95,31 @@ The full deployment adds:
 Never the `DEMO_*` keys — those are read only by the scripts, which do not run on
 Vercel.
 
-`NEXT_PUBLIC_WEB_AUTH_DOMAIN` follows `NEXT_PUBLIC_HOME_DOMAIN` when unset.
+`QUIETSTAY_WEB_AUTH_DOMAIN` follows `QUIETSTAY_HOME_DOMAIN` when unset.
 
 Paste values with no quotes and no trailing newline. A malformed seed is caught
 and named rather than failing somewhere further in.
 
-### The domain is read at build time
+### The domain is a host, and it is read at runtime
 
-`NEXT_PUBLIC_*` values are baked into the bundle, and the URL is not known until
-the first deploy — which makes this awkward exactly once. Set the Vercel project
-name first so the URL is predictable, then set the variable before deploying.
+`quietstay.vercel.app`. Not `https://quietstay.vercel.app`, not with a trailing
+slash — SEP-10 puts `<home domain> auth` in the challenge the wallet displays,
+and it wants a host there. A scheme or a path is stripped rather than carried
+into a challenge no standard wallet would recognise, so a pasted address-bar URL
+still works, but the value that is meant is the bare host.
+
+It is deliberately **not** a `NEXT_PUBLIC_` variable. `sep10.ts` is the only
+reader and never runs in a browser, so nothing is gained by shipping it there and
+something is lost: `NEXT_PUBLIC_*` values are baked into the bundle at build time,
+and the URL is not known until the first deploy has already happened. Read at
+runtime, the domain can be corrected after the fact and takes effect on the next
+request. The old `NEXT_PUBLIC_HOME_DOMAIN` still works for a deployment already
+configured with it.
 
 Getting it wrong does not break sign-in: the server builds and verifies the
 challenge against the same constant, so it stays self-consistent. It breaks
 something quieter — the app asks people to sign a message naming a site they are
-not on, which is the one thing that field exists to prevent. No scheme, no
-trailing slash.
+not on, which is the one thing that field exists to prevent.
 
 ### If sign-in fails on the deployed app
 
@@ -132,8 +141,8 @@ The message names variables, never values.
 
 Both keys are safe to set here and both can be rotated — rotating the SEP-10 key
 invalidates nothing but in-flight challenges, and rotating the session key signs
-everyone out. Neither can move a week. That is `QUIETSTAY_ISSUER_SECRET`, which
-is not on this host.
+everyone out. Neither can move a week, and neither is the one that cannot be
+replaced; that is `QUIETSTAY_ISSUER_SECRET`, discussed above.
 
 ## The store, and why the app needs one
 
@@ -148,10 +157,20 @@ application.
 
 ### Setting it up
 
-Vercel dashboard → **Storage** → **Marketplace** → **Upstash for Redis** →
-create, and connect it to the project. The integration sets
-`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` itself; nothing needs
-copying by hand. Redeploy afterwards.
+Vercel dashboard → **Storage** → **Redis** (Upstash) → create, then **Connect
+Project**. The integration sets the variables itself; nothing needs copying by
+hand. Redeploy afterwards — Vercel binds environment variables at deploy time, so
+saving one does not reach the deployment already running.
+
+Check which names it used, because it varies: **`UPSTASH_REDIS_REST_URL` /
+`UPSTASH_REDIS_REST_TOKEN`** or **`KV_REST_API_URL` / `KV_REST_API_TOKEN`**.
+Either pair is accepted. What is *not* used is `REDIS_URL` or `KV_URL` — those
+are `rediss://` connection strings, and a serverless invocation cannot hold a TCP
+connection open between requests, which is why this talks REST.
+
+Doing it outside Vercel works identically: create a database at
+[upstash.com](https://upstash.com), copy the two values from its **REST API**
+panel, and add them to the project's environment variables by hand.
 
 The free tier is far more than this uses: an attestation is about a kilobyte and
 there is one per week.
