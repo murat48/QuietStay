@@ -518,6 +518,21 @@ input[readonly]:focus {
   font-weight: 600;
 }
 
+/* Sits under the strip and explains why the counts do not sum. Pulled up into
+   the strip's own bottom margin so it reads as part of it rather than as the
+   first thing in the results. */
+.tabs-hint {
+  color: var(--text-faint);
+  font-size: 0.85rem;
+  max-width: 62ch;
+  margin: -0.7rem 0 1.2rem;
+}
+
+.tabs-hint strong {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
 /* --- verification checklist -------------------------------------------- */
 
 ul.checks {

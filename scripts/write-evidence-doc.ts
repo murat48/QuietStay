@@ -258,6 +258,28 @@ ${issued.rights
 Each commitment is reproducible with \`sha256sum\` alone —
 see [COMMITMENT.md](./COMMITMENT.md#reproducing-a-commitment).
 
+### One week in the registry has no attestation, and cannot be given one
+
+Right **#36** exists on chain, carries the commitment
+\`7634048ef3230aec…\`, and has no attestation. The registry shows it as never
+attested, which keeps it out of every shopping filter, and \`approve-transfer\`
+would decline it, so nobody can take it. It is listed here rather than quietly
+left to be discovered.
+
+It was issued from the deployed app at a moment when that deployment had the
+issuer key but nowhere to write. The transaction went to the ledger and the
+attestation had no destination — the ordering bug is described in
+[VERCEL.md](./VERCEL.md#issuing-checks-the-store-before-it-touches-the-chain),
+and \`/api/issue\` now checks it can write before it touches the chain.
+
+It cannot be repaired, and the reason is the point. Every record carries a
+32-byte random \`salt\`, and that record was never persisted — being unable to
+persist it *was* the failure. Producing a record that hashes to
+\`7634048ef3230aec…\` therefore means recovering 256 bits of randomness that
+exist nowhere. The issuer holds the signing key, controls the deployment, and
+still cannot backfill a record to match a commitment it published. That is the
+binding property this document argues for, demonstrated at our own expense.
+
 ## Deliverable 3 — Reference web application
 
 Four screens, connected to the deployed contract:

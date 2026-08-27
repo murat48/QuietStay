@@ -637,6 +637,19 @@ export default function ListScreen() {
             ))}
           </div>
 
+          {/*
+            The counts do not add up to "All", and without this they look like
+            arithmetic that went wrong. They are answers to different questions:
+            a week can be in two of them, and one nobody has offered is in none.
+            Said plainly rather than as a note box, which would make a permanent
+            fact of the registry look like a warning about it.
+          */}
+          <p className="tabs-hint">
+            <strong>All</strong> is every week here. The rest are different questions, not
+            slices — a week can appear in two of them, and a week nobody has offered
+            appears in none.
+          </p>
+
           {shown.length === 0 ? (
             <div className="note">
               {EMPTY[filter]}{" "}
