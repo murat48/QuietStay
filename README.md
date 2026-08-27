@@ -171,3 +171,11 @@ integration with real resorts, and legal title transfer or contractual assignmen
 
 Sample inventory is fictional. Names, resorts, unit numbers, and deed references were
 made up for the demo.
+
+## License
+
+[Apache-2.0](./LICENSE). Copyright 2026 murat48.
+
+Apache rather than MIT for the patent grant: a contributor cannot hand over code and
+later assert a patent against the people using it. That matters more than usual for a
+repository whose whole subject is a transfer of rights.

@@ -2,6 +2,7 @@
   "name": "quietstay",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "QuietStay Phase 1 — a marketplace for tokenized vacation usage rights on Stellar testnet",
   "scripts": {
     "dev": "next dev",
