@@ -1,79 +1,74 @@
 # QuietStay — Phase 1
 
-A marketplace for tokenized vacation usage rights on Stellar. Rent or sell a
-timeshare week you cannot use, and let a buyer verify it — without publishing who
-you are, where the resort is, or what your deed says.
+**Rent or sell a timeshare week you cannot use — and let the buyer verify it is
+real, without publishing who you are, where the resort is, or what your deed says.**
+
+A timeshare owner who cannot travel this year has no simple way to pass the week on.
+Transfers are slow, broker-dependent, and fee-heavy, and a buyer has no way to check
+who really holds the week or whether it carries unpaid maintenance fees. QuietStay
+puts the week on Stellar so those two checks take seconds — and keeps the deed, the
+name, and the address off the ledger while doing it.
 
 **Testnet only.** Phase 1 does not deploy to mainnet and has no switch that would
 let it.
 
 | | |
 | --- | --- |
+| Live app | **[quietstay.vercel.app](https://quietstay.vercel.app)** — browse and verify without an account |
 | Contract | [`CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M`](https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M) |
 | Network | `Test SDF Network ; September 2015` |
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
 | Tests | 34 unit tests — `cd contracts && cargo test` |
 | Demo video | _add link after recording — see [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)_ |
-| Live app | **[quietstay.vercel.app](https://quietstay.vercel.app)** — testnet, browse and verify without an account |
 
-**Reviewing this?** Start at [**docs/EVIDENCE.md**](./docs/EVIDENCE.md). It is links
-to open — a contract address and four transactions. Nothing to clone or build.
+## Reviewing this?
 
----
+Everything is links to open. Nothing to clone, install, or build.
 
-## The idea
+1. **[docs/EVIDENCE.md](./docs/EVIDENCE.md)** — the contract address and four
+   transactions, each one a claim you can check in an explorer.
+2. **[quietstay.vercel.app/verify](https://quietstay.vercel.app/verify)** — type
+   `3` and press verify. Every check runs in your browser against the live contract,
+   with no account and nothing installed. Paste the record from
+   [`inventory/records/`](./inventory/records/), change one character of it, and
+   watch the commitment check fail.
+3. **[docs/DESIGN.md](./docs/DESIGN.md)** — the protocol, the trust model, and what
+   this phase deliberately does not do.
 
-A timeshare owner who cannot travel in a given year has no simple way to rent or sell
-that week. Transfers are slow, broker-dependent, and fee-heavy, and a buyer cannot
-easily verify who really holds the week or whether it carries unpaid maintenance fees.
-A public ledger fixes the trust problem and creates a new one: ownership history and
-travel schedules become visible to everyone.
+## How it works
 
-So the record stays off chain. The ledger holds a **SHA-256 commitment** to it, plus
-an **issuer-signed attestation** that the week is valid and free of arrears. A buyer
-verifies exactly what needs verifying — that the seller is the authorized holder, and
-that the week is clean — and no document, name, or resort ever reaches the public
-ledger.
+The ownership record — deed reference, resort, unit, owner name — stays **off
+chain**. The ledger holds a **SHA-256 commitment** to it and an **issuer-signed
+attestation** that the week is valid and free of arrears. A buyer verifies exactly
+what needs verifying: that the seller is the authorized holder, and that the week is
+clean. No document, name, or resort ever reaches the public ledger.
 
 The attestation also carries a **public description** — town and country, bedrooms,
-how many it sleeps, what it offers — because a hash covers the whole record and so
-no part of it can be revealed on its own. A registry built from the ledger alone can
-say when a week is and nothing else, and nobody takes a week on those terms. The
+how many it sleeps, what it offers — because a hash covers the whole record, so no
+part of it can be revealed on its own. A registry built from the ledger alone could
+say *when* a week is and nothing else, and nobody takes a week on those terms. The
 line falls at the town: a town shares its name with thousands of owners, while a
-resort plus a unit names one apartment. So the resort, the unit and the deed are
+resort plus a unit names one apartment. So the resort, the unit, and the deed are
 disclosed once, to a buyer, who checks the whole document against the hash.
 
-A successful sale transaction shows, in full: two account addresses, an integer id,
+A completed sale shows on the ledger, in full: two account addresses, an integer id,
 `null`, and a 32-byte hash. That is checked against the real chain by
 `npm run check-privacy`, not asserted.
 
-## One transfer primitive
-
-```rust
-transfer(from, to, right_id, expires_at: Option<u64>)
-```
-
-- `expires_at = None` → open-ended. A **sale**.
-- `expires_at = Some(t)` → lapses at `t`. A **rental**.
-
-Not two code paths. A right holds a chain of holdings — open-ended title at the
-bottom, finite grants above it — and a grant either replaces the chain or extends it.
-The chain is re-evaluated against the ledger clock on every read, so **a rental ends
-on its own**: no return transaction, and a renter whose term expired is not the holder
-at all.
-
-Two rules fall out of that and are enforced on every grant: nobody can grant a longer
-term than they hold (so a renter cannot sell), and only the effective holder can
-transfer (so a week cannot be sold out from under an active renter).
+Renting and selling are **one contract function**, separated only by whether the
+grant has an end date. A rental therefore ends on its own — no return transaction,
+and a renter whose term has lapsed is not the holder at all.
+[How that works](./docs/DESIGN.md#the-transfer-primitive).
 
 ## What the issuer can and cannot do
 
-Phase 1 rests on a trusted issuer signature for *attestation*, and that is deliberate.
-But "trusted to attest honestly" must not become "able to take your week."
+Phase 1 rests on a trusted issuer signature for *attestation*, and that is
+deliberate. But "trusted to attest honestly" must not become "able to take your
+week."
 
-**Cannot** — enforced by the contract, not by good behaviour: move, reassign, freeze,
-or burn a right someone holds; claw back; overwrite an existing right; or alter a
-commitment after issuance.
+**Cannot** — enforced by the contract, not by good behaviour: move, reassign,
+freeze, or burn a right someone holds; claw back; overwrite an existing right; or
+alter a commitment after issuance.
 
 Demonstrated on chain: the issuer builds, signs, and pays for a transfer of a held
 right to itself, and the contract rejects it. Hash in
@@ -88,7 +83,8 @@ veto and there is no timelock. The reasoning, and what was traded for what, is i
 
 **Can, and this is stated rather than glossed over:** decline a transfer it should
 have approved, and attest falsely. Verification proves the issuer *said* something,
-not that it was honest. Closing that is [Phase 2's whole purpose](./docs/DESIGN.md#what-phase-2-is-for).
+not that it was honest. Closing that is
+[Phase 2's whole purpose](./docs/DESIGN.md#what-phase-2-is-for).
 
 ## The four screens
 
@@ -101,43 +97,10 @@ not that it was honest. Closing that is [Phase 2's whole purpose](./docs/DESIGN.
 
 Four, deliberately. No dashboards, search, profiles, or admin panels.
 
-## Owner, renter, issuer — different entries, same four screens
-
-Roles are **read off the ledger, never declared** — there is no "I am an owner"
-selector anywhere, because a self-declared role would only earn an on-chain
-rejection after a fee.
-
-| Role | Turkish | Derived from | May |
-| --- | --- | --- | --- |
-| Issuer | ihraççı | equals `issuer()` on the contract | issue, attest, approve or decline |
-| Owner | kiraya veren | holds **title** to a week | rent the week out, or sell it |
-| Renter | kiracı | holds a week on a **finite term** | use it until the term lapses. Not sell — the contract refuses it — and the registry offers no sub-let, because this issuer approves none |
-| Visitor | ziyaretçi | holds nothing | verify a week — no account needed. Browsing the registry asks for a signed-in wallet: a product decision, not a lock, since the contract answers anyone. |
-
-Not exclusive: owning one week and renting another makes you both, and the app shows
-both. An owner and a renter land on different content, see different nav, and get a
-different transfer form — the renter's sell option is disabled with the reason
-stated, and the registry offers them no way to publish the week they are staying in.
-Neither of them picks a term: a rental runs to the end of the week, because the week
-is the thing being let.
-
-None of this grants anything. Every limit is enforced again server-side and again on
-chain; the role layer exists so a refusal arrives before a signature.
+Nobody picks a role. Owner, renter, and issuer are **read off the ledger**, and each
+lands on different content with a different transfer form — a renter's sell option is
+disabled with the reason stated, because the contract would refuse it anyway.
 [Details](./docs/DESIGN.md#roles-owner-renter-issuer).
-
-## Wallets
-
-Any Stellar wallet, through
-[Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit):
-**Freighter, xBull, Albedo, Rabet, Lobstr, Hana.**
-
-The six modules are named explicitly rather than using `allowAllModules()`. That
-helper also pulls in WalletConnect, Trezor, Ledger, and HOT, which drag
-`@coinbase/cdp-sdk`, `@trezor/connect`, and `elliptic` into the tree — code this app
-never runs, some of it carrying published advisories. Naming the modules keeps it out
-of the bundle rather than shipping it and hoping nobody reaches it; `grep` the build
-output and none of those names appear. Adding hardware or WalletConnect support is
-one import each, as a deliberate decision.
 
 ## Quick start
 
@@ -154,6 +117,9 @@ npm run e2e                   # 34 checks against a running app
 npm run check-privacy         # confirm nothing leaked, against the real chain
 ```
 
+Any Stellar wallet works — **Freighter, xBull, Albedo, Rabet, Lobstr, Hana** —
+through [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit).
+
 ## Documentation
 
 | | |
@@ -166,8 +132,6 @@ npm run check-privacy         # confirm nothing leaked, against the real chain
 | [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md) | Shot list and narration for the ~2 minute video. |
 | [VERCEL.md](./docs/VERCEL.md) | Deploying it. Environment, what works without the issuer key, and why attestations come from git. |
 | [inventory/README.md](./inventory/README.md) | The sample weeks, and how to check a commitment with `sha256sum`. |
-
-## Layout
 
 ```
 contracts/quietstay-rights/src/
@@ -185,12 +149,11 @@ inventory/      sample records, canonical forms, and attestations
 
 ## Built on
 
-Ecosystem standards only — no custom cryptography anywhere in this repository.
+Ecosystem standards only — **no custom cryptography anywhere in this repository.**
 
 - **SEP-41** token interface, with one documented substitution: `right_id` in place of
   `amount`, because weeks are not fungible. [The divergences are enumerated](./docs/DESIGN.md#relationship-to-sep-41-and-where-it-diverges).
 - **SEP-10** wallet authentication, via `WebAuth` from `@stellar/stellar-sdk`.
-- **Stellar Wallets Kit** for multi-wallet connection and signing.
 - **SEP-8**'s approval model for issuer-approved transfers, expressed with Stellar's
   native Soroban authorization rather than a bespoke scheme.
 - **RFC 8785** (JSON Canonicalization) for commitments, via the `canonicalize`

@@ -28,8 +28,13 @@ video. Nothing to install.
 
 Connection goes through [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit),
 so there is no single required extension — pick your wallet from the kit's modal.
-Hardware wallets and WalletConnect are deliberately not enabled; see the
-[README](../README.md#wallets) for why.
+
+Those six modules are named explicitly rather than using `allowAllModules()`. That
+helper also pulls in WalletConnect, Trezor, Ledger, and HOT, which drag
+`@coinbase/cdp-sdk`, `@trezor/connect`, and `elliptic` into the tree — code this app
+never runs, some of it carrying published advisories. Naming the modules keeps it out
+of the bundle rather than shipping it and hoping nobody reaches it. Adding hardware or
+WalletConnect support is one import each, as a deliberate decision.
 
 The pinned versions are `soroban-sdk` 27.0.6, `@stellar/stellar-sdk` 16.2.0, and
 `@creit.tech/stellar-wallets-kit` 2.5.0.
