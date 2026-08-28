@@ -133,7 +133,7 @@ verify screen and the approval service something real to refuse.
 | `npm run seed` | Issue the sample inventory and write attestations. |
 | `npm run evidence` | Produce the four evidence transactions; rewrite `docs/EVIDENCE.md`. |
 | `npm run check-privacy` | Fetch the evidence transactions back and search for record leaks. |
-| `npm run e2e` | 34 checks against a running app. Needs `npm run start` first. |
+| `npm run e2e` | End-to-end checks against a running app. Needs `npm run start` first. |
 | `npm run commit-record -- <record.json>` | Compute a commitment; write canonical bytes for `sha256sum`. |
 | `npm run verify-record -- <id> <attestation.json> [record.json]` | The verify screen's checks, on the command line. The record is optional. |
 | `npm run attest -- <id> <record.json>` | Re-sign an attestation, e.g. once arrears are settled. |

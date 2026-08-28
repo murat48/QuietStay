@@ -315,7 +315,7 @@ impersonation:
 
 \`\`\`
 npm run build && npm run start     # one terminal
-npm run e2e                        # another → 34 checks
+npm run e2e                        # another → end-to-end checks
 \`\`\`
 
 ## Accounts used
@@ -353,7 +353,7 @@ curl -s "https://horizon-testnet.stellar.org/accounts/${evidence.accounts.renter
 
 The suite could submit that step only behind a flag and keep the account tidy. It does
 not, because the check would then be absent from the default run, and a green
-\"34 checks passed\" that never actually asked the chain is the kind of assurance this
+\"all checks passed\" that never actually asked the chain is the kind of assurance this
 repository is arguing against.
 
 ## Reproducing all of it

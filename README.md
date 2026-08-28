@@ -113,7 +113,7 @@ Issuing and transferring need keys: see [SETUP.md](./docs/SETUP.md).
 
 ```bash
 cd contracts && cargo test    # 34 unit tests
-npm run e2e                   # 34 checks against a running app
+npm run e2e                   # end-to-end checks against a running app
 npm run check-privacy         # confirm nothing leaked, against the real chain
 ```
 
