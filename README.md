@@ -19,7 +19,7 @@ let it.
 | Network | `Test SDF Network ; September 2015` |
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
 | Tests | 34 unit tests — `cd contracts && cargo test` |
-| Demo video | _add link after recording — see [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md)_ |
+| Demo video | **[~2 minutes, end to end](https://youtu.be/7hhtiG_yGFY)** — issue, verify, rent, sell, and a transfer the contract refuses |
 
 ## Reviewing this?
 

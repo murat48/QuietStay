@@ -292,7 +292,14 @@ Four screens, connected to the deployed contract:
 | [Transfer](../src/app/transfer/page.tsx) | Rent or sell through one form, with issuer approval — plus a control that submits **without** approval so the refusal can be watched. |
 
 Live at **[quietstay.vercel.app](https://quietstay.vercel.app)**, on testnet.
-Browsing and verifying need no account and no wallet.
+Browsing and verifying need no account and no wallet — enter a right id on the
+verify screen, \`3\` for instance, and every check runs in your own browser
+against the deployed contract.
+
+**[Demo video, ~2 minutes](https://youtu.be/7hhtiG_yGFY)** — a week issued and
+offered, a counterparty verifying it, a week in arrears failing exactly one
+check, a rental and a sale, and the same transfer refused when the issuer's
+approval is taken out of it.
 
 That deployment holds the issuer key, so weeks can be issued from it directly.
 [VERCEL.md](./VERCEL.md) documents both that and the alternative — a public
