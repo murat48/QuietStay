@@ -1,3 +1,5 @@
+<img src="./logo.png" alt="QuietStay" width="120" align="right">
+
 # QuietStay — Phase 1
 
 **Rent or sell a timeshare week you cannot use — and let the buyer verify it is
@@ -14,7 +16,7 @@ let it.
 
 | | |
 | --- | --- |
-| Live app | **[quietstay.vercel.app](https://quietstay.vercel.app)** — browse and verify without an account |
+| Live app | **[quietstay.vercel.app](https://quietstay.vercel.app)** — verify a week without an account or a wallet |
 | Contract | [`CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M`](https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M) |
 | Network | `Test SDF Network ; September 2015` |
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
@@ -129,7 +131,7 @@ through [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit)
 | [COMMITMENT.md](./docs/COMMITMENT.md) | Canonical serialization, precisely enough to recompute a hash with `sha256sum`. |
 | [ATTESTATION.md](./docs/ATTESTATION.md) | Attestation schema, signing key, and the verification procedure. |
 | [SETUP.md](./docs/SETUP.md) | Requirements, configuration, every command, troubleshooting. |
-| [VERCEL.md](./docs/VERCEL.md) | Deploying it. Environment, what works without the issuer key, and why attestations come from git. |
+| [VERCEL.md](./docs/VERCEL.md) | Deploying it. Environment, the two modes — with the issuer key and without — and where attestations are read from. |
 | [inventory/README.md](./inventory/README.md) | The sample weeks, and how to check a commitment with `sha256sum`. |
 
 ```

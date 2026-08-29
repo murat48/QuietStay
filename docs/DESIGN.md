@@ -281,8 +281,14 @@ lives inside the existing screens:
   A renter publishing the week they are staying in would be advertising a sub-let:
   kept out of the shopping filters by `isSublet`, shown to no buyer, and refused if
   anyone asked. The card explains that instead of showing a button.
-- **List** and **Verify** — open to everyone, no account required. Auditing the
-  registry is the point; gating it would defeat the exercise.
+- **Verify** — open to everyone, no account and no wallet. A visitor who could not
+  check a week without signing in would be evidence against the design's own claim,
+  since the point is that verification needs nobody's cooperation.
+- **List** — asks for a signed-in wallet. That is a product decision rather than a
+  boundary: the contract answers anyone, and every figure the registry shows can be
+  read straight off the ledger by someone who wants it. What the wallet buys is a
+  registry that knows which weeks are yours, which is most of what the screen is
+  for. `/api/inventory` stays open, so nothing here is hidden — only unassembled.
 
 ## Centralization: what the issuer can and cannot do
 

@@ -292,9 +292,11 @@ Four screens, connected to the deployed contract:
 | [Transfer](../src/app/transfer/page.tsx) | Rent or sell through one form, with issuer approval — plus a control that submits **without** approval so the refusal can be watched. |
 
 Live at **[quietstay.vercel.app](https://quietstay.vercel.app)**, on testnet.
-Browsing and verifying need no account and no wallet — enter a right id on the
-verify screen, \`3\` for instance, and every check runs in your own browser
-against the deployed contract.
+Verifying needs no account and no wallet — enter a right id on the verify screen,
+\`3\` for instance, and every check runs in your own browser against the deployed
+contract. The registry screen asks for a signed-in wallet, which is a product
+decision and not a boundary: \`/api/inventory\` answers anyone, and so does the
+contract.
 
 **[Demo video, ~2 minutes](https://youtu.be/7hhtiG_yGFY)** — a week issued and
 offered, a counterparty verifying it, a week in arrears failing exactly one
