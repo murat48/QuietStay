@@ -107,8 +107,16 @@ verification here, and there is not meant to be.** The SOW lists it under
 *Out-of-Scope (Explicitly Not Included)*, alongside mainnet deployment, a security
 audit, any custom cryptographic implementation, legal title transfer, integration
 with real resorts, swaps and multi-party exchange, and payment, escrow or
-settlement of consideration. None of the eight appears in this repository, and a
-grep for \`groth16\`, \`bls12\`, \`bn254\` or \`poseidon\` returns nothing.
+settlement of consideration. None of the eight appears in this repository.
+
+A grep for \`groth16\`, \`bls12\`, \`bn254\` or \`poseidon\` does return two matches, and
+both are in \`contracts/Cargo.lock\`: \`soroban-sdk\` carries the BLS12-381 and BN254
+curve libraries because the host exposes those functions, and nothing here calls
+them. Worth stating rather than glossing, because it says something useful about
+the next phase — the primitives a proof would need are already on the network.
+CAP-0059 is Final at protocol 22, CAP-0074 and CAP-0075 at protocol 25, and
+testnet runs 28. What stands between this phase and a verified proof is the work,
+not the platform.
 
 The SOW mentions zero-knowledge proofs three times and all three are negations: the
 out-of-scope list, \`no custom cryptography\` in Deliverable 2, and the sentence that
