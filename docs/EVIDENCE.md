@@ -207,7 +207,7 @@ contract. The registry screen asks for a signed-in wallet, which is a product
 decision and not a boundary: `/api/inventory` answers anyone, and so does the
 contract.
 
-**[Demo video, three minutes](https://youtu.be/7hhtiG_yGFY)** — a week issued and
+**[Demo video, ~3 min](https://youtu.be/7hhtiG_yGFY)** — a week issued and
 offered, a counterparty verifying it, a week in arrears failing exactly one
 check, a rental and a sale, and the same transfer refused when the issuer's
 approval is taken out of it.

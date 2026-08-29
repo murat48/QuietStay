@@ -21,13 +21,13 @@ let it.
 | Network | `Test SDF Network ; September 2015` |
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
 | Tests | [34 unit tests](./contracts/quietstay-rights/src/test.rs) — readable without installing anything; `cd contracts && cargo test` to run them |
-| Demo video | **[three minutes, end to end](https://youtu.be/7hhtiG_yGFY)** — issue, verify, rent, sell, and a transfer the contract refuses |
+| Demo video | **[~3 min, end to end](https://youtu.be/7hhtiG_yGFY)** — issue, verify, rent, sell, and a transfer the contract refuses |
 
 ## Reviewing this?
 
 Everything is links to open. Nothing to clone, install, or build.
 
-1. **[The demo video](https://youtu.be/7hhtiG_yGFY)**, three minutes — a week issued
+1. **[The demo video](https://youtu.be/7hhtiG_yGFY)**, ~3 min — a week issued
    and offered, a counterparty verifying it, a week in arrears failing exactly one
    check, a rental and a sale, and the same transfer refused when the issuer's
    approval is taken out of it. Everything below is that, checkable.
