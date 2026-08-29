@@ -1,4 +1,5 @@
-<img src="./logo.png" alt="QuietStay" width="120" align="right">
+<img src="./logo.png" alt="QuietStay" width="150" align="right">
+<br>
 
 # QuietStay — Phase 1
 
