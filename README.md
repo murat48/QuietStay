@@ -20,21 +20,26 @@ let it.
 | Contract | [`CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M`](https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M) |
 | Network | `Test SDF Network ; September 2015` |
 | Contract source | [`contracts/quietstay-rights/src/`](./contracts/quietstay-rights/src/) |
-| Tests | 34 unit tests — `cd contracts && cargo test` |
+| Tests | [34 unit tests](./contracts/quietstay-rights/src/test.rs) — readable without installing anything; `cd contracts && cargo test` to run them |
 | Demo video | **[~2 minutes, end to end](https://youtu.be/7hhtiG_yGFY)** — issue, verify, rent, sell, and a transfer the contract refuses |
 
 ## Reviewing this?
 
 Everything is links to open. Nothing to clone, install, or build.
 
-1. **[docs/EVIDENCE.md](./docs/EVIDENCE.md)** — the contract address and four
-   transactions, each one a claim you can check in an explorer.
+1. **[The demo video](https://youtu.be/7hhtiG_yGFY)**, two minutes — a week issued
+   and offered, a counterparty verifying it, a week in arrears failing exactly one
+   check, a rental and a sale, and the same transfer refused when the issuer's
+   approval is taken out of it. Everything below is that, checkable.
 2. **[quietstay.vercel.app/verify](https://quietstay.vercel.app/verify)** — type
    `3` and press verify. Every check runs in your browser against the live contract,
    with no account and nothing installed. Paste the record from
    [`inventory/records/`](./inventory/records/), change one character of it, and
    watch the commitment check fail.
-3. **[docs/DESIGN.md](./docs/DESIGN.md)** — the protocol, the trust model, and what
+3. **[docs/EVIDENCE.md](./docs/EVIDENCE.md)** — the contract address and four
+   transactions, each one a claim you can check in an explorer. Two of the four
+   were refused by the contract, which is the point of including them.
+4. **[docs/DESIGN.md](./docs/DESIGN.md)** — the protocol, the trust model, and what
    this phase deliberately does not do.
 
 ## How it works
