@@ -45,3 +45,9 @@ inventory/requests/
 # as deliverable evidence, so neither belongs in it.
 2.pdf
 quietstay_phase1_build_prompt.md
+
+# Production notes for the demo video. Kept locally: it did its job once the
+# recording existed, and it carried a fallback step — `npm run evidence` — that
+# reissues the transactions EVIDENCE.md cites, which is no longer safe to
+# suggest now that those hashes are quoted in a submitted document.
+docs/DEMO_SCRIPT.md

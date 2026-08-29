@@ -314,7 +314,7 @@ compromised completely could not **take** a week. \`transfer\` begins with
 \`from.require_auth()\`, which no server-side key satisfies — only the holder's
 wallet does. The worst a stolen issuer key can do is lie.
 
-Locally: [SETUP.md](./SETUP.md). Demo walkthrough: [DEMO_SCRIPT.md](./DEMO_SCRIPT.md).
+Locally: [SETUP.md](./SETUP.md).
 
 End-to-end test against the running app — SEP-10, issuance, offers, an approved
 rental, a refused unapproved transfer, a declined approval, and an attempted

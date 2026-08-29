@@ -129,7 +129,6 @@ through [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit)
 | [COMMITMENT.md](./docs/COMMITMENT.md) | Canonical serialization, precisely enough to recompute a hash with `sha256sum`. |
 | [ATTESTATION.md](./docs/ATTESTATION.md) | Attestation schema, signing key, and the verification procedure. |
 | [SETUP.md](./docs/SETUP.md) | Requirements, configuration, every command, troubleshooting. |
-| [DEMO_SCRIPT.md](./docs/DEMO_SCRIPT.md) | Shot list and narration for the ~2 minute video. |
 | [VERCEL.md](./docs/VERCEL.md) | Deploying it. Environment, what works without the issuer key, and why attestations come from git. |
 | [inventory/README.md](./inventory/README.md) | The sample weeks, and how to check a commitment with `sha256sum`. |
 
