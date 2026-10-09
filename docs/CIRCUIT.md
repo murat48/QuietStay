@@ -253,7 +253,9 @@ and `h` (`n = 1`) separate domains.
 
 All public signals are declared as circuit **inputs** with equality constraints;
 the circuit has no outputs. snarkjs then emits them in declaration order, which
-is the order below. Step 2 confirms this against a generated `public.json`.
+is the order below — confirmed by the circuit test that reads the compiled
+symbol table (`emits public signals in the order CIRCUIT.md §7 fixes`), and by
+the prover, which refuses to write a proof whose signals differ.
 
 **Public (11)** — each must be a canonical field element (`< r`); the contract
 rejects any that is not, so one value cannot be stored under two encodings.
@@ -550,6 +552,33 @@ its successful twin's simulation and declares twice that twin's CPU (about
 transfers), 71 forbidden values, none found at any layer. A negative control —
 searching the same bytes for `h'` and `C'`, which are on chain — finds both,
 so the search does find what is there.
+
+## Step 5: the app and the command line
+
+Completed 2026-10-09. The app talks to the final deployment, and no part of it asks
+the issuer to approve anything.
+
+- **Proving stays on the holder's machine.** `npm run zk:prove` writes
+  `transfer.json`; the Transfer screen's *Prove ownership* step takes it,
+  `/api/tx/proven-transfer` checks it names the signed-in holder and simulates the
+  call — so the contract checks the proof before the wallet signs — and the holder
+  signs the envelope.
+- **The buyer's signature (§3) is given in advance.** It covers `(right_id, h')`
+  only, which does not depend on the seller's proof, so the buyer signs it when
+  asking to buy: the server prepares the authorization preimage, the wallet signs it
+  (`signAuthEntry`), and stellar-sdk's `authorizeEntry` checks the signature
+  against the buyer's key before the ask is stored. Freighter and Hana implement
+  `signAuthEntry`; xBull, Albedo and Rabet do not, so in the app a buyer needs one
+  of the first two.
+- **`/verify`** computes `d` with SHA-256 in the browser, checks it against the v2
+  attestation ([ATTESTATION.md](./ATTESTATION.md)), lists the week's accepted
+  transfers from the contract's events — each one a proof the contract verified —
+  and says in one sentence why `d → C` is `npm run verify-record --secret-hash`.
+  Poseidon never runs in the browser or the app's server.
+- **`npm run e2e`** covers the flow end to end — 36 checks, including a replayed
+  proof, someone else's proof, a tampered proof, a sale without consent and a
+  forged consent — run against a throwaway deployment so it issues nothing on the
+  evidence contract ([SETUP.md](./SETUP.md#end-to-end-test)).
 
 ## Decisions
 

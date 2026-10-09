@@ -13,7 +13,8 @@ Poseidon commitments; [`phase2/issued.json`](./phase2/issued.json) lists each
 week's right id, its SHA-256 digest `d` — still what `sha256sum` gives for the
 canonical file below — and its on-chain commitment `C`. How `d` becomes `C` is in
 [COMMITMENT.md](../docs/COMMITMENT.md#phase-2-the-ledger-stores-c-which-wraps-this-digest).
-The files below describe the Phase 1 contract, which the live app still uses.
+`phase2/attestations/` holds the v2 attestations the live app reads. The rest of
+the files below describe the Phase 1 contract, as delivered.
 
 ## What is in each directory
 
@@ -21,9 +22,11 @@ The files below describe the Phase 1 contract, which the live app still uses.
 | --- | --- |
 | `records/` | The four sample ownership records, pretty-printed for reading. **These do not hash to the commitment** — see below. |
 | `canonical/` | The RFC 8785 canonical form of each record, with no trailing newline. `sha256sum` on one of these gives the value on chain. |
-| `attestations/` | Issuer-signed attestations, one per issued right — including rights created later through the app's issue screen or by `npm run e2e`, since those go through the same code path. |
-| `evidence/` | Throwaway records and attestations issued by `npm run evidence`. Kept separate because each evidence run issues its own weeks. |
-| `issued.json` | Maps each sample right id to its record, canonical file, commitment, attestation, and issuance transaction. |
+| `phase2/issued.json` | **Phase 2**: each sample week's right id, `d`, on-chain commitment `C`, and issuance transaction on the Phase 2 contract. |
+| `phase2/attestations/` | **Phase 2**: v2 attestations, bound to `d`, the right and the contract. |
+| `attestations/` | Phase 1: v1 attestations for the Phase 1 contract. |
+| `evidence/` | Phase 1: the throwaway weeks its evidence run issued. |
+| `issued.json` | Phase 1: each sample right id, its record, commitment, attestation, and issuance transaction. |
 
 ## The four sample weeks
 

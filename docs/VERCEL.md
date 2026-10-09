@@ -8,14 +8,29 @@ puts a key on a host that can never be taken back.
 | --- | --- | --- |
 | Browse, verify, sign in, list/unlist | ✅ | ✅ |
 | Ask for a week | needs a store | ✅ |
-| Issue, settle fees, approve a transfer | ✗ | ✅ |
+| Rent out or sell a week (by proof) | ✅ | ✅ |
+| Issue, settle fees | ✗ | ✅ |
 | `QUIETSTAY_ISSUER_SECRET` on the host | no | **yes** |
 | Where weeks are issued | locally, then git | in the app |
 
+## Moving the live app to Phase 2
+
+The app reads its contract from `NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID` (and
+`QUIETSTAY_CONTRACT_ID`), falling back to the Phase 2 deployment,
+`CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD`, built into
+`src/lib/config.ts`. A `NEXT_PUBLIC_` value is baked in at build time, so if the
+Vercel project sets either variable to the Phase 1 contract, change both to the
+Phase 2 address — or delete them to take the default — and **redeploy**.
+
+Nothing else needs migrating. The store's keys now carry the contract address
+(`quietstay:<contract>:attestation:<id>`), so Phase 1 entries are simply not read;
+the Phase 2 attestations ship with the build from
+`inventory/phase2/attestations/`.
+
 ## The one thing to understand before choosing
 
-`QUIETSTAY_ISSUER_SECRET` signs every attestation and authorizes every transfer,
-and unlike the other two secrets it **cannot be rotated** — the contract fixed
+`QUIETSTAY_ISSUER_SECRET` issues weeks and signs every attestation — under Phase 2
+it authorizes no transfer — and unlike the other two secrets it **cannot be rotated** — the contract fixed
 its issuer at construction. Replacing it means a new contract, a new address, and
 every hash in [EVIDENCE.md](./EVIDENCE.md) pointing at a deployment nobody uses.
 A key that leaks is leaked for the life of the deployment.
@@ -24,8 +39,8 @@ What it cannot do is worth stating just as plainly, because it is the project's
 own claim being cashed: **even a host compromised completely could not take a
 week.** `transfer` begins with `from.require_auth()`, and no server-side key
 satisfies that — only the holder's wallet does. The worst a stolen issuer key can
-do is **lie**: sign attestations for weeks that do not deserve them. Closing that
-is what Phase 2 is for.
+do is **lie**: sign attestations for weeks that do not deserve them, which under
+Phase 2 misleads a buyer but cannot stop or force a transfer.
 
 The other two secrets are rotatable and belong on the host either way. A forged
 session convinces the app you are someone else, and then `transfer` asks for the
@@ -38,12 +53,12 @@ server only ever **reads** what it signed:
 
 ```
 1. issue a week locally          the key never leaves
-2. inventory/attestations/       the signed file appears
+2. inventory/phase2/attestations/  the signed file appears
 3. git commit && git push
 4. Vercel rebuilds               the registry shows it
 ```
 
-Next's build traces `inventory/attestations` into the serverless functions, so
+Next's build traces `inventory/phase2/attestations` into the serverless functions, so
 the files are present at runtime. Committing them is what makes that work —
 **an attestation that is not in git does not exist as far as Vercel is
 concerned**, and its week shows as never attested, which also keeps it out of
@@ -191,7 +206,7 @@ of the other:
 | Layer | Holds |
 | --- | --- |
 | the store | weeks issued since the build |
-| `inventory/attestations/` | the weeks git carried, shipped with the build |
+| `inventory/phase2/attestations/` | the weeks git carried, shipped with the build |
 
 That is what lets a fresh deployment with an empty store keep showing every week
 already attested, with no migration step. It also means an unreachable store
@@ -217,8 +232,9 @@ verification badges and its pending asks, and cost nobody their property.
 | `/api/requests` POST | 503 — nowhere to keep an ask | **works** |
 | `/api/issue` | 503 | **works** — with the issuer key |
 | `/api/settle-fees` | 503 | **works** — with the issuer key |
-| `/api/approve-transfer` | 503 | works — with the issuer key |
-| `/api/tx/unapproved-transfer` | 503 | works — with the issuer key |
+| `/api/tx/proven-transfer` | works — no key | works |
+| `/api/requests/consent` | works — no key, no writes | works |
+| `/api/right/[id]/transfers` | works — chain events | works |
 
 Two separate requirements, and the routes say which one they are missing. A
 store with no issuer key still takes requests. An issuer key with no store is
@@ -226,9 +242,10 @@ the worse of the two, and is refused up front — see below.
 
 ### Issuing checks the store before it touches the chain
 
-An issuance cannot be undone, and the attestation that goes with it is not
-optional: `approve-transfer` will not approve a week the issuer has never
-attested, so a right issued without one can never be transferred by anybody.
+An issuance cannot be undone. Under Phase 1 a week issued without its attestation
+could never be transferred, because the issuer's approval service would not
+approve it; under Phase 2 nothing about a transfer depends on the attestation, but
+a week with none leaves buyers nothing to read.
 
 `/api/issue` used to submit first and write second. On a host with the issuer key
 and no store that produced exactly that — right #36 exists on chain, has no

@@ -3,14 +3,17 @@
 Two ways in, depending on what you need.
 
 **Just reviewing?** You do not need any of this. Open the links in
-[EVIDENCE.md](./EVIDENCE.md) — a contract address, four transactions, and a demo
-video. Nothing to install.
+[EVIDENCE.md](./EVIDENCE.md) — contract addresses and transactions, each with what to
+look for. Nothing to install.
 
 **Running it yourself?** Read on.
 
 - [Requirements](#requirements)
 - [Run against the existing deployment](#run-against-the-existing-deployment)
+- [Proving a transfer](#proving-a-transfer)
 - [Deploy your own](#deploy-your-own)
+- [The circuit, Poseidon and the trusted setup](#the-circuit-poseidon-and-the-trusted-setup)
+- [End-to-end test](#end-to-end-test)
 - [Every command](#every-command)
 - [Troubleshooting](#troubleshooting)
 
@@ -18,64 +21,58 @@ video. Nothing to install.
 
 ## Requirements
 
-| | Version used | Notes |
+| | Version used | Needed for |
 | --- | --- | --- |
-| Rust | 1.96.0 | Only for the contract. Not needed to run the web app. |
+| Node.js | 24.17 | Everything. 20.6+ works; `process.loadEnvFile` is required. |
+| Rust | 1.96.0 | The contracts. Not needed to run the web app or to prove. |
 | `wasm32v1-none` target | — | `rustup target add wasm32v1-none` |
 | Stellar CLI | 27.0.0 | `cargo install --locked stellar-cli` |
-| Node.js | 24.17 | 20.6+ works; `process.loadEnvFile` is required. |
-| A Stellar wallet | — | Any of **Freighter, xBull, Albedo, Rabet, Hana**, set to **testnet**. |
+| circom | 2.2.2 (`e410b0d5`) | Compiling the circuit. `cargo install --locked --git https://github.com/iden3/circom.git --tag v2.2.2 circom` |
+| snarkjs | 0.7.5 | Setup and proving — installed by `npm install` (pinned, exact). |
+| circomlib / ffjavascript | 2.0.5 / 0.2.63 | The Poseidon template and field arithmetic — installed by `npm install`. |
+| Docker + SageMath 10.4 | `sagemath/sagemath@sha256:8d657a42…` | **Only** to regenerate the Poseidon constants from scratch. Checking them needs nothing. |
+| Python 3 | 3.12 | Only with the line above, for the round-number script. |
+| A Stellar wallet | — | **Freighter, xBull, Albedo, Rabet** or **Hana**, on testnet. Asking to *buy* needs Freighter or Hana. |
 
-Connection goes through [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit),
-so there is no single required extension — pick your wallet from the kit's modal.
+Proving needs Node only: the compiled circuit, the proving key and the verification
+key are committed in [`circuits/keys/`](../circuits/keys/), so `npm run zk:prove` works
+from a clone with no circom installed.
 
-Those five modules are named explicitly rather than using `allowAllModules()`. That
-helper also pulls in WalletConnect, Trezor, Ledger, and HOT, which drag
-`@coinbase/cdp-sdk`, `@trezor/connect`, and `elliptic` into the tree — code this app
-never runs, some of it carrying published advisories. Naming the modules keeps it out
-of the bundle rather than shipping it and hoping nobody reaches it. Adding hardware or
-WalletConnect support is one import each, as a deliberate decision.
-
-The pinned versions are `soroban-sdk` 27.0.6, `@stellar/stellar-sdk` 16.2.0, and
-`@creit.tech/stellar-wallets-kit` 2.5.0.
+Connection goes through [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit).
+The five modules are named explicitly rather than using `allowAllModules()`, which
+would pull in WalletConnect, Trezor, Ledger and HOT and their dependencies — code
+this app never runs, some of it carrying published advisories. Lobstr is not among
+them because its signer library is GPL-3.0 and would put GPL code in the browser
+bundle (see the README's License section).
 
 ### A note on `npm audit`
 
 `npm audit` reports findings in `elliptic`, `axios`, and friends. They arrive as
 transitive dependencies of wallet modules the kit *packages* but this app never
-*loads* — Trezor, Ledger, HOT, and WalletConnect. Because the modules are imported
-individually, that code is absent from the build; `grep -r cdp-sdk .next/static` and
-the like come back empty. The advisories cannot be resolved by us without the kit
-dropping those integrations upstream.
+*loads*. Because the modules are imported individually, that code is absent from the
+build; `npm run zk:check-bundle` and `grep -r cdp-sdk .next/static` come back empty.
 
 ## Run against the existing deployment
 
-The contract at
-[`CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M`](https://stellar.expert/explorer/testnet/contract/CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M)
-is live with sample inventory already issued. You can read all of it with no
-configuration at all:
+The Phase 2 contract at
+[`CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD`](https://stellar.expert/explorer/testnet/contract/CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD)
+is live with the sample inventory issued
+([`inventory/phase2/issued.json`](../inventory/phase2/issued.json)). Reading needs no
+configuration:
 
 ```bash
 npm install
-npm run dev            # then open http://localhost:3000/list
+npm run dev            # http://localhost:3000/verify
 ```
 
-The **list** and **verify** screens work immediately — they only read. Sample
-records and attestations to paste into the verify screen are in
-[`inventory/`](../inventory/).
-
-### To issue or transfer
-
-Those need keys, because they need signatures.
+### Keys, for anything that signs
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env.local     # gitignored; never commit it
 ```
 
-Then fill in `.env.local`. It is gitignored; do not commit it.
-
 ```bash
-# 1. The issuer's key. Signs attestations and co-signs transfer approvals.
+# 1. The issuer's key. Issues weeks and signs attestations — never transfers.
 stellar keys generate qs-issuer --fund --network testnet
 stellar keys show qs-issuer          # → QUIETSTAY_ISSUER_SECRET
 
@@ -86,94 +83,174 @@ stellar keys show qs-sep10-server    # → QUIETSTAY_SEP10_SERVER_SECRET
 # 3. Session signing secret. Any 32+ random characters.
 openssl rand -hex 32                 # → QUIETSTAY_SESSION_SECRET
 
-# 4. Optional: demo identities, used only by the scripts.
+# 4. Demo identities, used by the scripts (owner, renter, buyer).
 for k in qs-owner qs-renter qs-buyer; do
   stellar keys generate "$k" --fund --network testnet
-  echo "$k → $(stellar keys show $k)"
-done
+done                                 # → DEMO_OWNER_SECRET, DEMO_RENTER_SECRET, DEMO_BUYER_SECRET
 ```
 
-One caveat worth knowing before you try: **`issue` on the existing deployment will
-not work with your own issuer key.** The contract binds its issuer at deployment and
-has no setter, deliberately — see
-[DESIGN.md § privileged surface](./DESIGN.md#privileged-surface-enumerated). To use
-the issue screen, deploy your own.
+`issue` on the existing deployment will not work with your own issuer key: the
+contract binds its issuer at deployment and has no setter. To issue, deploy your own.
+
+## Proving a transfer
+
+The holder's side of a transfer, on their own machine:
+
+```bash
+# Once, when the week is issued to you: make your record secret. Keep the file;
+# send only the h it prints to the issuer.
+npm run zk:secret -- .secrets/my-week.json
+
+# A rental, running to the end of the week:
+npm run zk:prove -- --record my-week-record.json --secret .secrets/my-week.json \
+  --right 3 --from <your G…> --to <renter G…> --rental-until <unix seconds> \
+  --out proofs/right-3
+
+# A sale — with the h' the buyer gave when asking for the week:
+npm run zk:prove -- --record my-week-record.json --secret .secrets/my-week.json \
+  --right 3 --from <your G…> --to <buyer G…> --sale --next-secret-hash <buyer's h'> \
+  --out proofs/right-3
+```
+
+The prover verifies its own proof with snarkjs before writing anything, and writes
+`proof.json`, `public.json` and `transfer.json` — the last is what the Transfer
+screen takes. A proof is valid for 360 ledgers by default (`--window`, at most 720 —
+about an hour). The List screen shows each ask with this command already filled in.
+
+From the command line instead of the app: `npm run zk:submit -- <contract> proofs/right-3`
+signs every authorization the contract asks for with the keys in `.env.local`.
+
+**Lose the secret file and the week can never be rented out or sold again** — nobody
+else can prove for it, the issuer included. `.secrets/` and `proofs/` are gitignored.
+
+The buyer's side of a sale is one command and one signature: `npm run zk:secret`,
+then the List screen's *Sign my consent and ask to buy* with the printed `h'`.
+
+To check a disclosed record against the ledger's commitment — the step the browser
+does not take:
+
+```bash
+npm run verify-record -- <id> <attestation.json> <record.json> --secret-hash <h>
+```
 
 ## Deploy your own
 
 ```bash
-./scripts/deploy.sh
-```
-
-Which runs the tests, builds the WASM, reports its size against the 64 KB limit, and
-deploys with `qs-issuer` as the issuer. Put the printed contract address into
-`.env.local` as **both** `QUIETSTAY_CONTRACT_ID` and
-`NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID`, then:
-
-```bash
-npm run seed        # issue the four sample weeks, write attestations
-npm run evidence    # produce the four evidence transactions, regenerate EVIDENCE.md
+./scripts/deploy.sh                      # tests, builds, deploys with the committed verification key
+# put the address in .env.local as QUIETSTAY_CONTRACT_ID and NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID
+npm run zk:reissue -- <contract>         # issue the four sample weeks; secrets to .secrets/<contract>/
+for n in 1 2 3 4; do npm run attest -- $n inventory/records/week-0$n.json; done
 npm run dev
 ```
 
-`npm run seed` deliberately leaves sample week 04 attested as **not** clean — it
-carries €410 in arrears, so the issuer declines to vouch for it. That gives the
-verify screen and the approval service something real to refuse.
+`zk:reissue` makes each owner's secret in `.secrets/<first 8 of the contract>/`, hands
+only its hash to the issuer side, and records each week's `d` and `C` in
+`inventory/phase2/issued.json`. Sample week 04 is attested **not** clean — it carries
+€410 in arrears — which gives the verify screen something real to flag; under Phase
+2 it does not stop a transfer.
+
+The evidence: `npm run zk:evidence -- <contract> <deploy tx>` produces two accepted and
+five rejected transfers on the contract, reads each rejection's error back from the
+ledger and checks it, and writes `docs/evidence-phase2.json`; `npm run evidence-doc`
+turns that into `docs/EVIDENCE.md`. The rejections use an evidence-only submission
+path (`withSiblingResources` in `scripts/lib/zk-tx.ts`).
+
+## The circuit, Poseidon and the trusted setup
+
+```bash
+npm run zk:compile           # circom → circuits/build/ (R1CS, WASM, symbols)
+npm run zk:test              # 11 circuit tests
+npm run zk:check-poseidon    # the Poseidon constants' provenance, 20 checks, offline
+bash circuits/poseidon/generate.sh   # regenerate the constants from scratch (Docker, Sage)
+npm run zk:setup             # a NEW development trusted setup — non-production
+npm run zk:encode-vk         # the verification key in the contract's byte layout
+npm run zk:test-fixtures     # real proofs for the contract tests
+```
+
+`npm run zk:setup` makes **new** keys every time — the contributions are random — and
+every proof made with the old ones stops verifying against the new. The committed
+keys are the ones the deployed contracts were constructed with; their hashes are in
+[`circuits/keys/SHA256SUMS`](../circuits/keys/SHA256SUMS). After a new setup, run
+`zk:encode-vk` and `zk:test-fixtures` and deploy afresh.
+
+`generate.sh` needs Docker; it clones the Poseidon authors' repository at a pinned
+commit and runs their scripts in a digest-pinned SageMath image. Its output is
+deterministic: a rerun leaves `git diff circuits/poseidon` empty. Details and the
+parameters in [CIRCUIT.md](./CIRCUIT.md#poseidon-parameters-over-bls12-381).
+
+## End-to-end test
+
+`npm run e2e` drives the running app over HTTP with the demo keys, proving with the
+same code as `zk:prove`: SEP-10, issuance with a CLI-computed `C`, attestation v2,
+offers, a proven rental, a replay refused, someone else's proof refused, a tampered
+proof refused, a sale refused without the buyer's consent, a forged consent refused,
+the sale with a real one, and the verify screen's transfer list — 36 checks.
+
+It issues weeks, so **run it against a throwaway deployment**, never the one in
+EVIDENCE.md — and give the app its own data directory, because every contract
+numbers its rights from 1 and the app would otherwise write the throwaway weeks'
+attestations over the committed ones:
+
+```bash
+VK="$(node -e 'process.stdout.write(JSON.stringify(require("./circuits/keys/verification_key.soroban.json")))')"
+E2E=$(stellar contract deploy --wasm contracts/target/wasm32v1-none/release/quietstay_rights.wasm \
+  --source qs-issuer --network testnet -- --issuer "$(stellar keys address qs-issuer)" \
+  --name "QuietStay E2E" --symbol QSE2E --verification_key "$VK" | tail -1)
+export NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID=$E2E QUIETSTAY_CONTRACT_ID=$E2E
+
+npm run build
+QUIETSTAY_DATA_DIR=$(mktemp -d) npm run start -- -p 3107      # one terminal
+E2E_BASE_URL=http://localhost:3107 npm run e2e                 # another
+```
 
 ## Every command
 
 | Command | What it does |
 | --- | --- |
-| `cd contracts && cargo test` | 32 contract unit tests. |
-| `cd contracts && stellar contract build` | Build the WASM. |
-| `./scripts/deploy.sh` | Test, build, deploy to testnet. |
-| `npm run dev` | Development server on :3000. |
-| `npm run build && npm run start` | Production build and serve. |
-| `npm run typecheck` | `tsc --noEmit` over app and scripts. |
-| `npm run seed` | Issue the sample inventory and write attestations. |
-| `npm run evidence` | Produce the four evidence transactions; rewrite `docs/EVIDENCE.md`. |
-| `npm run check-privacy` | Fetch the evidence transactions back and search for record leaks. |
-| `npm run e2e` | End-to-end checks against a running app. Needs `npm run start` first. |
-| `npm run commit-record -- <record.json>` | Compute a commitment; write canonical bytes for `sha256sum`. |
-| `npm run verify-record -- <id> <attestation.json> [record.json]` | The verify screen's checks, on the command line. The record is optional. |
-| `npm run attest -- <id> <record.json>` | Re-sign an attestation, e.g. once arrears are settled. |
-| `npm run describe -- <id> --region "Town, Country" --bedrooms <n>` | Describe a week whose record you no longer hold. Last resort — nothing is derived, so nothing can be checked. |
+| `cd contracts && cargo test` | 62 rights-contract tests (every transfer with a real proof) and 6 verifier tests. |
+| `./scripts/deploy.sh` | Test, build, deploy to testnet with the committed verification key. |
+| `npm run dev` / `npm run build && npm run start` | The web app. |
+| `npm run typecheck` | `tsc --noEmit` over app, scripts and circuit tests. |
+| `npm run zk:secret -- <file>` | Make a record secret; print its shareable hash `h`. |
+| `npm run zk:commitment -- --record … --owner … --secret-hash …` | The commitment `C` the issuer issues with. |
+| `npm run zk:prove -- …` | Prove a transfer; write `transfer.json`. |
+| `npm run zk:submit -- <contract> <proof dir>` | Submit a proven transfer from the command line. |
+| `npm run zk:reissue -- <contract>` | Issue the sample inventory with Poseidon commitments. |
+| `npm run zk:evidence -- <contract> <deploy tx>` | Produce the seven evidence transactions. |
+| `npm run evidence-doc` | Regenerate `docs/EVIDENCE.md`. |
+| `npm run attest -- <id> <record.json> [--secret-hash <h>]` | Sign a v2 attestation; the record is checked against the issuance or against `C`. |
+| `npm run describe -- <id> --region … --bedrooms …` | Restate a week's description without its record. |
+| `npm run verify-record -- <id> <attestation> [record] [--secret-hash <h>]` | The verify screen's checks, plus `d → C`. |
+| `npm run commit-record -- <record.json>` | `d`, and the canonical bytes for `sha256sum`. |
+| `npm run check-privacy -- --phase2` | Search every Phase 2 transaction for leaked record contents, `d`, `s` or `h`. |
+| `npm run e2e` | End-to-end checks against a running app — see [above](#end-to-end-test). |
+| `npm run zk:compile` / `zk:test` / `zk:check-poseidon` / `zk:setup` / `zk:encode-vk` / `zk:test-fixtures` | See [the circuit](#the-circuit-poseidon-and-the-trusted-setup). |
+| `npm run zk:measure -- <verifier> <proof dir>` | Simulate the standalone verifier and print its cost. |
+| `npm run zk:check-bundle` | After `npm run build`: confirm no GPL-3.0 code is in the browser bundle. |
 
 ## Troubleshooting
 
-**`Failed to find config identity for qs-issuer`** — the identity does not exist yet.
-Note that `--global` was removed in Stellar CLI 27; identities are global by default,
-so `stellar keys generate qs-issuer --fund --network testnet` is the whole command.
+**`no open request from G… to buy right #N carries this proof's next secret hash`** —
+a sale needs the buyer's consent, which the buyer gives when asking for the week.
+Prove with the `h'` shown on that ask.
+
+**`This proof has already been used`** / **`This proof's window has passed`** — make a
+fresh one with `npm run zk:prove`. Each proof is good for one transfer, for about an
+hour.
+
+**`This proof is for a different record secret than the one this week is committed
+to`** — the secret file is not the one this week was issued (or last sold) to. After
+a sale, only the buyer's secret works.
+
+**`xBull does not support the "signAuthEntry" function`** (or Albedo, Rabet) — asking
+to buy needs a wallet that signs authorization entries: Freighter or Hana.
+
+**`Failed to find config identity for qs-issuer`** — the identity does not exist yet:
+`stellar keys generate qs-issuer --fund --network testnet`.
 
 **`QUIETSTAY_ISSUER_SECRET is not set`** — `.env.local` is missing or unreadable.
-Scripts load it with `process.loadEnvFile`; Next.js loads it automatically.
 
-**A wallet is missing from the chooser** — extension wallets inject on page load, so
-install first and then reload. Only Freighter, xBull, Albedo, Rabet, and Hana
-are enabled.
+**`Your wallet is on PUBLIC`** — switch the wallet to testnet and reconnect.
 
-**`Your wallet is on PUBLIC. QuietStay Phase 1 is testnet only`** — switch the wallet
-to testnet and reconnect. The app refuses rather than building a transaction for the
-wrong network. Wallets that do not report a network (Albedo, for one) are allowed
-through: the transaction carries the testnet passphrase either way, so a wrong-network
-wallet will refuse or produce a signature the network rejects.
-
-**`This is the issuer's screen`** — you are signed in as an account that is not this
-deployment's issuer. Expected; see [above](#to-issue-or-transfer). Roles come from the
-registry, so signing in with a different account is the only way to change one.
-
-**`You have no week to transfer right now`** — this account holds nothing, or the
-weeks it owns are all out on rental. A rented-out week is not the owner's to move
-until the term lapses, which it does on its own.
-
-**`the issuer has no attestation on file for right #N`** — the approval service will
-not approve a transfer of a week it cannot vouch for. Sign one with
-`npm run attest -- N <record.json>`.
-
-**`This right's use year has closed`** — the sample inventory is use-year 2026, so
-every sample right goes inert on 2027-01-01. Re-seed with later dates.
-
-**`EADDRINUSE: :::3000`** — an earlier server is still running. `pkill -f next-server`.
-
-**Contract calls fail after a long gap** — testnet resets roughly quarterly, which
-deletes all accounts and contracts. Redeploy and re-seed.
+**`This right's use year has closed`** — the sample inventory is use-year 2026 and
+goes inert on 2027-01-01. Issue again with later dates.

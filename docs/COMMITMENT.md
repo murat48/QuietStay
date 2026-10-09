@@ -187,4 +187,4 @@ Note that this step is **optional** for a counterparty. An issuer-signed attesta
 plus the contract already establishes that a week is real, owes nothing, and is held
 by a particular account — with no document disclosed at all. Recomputing a commitment
 is the deeper check available when a seller does choose to show the underlying
-record. See [DESIGN.md](./DESIGN.md#why-the-document-is-optional).
+record. See [DESIGN.md](./DESIGN.md#verification-what-a-buyer-checks).
