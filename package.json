@@ -27,7 +27,9 @@
     "zk:encode-vk": "tsx scripts/zk/encode-vk.ts",
     "zk:measure": "tsx scripts/zk/measure.ts",
     "zk:check-bundle": "tsx scripts/zk/check-bundle.ts",
-    "zk:test-fixtures": "tsx scripts/zk/make-test-fixtures.ts"
+    "zk:test-fixtures": "tsx scripts/zk/make-test-fixtures.ts",
+    "zk:commitment": "tsx scripts/zk/commitment.ts",
+    "zk:submit": "tsx scripts/zk/submit-transfer.ts"
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "^2.5.0",

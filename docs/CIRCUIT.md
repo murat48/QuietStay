@@ -451,8 +451,10 @@ agree to within 5%.
 about **82 million instructions** (78.9 M verification + 2.3 M Phase 1 transfer
 logic + a little for the signal checks, the account conversions and one nullifier
 write), about **21% of the per-transaction limit**; memory well under 1 MB of
-40 MB; a fee of roughly **0.011 XLM**. Step 3 replaces this estimate with a
-measurement.
+40 MB; a fee of roughly **0.011 XLM**. Step 3 measured it on the deployed
+contract (below): 80.4 million instructions for a sale, as estimated, but a fee
+of 0.018 XLM — higher than estimated, because the estimate left out the ledger
+writes a transfer makes (the right, the nullifier entry, the buyer's balance).
 
 **Decision (approved 2026-10-09): the one-transaction flow.** Verification uses a fifth of the
 CPU a transaction may spend, so verification and transfer fit together with
@@ -469,6 +471,45 @@ a proof made at the edge of the window does, so Step 3 extends each
 nullifier's TTL explicitly past its `expiry_ledger`, as §6 requires.
 
 ---
+
+## Step 3: integrated and deployed
+
+Completed 2026-10-09. The proof check lives in the rights contract, behind
+`auth.rs`, in one transaction with the transfer. Tests: `cargo test` in
+`contracts/` — 62 for the rights contract, every transfer carrying a real proof
+from `npm run zk:test-fixtures`, and 6 for the standalone verifier.
+
+| | |
+| --- | --- |
+| Contract | [`CBET7IDGZQKG2Q3KPUDNKWLFAVDJ2YQJTCKPIS5I55KTTDF7WIX45FC4`](https://stellar.expert/explorer/testnet/contract/CBET7IDGZQKG2Q3KPUDNKWLFAVDJ2YQJTCKPIS5I55KTTDF7WIX45FC4) — verification key fixed in the constructor |
+| Deployed in | [`945bb0e2…`](https://stellar.expert/explorer/testnet/tx/945bb0e2da12914d71bedbd0de2a853cc081f9e1e444fc32d34b4e765c89c2fc) |
+| Issued | right #1, sample week 03 — [`3ff775ff…`](https://stellar.expert/explorer/testnet/tx/3ff775ff4da6347e69df2acc7ccc476a4639f083a2b8b5e959def860407b2f3a); right #2, sample week 01 — [`1ad567cd…`](https://stellar.expert/explorer/testnet/tx/1ad567cd49e04248309aff632c0f424a0c04bfd600f9c0b2b85ec7339fa3bade) |
+| **Proof-authorized rental** | [`85b16c610912f10812fd9fbcd30b7aabbccee325fd86b6e230fafd2861a55ce7`](https://stellar.expert/explorer/testnet/tx/85b16c610912f10812fd9fbcd30b7aabbccee325fd86b6e230fafd2861a55ce7) — right #1 to the renter until 2026-11-28; signed by the holder alone |
+| **Proof-authorized sale** | [`9b7ce1ea45559b8e057a89c1aeaeb107e7abf6e72d3086ccaf373f786c13d974`](https://stellar.expert/explorer/testnet/tx/9b7ce1ea45559b8e057a89c1aeaeb107e7abf6e72d3086ccaf373f786c13d974) — right #2 to the buyer; signed by the holder and the buyer |
+
+Neither transaction carries an issuer signature. After them, `holder(1)` is the
+renter, `holder(2)` is the buyer, and `commitment(2)` is
+`1232be5f…88d7` — byte for byte the `next_commitment` the sale's proof
+computed for the buyer.
+
+Each owner made a secret with `npm run zk:secret` and passed only its hash `h`
+to the issuer, which computed the commitment with `npm run zk:commitment` and
+called `issue`. Transfers were proved with `npm run zk:prove` and submitted with
+`npm run zk:submit`, which signs exactly the authorizations the simulation asks
+for.
+
+**Cost, verification and transfer in one transaction:**
+
+| | Local host budget (`cargo test cost_of_one_proven_sale -- --nocapture`) | Testnet simulation (`npm run zk:submit`) | Fee charged on testnet |
+| --- | --- | --- | --- |
+| Rental | — | 79,607,161 instructions | 141,072 stroops (0.0141 XLM) |
+| Sale | 75,535,619 instructions, 497,418 bytes | 80,352,655 instructions | 184,436 stroops (0.0184 XLM) |
+
+The local figure runs the contract as native Rust, so it leaves out the WASM VM's
+own work; the simulation runs the deployed WASM and is the number that counts.
+A sale uses **20.1%** of testnet's 400,000,000-instruction limit and a rental
+19.9%. Memory is reported only by the local budget: under 0.5 MB of 40 MiB.
+
 
 ## Decisions
 
