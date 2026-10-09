@@ -577,7 +577,8 @@ the issuer to approve anything.
   Poseidon never runs in the browser.
 - **`/issue`** reads the role. An owner signs in and asks for issuance with their
   `h` (`/api/requests/issuance`, the account taken from the session, `h` checked as
-  below). The issuer sees the pending asks; picking one fills in and locks the
+  below). `npm run zk:secret` prints a link, `/issue?h=…`, that fills the owner's
+  box; the issuer's form ignores it. The issuer sees the pending asks; picking one fills in and locks the
   first holder and `h`, and issuing closes it. The issuer can also take an `h`
   given directly. Either way the route takes the record and the owner's `h`
   (decimal or hex). The server
@@ -587,8 +588,9 @@ the issuer to approve anything.
   below `r` with 400, before anything is issued. The screen then offers the record
   exactly as issued for download; with it and the owner's secret file,
   `npm run zk:prove` proves a transfer.
-- **`npm run e2e`** covers the flow end to end — 65 checks, including an
-  owner's ask issued and closed, an ask in another account's name and asks with
+- **`npm run e2e`** covers the flow end to end — 73 checks, including the
+  `zk:secret` link filling the owner's box and an invalid `h` in it flagged and
+  refused, an owner's ask issued and closed, an ask in another account's name and asks with
   an invalid `h` refused, the Issue screen showing the form to the issuer only,
   five
   malformed `h` refused with nothing issued, the server's `C` equal to the

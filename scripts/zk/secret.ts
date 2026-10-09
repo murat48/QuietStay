@@ -4,7 +4,9 @@
  *   npm run zk:secret -- <out-file>
  *
  * Writes { "secret": s } to <out-file> (created with mode 600, refused if it
- * exists) and prints h = Poseidon(s).
+ * exists) and prints h = Poseidon(s), and a link to the Issue screen with h
+ * filled in for asking the issuer: QUIETSTAY_APP_URL from .env.local, or
+ * http://localhost:3000. The link carries h only.
  *
  * Who runs this:
  *   - an owner, before issuance: send h to the issuer, which computes the
@@ -17,10 +19,12 @@
  */
 
 import { existsSync, writeFileSync } from "node:fs";
-import { fatal, log, requireArg } from "../lib/cli";
+import { issuanceRequestLink } from "../../src/lib/secret-hash";
+import { fatal, loadEnv, log, requireArg } from "../lib/cli";
 import { randomSecret, secretHash } from "../lib/zk";
 
 async function main() {
+  loadEnv();
   const out = requireArg(0, "npm run zk:secret -- <out-file>");
   if (existsSync(out)) throw new Error(`${out} exists; refusing to overwrite a secret`);
   const s = randomSecret();
@@ -28,6 +32,7 @@ async function main() {
   const h = await secretHash(s);
   log.ok(`wrote ${out} — keep it private`);
   log.info(`h (shareable): ${h.toString()}`);
+  log.info(`ask the issuer: ${issuanceRequestLink(process.env.QUIETSTAY_APP_URL || "http://localhost:3000", h)}`);
   process.exit(0);
 }
 

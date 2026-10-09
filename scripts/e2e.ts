@@ -10,7 +10,10 @@
  *
  *   1. SEP-10 for the issuer, owner, renter and buyer; a forged response refused
  *   2. routes refuse callers without a session, and non-issuers cannot issue
- *   3. the owner asks for issuance with their h, from their own session — asking
+ *   3. the owner makes a secret with `npm run zk:secret`, which prints a link to
+ *      the Issue screen with h in it; the screen's request box takes h from that
+ *      link, and an invalid h from a link is flagged and refused. The owner asks
+ *      for issuance with their h, from their own session — asking
  *      in another account's name, or with an h that is not a number below the
  *      field modulus, is refused. The Issue screen shows the issuer the form and
  *      the ask, and everyone else only the ask box. The issuer issues one week
@@ -56,6 +59,7 @@ import evidenceFile from "../docs/evidence-phase2.json";
 import type { OwnershipRecord } from "../src/lib/record";
 import type { IssuanceRequest } from "../src/lib/requests";
 import { issueScreenView, type AccountStanding } from "../src/lib/roles";
+import { issuanceRequestLink, issuanceRequestPrefill } from "../src/lib/secret-hash";
 import { fatal, loadEnv, log } from "./lib/cli";
 import { R, commitment as poseidonCommitment, randomSecret, secretHash, splitRecordDigest } from "./lib/zk";
 import { fr } from "./lib/zk-encode";
@@ -148,8 +152,8 @@ function freshRecord(ownerAccount: string, checkIn: string, checkOut: string): O
 const unix = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 1000;
 
 /** Run one of the command-line tools as a person would, with this process's environment. */
-function cli(script: string, args: string[]): { status: number | null; output: string } {
-  const run = spawnSync("node_modules/.bin/tsx", [script, ...args], { encoding: "utf8", env: process.env });
+function cli(script: string, args: string[], env: Record<string, string> = {}): { status: number | null; output: string } {
+  const run = spawnSync("node_modules/.bin/tsx", [script, ...args], { encoding: "utf8", env: { ...process.env, ...env } });
   return { status: run.status, output: `${run.stdout}${run.stderr}` };
 }
 
@@ -201,16 +205,31 @@ async function main(): Promise<void> {
   const issuanceAsks = async (token: string) =>
     ((await (await fetch(`${BASE}/api/requests/issuance`, { headers: { authorization: `Bearer ${token}` } })).json()) as { requests: IssuanceRequest[] }).requests;
 
-  // The owner's side: a secret on their machine, and only its hash sent — from their session.
-  const rentSecret = randomSecret();
+  // The owner's side: `npm run zk:secret` on their machine, and the link it prints.
+  const ownerSecretFile = join(work, "owner-secret.json");
+  const made = cli("scripts/zk/secret.ts", [ownerSecretFile], { QUIETSTAY_APP_URL: BASE });
+  const rentSecret = BigInt((JSON.parse(readFileSync(ownerSecretFile, "utf8")) as { secret: string }).secret);
   const rentHash = await secretHash(rentSecret);
+  const link = made.output.match(/ask the issuer: (\S+)/)?.[1] ?? "";
+  check(made.status === 0 && link === issuanceRequestLink(BASE, rentHash), "npm run zk:secret prints a link to the Issue screen carrying h", made.output.slice(-400));
+  check(!link.includes(rentSecret.toString()), "and the link carries h, never the secret");
+  check((await fetch(link)).status === 200, "the link opens the Issue screen");
+  // What the request box starts with, from the link's query — the function the screen calls.
+  const prefill = issuanceRequestPrefill(new URL(link).search);
+  check(prefill.value === rentHash.toString() && prefill.error === null, "the request box comes filled with the owner's h, valid", prefill);
+  for (const [what, bad] of [["the field modulus r", issuanceRequestLink(BASE, R)], ["not a number", `${BASE}/issue?h=twelve`]] as const) {
+    const flagged = issuanceRequestPrefill(new URL(bad).search);
+    check(flagged.error !== null, `a link with h ${what}: the box flags it as invalid`, flagged);
+    const refused = await post("/api/requests/issuance", { secret_hash: flagged.value }, ownerToken);
+    check(refused.status === 400, `and asking with it is refused (400)`, refused.status);
+  }
   const forOther = await post("/api/requests/issuance", { secret_hash: rentHash.toString(), owner: renter.publicKey() }, ownerToken);
   check(forOther.status === 403, "asking in another account's name is refused (403)", forOther.status);
   for (const [what, value] of [["not a number", "twelve"], ["the field modulus r", R.toString()]] as const) {
     const bad = await post("/api/requests/issuance", { secret_hash: value }, ownerToken);
     check(bad.status === 400, `asking with h ${what} is refused (400)`, bad.status);
   }
-  const asked = await post("/api/requests/issuance", { secret_hash: rentHash.toString() }, ownerToken);
+  const asked = await post("/api/requests/issuance", { secret_hash: prefill.value }, ownerToken);
   const issuanceAsk = ((await asked.json()) as { request?: IssuanceRequest }).request;
   check(asked.ok && issuanceAsk?.by === owner.publicKey() && issuanceAsk.secret_hash === rentHash.toString(), "the owner's ask is recorded for their own account, with h and nothing else", issuanceAsk);
   check(!(await issuanceAsks(renterToken)).some((r) => r.id === issuanceAsk?.id), "another account cannot see it");

@@ -34,6 +34,10 @@
  * holder and `h` and locks both, so the issuer only enters the record. Every
  * other account sees just the box for asking to have a week issued: it sends
  * `h` — never the secret — for the account signed in, and nothing else.
+ *
+ * `/issue?h=…` — the link `npm run zk:secret` prints — fills that box, checked
+ * by the same rule the server applies. The issuer's form never reads it: the
+ * issuer takes `h` from an owner's request, or types it.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -45,6 +49,7 @@ import { explorer } from "@/lib/config";
 import { describeError, formatDate } from "@/lib/format";
 import type { IssuanceRequest } from "@/lib/requests";
 import { issueScreenView } from "@/lib/roles";
+import { issuanceRequestPrefill, parseSecretHash } from "@/lib/secret-hash";
 import {
   isoWeekNumber,
   onChainWindows,
@@ -989,6 +994,21 @@ export default function IssueScreen() {
 function IssuanceAsk() {
   const { address, authenticated, standing, busy: connecting, connect, authFetch } = useWallet();
   const [hashText, setHashText] = useState("");
+  // Filled from the link `npm run zk:secret` prints, once in the browser.
+  useEffect(() => {
+    const { value } = issuanceRequestPrefill(window.location.search);
+    if (value) setHashText(value);
+  }, []);
+  // The same check the server makes, shown before anything is sent.
+  const hashError = useMemo(() => {
+    if (hashText.trim() === "") return null;
+    try {
+      parseSecretHash(hashText);
+      return null;
+    } catch (caught) {
+      return describeError(caught);
+    }
+  }, [hashText]);
   const [mine, setMine] = useState<IssuanceRequest[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1068,11 +1088,17 @@ function IssuanceAsk() {
             placeholder="the number npm run zk:secret printed — decimal or hex"
             spellCheck={false}
           />
+          {hashError ? <div className="note bad">{hashError}</div> : null}
           <p className="muted">
-            Only this hash is sent. The secret in the file never leaves your machine.
+            Only this hash is sent. The secret in the file never leaves your machine. The link{" "}
+            <code>npm run zk:secret</code> prints fills it in.
           </p>
         </div>
-        <button className="primary" onClick={() => void ask()} disabled={sending || hashText.trim() === ""}>
+        <button
+          className="primary"
+          onClick={() => void ask()}
+          disabled={sending || hashText.trim() === "" || hashError !== null}
+        >
           {sending ? "sending…" : "Request issuance"}
         </button>
         {error ? <div className="note bad" style={{ marginTop: "1rem" }}>{error}</div> : null}

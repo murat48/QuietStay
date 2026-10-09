@@ -117,8 +117,9 @@ Owner and issuer are one person here, which suits a demo. In real use the owner 
 The holder's side of a transfer, on their own machine:
 
 ```bash
-# Once, when the week is issued to you: make your record secret. Keep the file;
-# send only the h it prints to the issuer.
+# Once, before the week is issued to you: make your record secret. Keep the file.
+# It prints h and a link, <app>/issue?h=… (QUIETSTAY_APP_URL, or localhost:3000):
+# open it, sign in with your wallet, and press Request issuance.
 npm run zk:secret -- .secrets/my-week.json
 
 # A rental, running to the end of the week:
@@ -201,7 +202,8 @@ parameters in [CIRCUIT.md](./CIRCUIT.md#poseidon-parameters-over-bls12-381).
 ## End-to-end test
 
 `npm run e2e` drives the running app over HTTP with the demo keys: SEP-10;
-the owner's ask for issuance (asking for another account and an invalid `h`
+`zk:secret`'s link filling the owner's request box (an invalid `h` flagged and
+refused); the owner's ask for issuance (asking for another account and an invalid `h`
 refused; the Issue screen's form shown to the issuer only); issuance from that ask
 and from an `h` given directly, in hex —
 with five malformed `h` refused (400) and nothing issued, and the server's `C` equal
@@ -211,7 +213,7 @@ as the screen saves it; attestation v2; offers; a rental proved by
 proof refused, a sale refused without the buyer's consent, a forged consent refused,
 the sale with a real one, the verify screen's transfer list, and — on an app that
 reads the evidence contract — the evidence links it falls back to once the event
-window has passed: 65 checks.
+window has passed: 73 checks.
 
 It issues weeks, so **run it against a throwaway deployment**, never the one in
 EVIDENCE.md — and give the app its own data directory, because every contract
@@ -251,7 +253,7 @@ attests them. The CLI reads the contract and the data directory before
 | `./scripts/deploy.sh` | Test, build, deploy to testnet with the committed verification key. |
 | `npm run dev` / `npm run build && npm run start` | The web app. |
 | `npm run typecheck` | `tsc --noEmit` over app, scripts and circuit tests. |
-| `npm run zk:secret -- <file>` | Make a record secret; print its shareable hash `h`. |
+| `npm run zk:secret -- <file>` | Make a record secret; print its shareable hash `h` and the `/issue?h=…` link that asks the issuer with it. |
 | `npm run zk:commitment -- --record … --owner … --secret-hash …` | The commitment `C` the issuer issues with. |
 | `npm run zk:issue -- --contract … --owner … --check-in … --check-out …` | Record, secret, `C`, `issue` and attestation in one step. |
 | `npm run zk:prove -- …` | Prove a transfer; write `transfer.json`. |

@@ -315,7 +315,8 @@ Deliberate, and stated so nobody discovers them as surprises:
    app — Freighter or Hana. Others can sign from the command line.
 6. **Who still uses the command line: the owner, not the issuer.** Issuance runs in
    the app end to end. The owner signs in on the Issue screen and asks for a week
-   with their `h`; the issuer, on the same screen, picks the ask — which fills in the
+   with their `h` — `npm run zk:secret` prints a link, `/issue?h=…`, that fills it
+   in (the issuer's form never reads it); the issuer, on the same screen, picks the ask — which fills in the
    first holder and `h` and locks both — enters the record, and issues. The server
    computes `C`; `s` never reaches it. The owner still makes the secret and its `h`
    (`npm run zk:secret`) and the transfer proof (`npm run zk:prove`) on the command

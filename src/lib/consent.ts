@@ -35,30 +35,10 @@ import {
 
 import { BUYER_CONSENT_LEDGERS, CONTRACT_ID, NETWORK_PASSPHRASE } from "./config";
 import { server } from "./contract";
+import { parseSecretHash } from "./secret-hash";
 
-/** `h'` must be a canonical BLS12-381 scalar, as every public signal must. */
-const R = 52435875175126190479447740508185965837690552500527637822603658699938581184513n;
-
-/**
- * A secret hash — the owner's `h` at issuance, the buyer's `h'` on a sale — as a
- * canonical field element. Throws with a message fit for a 400.
- */
-export function parseSecretHash(value: unknown): bigint {
-  // Decimal, as `npm run zk:secret` prints it, or hex — `0x`-prefixed, or bare
-  // when it has a letter in it. A bare string of digits is always decimal.
-  const text = typeof value === "string" ? value.trim() : "";
-  let h: bigint;
-  if (/^\d{1,78}$/.test(text)) h = BigInt(text);
-  else if (/^0x[0-9a-fA-F]{1,64}$/.test(text)) h = BigInt(text);
-  else if (/^[0-9a-fA-F]{1,64}$/.test(text)) h = BigInt(`0x${text}`);
-  else {
-    throw new Error("the secret hash must be the number `npm run zk:secret` printed, in decimal or hex");
-  }
-  if (h === 0n || h >= R) {
-    throw new Error("the secret hash is not a BLS12-381 scalar: it must be above 0 and below the field modulus r");
-  }
-  return h;
-}
+// Parsed the same way everywhere — here, at issuance, and in the browser.
+export { parseSecretHash };
 
 function invocation(rightId: number, nextSecretHash: bigint): xdr.SorobanAuthorizedInvocation {
   return new xdr.SorobanAuthorizedInvocation({
