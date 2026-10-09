@@ -184,7 +184,9 @@ parameters in [CIRCUIT.md](./CIRCUIT.md#poseidon-parameters-over-bls12-381).
 same code as `zk:prove`: SEP-10, issuance with a CLI-computed `C`, attestation v2,
 offers, a proven rental, a replay refused, someone else's proof refused, a tampered
 proof refused, a sale refused without the buyer's consent, a forged consent refused,
-the sale with a real one, and the verify screen's transfer list — 36 checks.
+the sale with a real one, the verify screen's transfer list, and — on an app that
+reads the evidence contract — the evidence links it falls back to once the event
+window has passed: 41 checks.
 
 It issues weeks, so **run it against a throwaway deployment**, never the one in
 EVIDENCE.md — and give the app its own data directory, because every contract
@@ -202,6 +204,19 @@ npm run build
 QUIETSTAY_DATA_DIR=$(mktemp -d) npm run start -- -p 3107      # one terminal
 E2E_BASE_URL=http://localhost:3107 npm run e2e                 # another
 ```
+
+Step 11 looks at an app that reads the **evidence** contract. If the one under test
+does not, point `E2E_EVIDENCE_BASE_URL` at one that does — the live app, or
+`npm run dev -- -p 3108` with the default `.env.local` (Next 16's dev server builds
+into `.next/dev`, so it runs beside `npm run start`).
+
+**Rehearsing on a throwaway contract.** `npm run zk:reissue -- <throwaway> --out
+<file outside the repo>` issues the sample weeks there without touching
+`inventory/phase2/issued.json` — it refuses to overwrite that file with another
+contract's issuance — and `npm run attest -- <id> <record> --issued <that file>`
+attests them. The CLI reads the contract and the data directory before
+`.env.local` is loaded, so give `QUIETSTAY_CONTRACT_ID`,
+`NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID` and `QUIETSTAY_DATA_DIR` on the command line.
 
 ## Every command
 

@@ -1,7 +1,7 @@
 /**
  * Issue the sample inventory on a Phase 2 contract, with Poseidon commitments.
  *
- *   npm run zk:reissue -- <contract id>
+ *   npm run zk:reissue -- <contract id> [--out <issued.json>]
  *
  * For each record in inventory/records/, as its owner and then as the issuer:
  *
@@ -10,9 +10,9 @@
  *      gitignored, mode 600 — and hands over only h = Poseidon(s);
  *   2. the issuer computes C = Poseidon(d, owner, h) and calls `issue`.
  *
- * Writes inventory/phase2/issued.json. It lives beside, not over, Phase 1's
- * inventory files: the live app still reads those against the Phase 1 contract
- * until Step 5 moves it.
+ * Writes inventory/phase2/issued.json — the record of the evidence deployment —
+ * or, with --out, anywhere else. It refuses to overwrite that file with another
+ * contract's issuance, so a rehearsal on a throwaway contract cannot clobber it.
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -35,7 +35,17 @@ interface RecordFile {
 
 async function main() {
   loadEnv();
-  const contractId = requireArg(0, "npm run zk:reissue -- <contract id>");
+  const contractId = requireArg(0, "npm run zk:reissue -- <contract id> [--out <issued.json>]");
+  const outAt = process.argv.indexOf("--out");
+  const outFile = outAt === -1 ? "inventory/phase2/issued.json" : process.argv[outAt + 1]!;
+  if (outFile === "inventory/phase2/issued.json" && existsSync(outFile)) {
+    const current = (JSON.parse(readFileSync(outFile, "utf8")) as { contract: string }).contract;
+    if (current !== contractId) {
+      throw new Error(
+        `${outFile} records ${current}; issuing on ${contractId} would overwrite it — pass --out <file>`,
+      );
+    }
+  }
   const issuer = Keypair.fromSecret(issuerSecret());
   const secretsDir = join(".secrets", contractId.slice(0, 8));
   mkdirSync(secretsDir, { recursive: true, mode: 0o700 });
@@ -87,7 +97,7 @@ async function main() {
     });
   }
 
-  writeJson("inventory/phase2/issued.json", {
+  writeJson(outFile, {
     contract: contractId,
     network: "testnet",
     issued_on: new Date().toISOString().slice(0, 10),
@@ -96,7 +106,7 @@ async function main() {
       "where d is the record's SHA-256 digest. Owner secrets are local files and are not in the repository.",
     rights,
   });
-  log.ok("wrote inventory/phase2/issued.json");
+  log.ok(`wrote ${outFile}`);
   process.exit(0);
 }
 

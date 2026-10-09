@@ -19,7 +19,8 @@
  *                       issuance: C is recomputed from the record and compared
  *                       with the ledger's
  *   (otherwise)         the record's digest d is compared with the one the issuer
- *                       recorded at issuance in inventory/phase2/issued.json
+ *                       recorded at issuance in inventory/phase2/issued.json, or
+ *                       in the file --issued names (a rehearsal's, say)
  *
  * Either way this cannot mint an attestation for a record the issuer never
  * issued. The attestation it signs binds d, the right id and the contract.
@@ -97,6 +98,7 @@ async function main(): Promise<void> {
   const rawSleeps = valued("--sleeps");
   const rawFeatures = valued("--features");
   const secretHashFlag = valued("--secret-hash");
+  const issuedFlag = valued("--issued");
 
   const positional = args.filter((a, i) => !a.startsWith("--") && !valueSlots.has(i));
   const [rawId, recordPath] = positional;
@@ -167,7 +169,7 @@ async function main(): Promise<void> {
     }
     log.ok(`record + h give the on-chain commitment C = ${c.slice(0, 16)}…`);
   } else {
-    const issuedFile = "inventory/phase2/issued.json";
+    const issuedFile = issuedFlag ?? "inventory/phase2/issued.json";
     const issued = existsSync(issuedFile)
       ? (JSON.parse(readFileSync(issuedFile, "utf8")) as { contract: string; rights: { right_id: number; record_digest: string }[] })
       : null;

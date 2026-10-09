@@ -21,6 +21,11 @@
  *   9. the owner proves the sale with the buyer's h' and it goes through; the
  *      commitment is now the buyer's
  *  10. the week's proof-verified transfers are listed for the verify screen
+ *  11. a week with no transfer in the RPC's event window — which every week is,
+ *      a week after its last transfer — gets the evidence transactions instead,
+ *      so the verify screen never shows an empty list. Checked on an app that
+ *      reads the evidence contract: E2E_EVIDENCE_BASE_URL, or the app under test
+ *      if that is the one
  *
  * Run it against a throwaway deployment, not the one in docs/EVIDENCE.md — it
  * issues weeks — and point the app's data directory somewhere disposable, since
@@ -35,6 +40,7 @@ import { verifyAttestation } from "../src/lib/attestation";
 import { commit, type JsonValue } from "../src/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, issuerSecret } from "../src/lib/config";
 import { readCommitment, readHolder, readIsActive, readRight, server } from "../src/lib/contract";
+import evidenceFile from "../docs/evidence-phase2.json";
 import type { OwnershipRecord } from "../src/lib/record";
 import { fatal, loadEnv, log } from "./lib/cli";
 import { commitment as poseidonCommitment, randomSecret, secretHash, splitRecordDigest } from "./lib/zk";
@@ -300,6 +306,51 @@ async function main(): Promise<void> {
   log.step("10. The verify screen's list of proof-verified transfers");
   const listed = (await (await fetch(`${BASE}/api/right/${forSale.rightId}/transfers`)).json()) as { transfers?: { tx: string; kind: string }[] };
   check(listed.transfers?.some((t) => t.tx === sold.hash && t.kind === "sale") === true, "the sale is listed with its transaction", listed);
+
+  // --- 11. the verify screen once the event window has passed ---------------
+  log.step("11. A week with no transfer in the event window: evidence links instead");
+  const evidenceBase = process.env.E2E_EVIDENCE_BASE_URL ?? BASE;
+  const reads = ((await (await fetch(`${evidenceBase}/api/inventory`)).json()) as { contract: string; rights: { id: number }[] });
+  if (reads.contract !== evidenceFile.contract) {
+    failed += 1;
+    log.fail(
+      `${evidenceBase} reads ${reads.contract}, not the evidence contract ${evidenceFile.contract} — ` +
+        "set E2E_EVIDENCE_BASE_URL to an app that reads it (docs/SETUP.md, End-to-end test)",
+    );
+  } else {
+    // Any week the RPC has no recent transfer for is in the state every week
+    // reaches a week after its last transfer.
+    let quiet: { id: number; body: { transfers: unknown[]; evidence: { tx: string; accepted: boolean; error: string | null; explorer: string }[] } } | null = null;
+    for (const r of reads.rights) {
+      const body = await (await fetch(`${evidenceBase}/api/right/${r.id}/transfers`)).json();
+      if (Array.isArray(body.transfers) && body.transfers.length === 0) {
+        quiet = { id: r.id, body };
+        break;
+      }
+    }
+    check(quiet !== null, "found a week with no transfer in the event window", reads.rights.map((r) => r.id));
+    if (quiet) {
+      const { evidence } = quiet.body;
+      const expected = evidenceFile.transactions.map((t) => t.hash);
+      check(
+        evidence.length === expected.length && evidence.every((e, i) => e.tx === expected[i]),
+        `week #${quiet.id}: the screen gets all ${expected.length} evidence transactions, as in EVIDENCE.md`,
+        evidence.map((e) => e.tx.slice(0, 8)),
+      );
+      check(
+        evidence.filter((e) => e.accepted).length === 2 && evidence.filter((e) => !e.accepted && e.error).length === 5,
+        "two accepted, five refused with their on-chain errors",
+      );
+      check(
+        evidence.every((e) => e.explorer === `https://stellar.expert/explorer/testnet/tx/${e.tx}`),
+        "each one is a Stellar Expert link",
+      );
+    }
+  }
+  const otherApp = (await (await fetch(`${BASE}/api/right/1/transfers`)).json()) as { evidence?: unknown[] };
+  if (BASE !== evidenceBase) {
+    check(otherApp.evidence?.length === 0, "an app on another contract shows no other contract's evidence", otherApp.evidence);
+  }
 
   log.step("Result");
   log.info(`${passed} passed, ${failed} failed`);

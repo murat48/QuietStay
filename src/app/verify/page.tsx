@@ -68,12 +68,31 @@ interface ProvenTransfer {
   expires_at: number | null;
 }
 
-/** The right's accepted transfers the RPC still remembers. Empty is an answer. */
-async function fetchTransfers(id: string): Promise<ProvenTransfer[] | null> {
+/** One of the deployment's evidence transactions (docs/EVIDENCE.md). */
+interface EvidenceTx {
+  id: string;
+  title: string;
+  right_id: number;
+  accepted: boolean;
+  error: string | null;
+  tx: string;
+  explorer: string;
+}
+
+interface OnChainHistory {
+  /** This week's accepted transfers the RPC still remembers. */
+  transfers: ProvenTransfer[];
+  /** The deployment's permanent evidence, shown when `transfers` is empty. */
+  evidence: EvidenceTx[];
+}
+
+/** The right's recent transfers, and the evidence to fall back on. */
+async function fetchTransfers(id: string): Promise<OnChainHistory | null> {
   try {
     const response = await fetch(`/api/right/${id}/transfers`, { cache: "no-store" });
     if (!response.ok) return null;
-    return ((await response.json()) as { transfers: ProvenTransfer[] }).transfers;
+    const body = (await response.json()) as Partial<OnChainHistory>;
+    return { transfers: body.transfers ?? [], evidence: body.evidence ?? [] };
   } catch {
     return null;
   }
@@ -118,7 +137,8 @@ export default function VerifyScreen() {
   const [tab, setTab] = useState<Tab>("id");
   const [rightId, setRightId] = useState("3");
   const [right, setRight] = useState<OnChainRight | null>(null);
-  const [transfers, setTransfers] = useState<ProvenTransfer[] | null>(null);
+  const [history, setHistory] = useState<OnChainHistory | null>(null);
+  const transfers = history?.transfers ?? null;
   const [recordText, setRecordText] = useState("");
   const [attestationText, setAttestationText] = useState("");
   const [claimedHolder, setClaimedHolder] = useState("");
@@ -253,12 +273,12 @@ export default function VerifyScreen() {
       return null;
     }
     setLoading(true);
-    setTransfers(null);
+    setHistory(null);
     try {
       const body = await fetchRight(id);
       setRight(body);
       setClaimedHolder(body.effective_holder ?? "");
-      void fetchTransfers(id).then(setTransfers);
+      void fetchTransfers(id).then((h) => setHistory(h ?? { transfers: [], evidence: [] }));
       return body;
     } catch (caught) {
       setError(describeError(caught));
@@ -461,14 +481,44 @@ export default function VerifyScreen() {
           {transfers === null ? (
             <p className="muted">Reading the contract&apos;s recent transfers…</p>
           ) : transfers.length === 0 ? (
-            <p className="muted">
-              No transfer of this week in the network&apos;s recent window (about a week) — it has not
-              moved since issuance, or moved earlier; the{" "}
-              <a href={explorer.contract()} target="_blank" rel="noreferrer">
-                contract&apos;s history
-              </a>{" "}
-              has every one.
-            </p>
+            <div data-testid="evidence-fallback">
+              <p className="muted">
+                The network keeps a contract&apos;s events for only about a week, so this week&apos;s
+                own transfers are not listed here once they are older than that — instead, these are
+                the contract&apos;s evidence transactions, permanent and each openable in the
+                explorer, showing what it accepts and what it refuses.
+              </p>
+              {history && history.evidence.length > 0 ? (
+                <ul className="checks">
+                  {history.evidence.map((e) => (
+                    <li key={e.tx}>
+                      <span className={`mark ${e.accepted ? "ok" : "bad"}`}>{e.accepted ? "✓" : "✗"}</span>
+                      <span>
+                        <span className="check-label">
+                          {e.title}
+                          {e.right_id === right.id ? " — this week" : ` — week #${e.right_id}`}
+                        </span>
+                        <br />
+                        <span className="check-detail">
+                          {e.accepted ? "accepted: the contract verified the proof" : `refused on chain: ${e.error ?? "rejected"}`} —{" "}
+                          <a href={e.explorer} target="_blank" rel="noreferrer">
+                            {e.tx.slice(0, 16)}…
+                          </a>
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">
+                  This deployment has no evidence file for its contract; the{" "}
+                  <a href={explorer.contract()} target="_blank" rel="noreferrer">
+                    contract&apos;s history
+                  </a>{" "}
+                  in the explorer has every transfer.
+                </p>
+              )}
+            </div>
           ) : (
             <ul className="checks">
               {transfers

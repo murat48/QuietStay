@@ -575,10 +575,16 @@ the issuer to approve anything.
   transfers from the contract's events — each one a proof the contract verified —
   and says in one sentence why `d → C` is `npm run verify-record --secret-hash`.
   Poseidon never runs in the browser or the app's server.
-- **`npm run e2e`** covers the flow end to end — 36 checks, including a replayed
+- **`npm run e2e`** covers the flow end to end — 41 checks, including a replayed
   proof, someone else's proof, a tampered proof, a sale without consent and a
   forged consent — run against a throwaway deployment so it issues nothing on the
   evidence contract ([SETUP.md](./SETUP.md#end-to-end-test)).
+- **When the event window has passed.** The RPC keeps events for about a week, so
+  *Verified on chain* falls back to the deployment's evidence transactions from
+  `docs/evidence-phase2.json` — two accepted, five refused, each a Stellar Expert
+  link — and says in one sentence why. The e2e checks this on a week with no
+  transfer in the window, which is the state every week reaches a week after its
+  last transfer.
 
 ## Decisions
 
