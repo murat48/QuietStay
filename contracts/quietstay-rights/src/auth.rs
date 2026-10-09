@@ -91,6 +91,16 @@ fn split_account(env: &Env, account: &Address) -> Result<(U256, U256), Error> {
     ))
 }
 
+/// Refuse anything but a `G…` account as a holder. Used by `issue`, so a right
+/// is never created in the hands of an address no proof could name — such a
+/// right could never be transferred.
+pub fn require_account(account: &Address) -> Result<(), Error> {
+    match account.to_payload() {
+        Some(AddressPayload::AccountIdPublicKeyEd25519(_)) => Ok(()),
+        _ => Err(Error::NotAnAccount),
+    }
+}
+
 /// The verification key fixed in the constructor.
 pub fn verification_key(env: &Env) -> VerificationKey {
     env.storage()

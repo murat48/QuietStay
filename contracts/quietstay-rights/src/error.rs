@@ -55,8 +55,8 @@ pub enum Error {
     /// scalar field modulus — the same value could otherwise appear in two
     /// encodings.
     NonCanonicalSignal = 17,
-    /// The sender or recipient is a contract address. A proof binds an Ed25519
-    /// account key, so only `G…` accounts can hold a right.
+    /// The sender, recipient, or owner at issuance is a contract address. A proof
+    /// binds an Ed25519 account key, so only `G…` accounts can hold a right.
     NotAnAccount = 18,
     /// The proof is for a different commitment than the one stored for this right.
     CommitmentMismatch = 19,

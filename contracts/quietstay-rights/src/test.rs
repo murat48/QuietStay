@@ -782,22 +782,23 @@ fn only_accounts_can_send_or_receive() {
 }
 
 #[test]
-fn a_right_held_by_a_contract_cannot_be_transferred() {
+fn a_right_cannot_be_issued_to_a_contract_address() {
     let f = setup();
-    // `issue` does not check the owner's kind, so a right can be issued to a
-    // contract address. `to_payload()` gives such an address a ContractIdHash,
-    // not an Ed25519 key, so no proof can name it as the sender: the right can
-    // never leave it.
-    let holder = Address::generate(&f.env);
+    // `to_payload()` gives a contract address a ContractIdHash, not an Ed25519
+    // key, so no proof could ever name it as the sender. Issuing to one would
+    // create a week that can never be transferred; `issue` refuses instead.
     f.env.mock_all_auths();
     let (period, validity) = week();
-    let right_id = f
-        .client
-        .issue(&holder, &period, &validity, &owner_commitment(&f.env));
-    let mut t = tx(&f.env, "rental");
-    t.from = holder.clone();
-    assert_eq!(f.send(&t), Err(Error::NotAnAccount));
-    assert_eq!(f.client.holder(&right_id), holder);
+    assert_eq!(
+        f.client.try_issue(
+            &Address::generate(&f.env),
+            &period,
+            &validity,
+            &owner_commitment(&f.env)
+        ),
+        Err(Ok(Error::NotAnAccount))
+    );
+    assert_eq!(f.client.next_id(), 1);
 }
 
 // -------------------------------------------------------------------------

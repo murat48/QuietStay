@@ -136,7 +136,8 @@ impl QuietStayRights {
     ///
     /// `commitment` is `C = Poseidon(d, owner, h)` (docs/CIRCUIT.md §2), computed
     /// off chain from the owner's secret hash; the issuer never learns the secret.
-    /// It must be a canonical field element, or no proof could ever match it.
+    /// It must be a canonical field element, or no proof could ever match it, and
+    /// `owner` must be a `G…` account, or no proof could ever name it.
     pub fn issue(
         env: Env,
         owner: Address,
@@ -147,6 +148,7 @@ impl QuietStayRights {
         let config = store::config(&env);
         config.issuer.require_auth();
 
+        auth::require_account(&owner)?;
         if !auth::is_canonical(&env, &commitment) {
             return Err(Error::NonCanonicalSignal);
         }
