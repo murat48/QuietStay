@@ -99,15 +99,25 @@ function main() {
   }
   const copyleft = [...seen].filter(([, v]) => isCopyleft(v.license));
   console.log(`  ${seen.size} packages reachable from "dependencies"; ${copyleft.length} copyleft:`);
+  // Entry files of every permissively licensed package in the same tree. A
+  // string a copyleft package shares with one of these proves nothing — the
+  // bundle may hold the permissive package's copy — so only strings unique to
+  // the copyleft package count. (Lobstr's message names REQUEST_ACCESS and
+  // SIGN_TRANSACTION, for one, also appear in Freighter's Apache-2.0 API.)
+  const permissiveEntries = [...seen]
+    .filter(([, v]) => !isCopyleft(v.license) && v.main)
+    .map(([dir, v]) => join(dir, v.main!))
+    .filter((f) => existsSync(f) && statSync(f).isFile())
+    .map((f) => readFileSync(f, "latin1"));
   for (const [dir, { license: l, main }] of copyleft) {
-    // A package reaches the browser if distinctive string literals from its entry
-    // file turn up in the built bundle. Minifiers rename identifiers, not strings.
+    // A package reaches the browser if string literals unique to its entry file
+    // turn up in the built bundle. Minifiers rename identifiers, not strings.
     const entry = main ? join(dir, main) : null;
     let verdict = "no JavaScript entry — not bundled";
     if (entry && existsSync(entry)) {
       const literals = [
         ...new Set([...readFileSync(entry, "utf8").matchAll(/["']([A-Za-z0-9_:\-. ]{14,})["']/g)].map((m) => m[1]!)),
-      ];
+      ].filter((s) => !permissiveEntries.some((text) => text.includes(s)));
       const found = literals.filter((s) => bundle.some(({ text }) => text.includes(s)));
       const where = [...new Set(bundle.filter(({ text }) => found.some((s) => text.includes(s))).map(({ f }) => f.replace(root + "/", "")))];
       verdict =

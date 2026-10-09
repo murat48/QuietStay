@@ -125,7 +125,7 @@ npm run e2e                   # end-to-end checks against a running app
 npm run check-privacy         # confirm nothing leaked, against the real chain
 ```
 
-Any Stellar wallet works — **Freighter, xBull, Albedo, Rabet, Lobstr, Hana** —
+Any Stellar wallet works — **Freighter, xBull, Albedo, Rabet, Hana** —
 through [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit).
 
 ## Documentation
@@ -191,6 +191,11 @@ One directory is the exception. [`circuits/gpl/`](./circuits/gpl/) — the owner
 circuit, the circomlib Poseidon template it includes, iden3's constant optimizer and
 the JavaScript Poseidon the prover uses — derives from iden3's circomlib and
 circomlibjs, and is **GPL-3.0** with its own [LICENSE](./circuits/gpl/LICENSE). It
-serves the command-line prover only: no web-app module imports it or any iden3
-package, and none of its code appears in the built browser bundle —
-`npm run build && npm run zk:check-bundle` checks both.
+serves the command-line prover only.
+
+**The browser bundle contains no GPL-3.0 code at all.** No web-app module imports
+`circuits/gpl/` or any iden3 package, and no copyleft package the app depends on
+reaches `.next/static`. That includes the Lobstr wallet module, whose signer
+library is GPL-3.0: Phase 1 shipped it, and Phase 2 removed it, which is why the
+app offers five wallets rather than six. `npm run build && npm run zk:check-bundle`
+checks all of this against the built bundle.

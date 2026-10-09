@@ -29,7 +29,7 @@ number, and opaque 32-byte values.
 
 | Attempt | Why it fails |
 | --- | --- |
-| Someone steals the holder's wallet key and sells the week | They also need the week's secret, which never touches the ledger |
+| Someone steals the holder's wallet key and rents out or sells the week | A stolen wallet alone cannot transfer the week: that also needs the week's secret, which never touches the ledger |
 | Someone copies a proof from a past transaction and submits it again | Every proof carries a one-time code; the contract remembers used codes and refuses a second use |
 | A proof made for one buyer is used for another buyer, or a rental proof for a sale | The buyer, the mode and the rental end are sealed inside the proof |
 | The previous owner tries to sell the week again after selling it | The sale replaces the week's record with one only the buyer can prove |
@@ -37,7 +37,10 @@ number, and opaque 32-byte values.
 | The issuer moves a week it does not hold | The issuer has neither the holder's wallet nor the secret, and the contract has no function that lets it move, freeze or burn a week |
 | An old proof is held back and used weeks later | Each proof expires after a short window, about an hour |
 
-**What the proof does not prevent.** The issuer can still *attest falsely* about
+**What the proof does not prevent.** A stolen wallet cannot *transfer* the week,
+but it can **burn** it: `burn` still asks only for the holder's signature, so a
+thief could destroy the week though never take it. Binding `burn` to the proof
+is Phase 3. The issuer can still *attest falsely* about
 maintenance fees; that attestation is shown to the buyer but no longer decides
 whether a transfer can happen. And the proving keys come from a **development
 setup run by the builder — non-production**: whoever ran it could forge a proof.
@@ -74,9 +77,10 @@ the holder. The proof additionally proves **knowledge of the week's record
 secret** — a value that exists only off chain, in the holder's hands — and binds
 that knowledge to this exact transfer.
 
-> **In one sentence:** taking someone's week now requires two things an attacker
-> would have to steal separately — the holder's wallet and the holder's secret —
-> and no longer requires anyone's permission.
+> **In one sentence:** transferring someone's week — renting it out or selling
+> it — now requires two things an attacker would have to steal separately, the
+> holder's wallet and the holder's secret, and no longer requires anyone's
+> permission.
 
 `from.require_auth()` stays. The proof replaces the issuer's signature, not the
 holder's.
@@ -186,8 +190,13 @@ a_lo = int.from_bytes(k[16..32], "big")
 Split point: byte 16. Byte order: big-endian within each half. The same split is
 used for the recipient `(b_hi, b_lo)`.
 
-A contract address (`C…`) has no Ed25519 key. Both `from` and `to` must be `G…`
-accounts; the contract rejects a transfer otherwise.
+A contract address (`C…`) has no Ed25519 key: for one, `to_payload()` returns
+`AddressPayload::ContractIdHash` rather than a key, and the contract refuses the
+transfer with `NotAnAccount` before any signal is compared with its state, whether
+the contract address is the sender or the recipient — so a right issued to a
+contract address can never be transferred (tests
+`only_accounts_can_send_or_receive` and
+`a_right_held_by_a_contract_cannot_be_transferred`).
 
 ### 6. The nullifier
 

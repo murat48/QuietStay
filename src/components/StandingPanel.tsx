@@ -69,7 +69,7 @@ export function StandingPanel() {
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Sign in to see your side of the market</h3>
         <p className="muted">
-          Connect any Stellar wallet — Freighter, xBull, Albedo, Rabet, Lobstr, or Hana —
+          Connect any Stellar wallet — Freighter, xBull, Albedo, Rabet, or Hana —
           and prove control of the account with SEP-10. What you see next depends on what
           the registry says you hold: an owner and a renter get different screens, because
           the contract gives them different powers.

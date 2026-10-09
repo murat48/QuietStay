@@ -510,6 +510,12 @@ surprises:
    time rather than reusing the sample inventory, because a sale is permanent and
    reusing them would make the script work once. The registry therefore grows on
    each run.
+9. **`burn` needs the holder's wallet, not the holder's proof** (Phase 2). Phase 2
+   puts a second factor in front of every transfer: the holder's signature *and* a
+   proof of the record secret. `burn` still asks only for the signature. So
+   someone who steals a holder's wallet key **cannot take the week** — that needs
+   the secret too — **but can burn it**, destroying it for everyone. The issuer
+   can do neither. Binding `burn` to the proof as well is left to Phase 3.
 
 ## What Phase 2 is for
 

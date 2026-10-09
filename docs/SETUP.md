@@ -24,12 +24,12 @@ video. Nothing to install.
 | `wasm32v1-none` target | — | `rustup target add wasm32v1-none` |
 | Stellar CLI | 27.0.0 | `cargo install --locked stellar-cli` |
 | Node.js | 24.17 | 20.6+ works; `process.loadEnvFile` is required. |
-| A Stellar wallet | — | Any of **Freighter, xBull, Albedo, Rabet, Lobstr, Hana**, set to **testnet**. |
+| A Stellar wallet | — | Any of **Freighter, xBull, Albedo, Rabet, Hana**, set to **testnet**. |
 
 Connection goes through [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit),
 so there is no single required extension — pick your wallet from the kit's modal.
 
-Those six modules are named explicitly rather than using `allowAllModules()`. That
+Those five modules are named explicitly rather than using `allowAllModules()`. That
 helper also pulls in WalletConnect, Trezor, Ledger, and HOT, which drag
 `@coinbase/cdp-sdk`, `@trezor/connect`, and `elliptic` into the tree — code this app
 never runs, some of it carrying published advisories. Naming the modules keeps it out
@@ -149,7 +149,7 @@ so `stellar keys generate qs-issuer --fund --network testnet` is the whole comma
 Scripts load it with `process.loadEnvFile`; Next.js loads it automatically.
 
 **A wallet is missing from the chooser** — extension wallets inject on page load, so
-install first and then reload. Only Freighter, xBull, Albedo, Rabet, Lobstr, and Hana
+install first and then reload. Only Freighter, xBull, Albedo, Rabet, and Hana
 are enabled.
 
 **`Your wallet is on PUBLIC. QuietStay Phase 1 is testnet only`** — switch the wallet

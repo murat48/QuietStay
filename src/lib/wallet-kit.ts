@@ -2,7 +2,7 @@
  * Stellar Wallets Kit bootstrap.
  *
  * One wallet-agnostic entry point for the app: the user picks Freighter, xBull,
- * Albedo, Rabet, Lobstr, or Hana from the kit's own modal, and everything
+ * Albedo, Rabet, or Hana from the kit's own modal, and everything
  * downstream — SEP-10 challenges, transfer envelopes, offers — is signed through
  * the same three calls.
  *
@@ -13,10 +13,17 @@
  * `@coinbase/cdp-sdk`, `@trezor/connect`, and `elliptic` — hundreds of kilobytes
  * of code this app never executes, some of it carrying published advisories.
  *
- * Naming the six browser wallets keeps that code out of the bundle entirely
+ * Naming the five browser wallets keeps that code out of the bundle entirely
  * instead of shipping it and hoping nobody reaches it. Adding hardware or
  * WalletConnect support later is one import each, and a deliberate decision rather
  * than a default.
+ *
+ * ## Why Lobstr is not among them
+ *
+ * The Lobstr module depends on `@lobstrco/signer-extension-api`, which is
+ * GPL-3.0. It was enabled in Phase 1 and so shipped GPL-3.0 code in the browser
+ * bundle; it was removed in Phase 2 so that the bundle carries none.
+ * `npm run build && npm run zk:check-bundle` checks that it stays out.
  *
  * ## Why it is loaded lazily
  *
@@ -61,7 +68,6 @@ export function walletKit(): Promise<Kit> {
       { xBullModule },
       { AlbedoModule },
       { RabetModule },
-      { LobstrModule },
       { HanaModule },
     ] = await Promise.all([
       import("@creit.tech/stellar-wallets-kit"),
@@ -69,7 +75,6 @@ export function walletKit(): Promise<Kit> {
       import("@creit.tech/stellar-wallets-kit/modules/xbull"),
       import("@creit.tech/stellar-wallets-kit/modules/albedo"),
       import("@creit.tech/stellar-wallets-kit/modules/rabet"),
-      import("@creit.tech/stellar-wallets-kit/modules/lobstr"),
       import("@creit.tech/stellar-wallets-kit/modules/hana"),
     ]);
 
@@ -81,7 +86,6 @@ export function walletKit(): Promise<Kit> {
         new xBullModule(),
         new AlbedoModule(),
         new RabetModule(),
-        new LobstrModule(),
         new HanaModule(),
       ],
     });
