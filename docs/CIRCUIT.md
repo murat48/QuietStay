@@ -337,15 +337,18 @@ circomlib's. Generated 2026-10-09.
 
 The optimized form circomlib's template consumes (`C`, `S`, `M`, `P`) comes from
 iden3's `poseidon_optimize_constants.js`, changed only so the field is a parameter
-(`circuits/poseidon/optimize.mjs`). The template itself is circomlib's, with one
-`include` line changed (`circuits/lib/poseidon.circom`).
+(`circuits/gpl/optimize.mjs`). The template itself is circomlib's, with one
+`include` line changed (`circuits/gpl/poseidon.circom`).
 
 ```
 npm run zk:check-poseidon            # all of the above, offline, from circuits/poseidon/raw/
 bash circuits/poseidon/generate.sh   # regenerate raw/ from scratch (Docker); reproduces it byte for byte
 ```
 
-circomlib and circomlibjs are GPL-3.0; the files derived from them say so.
+circomlib and circomlibjs are GPL-3.0. Everything derived from them — the circuit,
+the vendored template, the generated constants, the optimizer and the JavaScript
+Poseidon — lives in `circuits/gpl/` under its own GPL-3.0 LICENSE; the rest of the
+repository is Apache-2.0.
 
 ### Trusted setup
 
@@ -362,12 +365,17 @@ contribution per phase, `snarkjs zkey verify` → `ZKey Ok!`. The keys in
 ```
 a4d547d3f811715705330e75652873de14ce94fc97b3e33418c3207264786ebf  transfer.zkey
 e07eed7b33a25605e0493b0e595d0f1ee3d70fd61f22cccc4aac00c9c494018b  verification_key.json
-eafe5e6905aa60612e3cf62bffd68993b49ff09040ddd186e84d5c458315936d  transfer.wasm
+5db51d96c3ddc46c8ebeb8feb28aeebc4e480d619f68b6fe9a8fa0fb826b91ea  transfer.wasm
 d58ebebeeb8fbfaabc0cfea05e85cacc3dbd8830b511bdaba1b953208e2a37ea  transfer.r1cs
 ```
 
 Rerunning the setup makes new, different keys; proofs made with these stop
 verifying against them.
+
+`transfer.wasm` was recompiled after the circuit moved to `circuits/gpl/` (two
+comment lines added, so the line numbers in its error messages moved). The R1CS
+is byte-for-byte the one the keys were made from (`d58ebebe…`), and the old and
+new witness generators produce identical witnesses for the same input.
 
 ---
 
@@ -378,7 +386,7 @@ circomlib 2.0.5, soroban-sdk 27.0.6, stellar-cli 27.0.0.
 
 ### The circuit
 
-`circuits/transfer.circom`, compiled with `npm run zk:compile`
+`circuits/gpl/transfer.circom`, compiled with `npm run zk:compile`
 (`circom … -p bls12381`): **1,221 non-linear and 1,831 linear constraints**,
 11 public inputs, 3 private inputs, no outputs. `npm run zk:test` — 11 circuit
 tests, all passing: an honest sale and an honest rental satisfy the R1CS; the
@@ -437,13 +445,14 @@ write), about **21% of the per-transaction limit**; memory well under 1 MB of
 40 MB; a fee of roughly **0.011 XLM**. Step 3 replaces this estimate with a
 measurement.
 
-**Recommendation: the one-transaction flow.** Verification uses a fifth of the
+**Decision (approved 2026-10-09): the one-transaction flow.** Verification uses a fifth of the
 CPU a transaction may spend, so verification and transfer fit together with
 room to spare. One transaction means no recorded-but-unconsumed authorization,
 no second ledger window to reason about, and one place for every rejection test.
 The two-transaction flow solves a cost problem this circuit does not have, and
 the hashed-public-input fallback would add a SHA-256 step to save about ten of
-the eleven `g1_mul`s — a saving the margin does not call for.
+the eleven `g1_mul`s — a saving the margin does not call for. Neither is built.
+The mainnet per-transaction limit is checked in Phase 3, with mainnet itself.
 
 **Testnet's minimum temporary TTL is 720 ledgers** — the same as the proof
 window. A nullifier entry left at the minimum TTL could therefore lapse just before

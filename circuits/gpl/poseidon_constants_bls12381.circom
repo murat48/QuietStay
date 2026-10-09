@@ -7,7 +7,7 @@
 // Round constants and MDS matrices: generate_parameters_grain.sage from the Poseidon
 // authors' reference repository, run as recorded in circuits/poseidon/generate.sh.
 // Optimized form (C, S, M, P): iden3's poseidon_optimize_constants.js, unchanged
-// except that the field is a parameter — see circuits/poseidon/optimize.mjs.
+// except that the field is a parameter — see circuits/gpl/optimize.mjs.
 // Provenance and checks: docs/CIRCUIT.md#poseidon-parameters-over-bls12-381.
 
 pragma circom 2.0.0;

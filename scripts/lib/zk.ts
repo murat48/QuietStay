@@ -9,7 +9,7 @@
 import { randomBytes } from "node:crypto";
 import { StrKey } from "@stellar/stellar-sdk";
 import { commit, type JsonValue } from "../../src/lib/canonical";
-import { hash, R } from "./poseidon";
+import { hash, R } from "../../circuits/gpl/poseidon";
 
 export { R };
 

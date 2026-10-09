@@ -10,8 +10,10 @@ pragma circom 2.2.2;
 //
 // Compiled for BLS12-381 (`circom -p bls12381`), against Poseidon constants
 // generated for that field — see circuits/poseidon/ and docs/CIRCUIT.md.
+//
+// GPL-3.0, like the circomlib template it includes; see circuits/gpl/LICENSE.
 
-include "./lib/poseidon.circom";
+include "./poseidon.circom";
 
 template QuietStayTransfer() {
     // ---- public, in the order the verifier receives them (CIRCUIT.md §7) ----

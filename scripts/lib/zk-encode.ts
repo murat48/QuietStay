@@ -13,7 +13,9 @@
  */
 
 import type { Groth16Proof } from "snarkjs";
-import { R } from "./poseidon";
+
+/** BLS12-381 scalar field modulus. */
+const R = 52435875175126190479447740508185965837690552500527637822603658699938581184513n;
 
 /** BLS12-381 base field modulus. */
 const P =

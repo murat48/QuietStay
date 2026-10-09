@@ -7,7 +7,7 @@
  * A failing witness is detected twice over: circom's generated witness code
  * asserts every `===` as it runs, and for the passing cases snarkjs then checks
  * the full witness against the R1CS. Because the honest inputs come from the
- * JavaScript Poseidon (scripts/lib/poseidon.ts), the passing cases are also the
+ * JavaScript Poseidon (circuits/gpl/poseidon.ts), the passing cases are also the
  * proof that circuit and CLI compute the same Poseidon at every width used.
  */
 
@@ -18,7 +18,7 @@ import { join, resolve } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { Keypair } from "@stellar/stellar-sdk";
 import { wtns } from "snarkjs";
-import { hash } from "../../scripts/lib/poseidon";
+import { hash } from "../gpl/poseidon";
 import {
   circuitInput,
   randomSecret,

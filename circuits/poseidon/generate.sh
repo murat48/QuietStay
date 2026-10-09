@@ -60,5 +60,5 @@ for t_rp in "2 56" "6 60" "7 63"; do
 done
 cp "$code/test_vectors.txt" "$here/raw/hadeshash_test_vectors.txt"
 
-# 3. Derived files: bls12381.json, bls12381_opt.json, ../lib/poseidon_constants_bls12381.circom.
+# 3. Derived files: bls12381.json, bls12381_opt.json, ../gpl/poseidon_constants_bls12381.circom.
 node "$here/build.mjs"

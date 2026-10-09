@@ -17,7 +17,7 @@
  *  3. Nothing hand-made in between. bls12381.json, bls12381_opt.json and the
  *     generated .circom file are byte-for-byte what build.mjs produces from raw/.
  *
- * That the circuit computes the same function as scripts/lib/poseidon.ts is the
+ * That the circuit computes the same function as circuits/gpl/poseidon.ts is the
  * circuit tests' job (npm run zk:test).
  */
 
@@ -26,7 +26,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseRaw, WIDTHS } from "../../circuits/poseidon/build.mjs";
-import { buildPoseidon } from "../lib/poseidon";
+import { buildPoseidon } from "../../circuits/gpl/poseidon";
 
 const BN254_R = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const dir = resolve("circuits/poseidon");
@@ -64,7 +64,7 @@ function optimize(prime: bigint, raw: Record<number, Raw>): Record<string, unkno
     Object.entries(raw).map(([t, r]) => [t, { C: r.C.map(hex), M: r.M.map((row) => row.map(hex)) }]),
   );
   writeFileSync(join(tmp, "in.json"), JSON.stringify(input));
-  execFileSync(process.execPath, [join(dir, "optimize.mjs"), prime.toString(), join(tmp, "in.json"), join(tmp, "out.json")]);
+  execFileSync(process.execPath, [join(dir, "..", "gpl", "optimize.mjs"), prime.toString(), join(tmp, "in.json"), join(tmp, "out.json")]);
   return JSON.parse(readFileSync(join(tmp, "out.json"), "utf8"));
 }
 
@@ -104,14 +104,14 @@ async function main() {
   }
 
   console.log("3. The committed files are exactly what build.mjs makes from raw/");
-  const before = ["bls12381.json", "bls12381_opt.json", "../lib/poseidon_constants_bls12381.circom"].map((f) =>
+  const before = ["bls12381.json", "bls12381_opt.json", "../gpl/poseidon_constants_bls12381.circom"].map((f) =>
     readFileSync(join(dir, f), "utf8"),
   );
   execFileSync(process.execPath, [join(dir, "build.mjs")]);
-  const after = ["bls12381.json", "bls12381_opt.json", "../lib/poseidon_constants_bls12381.circom"].map((f) =>
+  const after = ["bls12381.json", "bls12381_opt.json", "../gpl/poseidon_constants_bls12381.circom"].map((f) =>
     readFileSync(join(dir, f), "utf8"),
   );
-  ["bls12381.json", "bls12381_opt.json", "lib/poseidon_constants_bls12381.circom"].forEach((f, i) =>
+  ["bls12381.json", "bls12381_opt.json", "gpl/poseidon_constants_bls12381.circom"].forEach((f, i) =>
     report(before[i] === after[i], `${f} regenerates byte-for-byte`),
   );
 

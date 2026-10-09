@@ -186,3 +186,11 @@ made up for the demo.
 Apache rather than MIT for the patent grant: a contributor cannot hand over code and
 later assert a patent against the people using it. That matters more than usual for a
 repository whose whole subject is a transfer of rights.
+
+One directory is the exception. [`circuits/gpl/`](./circuits/gpl/) — the ownership
+circuit, the circomlib Poseidon template it includes, iden3's constant optimizer and
+the JavaScript Poseidon the prover uses — derives from iden3's circomlib and
+circomlibjs, and is **GPL-3.0** with its own [LICENSE](./circuits/gpl/LICENSE). It
+serves the command-line prover only: no web-app module imports it or any iden3
+package, and none of its code appears in the built browser bundle —
+`npm run build && npm run zk:check-bundle` checks both.

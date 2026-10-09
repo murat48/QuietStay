@@ -3,11 +3,11 @@
 //   raw/bls12381_t{2,6,7}.txt  ── stdout of generate_parameters_grain.sage (see generate.sh)
 //        │
 //        ├─▶ bls12381.json                         round constants C and MDS matrix M per width,
-//        │                                         read by the CLI prover's Poseidon (scripts/lib/poseidon.ts)
+//        │                                         read by the CLI prover's Poseidon (../gpl/poseidon.ts)
 //        │
-//        └─▶ optimize.mjs ─▶ bls12381_opt.json ─▶ ../lib/poseidon_constants_bls12381.circom
+//        └─▶ ../gpl/optimize.mjs ─▶ bls12381_opt.json ─▶ ../gpl/poseidon_constants_bls12381.circom
 //             (iden3's optimizer,                  POSEIDON_C/S/M/P(t) in circomlib's own format,
-//              field made a parameter)             included by the vendored ../lib/poseidon.circom
+//              field made a parameter)             included by the vendored ../gpl/poseidon.circom
 //
 // Nothing here produces a constant. Every value comes from the reference tool;
 // this file only parses it, hands it to iden3's optimizer, and writes it out.
@@ -87,7 +87,7 @@ function main() {
 
   // optimize.mjs reads { t: { C, M } } and ignores the round counts it is given.
   execFileSync(process.execPath, [
-    join(here, "optimize.mjs"),
+    join(here, "..", "gpl", "optimize.mjs"),
     BLS12_381_R.toString(),
     join(here, "bls12381.json"),
     join(here, "bls12381_opt.json"),
@@ -118,7 +118,7 @@ function main() {
     "// Round constants and MDS matrices: generate_parameters_grain.sage from the Poseidon",
     "// authors' reference repository, run as recorded in circuits/poseidon/generate.sh.",
     "// Optimized form (C, S, M, P): iden3's poseidon_optimize_constants.js, unchanged",
-    "// except that the field is a parameter — see circuits/poseidon/optimize.mjs.",
+    "// except that the field is a parameter — see circuits/gpl/optimize.mjs.",
     "// Provenance and checks: docs/CIRCUIT.md#poseidon-parameters-over-bls12-381.",
     "",
     "pragma circom 2.0.0;",
@@ -128,8 +128,8 @@ function main() {
     fn("POSEIDON_M", "M"),
     fn("POSEIDON_P", "P"),
   ].join("\n");
-  writeFileSync(join(here, "..", "lib", "poseidon_constants_bls12381.circom"), circom);
-  console.log(`wrote bls12381.json, bls12381_opt.json, lib/poseidon_constants_bls12381.circom (t = ${opt.t.join(", ")})`);
+  writeFileSync(join(here, "..", "gpl", "poseidon_constants_bls12381.circom"), circom);
+  console.log(`wrote bls12381.json, bls12381_opt.json, gpl/poseidon_constants_bls12381.circom (t = ${opt.t.join(", ")})`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();
