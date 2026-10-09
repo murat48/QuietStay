@@ -1,0 +1,92 @@
+{
+  "contract": "CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD",
+  "network": "testnet",
+  "issued_on": "2026-10-09",
+  "note": "Phase 2 sample inventory: each commitment is C = Poseidon(d, owner, h) per docs/CIRCUIT.md §2, where d is the record's SHA-256 digest. Owner secrets are local files and are not in the repository.",
+  "rights": [
+    {
+      "right_id": 1,
+      "record_file": "inventory/records/week-01.json",
+      "week": {
+        "check_in": "2026-10-03",
+        "check_out": "2026-10-10"
+      },
+      "period": {
+        "start": 1790985600,
+        "end": 1791590400
+      },
+      "validity": {
+        "from": 1767225600,
+        "until": 1798761600
+      },
+      "owner": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+      "record_digest": "e8ad1bb9deff0137565e22278ed2e42d9b894b442930bf03b9db050e98b0d991",
+      "commitment": "29c8d26aeffeb9ee11201ef4c238c2d77831694a873bf3ea804d051ec6ec0f8c",
+      "issue_tx": "de6220268a79ddecd0c921398e1e829028d0289be61f079ec5b8270281591664",
+      "owner_secret_file": ".secrets/CCSQRSLC/week-01-owner.json"
+    },
+    {
+      "right_id": 2,
+      "record_file": "inventory/records/week-02.json",
+      "week": {
+        "check_in": "2026-09-05",
+        "check_out": "2026-09-12"
+      },
+      "period": {
+        "start": 1788566400,
+        "end": 1789171200
+      },
+      "validity": {
+        "from": 1767225600,
+        "until": 1798761600
+      },
+      "owner": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+      "record_digest": "6de53b97af0c27c67c4c96f6b5e165d60471c40b9dc1f8fcb83fadc0166e6789",
+      "commitment": "2d0974fe30bbcca8ca8f3f1ecc3f273ebd360f436b0e040a41dae03055541c75",
+      "issue_tx": "af662b858b137de1d877013a717260076dd56a1c3d9829729f2fed6c473575c9",
+      "owner_secret_file": ".secrets/CCSQRSLC/week-02-owner.json"
+    },
+    {
+      "right_id": 3,
+      "record_file": "inventory/records/week-03.json",
+      "week": {
+        "check_in": "2026-11-21",
+        "check_out": "2026-11-28"
+      },
+      "period": {
+        "start": 1795219200,
+        "end": 1795824000
+      },
+      "validity": {
+        "from": 1767225600,
+        "until": 1798761600
+      },
+      "owner": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+      "record_digest": "d1e56562ea6f41073e50158da2cb122df01e7f6aee3ab7845669f0955f5ffc4c",
+      "commitment": "50dd6cc34379826983fc1294f926fd8c58ac76f9d5163aee44a19e5fd24f319c",
+      "issue_tx": "56d0e7d609ae171a77823a43e8e3446b5a89de1267eeb5225827765554a63165",
+      "owner_secret_file": ".secrets/CCSQRSLC/week-03-owner.json"
+    },
+    {
+      "right_id": 4,
+      "record_file": "inventory/records/week-04.json",
+      "week": {
+        "check_in": "2026-12-19",
+        "check_out": "2026-12-26"
+      },
+      "period": {
+        "start": 1797638400,
+        "end": 1798243200
+      },
+      "validity": {
+        "from": 1767225600,
+        "until": 1798761600
+      },
+      "owner": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+      "record_digest": "f50768340ae7065a4c7314c4064e6605feef598d9223f4b11a822cb3adc04f38",
+      "commitment": "1b653acca95a792288f6de6070d15fabfc0ddaed248d8b3d54d7affd9d351ca9",
+      "issue_tx": "3cb382b151cc2c8c44a9ff4c4740ea5e51aed0305cd77f0c3a3eaf737db4b102",
+      "owner_secret_file": ".secrets/CCSQRSLC/week-04-owner.json"
+    }
+  ]
+}

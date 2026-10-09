@@ -1,5 +1,7 @@
 /**
- * Generate docs/EVIDENCE.md from docs/evidence.json and inventory/issued.json.
+ * Generate docs/EVIDENCE.md: Phase 2 from docs/evidence-phase2.json and
+ * inventory/phase2/issued.json, then Phase 1 from docs/evidence.json and
+ * inventory/issued.json.
  *
  *   npm run evidence-doc      (run automatically at the end of `npm run evidence`)
  *
@@ -14,6 +16,18 @@ import { fatal, log, readJson } from "./lib/cli";
 
 const WASM_PATH = "contracts/target/wasm32v1-none/release/quietstay_rights.wasm";
 const TEST_PATH = "contracts/quietstay-rights/src/test.rs";
+const REPO = "https://github.com/murat48/QuietStay";
+
+/**
+ * Phase 1 as delivered. The contract source and tests on `main` are Phase 2's
+ * now, so the Phase 1 section pins its links and figures to the last Phase 1
+ * commit instead of reading the working tree.
+ */
+const PHASE1 = {
+  commit: "a1b8ad2edf2953dac7216d36a49d2fb56c47b4b8",
+  tests: 34,
+  wasmBytes: 21_275,
+};
 
 /** Read facts rather than restate them, so the document cannot drift from the code. */
 function contractFacts(): { tests: number; wasmBytes: number | null } {
@@ -60,6 +74,206 @@ interface IssuedFile {
   }[];
 }
 
+interface Phase2Evidence {
+  generated_on: string;
+  contract: string;
+  deploy_tx: string;
+  issuer: string;
+  accounts: { owner: string; renter: string; buyer: string };
+  holders_after: Record<string, string>;
+  transactions: {
+    id: string;
+    title: string;
+    claim: string;
+    expected: string;
+    look_for: string;
+    right_id: number;
+    signers: string[];
+    hash: string;
+    successful: boolean;
+    op_result: string;
+    error: string | null;
+    fee_charged: number;
+    declared_instructions?: number;
+    explorer: string;
+  }[];
+}
+
+interface Phase2Issued {
+  rights: {
+    right_id: number;
+    record_file: string;
+    week: { check_in: string; check_out: string };
+    record_digest: string;
+    commitment: string;
+    issue_tx: string;
+  }[];
+}
+
+/** Contract error codes the Phase 2 evidence can show, by number. */
+const ERROR_NAMES: Record<string, string> = {
+  "Error(Contract, #16)": "WrongSignalCount",
+  "Error(Contract, #21)": "WrongAccount",
+  "Error(Contract, #27)": "NullifierUsed",
+  "Error(Contract, #28)": "InvalidProof",
+  "Error(Auth, InvalidAction)": "a required signature is missing",
+};
+
+/**
+ * Earlier Phase 2 evidence, recorded in docs/CIRCUIT.md when it was produced and
+ * kept here so the timeline is in one place.
+ */
+const PHASE2_EARLIER = {
+  verifier: "CDMUMMOF3TM453RY4QZL6UWV2FT2QP3JUWW24SFIH5ICWSVGRB4IK5BK",
+  firstVerification: "8e16b7cdfccd15cd475b5c2c0a58a72000546b8bbbf70068e87a1efe30c52645",
+  week2Contract: "CBET7IDGZQKG2Q3KPUDNKWLFAVDJ2YQJTCKPIS5I55KTTDF7WIX45FC4",
+  week2Rental: "85b16c610912f10812fd9fbcd30b7aabbccee325fd86b6e230fafd2861a55ce7",
+  week2Sale: "9b7ce1ea45559b8e057a89c1aeaeb107e7abf6e72d3086ccaf373f786c13d974",
+};
+
+/** The functions the deployed Phase 2 contract exports, as `stellar contract info interface` lists them. */
+const PHASE2_FUNCTIONS = [
+  "__constructor", "balance", "burn", "commitment", "decimals", "get_listing", "get_right", "holder",
+  "holding", "holdings", "is_active", "issue", "issuer", "list", "name", "next_id", "symbol",
+  "transfer", "unlist",
+];
+
+function phase2Section(tests: number, wasmBytes: number | null): string {
+  const ev: Phase2Evidence = readJson("docs/evidence-phase2.json");
+  const inv: Phase2Issued = readJson("inventory/phase2/issued.json");
+  const tx = (h: string) => `https://stellar.expert/explorer/testnet/tx/${h}`;
+  const contract = (c: string) => `https://stellar.expert/explorer/testnet/contract/${c}`;
+  const short = (h: string) => `[\`${h.slice(0, 16)}…\`](${tx(h)})`;
+  const accepted = ev.transactions.filter((t) => t.successful);
+  const rejected = ev.transactions.filter((t) => !t.successful);
+  // Who signed, by role: in these transactions the source account is whoever
+  // initiates — the holder, unless the entry says otherwise.
+  const role = (who: string) => {
+    if (who === "source account") return "the holder (as source account)";
+    if (who === ev.accounts.buyer) return `the buyer (\`${who.slice(0, 8)}…\`)`;
+    if (who === ev.issuer) return `the issuer (\`${who.slice(0, 8)}…\`)`;
+    return who;
+  };
+  const errorCell = (t: Phase2Evidence["transactions"][number]) =>
+    t.error ? `\`${t.error}\` ${ERROR_NAMES[t.error] ?? ""}` : "—";
+
+  return `## Phase 2 — proof-gated transfers
+
+Transfers on this contract are authorized by a zero-knowledge proof verified on
+chain — Groth16 over BLS12-381 — instead of the issuer's co-signature. The proof
+is specified in [CIRCUIT.md](./CIRCUIT.md), which opens with a one-page summary.
+
+### Phase 2, week by week
+
+| Week | Evidence | Open |
+| --- | --- | --- |
+| 1 | One-page specification of the proof | [CIRCUIT.md — One page](./CIRCUIT.md#one-page-what-the-proof-does) |
+| 1 | First on-chain verification of an ownership proof, by the standalone verifier [\`${PHASE2_EARLIER.verifier.slice(0, 8)}…\`](${contract(PHASE2_EARLIER.verifier)}) | ${short(PHASE2_EARLIER.firstVerification)} |
+| 2 | Proof-authorized rental, on [\`${PHASE2_EARLIER.week2Contract.slice(0, 8)}…\`](${contract(PHASE2_EARLIER.week2Contract)}) | ${short(PHASE2_EARLIER.week2Rental)} |
+| 2 | Proof-authorized sale, same contract | ${short(PHASE2_EARLIER.week2Sale)} |
+| 3 | Inventory re-issued and the final deployment's two accepted and five rejected transfers | below |
+
+### Phase 2: the contract
+
+| | |
+| --- | --- |
+| **Contract** | [\`${ev.contract}\`](${contract(ev.contract)}) — testnet |
+| **Deployed in** | ${short(ev.deploy_tx)} |
+| **Verification key** | fixed in the constructor at deployment — [\`circuits/keys/verification_key.json\`](../circuits/keys/verification_key.json), from a **development trusted setup, non-production** |
+| **Source** | [\`contracts/quietstay-rights/src/\`](../contracts/quietstay-rights/src/) — the proof check is in [\`auth.rs\`](../contracts/quietstay-rights/src/auth.rs) |
+| **Tests** | ${tests} contract tests, every transfer carrying a real proof — \`cd contracts && cargo test\` |${
+    wasmBytes === null ? "" : `\n| **WASM size** | ${wasmBytes.toLocaleString("en-US")} bytes |`
+  }
+
+**What the contract cannot do, and where to check it.** Its whole interface is
+these ${PHASE2_FUNCTIONS.length} functions:
+
+\`\`\`
+${PHASE2_FUNCTIONS.join("  ")}
+\`\`\`
+
+- **No issuer function moves, freezes or burns a right.** The issuer's only entry
+  point is \`issue\`, which writes to a fresh id. \`transfer\` and \`burn\` require the
+  holder's own signature.
+- **No \`upgrade\`.** The code deployed is the code that runs.
+- **No function accepts a verification key.** \`verification_key\` is a parameter of
+  \`__constructor\` alone.
+
+To see the list yourself: on the contract's Stellar Expert page, the contract's
+code (WASM hash \`25e95e05…\`) lists its exported functions — the same names as
+above. From a terminal:
+\`stellar contract info interface --id ${ev.contract} --network testnet\`.
+
+### Phase 2: the seven transactions
+
+All seven were included in a ledger; the five refusals are therefore evidence, not
+assertions. Each refused transaction declared about twice the CPU its successful
+twin needs, so it failed at the contract's check, not for lack of resources —
+its result is \`invoke_host_function_trapped\` and its diagnostic events carry the
+error below, both read back from the ledger.
+
+| What | Outcome | Error on chain | Transaction |
+| --- | --- | --- | --- |
+${ev.transactions
+  .map((t) => `| ${t.title} | ${t.successful ? "succeeded" : "**rejected**"} | ${errorCell(t)} | ${short(t.hash)} |`)
+  .join("\n")}
+
+${ev.transactions
+  .map(
+    (t) => `#### ${t.title}
+
+${t.claim}
+
+- Transaction: [\`${t.hash}\`](${t.explorer})
+- Signed by: ${t.signers.map(role).join(", ")}${t.error ? `\n- Error on chain: \`${t.error}\` — ${ERROR_NAMES[t.error] ?? ""}` : ""}
+- **Look for:** ${t.look_for}`,
+  )
+  .join("\n\n")}
+
+Where Stellar Expert shows a refusal: open the transaction; it is marked failed,
+the operation's result is \`invoke_host_function_trapped\`, and the error sits in the
+transaction's diagnostic events, which are part of the transaction meta the
+explorer stores. ${rejected.length} refusals, ${accepted.length} successes; afterwards right #${
+    accepted.find((t) => t.id === "sale")?.right_id
+  } is held by the buyer, right #${accepted.find((t) => t.id === "rental")?.right_id} by the renter, and
+the rights the refused transactions targeted are still the owner's.
+
+### Phase 2: what the ledger shows
+
+\`npm run check-privacy -- --phase2\` fetches all seven transactions and the four
+issuances back from the network and searches the raw bytes of the envelope, the
+result and the meta for every field of every record, every record's SHA-256
+digest \`d\` (hex, raw, and as the circuit's two 16-byte halves), every owner's
+secret \`s\` and every owner's secret hash \`h\`. None appears.
+
+What is public, by design: account addresses, the right id, the Poseidon
+commitment, the proof's three curve points and its eleven public signals (see
+[CIRCUIT.md §8](./CIRCUIT.md#8-what-the-proof-reveals-and-what-it-hides)), a
+rental's end time, and on a sale the buyer's next secret hash \`h'\` — which
+proves nothing without the record and the buyer's secret.
+
+### Phase 2: the sample inventory
+
+The four sample weeks, re-issued on this contract with Poseidon commitments
+\`C = Poseidon(d, owner, h)\`. The records are the Phase 1 records, unchanged, so
+each \`d\` is still what \`sha256sum\` gives for the record's canonical form —
+see [COMMITMENT.md](./COMMITMENT.md).
+
+| Right | Week | \`d\` (SHA-256 of the record) | Commitment \`C\` on chain | Issued in |
+| --- | --- | --- | --- | --- |
+${inv.rights
+  .map(
+    (r) =>
+      `| #${r.right_id} | ${r.week.check_in} → ${r.week.check_out} | \`${r.record_digest.slice(0, 16)}…\` | \`${r.commitment.slice(0, 16)}…\` | ${short(r.issue_tx)} |`,
+  )
+  .join("\n")}
+
+Reproduce: \`npm run zk:reissue -- <contract>\` then
+\`npm run zk:evidence -- <contract> <deploy tx>\`. Both need the testnet keys in
+\`.env.local\`; the record secrets they create stay in \`.secrets/\`, outside git.
+`;
+}
+
 function main(): void {
   const evidence: EvidenceFile = readJson("docs/evidence.json");
   const issued: IssuedFile = readJson("inventory/issued.json");
@@ -70,7 +284,8 @@ function main(): void {
   const noApproval = byId("rejected-no-approval");
   const seizure = byId("rejected-seizure");
 
-  const { tests, wasmBytes } = contractFacts();
+  const { tests: phase2Tests, wasmBytes: phase2WasmBytes } = contractFacts();
+  const { tests, wasmBytes } = PHASE1;
 
   const txRow = (item: EvidenceFile["transactions"][number] | undefined): string => {
     if (!item) return "| _(not produced)_ | | | |";
@@ -86,6 +301,16 @@ Everything a reviewer needs, as links to open. No cloning, no building, no comma
 line. Generated by \`npm run evidence\` — the hashes below came back from the network,
 they were not typed in.
 
+**Phase 2 — proof-gated transfers**
+
+- [Week by week](#phase-2-week-by-week)
+- [The contract, and what it cannot do](#phase-2-the-contract)
+- [The seven transactions](#phase-2-the-seven-transactions)
+- [What the ledger shows](#phase-2-what-the-ledger-shows)
+- [The sample inventory](#phase-2-the-sample-inventory)
+
+**Phase 1 — issuer-approved transfers** (delivered; links pinned to the last Phase 1 commit)
+
 - [What is deliberately not here](#what-is-deliberately-not-here)
 - [Deliverable 1 — the contract](#deliverable-1--soroban-smart-contracts)
 - [Deliverable 2 — verification and selective disclosure](#deliverable-2--verifiable-ownership-and-selective-disclosure)
@@ -93,6 +318,11 @@ they were not typed in.
 - [Reproducing all of it](#reproducing-all-of-it)
 
 ---
+
+${phase2Section(phase2Tests, phase2WasmBytes)}
+---
+
+# Phase 1
 
 ## What is deliberately not here
 
@@ -141,8 +371,8 @@ contract rather than by good behaviour, and
 | **Network** | \`${NETWORK_PASSPHRASE}\` (testnet) |
 | **Contract address** | [\`${CONTRACT_ID}\`](${explorer.contract()}) |
 | **Explorer** | ${explorer.contract()} |
-| **Source** | [\`contracts/quietstay-rights/src/\`](../contracts/quietstay-rights/src/) |
-| **Tests** | [\`src/test.rs\`](../contracts/quietstay-rights/src/test.rs) — ${tests} tests, \`cd contracts && cargo test\` |${
+| **Source** | [\`contracts/quietstay-rights/src/\`](${REPO}/tree/${PHASE1.commit}/contracts/quietstay-rights/src) at the last Phase 1 commit |
+| **Tests** | [\`src/test.rs\`](${REPO}/blob/${PHASE1.commit}/contracts/quietstay-rights/src/test.rs) — ${tests} tests, \`git checkout ${PHASE1.commit.slice(0, 7)} && cd contracts && cargo test\` |${
     wasmBytes === null
       ? ""
       : `\n| **WASM size** | ${wasmBytes.toLocaleString("en-US")} bytes (limit 65,536) |`
@@ -376,7 +606,7 @@ repository is arguing against.
 ## Reproducing all of it
 
 \`\`\`bash
-cd contracts && cargo test          # 34 unit tests
+git checkout a1b8ad2 && (cd contracts && cargo test)   # Phase 1's 34 unit tests
 ./scripts/deploy.sh                 # build, test, deploy to testnet
 npm run seed                        # issue the sample inventory, write attestations
 npm run evidence                    # produce the four transactions above

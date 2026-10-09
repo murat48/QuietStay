@@ -1,0 +1,153 @@
+{
+  "generated_on": "2026-10-09",
+  "contract": "CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD",
+  "contract_explorer": "https://stellar.expert/explorer/testnet/contract/CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD",
+  "deploy_tx": "c17e5c9d3de53b7466b3c422954d69e4c5f5281fcc29d5ce6f08680f460f4dca",
+  "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+  "accounts": {
+    "owner": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+    "renter": "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+    "buyer": "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"
+  },
+  "holders_after": {
+    "1": "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+    "2": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+    "3": "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+    "4": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"
+  },
+  "transactions": [
+    {
+      "id": "rental",
+      "title": "Rental, authorized by an on-chain proof",
+      "claim": "The holder rents right #3 to the renter until 2026-11-28. The contract verifies the ownership proof on chain; the holder's signature is the only one.",
+      "expected": "succeeds",
+      "look_for": "Status: success. One signature, the holder's — no issuer. The call's last two arguments are the proof and its eleven public signals.",
+      "right_id": 3,
+      "signers": [
+        "source account"
+      ],
+      "hash": "2e2e5938169eee18cadce01c4e1b036fb738edb4256318e873e8501b2badbef6",
+      "ledger": 5103608,
+      "successful": true,
+      "op_result": "invokeHostFunctionSuccess",
+      "error": null,
+      "fee_charged": 141254,
+      "explorer": "https://stellar.expert/explorer/testnet/tx/2e2e5938169eee18cadce01c4e1b036fb738edb4256318e873e8501b2badbef6"
+    },
+    {
+      "id": "sale",
+      "title": "Sale, authorized by an on-chain proof",
+      "claim": "The holder sells right #1 to the buyer. The proof also computes the buyer's new commitment, which replaces the old one, so only the buyer can prove next.",
+      "expected": "succeeds",
+      "look_for": "Status: success. Two signatures — the holder's over the whole call, the buyer's over the right id and the buyer's secret hash. No issuer. The transfer event's commitment is the new one.",
+      "right_id": 1,
+      "signers": [
+        "source account",
+        "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"
+      ],
+      "hash": "c76829e26661c458e9cac7e4f86eead1f47cd32eb6921209b8208e571b4fee97",
+      "ledger": 5103609,
+      "successful": true,
+      "op_result": "invokeHostFunctionSuccess",
+      "error": null,
+      "fee_charged": 184697,
+      "explorer": "https://stellar.expert/explorer/testnet/tx/c76829e26661c458e9cac7e4f86eead1f47cd32eb6921209b8208e571b4fee97"
+    },
+    {
+      "id": "rejected-tampered-proof",
+      "title": "Tampered proof — rejected on chain",
+      "claim": "A valid rental of right #4 with two of the proof's points swapped. Every public signal matches the transfer, so every check passes up to the pairing check, which fails.",
+      "expected": "rejected: Error(Contract, #28) InvalidProof",
+      "look_for": "Status: failed, result invoke_host_function_trapped. The diagnostic events end in Error(Contract, #28) — InvalidProof.",
+      "right_id": 4,
+      "signers": [
+        "source account"
+      ],
+      "hash": "63c7727e209d9f82d0fc133070160360b84523892432a4481a44c117ee650b44",
+      "ledger": 5103610,
+      "successful": false,
+      "op_result": "invokeHostFunctionTrapped",
+      "error": "Error(Contract, #28)",
+      "fee_charged": 145336,
+      "declared_instructions": 159202220,
+      "explorer": "https://stellar.expert/explorer/testnet/tx/63c7727e209d9f82d0fc133070160360b84523892432a4481a44c117ee650b44"
+    },
+    {
+      "id": "rejected-replayed-proof",
+      "title": "Replayed proof — rejected on chain",
+      "claim": "Transaction 1's call, resubmitted unchanged: the same proof, the same signals. Its nullifier was spent by transaction 1.",
+      "expected": "rejected: Error(Contract, #27) NullifierUsed",
+      "look_for": "Status: failed, result invoke_host_function_trapped. Error(Contract, #27) — NullifierUsed. Compare its arguments with transaction 1's: identical.",
+      "right_id": 3,
+      "signers": [
+        "source account"
+      ],
+      "hash": "1ea22b17b0f4b50166fe8bc7714e4859f68a70851ccb68f9a868a74dd2d9adf8",
+      "ledger": 5103611,
+      "successful": false,
+      "op_result": "invokeHostFunctionTrapped",
+      "error": "Error(Contract, #27)",
+      "fee_charged": 145346,
+      "declared_instructions": 159216550,
+      "explorer": "https://stellar.expert/explorer/testnet/tx/1ea22b17b0f4b50166fe8bc7714e4859f68a70851ccb68f9a868a74dd2d9adf8"
+    },
+    {
+      "id": "rejected-wrong-account",
+      "title": "Proof from the wrong account — rejected on chain",
+      "claim": "The renter signs and submits the owner's valid proof for right #4 as if it were theirs. The proof names the owner's account.",
+      "expected": "rejected: Error(Contract, #21) WrongAccount",
+      "look_for": "Status: failed, result invoke_host_function_trapped. Error(Contract, #21) — WrongAccount. The source account is the renter.",
+      "right_id": 4,
+      "signers": [
+        "source account (the renter)"
+      ],
+      "hash": "5dd0f0e7a2c8352561c519091066b2aafb98c5f78fb048cca3dbcea23f10cf8c",
+      "ledger": 5103612,
+      "successful": false,
+      "op_result": "invokeHostFunctionTrapped",
+      "error": "Error(Contract, #21)",
+      "fee_charged": 145336,
+      "declared_instructions": 159202220,
+      "explorer": "https://stellar.expert/explorer/testnet/tx/5dd0f0e7a2c8352561c519091066b2aafb98c5f78fb048cca3dbcea23f10cf8c"
+    },
+    {
+      "id": "rejected-issuer-signed-no-proof",
+      "title": "Holder and issuer sign, no proof — rejected on chain",
+      "claim": "Phase 1's full authorization for a sale of right #2: the holder's signature and the issuer's. No proof. Under Phase 2 the issuer's signature counts for nothing.",
+      "expected": "rejected: Error(Contract, #16) WrongSignalCount",
+      "look_for": "Status: failed, result invoke_host_function_trapped. Two authorization entries — the holder's and the issuer's — and Error(Contract, #16): no public signals, so no proof.",
+      "right_id": 2,
+      "signers": [
+        "source account (the holder)",
+        "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE"
+      ],
+      "hash": "163244fad95e4f7e1a3bf88e823d5a6e0638f3dbff58b46d22309bd8dba8198f",
+      "ledger": 5103613,
+      "successful": false,
+      "op_result": "invokeHostFunctionTrapped",
+      "error": "Error(Contract, #16)",
+      "fee_charged": 157472,
+      "declared_instructions": 160758148,
+      "explorer": "https://stellar.expert/explorer/testnet/tx/163244fad95e4f7e1a3bf88e823d5a6e0638f3dbff58b46d22309bd8dba8198f"
+    },
+    {
+      "id": "rejected-issuer-seizure",
+      "title": "Issuer transferring a held week to itself — rejected on chain",
+      "claim": "The issuer builds, signs and pays for a transfer of right #2 from its holder to itself. It has neither the holder's signature nor the holder's secret.",
+      "expected": "rejected: Error(Auth, InvalidAction)",
+      "look_for": "Status: failed, result invoke_host_function_trapped. Source account: the issuer. Error(Auth, InvalidAction) — the holder never authorized it, so nothing past the first check ran.",
+      "right_id": 2,
+      "signers": [
+        "source account (the issuer)"
+      ],
+      "hash": "788c0308a20b24ceb8c7963afd1fe6c1c4da5dfccb354347e7419bc0979971f5",
+      "ledger": 5103614,
+      "successful": false,
+      "op_result": "invokeHostFunctionTrapped",
+      "error": "Error(Auth, InvalidAction)",
+      "fee_charged": 150931,
+      "declared_instructions": 160758148,
+      "explorer": "https://stellar.expert/explorer/testnet/tx/788c0308a20b24ceb8c7963afd1fe6c1c4da5dfccb354347e7419bc0979971f5"
+    }
+  ]
+}

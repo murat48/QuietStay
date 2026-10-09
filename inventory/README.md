@@ -8,6 +8,13 @@ and fee figures were invented for the demo. In a real deployment these files wou
 never leave the parties holding them — they are published here only so that
 commitments can be checked independently.
 
+**Phase 2.** The same four records are issued on the Phase 2 contract with
+Poseidon commitments; [`phase2/issued.json`](./phase2/issued.json) lists each
+week's right id, its SHA-256 digest `d` — still what `sha256sum` gives for the
+canonical file below — and its on-chain commitment `C`. How `d` becomes `C` is in
+[COMMITMENT.md](../docs/COMMITMENT.md#phase-2-the-ledger-stores-c-which-wraps-this-digest).
+The files below describe the Phase 1 contract, which the live app still uses.
+
 ## What is in each directory
 
 | Path | Contents |

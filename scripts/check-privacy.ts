@@ -28,9 +28,20 @@
  *
  * Neither is tied to a name, a resort, a unit, a deed, or a fee history. See
  * docs/DESIGN.md, "What the ledger reveals".
+ *
+ *   npm run check-privacy -- --phase2
+ *
+ * checks the Phase 2 deployment instead: every transaction in
+ * docs/evidence-phase2.json — accepted and rejected — and every issuance in
+ * inventory/phase2/issued.json. On top of the record contents it forbids what
+ * the ownership proof keeps private (docs/CIRCUIT.md §8): each record's SHA-256
+ * digest `d` (as hex, as raw bytes, and as the two 16-byte halves the circuit
+ * takes), each owner's record secret `s`, and each owner's secret hash `h`.
+ * What is public by design in Phase 2 — the proof, its eleven signals, and on a
+ * sale the buyer's next secret hash `h'` — is printed, not forbidden.
  */
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { scValToNative, type xdr } from "@stellar/stellar-sdk";
@@ -39,8 +50,11 @@ import { toHex } from "../src/lib/canonical";
 import { server } from "../src/lib/contract";
 import type { OwnershipRecord } from "../src/lib/record";
 import { fatal, loadEnv, log, readJson } from "./lib/cli";
+import { secretHash } from "./lib/zk";
 
 loadEnv();
+
+const PHASE2 = process.argv.includes("--phase2");
 
 interface Evidence {
   contract: string;
@@ -83,6 +97,38 @@ function forbiddenValues(): { label: string; value: string }[] {
   return out;
 }
 
+/** As raw bytes, searched for in the binary layers like any string value. */
+const raw = (hex: string) => Buffer.from(hex, "hex").toString("latin1");
+const be32 = (x: bigint) => x.toString(16).padStart(64, "0");
+
+/**
+ * What the ownership proof keeps private, for the Phase 2 deployment. Secrets
+ * are read from the local .secrets/ files named in inventory/phase2/issued.json;
+ * they are searched for, never printed.
+ */
+async function phase2ForbiddenValues(): Promise<{ label: string; value: string }[]> {
+  const issued = readJson<{
+    rights: { record_file: string; record_digest: string; owner_secret_file: string }[];
+  }>("inventory/phase2/issued.json");
+  const out: { label: string; value: string }[] = [];
+  for (const r of issued.rights) {
+    const name = r.record_file.split("/").pop();
+    out.push({ label: `${name} record digest d (hex)`, value: r.record_digest });
+    out.push({ label: `${name} record digest d (raw bytes)`, value: raw(r.record_digest) });
+    out.push({ label: `${name} d_hi (raw 16 bytes)`, value: raw(r.record_digest.slice(0, 32)) });
+    out.push({ label: `${name} d_lo (raw 16 bytes)`, value: raw(r.record_digest.slice(32)) });
+    if (!existsSync(r.owner_secret_file)) {
+      throw new Error(`${r.owner_secret_file} is missing — the check needs it to search for the secret`);
+    }
+    const secret = BigInt(JSON.parse(readFileSync(r.owner_secret_file, "utf8")).secret);
+    out.push({ label: `${name} owner secret s (raw bytes)`, value: raw(be32(secret)) });
+    out.push({ label: `${name} owner secret s (decimal)`, value: secret.toString() });
+    const h = await secretHash(secret);
+    out.push({ label: `${name} owner secret hash h (raw bytes)`, value: raw(be32(h)) });
+  }
+  return out;
+}
+
 /** Render a decoded ScVal for a human, with bytes as hex and bigints as digits. */
 function show(value: unknown): string {
   return JSON.stringify(
@@ -90,7 +136,9 @@ function show(value: unknown): string {
     (_key, val) => {
       if (typeof val === "bigint") return val.toString();
       if (val && typeof val === "object" && (val as { type?: string }).type === "Buffer") {
-        return `0x${toHex(new Uint8Array((val as { data: number[] }).data))}`;
+        const hex = toHex(new Uint8Array((val as { data: number[] }).data));
+        // Proof points run to 192 bytes; show enough to compare with the explorer.
+        return hex.length > 64 ? `0x${hex.slice(0, 16)}…${hex.slice(-8)} (${hex.length / 2} bytes)` : `0x${hex}`;
       }
       return val;
     },
@@ -133,8 +181,8 @@ function decodeContractEvents(events: unknown): { topics: string; data: string }
 }
 
 async function main(): Promise<void> {
-  const evidence: Evidence = readJson("docs/evidence.json");
-  const forbidden = forbiddenValues();
+  const evidence: Evidence = PHASE2 ? phase2Evidence() : readJson("docs/evidence.json");
+  const forbidden = PHASE2 ? [...forbiddenValues(), ...(await phase2ForbiddenValues())] : forbiddenValues();
 
   log.step("Checking on-chain exposure");
   log.info(`${evidence.transactions.length} transactions, ${forbidden.length} forbidden values`);
@@ -190,7 +238,23 @@ async function main(): Promise<void> {
   }
 
   log.step("Result");
-  if (problems === 0) {
+  if (problems === 0 && PHASE2) {
+    log.ok("No record contents, no record digest d, no owner secret s and no owner");
+    log.ok("secret hash h appears in any Phase 2 evidence or issuance transaction,");
+    log.ok("at any layer — accepted or rejected.");
+    console.log("");
+    log.info("Public, and visible above:");
+    log.info("  • account addresses, and the contract address");
+    log.info("  • the usage right's numeric id");
+    log.info("  • the Poseidon commitment C, and after a sale the buyer's C'");
+    log.info("  • the proof (three curve points) and its eleven public signals: C, the");
+    log.info("    nullifier, the right id, both accounts' key halves, the mode (a rental's");
+    log.info("    end, or 0), the proof's last valid ledger, h' and C'");
+    log.info("  • on a sale, the buyer's next secret hash h' — public by design: it lets");
+    log.info("    whoever holds the record check C' against it, and proves nothing alone");
+    console.log("");
+    log.info("Also public, in contract state: the week's date range, as in Phase 1.");
+  } else if (problems === 0) {
     log.ok("No name, email, resort, country, unit, deed reference, registry, salt,");
     log.ok("or fee figure appears in any evidence transaction, at any layer.");
     console.log("");
@@ -208,6 +272,26 @@ async function main(): Promise<void> {
     log.fail(`${problems} problem(s) — the privacy claim does not hold as written`);
     process.exitCode = 1;
   }
+}
+
+/** The Phase 2 evidence transactions, plus every issuance on that contract. */
+function phase2Evidence(): Evidence {
+  const ev = readJson<{ contract: string; transactions: { id: string; title: string; hash: string; explorer: string }[] }>(
+    "docs/evidence-phase2.json",
+  );
+  const issued = readJson<{ rights: { right_id: number; issue_tx: string }[] }>("inventory/phase2/issued.json");
+  return {
+    contract: ev.contract,
+    transactions: [
+      ...issued.rights.map((r) => ({
+        id: `issue-${r.right_id}`,
+        title: `issue right #${r.right_id}`,
+        hash: r.issue_tx,
+        explorer: `https://stellar.expert/explorer/testnet/tx/${r.issue_tx}`,
+      })),
+      ...ev.transactions,
+    ],
+  };
 }
 
 main().catch(fatal);

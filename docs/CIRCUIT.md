@@ -193,10 +193,10 @@ used for the recipient `(b_hi, b_lo)`.
 A contract address (`C…`) has no Ed25519 key: for one, `to_payload()` returns
 `AddressPayload::ContractIdHash` rather than a key, and the contract refuses the
 transfer with `NotAnAccount` before any signal is compared with its state, whether
-the contract address is the sender or the recipient — so a right issued to a
-contract address can never be transferred (tests
-`only_accounts_can_send_or_receive` and
-`a_right_held_by_a_contract_cannot_be_transferred`).
+the contract address is the sender or the recipient. `issue` refuses one as
+owner the same way, so no right is ever created that no proof could transfer
+(tests `only_accounts_can_send_or_receive` and
+`a_right_cannot_be_issued_to_a_contract_address`).
 
 ### 6. The nullifier
 
@@ -296,15 +296,27 @@ evaluated then, not now.
 | Reveals (public signals — already implied by the transaction) | Hides |
 | --- | --- |
 | Which right is being transferred | The record secret `s` |
-| The sender's and recipient's accounts | `h`, the value that unlocks the record check |
+| The sender's and recipient's accounts | The sender's secret hash `h` |
 | Sale or rental, and the rental's end time | The record digest `d` |
 | The deadline for this proof | Every field of the record: owner name, email, resort, unit, deed, fees |
 | The current commitment and, on a sale, the next one — both opaque | Any link between the nullifier and the secret |
 | A nullifier — opaque, unlinkable to the secret | |
+| On a sale, the buyer's next secret hash `h'` | |
 
 Not hidden, and not claimed to be: *that* a transfer happened, between which
 accounts, for which right. That is the same public metadata Phase 1 had, and a
 transaction cannot avoid it.
+
+**`h'` is public, and an earlier draft of this table said otherwise.** On a sale
+the buyer's `h'` is public signal 10, and the buyer signs it, so it is in the
+transaction. That is acceptable for the reason `h` was always shareable (§2): it
+proves nothing without `s`, and checks a record against `C'` only for someone who
+already has the record. What keeps `C'` from being tested against guessed records
+is that `d` is unguessable — which the record's 32-byte `salt` guarantees
+(docs/COMMITMENT.md). The holder's own `h` before a sale never reaches the ledger:
+the issuer computes `C` off chain, and the proof keeps `h` private.
+`npm run check-privacy -- --phase2` searches every Phase 2 transaction for each
+owner's `h`, `s` and `d` and finds none.
 
 ### Poseidon parameters over BLS12-381
 
@@ -510,6 +522,34 @@ own work; the simulation runs the deployed WASM and is the number that counts.
 A sale uses **20.1%** of testnet's 400,000,000-instruction limit and a rental
 19.9%. Memory is reported only by the local budget: under 0.5 MB of 40 MiB.
 
+
+## Step 4: re-issued, redeployed, and the rejection evidence
+
+Completed 2026-10-09, on the final deployment
+[`CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD`](https://stellar.expert/explorer/testnet/contract/CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD)
+(deployed in `c17e5c9d…`; WASM `25e95e05…`). It differs from the Week 2 contract
+in one respect: `issue` refuses a contract address as owner, with `NotAnAccount`,
+so no right can be created that no proof could ever transfer.
+
+The four sample weeks were re-issued with Poseidon commitments
+(`npm run zk:reissue`), and `npm run zk:evidence` produced two accepted and five
+rejected transfers. Every rejection was read back from the ledger and matched
+its expected error — `InvalidProof`, `NullifierUsed`, `WrongAccount`,
+`WrongSignalCount` for the holder-and-issuer transfer with no proof, and
+`Error(Auth, InvalidAction)` for the issuer's seizure — with an
+`invoke_host_function_trapped` result, not a resource failure. The hashes, and
+what to look for in each, are in [EVIDENCE.md](./EVIDENCE.md#phase-2-the-seven-transactions).
+
+The rejections are submitted by `withSiblingResources`
+(`scripts/lib/zk-tx.ts`), an evidence-only path: a transaction the contract
+refuses cannot be built from its own simulation, so it borrows the footprint of
+its successful twin's simulation and declares twice that twin's CPU (about
+160 million instructions), enough that only the contract's check can stop it.
+
+`npm run check-privacy -- --phase2`: 11 transactions (four issuances, seven
+transfers), 71 forbidden values, none found at any layer. A negative control —
+searching the same bytes for `h'` and `C'`, which are on chain — finds both,
+so the search does find what is there.
 
 ## Decisions
 

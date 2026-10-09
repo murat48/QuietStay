@@ -17,6 +17,36 @@ commitment      = SHA-256(canonical bytes)
 The commitment is stored on chain as a `BytesN<32>` and written in documentation as
 64 lowercase hex characters.
 
+## Phase 2: the ledger stores `C`, which wraps this digest
+
+Everything in this document still holds for the record: the same schema, the same
+RFC 8785 canonical bytes, and the same SHA-256 — so `sha256sum` over a record's
+canonical form still gives its digest, which Phase 2 calls `d`. What changed is
+what the contract stores. Phase 1 stored `d` itself. Phase 2 stores a Poseidon
+commitment that wraps it together with the holder's account and the holder's
+secret hash (docs/CIRCUIT.md §2):
+
+```
+d = SHA-256(canonical bytes)                      ← unchanged; sha256sum computes it
+C = Poseidon_5(d_hi, d_lo, a_hi, a_lo, h)         ← what commitment(right_id) returns
+```
+
+So checking a record against the ledger is now two steps. The first is the one
+below, with `sha256sum`, exactly as before. The second needs `h`, which the holder
+discloses along with the record (never the secret `s` behind it), and Poseidon,
+which runs in the command-line tools only:
+
+```bash
+npm run zk:commitment -- --record inventory/records/week-02.json \
+    --owner <the holder's G… account> --secret-hash <h, from the holder>
+# prints C; compare it with:
+stellar contract invoke --id <Phase 2 contract> --source <any-identity> \
+    --network testnet --send=no -- commitment --right_id <id>
+```
+
+The Phase 2 sample inventory, with each week's `d` and `C`, is in
+[`inventory/phase2/issued.json`](../inventory/phase2/issued.json).
+
 ## Why RFC 8785
 
 `JSON.stringify` is not a specification. Key order, number formatting, and string
@@ -96,6 +126,10 @@ hashing it, and the commitment would be reversible by brute force rather than
 revealing nothing. Generate it with `openssl rand -hex 32`, once per record, and
 never reuse one.
 
+It matters more under Phase 2, not less. After a sale the buyer's secret hash `h'`
+is a public signal of the sale's proof, so the next commitment `C'` is hidden only
+because `d` is unguessable — and `d` is unguessable only because of the salt.
+
 **`record_id`** — makes each record unique so that one document cannot be committed
 for two different rights and presented interchangeably.
 
@@ -129,7 +163,7 @@ $ sha256sum inventory/canonical/week-01.canonical.json
 e8ad1bb9deff0137565e22278ed2e42d9b894b442930bf03b9db050e98b0d991  inventory/canonical/week-01.canonical.json
 ```
 
-And compare against what the ledger holds:
+And compare against what the Phase 1 contract holds:
 
 ```bash
 $ stellar contract invoke --id <CONTRACT_ID> --source <any-identity> \
@@ -138,8 +172,9 @@ $ stellar contract invoke --id <CONTRACT_ID> --source <any-identity> \
 ```
 
 Three independent computations of the same value: this project's tooling,
-`sha256sum`, and the deployed contract. The current values for every sample week
-are in [`inventory/issued.json`](../inventory/issued.json).
+`sha256sum`, and the Phase 1 contract. The Phase 1 values for every sample week are
+in [`inventory/issued.json`](../inventory/issued.json); against the Phase 2
+contract, the same `sha256sum` gives `d`, and the second step above takes it to `C`.
 
 ## Verifying without any tooling at all
 
