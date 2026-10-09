@@ -3,40 +3,29 @@
 /**
  * Screen 4 of 4 — **Transfer**.
  *
- * One form for both modes, because there is one primitive. Choosing "rent out"
- * sends a timestamp; choosing "sell" sends `expires_at = None`. Nothing else
- * differs.
+ * One primitive, two modes: a rental carries the week's end as its term, a sale
+ * carries none. Under Phase 2 either one is authorized by an **ownership proof**
+ * the contract verifies on chain, and by nobody's permission:
  *
- * What *does* differ is who is using it, and the form is built from the account's
- * standing on the registry rather than from a role the user picks:
+ *   1. **Prove ownership.** The holder runs the command-line prover on their own
+ *      machine — their record secret never leaves it — and gets `transfer.json`:
+ *      the transfer's terms, the proof, and its public signals. This screen shows
+ *      the exact command for each of the holder's weeks.
+ *   2. **Upload it here.** The app checks it names the signed-in holder, and on a
+ *      sale attaches the consent the buyer signed when asking for the week. It
+ *      simulates the call, so the contract checks the proof now and a bad one is
+ *      refused before anything is signed.
+ *   3. **Sign.** The holder's wallet signs the envelope; it is submitted.
  *
- * - **Owner (kiraya veren)** — holds title. May rent the week out, or sell it
- *   outright. A rental ends when the week does; there is no term to choose,
- *   because a stay has fixed dates and half a week is not a thing to hold.
- * - **Renter (kiracı)** — holds the week on a term, and may pass it on to nobody.
- *   They may use it until their term lapses; that is all.
+ * Proving is not done in the browser: in-browser proving is out of scope for
+ * Phase 2, and the secret belongs on the holder's machine.
  *
- * Those two limits come from different places, and the difference matters. That a
- * renter cannot **sell** is the contract's rule: an open-ended grant would outlast
- * the term they hold, and `ExpiryBeyondSenderTerm` rejects it. That a renter
- * cannot **sub-let** is this issuer's *policy*: the contract permits a sub-grant
- * inside the renter's own term, and this deployment declines to approve one,
- * because the account holding title is not consulted by `transfer` and would have
- * no say. `/api/approve-transfer` is where that policy lives; a different issuer
- * could approve sub-lets without touching the contract.
- *
- * Reflecting both here only stops the form offering something that would be
- * refused after a signature and a fee.
- *
- * The sequence is the SEP-8 approval model in Soroban's native authorization:
- * the holder states terms, `/api/approve-transfer` applies the issuer's policy and
- * attaches an authorization entry bound to exactly those terms, the holder's
- * wallet signs the envelope, and the contract checks both. The second button skips
- * the approval on purpose — the transfer is submitted without it and refused on
- * chain, with a hash you can open.
+ * Who can use it is read from the registry. Only a title holder can prove — the
+ * record secret is theirs — so a renter is shown why not, rather than a form
+ * that would fail.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { RoleGate } from "@/components/RoleGate";
 import { useWallet } from "@/components/WalletProvider";
@@ -45,11 +34,33 @@ import { describeError, formatDate, shortAddress } from "@/lib/format";
 import { transferableRights } from "@/lib/roles";
 
 interface Outcome {
-  kind: "approved" | "declined" | "rejected-on-chain" | "confirmed";
+  kind: "confirmed" | "rejected-on-chain";
   headline: string;
   detail?: string;
   hash?: string;
   explorer?: string;
+}
+
+/** What `transfer.json` says, as far as this screen needs to show it. */
+interface TransferFile {
+  transfer: {
+    right_id: string;
+    from: string;
+    to: string;
+    expires_at: string | null;
+    expiry_ledger: string;
+    next_secret_hash: string;
+  };
+  proof: { a: string; b: string; c: string };
+  public_signals: Record<string, string>;
+}
+
+function parseFile(text: string): TransferFile {
+  const parsed = JSON.parse(text) as TransferFile;
+  if (!parsed?.transfer || !parsed.proof || !parsed.public_signals) {
+    throw new Error("this is not the transfer.json that `npm run zk:prove` writes");
+  }
+  return parsed;
 }
 
 export default function TransferScreen() {
@@ -57,9 +68,9 @@ export default function TransferScreen() {
     <>
       <h1>Rent out or sell a week</h1>
       <p className="lede">
-        One form, one contract call. Renting sends a term; selling sends none. The issuer
-        approves the transfer you initiate — it cannot start one, and cannot take a week
-        back.
+        You prove you own the week, and the contract checks that proof on chain. Nobody approves
+        it — not the issuer, not this site — and nothing about you or the week&apos;s record is
+        revealed by the proof.
       </p>
       <RoleGate requires="holder" action="Transferring a week">
         <TransferForm />
@@ -69,121 +80,56 @@ export default function TransferScreen() {
 }
 
 function TransferForm() {
-  const { address, standing, readOnly, sign, authFetch, refreshStanding } = useWallet();
-
+  const { address, standing, sign, authFetch, refreshStanding } = useWallet();
   const options = useMemo(() => transferableRights(standing), [standing]);
+  const owned = options.filter((o) => o.maySell);
+  const rented = options.filter((o) => !o.maySell);
 
-  const [rightId, setRightId] = useState<string>("");
-  const [recipient, setRecipient] = useState("");
-  const [mode, setMode] = useState<"rent" | "sell">("rent");
+  const [fileText, setFileText] = useState("");
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const selected = options.find((option) => String(option.right.id) === rightId) ?? null;
-
-  // Default to the first transferable week. There is no term to default, because
-  // there is no term to choose.
-  useEffect(() => {
-    if (rightId !== "" || options.length === 0) return;
-    const first = options[0]!;
-    setRightId(String(first.right.id));
-    if (!first.maySell) setMode("rent");
-  }, [options, rightId]);
-
-  // A renter cannot sell. If the selection changes to a week they only rent, move
-  // the mode with it rather than leaving an impossible choice selected.
-  useEffect(() => {
-    if (selected && !selected.maySell && mode === "sell") setMode("rent");
-  }, [selected, mode]);
-
-  const terms = useCallback(() => {
-    if (!selected || !address) return null;
-    if (mode === "sell") {
-      return { from: address, to: recipient.trim(), rightId: selected.right.id, expiresAt: null };
+  const parsed = useMemo(() => {
+    if (fileText.trim() === "") return null;
+    try {
+      return { file: parseFile(fileText), problem: null as string | null };
+    } catch (caught) {
+      return { file: null, problem: describeError(caught) };
     }
-    /*
-     * A rental runs to the end of the week, and that is not a decision anybody
-     * on this form gets to make: the stay has fixed dates, and a right to half
-     * of somebody's week is not a thing that exists.
-     *
-     * A renter passing the week on is capped again by their own term, which is
-     * the same date unless a shorter grant put it earlier. The contract enforces
-     * that independently — `ExpiryBeyondSenderTerm` — so this is the honest
-     * value rather than the safe one.
-     */
-    const expiresAt = Math.min(selected.right.week.end, selected.maxTermEnds);
-    return { from: address, to: recipient.trim(), rightId: selected.right.id, expiresAt };
-  }, [selected, address, mode, recipient]);
+  }, [fileText]);
 
-  const validate = useCallback((): string | null => {
-    const requested = terms();
-    if (!requested) return "choose a week, a recipient, and — for a rental — a date the term ends";
-    // Only the title holder may grant. The contract would let a renter sub-let
-    // inside their own term; this deployment's issuer declines to approve one, so
-    // the refusal is stated here rather than after a signature and a fee.
-    if (selected && !selected.maySell) {
-      return (
-        `you hold this week until ${formatDate(selected.maxTermEnds)} but do not hold title to ` +
-        "it, so it is not yours to pass on — this issuer approves neither a sale nor a sub-let " +
-        "of a rented week"
-      );
-    }
-    if (!/^G[A-Z2-7]{55}$/.test(requested.to)) return "the recipient must be a Stellar account (G…)";
-    if (requested.to === requested.from) return "sender and recipient are the same account";
-    if (requested.expiresAt !== null && selected) {
-      if (requested.expiresAt <= Math.floor(Date.now() / 1000)) return "the term must end in the future";
-      if (requested.expiresAt > selected.maxTermEnds) {
-        return `the term cannot run past the end of the use year (${formatDate(selected.maxTermEnds)})`;
-      }
-    }
-    return null;
-  }, [terms, selected]);
+  const file = parsed?.file ?? null;
+  const isSale = file ? file.transfer.expires_at === null : false;
+  const notYours = file !== null && address !== null && file.transfer.from !== address;
 
-  /** Steps 2–4: ask for approval, sign, submit. */
-  const transfer = useCallback(async () => {
-    const problem = validate();
-    if (problem) {
-      setError(problem);
-      return;
-    }
-    const requested = terms()!;
+  const readUpload = useCallback(async (input: HTMLInputElement) => {
+    const chosen = input.files?.[0];
+    if (!chosen) return;
+    setOutcome(null);
+    setError(null);
+    setFileText(await chosen.text());
+  }, []);
 
+  /** Build with the proof (and the buyer's consent on a sale), sign, submit. */
+  const submit = useCallback(async () => {
+    if (!file) return;
     setBusy(true);
     setError(null);
     setOutcome(null);
-
     try {
-      const approval = await authFetch("/api/approve-transfer", {
+      const built = await authFetch("/api/tx/proven-transfer", {
         method: "POST",
-        body: JSON.stringify(requested),
+        body: JSON.stringify({ transfer: file }),
       });
-      const approvalBody = (await approval.json()) as {
+      const builtBody = (await built.json()) as {
         xdr?: string;
         error?: string;
-        detail?: unknown;
-        approved_by?: string;
-        valid_until_ledger?: number;
+        request_id?: string;
       };
+      if (!built.ok || !builtBody.xdr) throw new Error(builtBody.error ?? "could not build the transfer");
 
-      if (!approval.ok || !approvalBody.xdr) {
-        // A decline is a legitimate answer, and it is not a seizure: the holder
-        // keeps the week and may try again.
-        setOutcome({
-          kind: "declined",
-          headline: "The issuer declined to approve this transfer",
-          detail: approvalBody.error ?? "no reason given",
-        });
-        return;
-      }
-
-      setOutcome({
-        kind: "approved",
-        headline: `Approved by ${shortAddress(approvalBody.approved_by)} — waiting for your signature`,
-        detail: `The approval is bound to these exact terms and expires at ledger ${approvalBody.valid_until_ledger}.`,
-      });
-
-      const signed = await sign(approvalBody.xdr);
+      const signed = await sign(builtBody.xdr);
       const sent = await authFetch("/api/tx/submit", {
         method: "POST",
         body: JSON.stringify({ xdr: signed }),
@@ -197,14 +143,24 @@ function TransferForm() {
       };
       if (!sent.ok) throw new Error(result.error ?? "submission failed");
 
+      if (result.successful && builtBody.request_id) {
+        // The buyer's or renter's ask is now answered; record it against the chain.
+        await authFetch(`/api/requests/${builtBody.request_id}`, {
+          method: "POST",
+          body: JSON.stringify({ right_id: Number(file.transfer.right_id), action: "accepted", tx: result.hash }),
+        });
+      }
+
+      const expiresAt = file.transfer.expires_at === null ? null : Number(file.transfer.expires_at);
       setOutcome(
         result.successful
           ? {
               kind: "confirmed",
               headline:
-                requested.expiresAt === null
-                  ? `Sold. Right #${requested.rightId} now belongs to ${shortAddress(requested.to)}.`
-                  : `Rented out until ${formatDate(requested.expiresAt)}. Title stays with you and the week comes back on its own.`,
+                expiresAt === null
+                  ? `Sold. Right #${file.transfer.right_id} now belongs to ${shortAddress(file.transfer.to)}, and only they can prove it next.`
+                  : `Rented out until ${formatDate(expiresAt)}. Title stays with you and the week comes back on its own.`,
+              detail: "The contract verified your ownership proof on chain before accepting this.",
               hash: result.hash,
               explorer: result.explorer,
             }
@@ -216,221 +172,131 @@ function TransferForm() {
               explorer: result.explorer,
             },
       );
-
-      // The account's standing has changed — a sold week leaves, a rented one moves.
       await refreshStanding();
     } catch (caught) {
       setError(describeError(caught));
     } finally {
       setBusy(false);
     }
-  }, [validate, terms, authFetch, sign, refreshStanding]);
-
-  /** The same transfer with the issuer's approval left off. Expected to fail. */
-  const transferWithoutApproval = useCallback(async () => {
-    const problem = validate();
-    if (problem) {
-      setError(problem);
-      return;
-    }
-    const requested = terms()!;
-
-    setBusy(true);
-    setError(null);
-    setOutcome(null);
-
-    try {
-      const built = await authFetch("/api/tx/unapproved-transfer", {
-        method: "POST",
-        body: JSON.stringify(requested),
-      });
-      const builtBody = (await built.json()) as { xdr?: string; error?: string };
-      if (!built.ok || !builtBody.xdr) throw new Error(builtBody.error ?? "could not build");
-
-      const signed = await sign(builtBody.xdr);
-      const sent = await authFetch("/api/tx/submit", {
-        method: "POST",
-        body: JSON.stringify({ xdr: signed }),
-      });
-      const result = (await sent.json()) as {
-        hash?: string;
-        successful?: boolean;
-        failure?: string;
-        explorer?: string;
-      };
-
-      setOutcome(
-        result.successful
-          ? {
-              kind: "confirmed",
-              headline:
-                "This should not have happened: a transfer without issuer approval was accepted.",
-              hash: result.hash,
-              explorer: result.explorer,
-            }
-          : {
-              kind: "rejected-on-chain",
-              headline: "Rejected by the contract, as it should be",
-              detail:
-                `${result.failure ?? "authorization missing"}\n\n` +
-                "You signed this transfer and paid for it. The week did not move, because the " +
-                "contract — not the interface — requires the issuer's approval.",
-              hash: result.hash,
-              explorer: result.explorer,
-            },
-      );
-    } catch (caught) {
-      setError(describeError(caught));
-    } finally {
-      setBusy(false);
-    }
-  }, [validate, terms, authFetch, sign]);
+  }, [file, authFetch, sign, refreshStanding]);
 
   return (
     <>
       {standing && standing.rentedOut.length > 0 ? (
         <div className="note">
           {standing.rentedOut.length} week{standing.rentedOut.length === 1 ? "" : "s"} you own{" "}
-          {standing.rentedOut.length === 1 ? "is" : "are"} out on rental and therefore not listed
-          below. Until the term lapses the renter is the holder — the week returns to you with no
-          transaction to send.
+          {standing.rentedOut.length === 1 ? "is" : "are"} out on rental. Until the term lapses the
+          renter is the holder — the week returns to you with no transaction to send.
+        </div>
+      ) : null}
+
+      {rented.length > 0 ? (
+        <div className="note warn">
+          You are renting{" "}
+          {rented.map((o) => `#${o.right.id}`).join(", ")} until{" "}
+          {formatDate(rented[0]!.maxTermEnds)}. It is yours to use, not to pass on: transferring a
+          week takes the record secret, which only the owner holds.
         </div>
       ) : null}
 
       <div className="card">
-        <div className="field">
-          <label htmlFor="right">Week</label>
-          <select
-            id="right"
-            value={rightId}
-            onChange={(event) => {
-              setRightId(event.target.value);
-              const next = options.find((o) => String(o.right.id) === event.target.value);
-              if (next && !next.maySell) setMode("rent");
-            }}
-          >
-            {options.map((option) => (
-              <option key={option.right.id} value={option.right.id}>
-                #{option.right.id} — {formatDate(option.right.week.start)} →{" "}
-                {formatDate(option.right.week.end)}
-                {option.as === "lessor" ? " · you own it" : " · you are renting it"}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {selected ? (
-          <div className={`note ${selected.maySell ? "accent" : "warn"}`} style={{ marginTop: 0 }}>
-            {selected.maySell ? (
-              <>
-                You hold <strong>title</strong> to this week. You can rent it out, or sell it
-                outright. A rental runs to {formatDate(selected.right.week.end)}, the end of the
-                week — the dates are the week&apos;s, not yours to set.
-              </>
-            ) : (
-              <>
-                You are <strong>renting</strong> this week until{" "}
-                {formatDate(selected.maxTermEnds)}, so it is not yours to pass on. You cannot sell
-                it — an open-ended transfer would outlast the term you hold and the contract
-                rejects it — and this issuer does not approve sub-lets either, because the account
-                holding title is not party to that decision. The week is yours to use until the
-                date above.
-              </>
-            )}
-          </div>
-        ) : null}
-
-        <fieldset>
-          <legend>What you are granting</legend>
-          <div className="row">
-            <label style={{ display: "flex", gap: "0.4rem", alignItems: "center", margin: 0 }}>
-              <input
-                type="radio"
-                name="mode"
-                checked={mode === "rent"}
-                onChange={() => setMode("rent")}
-                style={{ width: "auto" }}
-              />
-              Rent out — a term that lapses
-            </label>
-            <label
-              style={{
-                display: "flex",
-                gap: "0.4rem",
-                alignItems: "center",
-                margin: 0,
-                opacity: selected?.maySell ? 1 : 0.45,
-              }}
-              title={selected?.maySell ? undefined : "a rented week is not yours to sell"}
-            >
-              <input
-                type="radio"
-                name="mode"
-                checked={mode === "sell"}
-                onChange={() => setMode("sell")}
-                style={{ width: "auto" }}
-                disabled={!selected?.maySell}
-              />
-              Sell — open-ended
-            </label>
-          </div>
-
-          {mode === "rent" && selected ? (
-            <p className="muted" style={{ marginTop: "0.75rem", marginBottom: 0 }}>
-              The term runs to{" "}
+        <h2 style={{ marginTop: 0 }}>1 · Prove ownership</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          On your own machine, with your week&apos;s record and the secret file you made when it
+          was issued. The secret never leaves that machine; what comes out is{" "}
+          <code>proofs/…/transfer.json</code>. A proof is good for one transfer, for about an hour.
+        </p>
+        {owned.length === 0 ? (
+          <p className="muted">You hold title to no week at the moment, so there is nothing to prove.</p>
+        ) : (
+          owned.map((o) => (
+            <div key={o.right.id} style={{ marginBottom: "0.9rem" }}>
               <strong>
-                {formatDate(Math.min(selected.right.week.end, selected.maxTermEnds))}
+                #{o.right.id} — {formatDate(o.right.week.start)} → {formatDate(o.right.week.end)}
               </strong>
-              , the end of this week. It lapses there on its own — no return transaction, and
-              nothing for either of you to remember.
-            </p>
-          ) : null}
-        </fieldset>
+              <pre>{`# rent it out for the week:
+npm run zk:prove -- --record <your record>.json --secret <your secret>.json \\
+  --right ${o.right.id} --from ${address} --to <renter G…> \\
+  --rental-until ${Math.min(o.right.week.end, o.maxTermEnds)} --out proofs/right-${o.right.id}
 
+# or sell it — with the h' the buyer gave when asking:
+npm run zk:prove -- --record <your record>.json --secret <your secret>.json \\
+  --right ${o.right.id} --from ${address} --to <buyer G…> \\
+  --sale --next-secret-hash <buyer's h'> --out proofs/right-${o.right.id}`}</pre>
+            </div>
+          ))
+        )}
+        <p className="muted" style={{ marginBottom: 0 }}>
+          A buyer&apos;s or renter&apos;s ask on the List screen shows the command with their account
+          and h&apos; already filled in.
+        </p>
+      </div>
+
+      <div className="card">
+        <h2 style={{ marginTop: 0 }}>2 · Upload the proof</h2>
         <div className="field">
-          <label htmlFor="recipient">Recipient account</label>
-          <input
-            id="recipient"
-            value={recipient}
-            onChange={(event) => setRecipient(event.target.value)}
-            placeholder="G…"
+          <label htmlFor="proof-file">transfer.json</label>
+          <input id="proof-file" type="file" accept="application/json,.json" onChange={(e) => void readUpload(e.currentTarget)} />
+        </div>
+        <div className="field">
+          <label htmlFor="proof-text">…or paste it</label>
+          <textarea
+            id="proof-text"
+            style={{ minHeight: "6rem" }}
+            value={fileText}
+            onChange={(e) => {
+              setOutcome(null);
+              setError(null);
+              setFileText(e.target.value);
+            }}
             spellCheck={false}
+            placeholder='{ "transfer": { … }, "proof": { … }, "public_signals": { … } }'
           />
         </div>
 
-        {readOnly ? (
-          <div className="note warn">
-            <strong>This deployment cannot approve a transfer.</strong> It does not hold the
-            issuer key, on purpose: the key authorizes every transfer and the contract fixed its
-            issuer at construction, so one that leaked could never be replaced. The registry,
-            verification, and asking for a week all work here — completing a transfer is done
-            from wherever the key already lives.
-          </div>
+        {parsed?.problem ? <div className="note bad">{parsed.problem}</div> : null}
+
+        {file ? (
+          <dl className="facts">
+            <dt>Week</dt>
+            <dd>#{file.transfer.right_id}</dd>
+            <dt>What</dt>
+            <dd>
+              {isSale
+                ? "A sale — title moves, and the buyer's new commitment replaces yours"
+                : `A rental until ${formatDate(Number(file.transfer.expires_at))} — title stays with you`}
+            </dd>
+            <dt>To</dt>
+            <dd className="hash">{file.transfer.to}</dd>
+            <dt>From</dt>
+            <dd className="hash">{file.transfer.from}</dd>
+            <dt>Proof valid through</dt>
+            <dd>ledger {file.transfer.expiry_ledger}</dd>
+          </dl>
         ) : null}
 
-        <div className="row">
-          <button
-            className="primary"
-            onClick={() => void transfer()}
-            disabled={busy || !selected || !selected.maySell || readOnly}
-          >
-            {busy
-              ? "working…"
-              : mode === "sell"
-                ? "Sell this week"
-                : "Rent this week out"}
-          </button>
-          <button
-            className="danger"
-            onClick={() => void transferWithoutApproval()}
-            disabled={busy || !selected || !selected.maySell || readOnly}
-          >
-            Try it without issuer approval
-          </button>
-        </div>
+        {notYours ? (
+          <div className="note bad">
+            This proof is for a transfer from {shortAddress(file!.transfer.from)}, and you are signed in as{" "}
+            {shortAddress(address)}. Only the holder it names can submit it.
+          </div>
+        ) : null}
+        {file && isSale && !notYours ? (
+          <p className="muted">
+            A sale also needs the buyer&apos;s consent, which they signed when they asked for the week.
+            It is attached automatically; if the buyer has not asked, the build will say so.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="card">
+        <h2 style={{ marginTop: 0 }}>3 · Sign and submit</h2>
+        <button className="primary" onClick={() => void submit()} disabled={busy || !file || notYours}>
+          {busy ? "working…" : isSale ? "Sell with my wallet" : "Rent out with my wallet"}
+        </button>
         <p className="muted" style={{ marginTop: "0.6rem", marginBottom: 0 }}>
-          The second button submits the same transfer with the issuer&apos;s authorization removed.
-          It costs a testnet fee and it will fail — that is the point.
+          Your wallet signs the transaction; nobody else&apos;s signature is involved except, on a sale,
+          the buyer&apos;s consent. The contract verifies the proof before anything moves.
         </p>
       </div>
 
@@ -439,41 +305,24 @@ function TransferForm() {
       {outcome ? (
         <>
           <h2>Outcome</h2>
-          <div
-            className={`note ${
-              outcome.kind === "confirmed"
-                ? "accent"
-                : outcome.kind === "approved"
-                  ? ""
-                  : outcome.kind === "declined"
-                    ? "warn"
-                    : "bad"
-            }`}
-          >
+          <div className={`note ${outcome.kind === "confirmed" ? "accent" : "bad"}`}>
             <strong>{outcome.headline}</strong>
             {outcome.detail ? (
               <pre style={{ marginBottom: 0, whiteSpace: "pre-wrap" }}>{outcome.detail}</pre>
             ) : null}
             {outcome.hash ? (
               <p style={{ marginBottom: 0, marginTop: "0.6rem" }}>
-                <a
-                  href={outcome.explorer ?? explorer.tx(outcome.hash)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a href={outcome.explorer ?? explorer.tx(outcome.hash)} target="_blank" rel="noreferrer">
                   Open {outcome.hash.slice(0, 12)}… in stellar.expert
                 </a>
               </p>
             ) : null}
           </div>
-
-          {outcome.kind === "rejected-on-chain" ? (
-            <div className="note">
-              Open that transaction and look at what it shows: two account addresses, a right id, a
-              term, and a hash. No name, no document, no resort. That is true of the transfers that
-              succeed as well.
-            </div>
-          ) : null}
+          <div className="note">
+            Open that transaction and look at what it shows: two account addresses, a right id, an
+            opaque commitment, and a proof with its public signals. No name, no document, no resort,
+            and no secret.
+          </div>
         </>
       ) : null}
     </>

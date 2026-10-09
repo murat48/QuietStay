@@ -26,14 +26,11 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { groth16 } from "snarkjs";
 import { server } from "../src/lib/contract";
 import type { JsonValue } from "../src/lib/canonical";
 import { fatal, log } from "./lib/cli";
-import { circuitInput, MAX_PROOF_WINDOW, PUBLIC_SIGNALS, splitRecordDigest } from "./lib/zk";
-import { encodeProof, fr } from "./lib/zk-encode";
-
-const KEYS = resolve("circuits/keys");
+import { MAX_PROOF_WINDOW } from "./lib/zk";
+import { proveTransfer } from "./lib/zk-prove";
 
 async function main() {
   const { values: a } = parseArgs({
@@ -73,7 +70,6 @@ async function main() {
 
   const record = JSON.parse(readFileSync(resolve(a.record!), "utf8")) as JsonValue;
   const secret = BigInt((JSON.parse(readFileSync(resolve(a.secret!), "utf8")) as { secret: string }).secret);
-  const d = await splitRecordDigest(record);
 
   const ctx = {
     rightId: BigInt(a.right!),
@@ -84,49 +80,15 @@ async function main() {
     nextSecretHash: a.sale ? BigInt(a["next-secret-hash"]!) : 0n,
   };
   log.step(`Proving ${a.sale ? "a sale" : "a rental"} of right #${ctx.rightId}`);
-  const { input, publicSignals: expected } = await circuitInput(d, secret, ctx);
-
-  const t0 = Date.now();
-  const { proof, publicSignals } = await groth16.fullProve(
-    input,
-    join(KEYS, "transfer.wasm"),
-    join(KEYS, "transfer.zkey"),
-  );
-  log.ok(`proved in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
-
-  // The signals snarkjs emitted must be exactly the ones computed above, in order.
-  if (publicSignals.length !== expected.length || publicSignals.some((s, i) => BigInt(s) !== expected[i])) {
-    throw new Error("snarkjs's public signals differ from the ones computed for this transfer");
-  }
-
-  const vk = JSON.parse(readFileSync(join(KEYS, "verification_key.json"), "utf8"));
-  if (!(await groth16.verify(vk, publicSignals, proof))) throw new Error("the proof does not verify off-chain");
+  const { file, proof, publicSignals, seconds } = await proveTransfer(record, secret, ctx);
+  log.ok(`proved in ${seconds.toFixed(1)} s`);
   log.ok("snarkjs groth16 verify: OK");
 
   const out = resolve(a.out!);
   mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "proof.json"), JSON.stringify(proof, null, 2) + "\n");
   writeFileSync(join(out, "public.json"), JSON.stringify(publicSignals, null, 2) + "\n");
-  writeFileSync(
-    join(out, "transfer.json"),
-    JSON.stringify(
-      {
-        transfer: {
-          right_id: ctx.rightId.toString(),
-          from: ctx.from,
-          to: ctx.to,
-          expires_at: ctx.expiresAt?.toString() ?? null,
-          expiry_ledger: ctx.expiryLedger.toString(),
-          next_secret_hash: ctx.nextSecretHash.toString(),
-        },
-        proof: encodeProof(proof),
-        public_signals: Object.fromEntries(PUBLIC_SIGNALS.map((k, i) => [k, publicSignals[i]])),
-        public_signals_hex: publicSignals.map((s) => fr(s)),
-      },
-      null,
-      2,
-    ) + "\n",
-  );
+  writeFileSync(join(out, "transfer.json"), JSON.stringify(file, null, 2) + "\n");
   log.ok(`wrote ${out}/proof.json, public.json, transfer.json`);
   // ffjavascript's curve worker threads outlive the proof; nothing else is pending.
   process.exit(0);

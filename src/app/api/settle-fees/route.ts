@@ -23,7 +23,7 @@
  *
  * It moves no money. Maintenance fees are settled with the resort the way they
  * always have been, and the issuer records that it happened — which is why this
- * stays inside Phase 1's "no payment, no escrow" boundary rather than crossing it.
+ * stays inside the "no payment, no escrow" boundary rather than crossing it.
  *
  * It also touches neither the record nor the ledger. The commitment stands, the
  * right is untouched, and its id, week, and holder are exactly as they were. The
@@ -43,13 +43,12 @@
 
 import { Keypair } from "@stellar/stellar-sdk";
 
-import { signAttestation } from "@/lib/attestation";
+import { attestationIsAuthentic, signAttestation } from "@/lib/attestation";
 import {
   attestationStoreIsWritable,
   loadAttestation,
   saveAttestation,
 } from "@/lib/attestation-store";
-import { digestsMatch } from "@/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, hasIssuerSecret, issuerSecret } from "@/lib/config";
 import { ContractCallError, readRight } from "@/lib/contract";
 import { authenticatedAccount } from "@/lib/sep10";
@@ -64,7 +63,7 @@ export async function POST(request: Request): Promise<Response> {
       {
         error:
           "this deployment is read-only: it does not hold the issuer key, so it cannot " +
-          "issue, attest, or approve a transfer. Browsing and verification need no key.",
+          "issue or attest. Browsing, verifying and transfers need no issuer key.",
         read_only: true,
       },
       { status: 503 },
@@ -157,17 +156,22 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    // The attestation on file must be about the record the ledger committed to.
-    // If it is not, the store is out of step with the chain and re-signing would
-    // launder the discrepancy into a fresh, valid-looking signature.
-    if (!digestsMatch(existing.payload.commitment, right.commitment)) {
+    // The attestation on file must be genuinely this issuer's, for this right on
+    // this contract. If it is not, re-signing would launder whatever is wrong
+    // with it into a fresh, valid-looking signature.
+    if (
+      !attestationIsAuthentic(existing, {
+        contract: CONTRACT_ID,
+        network: NETWORK_PASSPHRASE,
+        rightId,
+        contractIssuer: right.issuer,
+      })
+    ) {
       return Response.json(
         {
           error:
-            "the attestation on file commits to a different record than the ledger holds; " +
-            "re-attest from the record with `npm run attest` before settling fees",
-          on_file: existing.payload.commitment,
-          on_chain: right.commitment,
+            "the attestation on file is not this issuer's signed statement about this week on " +
+            "this contract; re-attest from the record with `npm run attest` before settling fees",
         },
         { status: 409 },
       );
@@ -177,7 +181,8 @@ export async function POST(request: Request): Promise<Response> {
       contract: CONTRACT_ID,
       network: NETWORK_PASSPHRASE,
       rightId,
-      commitment: right.commitment,
+      // The record does not change when fees are paid, so neither does `d`.
+      recordDigest: existing.payload.record_digest,
       // Carried over rather than re-asserted: this route knows nothing new about
       // whether the week is a real, allocated interval, or what the property
       // is. Dropping either would quietly un-attest it on the way through.
@@ -201,11 +206,10 @@ export async function POST(request: Request): Promise<Response> {
       attestation,
       attestation_path: path,
       note: feesCurrent
-        ? "The issuer now attests this week carries no unpaid maintenance fees. A transfer of " +
-          "it will be approved, and anyone verifying it will see that check pass. The ownership " +
-          "record and the on-chain commitment are unchanged."
-        : "The issuer now attests this week carries unpaid maintenance fees. Transfers of it " +
-          "will be declined until they are settled; the holder keeps the week either way.",
+        ? "The issuer now attests this week carries no unpaid maintenance fees; anyone verifying " +
+          "it will see that check pass. The ownership record and the on-chain commitment are unchanged."
+        : "The issuer now attests this week carries unpaid maintenance fees, for buyers to see. " +
+          "It does not stop a transfer: under Phase 2 no attestation does.",
     });
   } catch (error) {
     if (error instanceof ContractCallError) {

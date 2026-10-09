@@ -67,13 +67,15 @@ interface TransferRequest {
   requested_at: string;
   status: "open" | "accepted" | "declined" | "withdrawn";
   reason?: string;
+  /** A sale ask's consent: the buyer's h', which the holder proves with. */
+  consent?: { next_secret_hash: string; valid_until_ledger: number };
 }
 
 /**
  * What the registry is being narrowed to.
  *
  * Each one answers a question somebody actually arrives with. Two of them —
- * "Yours" and "Awaiting approval" — are about the reader rather than the
+ * "Yours" and "Awaiting an answer" — are about the reader rather than the
  * registry, and both would be permanently empty without an account.
  *
  * "For rent" and "Rented out" sound alike and are opposites: the first is what
@@ -81,7 +83,7 @@ interface TransferRequest {
  * them, never both, and separating them is the whole reason the shopping
  * filters stopped returning sub-let offers.
  *
- * "Awaiting approval" earns its place because an ask is the only thing here
+ * "Awaiting an answer" earns its place because an ask is the only thing here
  * that is *waiting on a person*. An offer sits until someone takes it, but a
  * request has somebody on the other end who cannot proceed until this account
  * answers — and buried among a holder's own weeks, each already carrying its
@@ -106,29 +108,28 @@ const EMPTY: Record<Filter, string> = {
     "Nothing is waiting on an answer. Asks appear here in both directions — one you sent and are waiting on, or one sent to you about a week you hold.",
 };
 
-/** Arrears, or no attestation at all: the issuer will decline a transfer. */
-const feesBlock = (right: RightRow): boolean => right.fees === null || !right.fees.current;
+/**
+ * Arrears, or no attestation at all. Shown to anyone looking at the week — it is
+ * what a buyer most wants to know — and nothing more: under Phase 2 no
+ * attestation is a condition of a transfer, so neither its content nor its
+ * absence stops one. An interface that hid or froze the week here would be
+ * putting back the issuer gate the contract took away.
+ */
+const feesWarning = (right: RightRow): boolean => right.fees === null || !right.fees.current;
 
 /**
- * An offer that is a sub-let, and so will be declined whoever asks.
+ * An offer that is a sub-let, and so can never be carried out.
  *
  * A week out on a term can only be listed by the account holding that term —
  * `list` asks the contract for the effective holder — so an offer on a
- * rented-out week is always the renter passing it on. The contract permits
- * that; this issuer does not approve it, because the account holding title is
- * not consulted by `transfer` and would have no say. Sub-letting is a question
- * for a later phase, so nobody should be invited to ask for one.
+ * rented-out week is always the renter passing it on. Under Phase 2 no renter
+ * can transfer: proving a transfer takes the record secret, which only the title
+ * holder has. So nobody should be invited to ask for one.
  */
 const isSublet = (right: RightRow): boolean => right.rented_out && right.listing !== null;
 
-/**
- * A week the issuer will not approve a transfer of, whatever its offer says.
- *
- * Listing needs nobody's approval — the contract asks only the holder — so a
- * week can be advertised while every transfer of it would be declined. That is
- * the right division of power, but it puts a dead offer in the shop window.
- */
-const isBlocked = (right: RightRow): boolean => feesBlock(right) || isSublet(right);
+/** An offer nobody can take up — a sub-let. Kept out of the shop window. */
+const isBlocked = (right: RightRow): boolean => isSublet(right);
 
 interface Inventory {
   contract: string;
@@ -140,7 +141,7 @@ interface Inventory {
 }
 
 export default function ListScreen() {
-  const { address, authenticated, readOnly, canRequest, sign, authFetch, connect, busy } = useWallet();
+  const { address, authenticated, readOnly, canRequest, sign, signAuth, authFetch, connect, busy } = useWallet();
   const [inventory, setInventory] = useState<Inventory | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyRight, setBusyRight] = useState<number | null>(null);
@@ -148,6 +149,8 @@ export default function ListScreen() {
   // The date the issuer is settling fees through, per right. Keyed rather than
   // held once, so two cards on screen cannot share one input.
   const [paidThrough, setPaidThrough] = useState<Record<number, string>>({});
+  // A buyer's h', per week, typed before asking to buy.
+  const [consentHash, setConsentHash] = useState<Record<number, string>>({});
   const [filter, setFilter] = useState<Filter>("all");
   // Which card is showing the placeholder's explanation. Per right, so two cards
   // with arrears cannot share one open notice.
@@ -210,10 +213,11 @@ export default function ListScreen() {
    *
    * "For rent" and "For sale" are shopping filters, and so they answer *can I
    * take this one*, not *does it carry an offer*. A week already rented out
-   * carries the renter's sub-let offer; a week in arrears carries an offer the
-   * issuer would decline. Both are real entries in the registry and both stay
-   * visible under "All" and "Yours" — where their holder needs to find them —
-   * but neither is available, so neither belongs in a list of what is.
+   * carries the renter's sub-let offer, which no renter can carry out. It stays
+   * visible under "All" and "Yours" — where its holder needs to find it — but it
+   * is not available, so it does not belong in a list of what is. A week in
+   * arrears *is* available — no attestation stops a transfer — and its card
+   * says what is owed.
    */
   const matches = useCallback(
     (right: RightRow, which: Filter): boolean => {
@@ -287,7 +291,7 @@ export default function ListScreen() {
   // explanation, so the empty case is rendered rather than fallen into.
   const shown = (inventory?.rights ?? [])
     .filter((right) => matches(right, filter))
-    // Under "All" and "Yours" a blocked week sorts last rather than vanishing:
+    // Under "All" and "Yours" a sub-let sorts last rather than vanishing:
     // it is genuinely in the registry, and its holder has to see the card to
     // clear whatever is blocking it. The shopping filters exclude it instead —
     // there it would be an offer nobody can take.
@@ -336,16 +340,49 @@ export default function ListScreen() {
     [address, authFetch, sign, load],
   );
 
-  /** Ask for a week on the terms its holder published. */
+  /**
+   * Ask for a week on the terms its holder published.
+   *
+   * Asking to buy also gives the buyer's consent to the sale (src/lib/consent.ts):
+   * the buyer's record-secret hash h', and a wallet signature over the right and
+   * that h' — the one signature the contract asks of a buyer. Given now, it lets
+   * the holder complete the sale later without the buyer present. The secret
+   * itself was made on the buyer's machine and never comes here.
+   */
   const askFor = useCallback(
-    async (rightId: number) => {
+    async (rightId: number, sale: boolean) => {
       setBusyRight(rightId);
       setMessage(null);
       setError(null);
       try {
+        let consent: Record<string, unknown> | undefined;
+        if (sale) {
+          const h = (consentHash[rightId] ?? "").trim();
+          if (!/^\d+$/.test(h)) {
+            throw new Error("paste your h' — the number `npm run zk:secret` printed — before asking to buy");
+          }
+          const prep = await authFetch("/api/requests/consent", {
+            method: "POST",
+            body: JSON.stringify({ right_id: rightId, next_secret_hash: h }),
+          });
+          const toSign = (await prep.json()) as {
+            entry?: string;
+            preimage?: string;
+            valid_until_ledger?: number;
+            error?: string;
+          };
+          if (!prep.ok || !toSign.preimage) throw new Error(toSign.error ?? "could not prepare the consent");
+          const signature = await signAuth(toSign.preimage);
+          consent = {
+            next_secret_hash: h,
+            entry: toSign.entry,
+            signature,
+            valid_until_ledger: toSign.valid_until_ledger,
+          };
+        }
         const response = await authFetch("/api/requests", {
           method: "POST",
-          body: JSON.stringify({ right_id: rightId }),
+          body: JSON.stringify({ right_id: rightId, ...(consent ? { consent } : {}) }),
         });
         const body = (await response.json()) as { note?: string; error?: string };
         if (!response.ok) throw new Error(body.error ?? "could not record the request");
@@ -357,7 +394,7 @@ export default function ListScreen() {
         setBusyRight(null);
       }
     },
-    [authFetch, loadRequests],
+    [authFetch, loadRequests, signAuth, consentHash],
   );
 
   /** Decline an ask, or take your own back. Neither touches the chain. */
@@ -385,95 +422,12 @@ export default function ListScreen() {
   );
 
   /**
-   * Accept an ask: run the transfer that was always there, then record it.
-   *
-   * The recipient comes from the request, which carried it from the asker's own
-   * SEP-10 session — nobody types an address, and a week sent to a wrong-but-valid
-   * account cannot be recovered by anyone, including the issuer.
-   *
-   * Nothing here bypasses anything. This is the same approve-sign-submit path the
-   * transfer screen uses, so the issuer's policy still runs and the contract still
-   * requires both signatures. Recording the acceptance happens afterwards and is
-   * checked against the chain, so it cannot log a transfer that did not happen.
-   */
-  const acceptRequest = useCallback(
-    async (req: TransferRequest) => {
-      if (!address) return;
-      setBusyRight(req.right_id);
-      setMessage(null);
-      setError(null);
-      try {
-        /*
-         * A rental ends when the *week* ends, not a stretch of days measured
-         * from whenever the owner got round to accepting. Those are different
-         * dates in every real case: a week is booked in advance, so `now + 7
-         * days` would hand the renter a term that lapses before their stay
-         * begins — the ledger would say they held it, in August, for a stay in
-         * December.
-         *
-         * The listing's `term_secs` is the length of the stay and is what the
-         * card advertises. It is not where the expiry comes from.
-         */
-        const week = inventory?.rights.find((r) => r.id === req.right_id)?.week ?? null;
-        if (req.term_secs !== null && week === null) {
-          throw new Error("this week is no longer in the registry — reload and try again");
-        }
-        const expiresAt = req.term_secs === null ? null : week!.end;
-
-        const approval = await authFetch("/api/approve-transfer", {
-          method: "POST",
-          body: JSON.stringify({
-            from: address,
-            to: req.by,
-            rightId: req.right_id,
-            expiresAt,
-          }),
-        });
-        const approvalBody = (await approval.json()) as { xdr?: string; error?: string };
-        if (!approval.ok || !approvalBody.xdr) {
-          throw new Error(approvalBody.error ?? "the issuer declined to approve this transfer");
-        }
-
-        const signed = await sign(approvalBody.xdr);
-        const sent = await authFetch("/api/tx/submit", {
-          method: "POST",
-          body: JSON.stringify({ xdr: signed }),
-        });
-        const result = (await sent.json()) as {
-          hash?: string;
-          successful?: boolean;
-          failure?: string;
-          error?: string;
-        };
-        if (!sent.ok) throw new Error(result.error ?? "submission failed");
-        if (!result.successful) throw new Error(result.failure ?? "the contract rejected it");
-
-        await authFetch(`/api/requests/${req.id}`, {
-          method: "POST",
-          body: JSON.stringify({ right_id: req.right_id, action: "accepted", tx: result.hash }),
-        });
-
-        setMessage(
-          `Right #${req.right_id} — ${req.term_secs === null ? "sold" : "rented out"} to ` +
-            `${shortAddress(req.by)}. ${result.hash}`,
-        );
-        await Promise.all([load(), loadRequests()]);
-      } catch (caught) {
-        setError(describeError(caught));
-      } finally {
-        setBusyRight(null);
-      }
-    },
-    [address, inventory, authFetch, sign, load, loadRequests],
-  );
-
-  /**
    * Record that a week's maintenance fees have been settled.
    *
    * No transaction and no signature from the holder: this re-signs the issuer's
    * attestation and touches neither the record nor the ledger. The commitment
    * stands, the right is untouched, and what changes is only what the issuer
-   * currently vouches for — which is the thing a transfer approval reads.
+   * currently vouches for, which is what a buyer reads.
    */
   const settleFees = useCallback(
     async (rightId: number, through: string, current: boolean) => {
@@ -525,9 +479,10 @@ export default function ListScreen() {
           </Link>
         </div>
         <div className="note" style={{ marginTop: "1.5rem" }}>
-          <strong>Reviewing this without a wallet?</strong> The contract, an approved transfer, one
-          the contract rejected, and the issuer&apos;s attempt to seize a week being refused are all
-          explorer links in <code>docs/EVIDENCE.md</code>, with nothing to install. The verify
+          <strong>Reviewing this without a wallet?</strong> The contract, a proof-authorized rental
+          and sale, five transfers the contract refused — a tampered proof, a replayed one, one from
+          the wrong account, one signed by the issuer with no proof, and the issuer trying to take a
+          week — are all explorer links in <code>docs/EVIDENCE.md</code>, with nothing to install. The verify
           screen also runs entirely in your browser and asks for no account.
         </div>
       </>
@@ -555,8 +510,8 @@ export default function ListScreen() {
       <p className="lede" style={{ marginTop: "-1rem" }}>
         <strong>Publishing an offer needs nobody&apos;s approval.</strong> If a week below is yours,
         the controls to offer or withdraw it appear on its card and go straight to the contract. The
-        issuer is not involved in listing at all — its approval is required only later, at the
-        moment the week actually changes hands.
+        issuer is not involved in listing — nor, under Phase 2, in the week changing hands: that
+        takes the holder&apos;s ownership proof, which the contract checks itself.
       </p>
 
       {error ? <div className="note bad">{error}</div> : null}
@@ -614,7 +569,7 @@ export default function ListScreen() {
               ...(address !== null
                 ? ([
                     ["yours", "Yours", counts.yours],
-                    ["pending", "Awaiting approval", counts.pending],
+                    ["pending", "Awaiting an answer", counts.pending],
                   ] as const)
                 : []),
             ] as const).map(([key, label, count]) => (
@@ -672,11 +627,11 @@ export default function ListScreen() {
               // A week nothing vouches for is as untransferable as one in
               // arrears, so the two are treated alike rather than only the loud
               // one being shown.
-              const blocked = feesBlock(right);
+              const owesFees = feesWarning(right);
               // An offer on a week that is out on a term is a sub-let, which this
               // issuer declines and which no later phase has committed to.
               const sublet = isSublet(right);
-              // Under "Awaiting approval" the card is on screen for exactly one
+              // Under "Awaiting an answer" the card is on screen for exactly one
               // reason, so the controls for *running* a week — the issuer's fee
               // entry, the holder's own offer — stand down. Answering an ask is a
               // decision about somebody else's plans, and the surrounding
@@ -893,13 +848,14 @@ export default function ListScreen() {
                     </dl>
                   </details>
 
-                  {blocked ? (
+                  {owesFees ? (
                     <div className="note warn">
                       {right.fees === null
-                        ? "The issuer has signed no attestation for this week, so it will not approve a transfer of it."
-                        : "The issuer will decline a transfer of this week until the arrears are settled."}{" "}
-                      The holder keeps it either way — declining is not seizing. The amount owed is
-                      in the off-chain record and is not published here.
+                        ? "The issuer has signed no attestation for this week, so nothing vouches for its maintenance fees."
+                        : "The issuer attests this week carries unpaid maintenance fees."}{" "}
+                      Worth knowing before taking it on — but it does not stop a transfer: no
+                      attestation does. The amount owed is in the off-chain record and is not
+                      published here.
                       {/*
                         Who owes is the question anyone reading this warning has,
                         and the card did not answer it. Arrears follow the deed,
@@ -920,7 +876,7 @@ export default function ListScreen() {
 
                       {/*
                         A placeholder, and it must stay one. Settling for real
-                        would mean either moving money — which Phase 1 excludes —
+                        would mean either moving money — which this phase excludes —
                         or flipping the fee state without any, which is both a
                         lie and a power that belongs to the issuer alone. So it
                         marks where payment will go and says why it is not there,
@@ -937,7 +893,7 @@ export default function ListScreen() {
                       {payNotice === right.id ? (
                         <div className="note bad" style={{ marginTop: "0.6rem" }}>
                           <strong>Not implemented, and deliberately so.</strong> Payment, escrow and
-                          settlement of consideration are out of scope for Phase 1 — this app
+                          settlement of consideration are out of scope — this app
                           transfers rights and never money, which is why a listing carries a term
                           but no price. This button marks where settlement would attach if a later
                           phase funds it; unlike swaps, an audit and mainnet, nothing has promised
@@ -972,15 +928,42 @@ export default function ListScreen() {
                             Withdraw request
                           </button>
                         </div>
+                      ) : right.listing.term_secs === null ? (
+                        <div>
+                          <div className="field" style={{ marginBottom: "0.5rem" }}>
+                            <label htmlFor={`h-${right.id}`}>
+                              Your h&apos; — from <code>npm run zk:secret -- my-secret.json</code>
+                            </label>
+                            <input
+                              id={`h-${right.id}`}
+                              value={consentHash[right.id] ?? ""}
+                              onChange={(e) => setConsentHash((m) => ({ ...m, [right.id]: e.target.value }))}
+                              placeholder="the shareable number it printed — never the secret file"
+                              spellCheck={false}
+                            />
+                          </div>
+                          <button
+                            className="primary"
+                            disabled={busyRight === right.id}
+                            onClick={() => void askFor(right.id, true)}
+                          >
+                            Sign my consent and ask to buy
+                          </button>
+                          <p className="muted" style={{ marginBottom: 0 }}>
+                            Buying a week means it will be committed to a secret only you hold, so
+                            you make one first, on your own machine, and give its hash here. Your
+                            wallet then signs that hash for this week — the one signature a sale
+                            asks of a buyer. Freighter and Hana can sign it; xBull, Albedo and Rabet
+                            cannot yet.
+                          </p>
+                        </div>
                       ) : (
                         <button
                           className="primary"
                           disabled={busyRight === right.id}
-                          onClick={() => void askFor(right.id)}
+                          onClick={() => void askFor(right.id, false)}
                         >
-                          {right.listing.term_secs === null
-                            ? "Ask to buy this week"
-                            : `Ask to rent it for ${formatDays(right.listing.term_secs)}`}
+                          {`Ask to rent it for ${formatDays(right.listing.term_secs)}`}
                         </button>
                       )}
                     </div>
@@ -1000,48 +983,43 @@ export default function ListScreen() {
                         {asks.length === 1 ? "One account is asking" : `${asks.length} accounts are asking`}
                       </legend>
                       <p className="muted" style={{ marginTop: 0 }}>
-                        Accepting runs the ordinary transfer — your signature, the issuer&apos;s
-                        approval, the contract checking both. The address comes from the request, so
-                        there is none to type.
+                        To accept, prove you own the week — on your own machine, with your record and
+                        your secret — then upload the result on the{" "}
+                        <a href="/transfer">Transfer</a> screen. The command below already has the
+                        asker&apos;s account{" "}
+                        {asks.some((r) => r.term_secs === null) ? "and, for a sale, their h'" : ""} in it,
+                        so there is no address to type.
                       </p>
                       {asks.map((req) => (
-                        <div
-                          key={req.id}
-                          className="row"
-                          style={{ gap: "0.5rem", alignItems: "center", marginTop: "0.4rem" }}
-                        >
-                          <code>{shortAddress(req.by)}</code>
-                          <span className="muted">
-                            {req.term_secs === null
-                              ? "wants to buy it"
-                              : `wants it for ${formatDays(req.term_secs)}`}
-                          </span>
-                          <button
-                            className="primary"
-                            disabled={busyRight === right.id || blocked || sublet || readOnly}
-                            onClick={() => void acceptRequest(req)}
-                          >
-                            Accept
-                          </button>
-                          <button
-                            disabled={busyRight === right.id}
-                            onClick={() => void answerRequest(req, "decline")}
-                          >
-                            Decline
-                          </button>
+                        <div key={req.id} style={{ marginTop: "0.6rem" }}>
+                          <div className="row" style={{ gap: "0.5rem", alignItems: "center" }}>
+                            <code>{shortAddress(req.by)}</code>
+                            <span className="muted">
+                              {req.term_secs === null ? "wants to buy it" : `wants it for ${formatDays(req.term_secs)}`}
+                            </span>
+                            <button
+                              disabled={busyRight === right.id}
+                              onClick={() => void answerRequest(req, "decline")}
+                            >
+                              Decline
+                            </button>
+                          </div>
+                          {sublet ? null : (
+                            <pre>{req.term_secs === null
+                              ? `npm run zk:prove -- --record <your record>.json --secret <your secret>.json \\
+  --right ${right.id} --from ${address} --to ${req.by} \\
+  --sale --next-secret-hash ${req.consent?.next_secret_hash ?? "<missing — ask the buyer to ask again>"} \\
+  --out proofs/right-${right.id}`
+                              : `npm run zk:prove -- --record <your record>.json --secret <your secret>.json \\
+  --right ${right.id} --from ${address} --to ${req.by} \\
+  --rental-until ${right.week.end} --out proofs/right-${right.id}`}</pre>
+                          )}
                         </div>
                       ))}
-                      {readOnly ? (
+                      {sublet ? (
                         <p className="muted" style={{ marginBottom: 0 }}>
-                          Accepting needs the issuer&apos;s approval, and this deployment does not
-                          hold the issuer key — deliberately, because it cannot be rotated. The
-                          request keeps; answer it from a deployment that has the key.
-                        </p>
-                      ) : blocked || sublet ? (
-                        <p className="muted" style={{ marginBottom: 0 }}>
-                          {sublet
-                            ? "Accepting is disabled because passing on a week you hold on a term is a sub-let, which this issuer does not approve."
-                            : "Accepting is disabled while this week cannot change hands — the issuer would decline the transfer. Settle the fees first; the requests keep."}
+                          This is a sub-let — you hold the week on a term — and only the title holder
+                          can prove a transfer, so it cannot be accepted. The requests keep.
                         </p>
                       ) : null}
                     </fieldset>
@@ -1146,8 +1124,8 @@ export default function ListScreen() {
                       ) : (
                         <p className="muted" style={{ margin: 0 }}>
                           You hold this week until {formatDate(right.week.end)} and it is yours to
-                          use. Passing it on would be a sub-let, which this issuer does not approve,
-                          so there is nothing to publish.
+                          use. Passing it on would be a sub-let, and only the title holder can prove
+                          a transfer, so there is nothing to publish.
                         </p>
                       )}
                     </div>
@@ -1159,7 +1137,7 @@ export default function ListScreen() {
 
           <div className="note">
             No price appears anywhere on this page or on the ledger. Payment, escrow, and settlement
-            of consideration are out of scope for Phase 1 — an offer records availability and term,
+            of consideration are out of scope — an offer records availability and term,
             and the parties settle however they already do.
           </div>
         </>

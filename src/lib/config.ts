@@ -22,7 +22,14 @@ export const FRIENDBOT_URL = "https://friendbot.stellar.org";
 export const CONTRACT_ID =
   process.env.NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID ??
   process.env.QUIETSTAY_CONTRACT_ID ??
-  "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M";
+  "CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD";
+
+/**
+ * The Phase 1 deployment: issuer-approved transfers. Delivered and closed; its
+ * evidence stays on chain and in docs/EVIDENCE.md, and nothing in the app
+ * talks to it any more.
+ */
+export const PHASE1_CONTRACT_ID = "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M";
 
 /** Explorer links, for evidence a reviewer can open without tooling. */
 export const explorer = {
@@ -33,11 +40,12 @@ export const explorer = {
 };
 
 /**
- * How long an issuer approval stays usable, in ledgers (~5s each). Short on
- * purpose: an approval is for one transfer happening now, not a standing
- * permission.
+ * How long a buyer's signed consent to a sale stays usable, in ledgers (~5s
+ * each): about a week. The buyer signs when asking for a week; the holder then
+ * has this long to prove ownership and submit. The signature covers only the
+ * right and the buyer's own secret hash, so it authorizes nothing else.
  */
-export const APPROVAL_VALIDITY_LEDGERS = 120;
+export const BUYER_CONSENT_LEDGERS = 120_960;
 
 /**
  * Where this deployment may write.

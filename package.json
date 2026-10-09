@@ -13,8 +13,6 @@
     "attest": "tsx scripts/attest.ts",
     "describe": "tsx scripts/describe.ts",
     "verify-record": "tsx scripts/verify-record.ts",
-    "seed": "tsx scripts/seed-inventory.ts",
-    "evidence": "tsx scripts/produce-evidence.ts && tsx scripts/write-evidence-doc.ts",
     "check-privacy": "tsx scripts/check-privacy.ts",
     "e2e": "tsx scripts/e2e.ts",
     "evidence-doc": "tsx scripts/write-evidence-doc.ts",

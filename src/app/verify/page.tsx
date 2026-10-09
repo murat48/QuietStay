@@ -32,10 +32,16 @@
  *
  * **Optional — the record.** A seller may additionally disclose the underlying
  * document: which resort, which unit, the deed. When supplied it is canonicalized
- * (RFC 8785), hashed with SHA-256 via WebCrypto, and matched against the ledger's
- * commitment, which proves it is the exact document committed at issuance and
- * unedited since. When it is not supplied, nothing is claimed about it and the
- * verification still stands on its own.
+ * (RFC 8785) and hashed with SHA-256 via WebCrypto into its digest `d`, which must
+ * equal the `d` the issuer signed for this right on this contract. The last link
+ * — that this `d` is inside the ledger's commitment `C = Poseidon(d, holder, h)` —
+ * needs Poseidon and the holder's secret hash `h`. Poseidon runs only in the
+ * circuit and the command-line tools, never in a browser, so that step is
+ * `npm run verify-record`, and this screen says so.
+ *
+ * **On chain — the proofs.** Every transfer of a week is an ownership proof the
+ * contract verified before accepting it. The screen lists the recent ones, each a
+ * transaction anyone can open.
  *
  * Making the record mandatory would have quietly reinstated document exchange —
  * the practice this design removes — so it is not. It is also why the record has
@@ -51,6 +57,27 @@ import { commit, digestsMatch } from "@/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, explorer } from "@/lib/config";
 import { describeError, formatDate, shortAddress } from "@/lib/format";
 import { validateRecord, type OwnershipRecord } from "@/lib/record";
+
+interface ProvenTransfer {
+  tx: string;
+  explorer: string;
+  closed_at: string;
+  from: string;
+  to: string;
+  kind: "sale" | "rental";
+  expires_at: number | null;
+}
+
+/** The right's accepted transfers the RPC still remembers. Empty is an answer. */
+async function fetchTransfers(id: string): Promise<ProvenTransfer[] | null> {
+  try {
+    const response = await fetch(`/api/right/${id}/transfers`, { cache: "no-store" });
+    if (!response.ok) return null;
+    return ((await response.json()) as { transfers: ProvenTransfer[] }).transfers;
+  } catch {
+    return null;
+  }
+}
 
 interface OnChainRight {
   id: number;
@@ -91,6 +118,7 @@ export default function VerifyScreen() {
   const [tab, setTab] = useState<Tab>("id");
   const [rightId, setRightId] = useState("3");
   const [right, setRight] = useState<OnChainRight | null>(null);
+  const [transfers, setTransfers] = useState<ProvenTransfer[] | null>(null);
   const [recordText, setRecordText] = useState("");
   const [attestationText, setAttestationText] = useState("");
   const [claimedHolder, setClaimedHolder] = useState("");
@@ -128,15 +156,13 @@ export default function VerifyScreen() {
       if (input.recordText.trim() !== "") {
         try {
           record = validateRecord(JSON.parse(input.recordText));
+          // d — computed here, in this browser, with WebCrypto.
           recomputed = await commit(record as never);
-          const matches = digestsMatch(recomputed, input.right.commitment);
           collected.push({
-            id: "record",
-            label: "Record is well formed and hashes to the on-chain commitment",
-            ok: matches,
-            detail: matches
-              ? `SHA-256 over the canonical record = 0x${recomputed}`
-              : `record hashes to 0x${recomputed}, ledger holds 0x${input.right.commitment}`,
+            id: "record-digest",
+            label: "Record is well formed — its SHA-256 is computed here",
+            ok: true,
+            detail: `d = 0x${recomputed}; the attestation check below compares it with what the issuer signed`,
           });
         } catch (caught) {
           collected.push({
@@ -167,8 +193,7 @@ export default function VerifyScreen() {
             rightId: input.right.id,
             // From the contract, never from the attestation itself.
             contractIssuer: input.right.issuer,
-            onChainCommitment: input.right.commitment,
-            recomputedCommitment: recomputed,
+            recordDigest: recomputed,
           });
           collected.push(...verification.checks);
         } catch (caught) {
@@ -228,10 +253,12 @@ export default function VerifyScreen() {
       return null;
     }
     setLoading(true);
+    setTransfers(null);
     try {
       const body = await fetchRight(id);
       setRight(body);
       setClaimedHolder(body.effective_holder ?? "");
+      void fetchTransfers(id).then(setTransfers);
       return body;
     } catch (caught) {
       setError(describeError(caught));
@@ -315,6 +342,7 @@ export default function VerifyScreen() {
   // Which of the optional legs were actually taken — the summary says what the
   // reader has, rather than implying more than was checked.
   const checkedARecord = checks?.some((check) => check.id === "record") ?? false;
+  // `record` is the attestation's d-match check; it only runs when a record was given.
   const checkedAHolder = checks?.some((check) => check.id === "holder") ?? false;
 
   const switchTab = (next: Tab) => {
@@ -410,7 +438,7 @@ export default function VerifyScreen() {
               <code>{shortAddress(right.effective_holder)}</code>
               {right.term_ends === null ? " (outright)" : ` until ${formatDate(right.term_ends)}`}
             </dd>
-            <dt>Commitment</dt>
+            <dt>Commitment C</dt>
             <dd className="hash">0x{right.commitment}</dd>
             <dt>On chain</dt>
             <dd>
@@ -421,6 +449,53 @@ export default function VerifyScreen() {
           </dl>
         ) : null}
       </div>
+
+      {right ? (
+        <div className="card">
+          <h2 style={{ marginTop: 0 }}>Verified on chain</h2>
+          <p className="muted" style={{ marginTop: 0 }}>
+            A week moves only when the contract has verified its holder&apos;s ownership proof — there
+            is no other way, and no issuer signature is involved. Each transfer below is one such
+            proof, accepted on chain.
+          </p>
+          {transfers === null ? (
+            <p className="muted">Reading the contract&apos;s recent transfers…</p>
+          ) : transfers.length === 0 ? (
+            <p className="muted">
+              No transfer of this week in the network&apos;s recent window (about a week) — it has not
+              moved since issuance, or moved earlier; the{" "}
+              <a href={explorer.contract()} target="_blank" rel="noreferrer">
+                contract&apos;s history
+              </a>{" "}
+              has every one.
+            </p>
+          ) : (
+            <ul className="checks">
+              {transfers
+                .slice()
+                .reverse()
+                .map((t) => (
+                  <li key={t.tx}>
+                    <span className="mark ok">✓</span>
+                    <span>
+                      <span className="check-label">
+                        {t.kind === "sale" ? "Sold" : `Rented out until ${formatDate(t.expires_at ?? 0)}`} —{" "}
+                        <code>{shortAddress(t.from)}</code> → <code>{shortAddress(t.to)}</code>
+                      </span>
+                      <br />
+                      <span className="check-detail">
+                        proof verified by the contract, {new Date(t.closed_at).toLocaleString()} —{" "}
+                        <a href={t.explorer} target="_blank" rel="noreferrer">
+                          {t.tx.slice(0, 16)}…
+                        </a>
+                      </span>
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
 
       {error ? <div className="note bad">{error}</div> : null}
       {notice ? <div className="note">{notice}</div> : null}
@@ -458,8 +533,15 @@ export default function VerifyScreen() {
             />
             <p className="muted" style={{ margin: "0.3rem 0 0" }}>
               Only if the seller has chosen to show you the detail behind the week — the resort, the
-              unit, the deed. Supply it and this screen proves it is the exact document committed on
-              chain and unaltered since. Leave it empty and nothing is claimed about it.
+              unit, the deed. Supply it and this screen computes its SHA-256 and checks it is the
+              exact document the issuer attested for this week. Leave it empty and nothing is
+              claimed about it.
+            </p>
+            <p className="muted" style={{ margin: "0.3rem 0 0" }}>
+              The last link — that this document is the one inside the ledger&apos;s commitment C —
+              takes the holder&apos;s secret hash and a Poseidon hash, which runs only in the
+              command-line tools, so it is{" "}
+              <code>npm run verify-record -- &lt;id&gt; &lt;attestation&gt; &lt;record&gt; --secret-hash &lt;h&gt;</code>.
             </p>
           </div>
 
@@ -507,8 +589,8 @@ export default function VerifyScreen() {
                 )}
                 {checkedARecord ? (
                   <>
-                    The record you were shown is the exact document committed on chain, unaltered
-                    since issuance.
+                    The record you were shown is the exact document the issuer attested, unaltered
+                    since — <code>npm run verify-record</code> ties it to the ledger&apos;s commitment.
                   </>
                 ) : (
                   <>
@@ -544,7 +626,8 @@ export default function VerifyScreen() {
           <div className="note">
             What was never needed to do any of this: the seller&apos;s identity in any registry, a
             document held by a third party, or a call to the resort. What the ledger gave up in
-            exchange: a hash, two account addresses, and the dates of the week itself.
+            exchange: an opaque commitment, two account addresses, a proof that reveals neither,
+            and the dates of the week itself.
           </div>
         </>
       ) : null}

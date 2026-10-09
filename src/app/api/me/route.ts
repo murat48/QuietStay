@@ -47,21 +47,20 @@ export async function GET(request: Request): Promise<Response> {
       is_issuer: standing.isIssuer,
       /*
        * Whether this deployment can act as the issuer at all. A public one is
-       * not expected to, so the interface has to stop offering issuing, fee
-       * entry and transfer approval — the alternative is a button that costs a
-       * signature to discover a 503.
+       * not expected to, so the interface has to stop offering issuing and fee
+       * entry — the alternative is a button that costs a signature to discover a
+       * 503. Transfers need no issuer key, so they are never read-only.
        *
        * Two ways to fall short, and holding the key is only the first. Issuing
-       * and settling both have to record the attestation they sign, and a right
-       * issued without one can never be transferred, so a host with the key and
-       * nowhere to write is read-only too — more dangerous than one without the
-       * key, because it gets as far as the ledger before finding out.
+       * and settling both have to record the attestation they sign, so a host
+       * with the key and nowhere to write is read-only too — it would otherwise
+       * get as far as the ledger before finding out.
        */
       read_only: !hasIssuerSecret() || !(await attestationStoreIsWritable()),
       /*
        * Separate from `read_only`, because they fail for different reasons and
        * a deployment can have either without the other. No issuer key means no
-       * transfer can be approved; no writable store means an ask cannot even be
+       * week can be issued; no writable store means an ask cannot even be
        * recorded — which is what a serverless host gives you, its filesystem
        * being read-only.
        */

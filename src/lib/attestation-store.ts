@@ -6,8 +6,8 @@
  * **Files**, one per right, are the base. They are what `npm run attest` writes,
  * what git carries, and what ships with the build, and they keep the artifacts
  * inspectable — a reviewer can open
- * `inventory/attestations/right-3.attestation.json` and check the signature by
- * hand, with no access to anything.
+ * `inventory/phase2/attestations/right-3.attestation.json` and check the
+ * signature by hand, with no access to anything.
  *
  * **A key-value store**, when one is configured, is the writable overlay on top.
  * A serverless host has a read-only filesystem, so a week issued from the
@@ -15,34 +15,40 @@
  * and then be untransferable. See `kv.ts`.
  *
  * The overlay is read first and the files second, never one instead of the
- * other. That is what lets the 35 weeks already in git keep working on a host
- * whose store is empty, with no migration step: the store holds what was written
- * since the build, the files hold what came with it.
+ * other. That is what lets the weeks already in git keep working on a host whose
+ * store is empty, with no migration step: the store holds what was written since
+ * the build, the files hold what came with it.
+ *
+ * **Per contract.** Rights are numbered from 1 on every deployment, so Phase 1's
+ * right #1 and Phase 2's right #1 are different weeks. Store keys carry the
+ * contract address and the files live under `inventory/phase2/`, so a Phase 1
+ * attestation is never read as a Phase 2 one.
  *
  * This store is not a source of truth about ownership; the contract is. It only
- * records what the issuer has vouched for, so that the approval service can refuse
- * to approve a transfer of a week it has never attested.
+ * records what the issuer has vouched for, for buyers to read. Under Phase 2 no
+ * transfer depends on it.
  */
 
 import { accessSync, constants, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
-import { DATA_ROOT } from "./config";
+import { CONTRACT_ID, DATA_ROOT } from "./config";
 import { kvGet, kvIsConfigured, kvIsReachable, kvSet } from "./kv";
 import type { Attestation } from "./attestation";
 
-/** The overlay's key for a right. Namespaced, since requests share the store. */
-const kvKey = (rightId: number) => `quietstay:attestation:${rightId}`;
+/**
+ * The overlay's key for a right: namespaced, since requests share the store, and
+ * per contract, since every deployment numbers its rights from 1.
+ */
+const kvKey = (rightId: number) => `quietstay:${CONTRACT_ID}:attestation:${rightId}`;
 
-/** Written by the web app and by `npm run issue`. */
-const PRIMARY_DIR = "inventory/attestations";
-/** Written by `npm run evidence`, kept separate so evidence runs stay disposable. */
-const EVIDENCE_DIR = "inventory/evidence/attestations";
+/** Written by the web app and by `npm run attest`. */
+const PRIMARY_DIR = "inventory/phase2/attestations";
 
 /**
  * The attestation on file for a right, or `null` if the issuer never signed one.
  *
- * Four places, in order, and the order is the point: whatever was written since
+ * Three places, in order, and the order is the point: whatever was written since
  * the build wins over what came with it. Every layer is searched rather than one
  * being chosen, because a deployment with an empty overlay would otherwise
  * **hide** what shipped behind it, and every week would read as never attested.
@@ -55,8 +61,8 @@ const EVIDENCE_DIR = "inventory/evidence/attestations";
  * of paths, which is not style. A build traces `readFileSync` to decide which
  * files to deploy, and it can only do that when the folder is a literal — given
  * `resolve(someVariable, …)` it gives up and copies the entire project into the
- * output, source and all. Two of these three folders are literals for that
- * reason. The third cannot be: it is an environment variable naming a directory
+ * output, source and all. The committed folder is a literal for that reason.
+ * The other cannot be: it is an environment variable naming a directory
  * that does not exist until the app runs, so it is hidden from the tracer
  * instead, which costs nothing — there is nothing there at build time to find.
  */
@@ -87,15 +93,7 @@ export async function loadAttestation(rightId: number): Promise<Attestation | nu
 
   try {
     return JSON.parse(
-      readFileSync(join(process.cwd(), "inventory/attestations", name), "utf8"),
-    ) as Attestation;
-  } catch {
-    // Not here either; try the evidence run's own directory.
-  }
-
-  try {
-    return JSON.parse(
-      readFileSync(join(process.cwd(), "inventory/evidence/attestations", name), "utf8"),
+      readFileSync(join(process.cwd(), "inventory/phase2/attestations", name), "utf8"),
     ) as Attestation;
   } catch {
     return null;
@@ -120,9 +118,8 @@ function filesAreWritable(): boolean {
  * Meant to be asked **before** anything reaches the ledger. Issuing puts a
  * transaction on chain and then records the attestation that goes with it, and
  * the chain half cannot be taken back: a deployment that discovers at the second
- * step that it has nowhere to write has already created a right nobody can
- * transfer, because the approval service will not approve a week the issuer has
- * no attestation for.
+ * step that it has nowhere to write has already created a right with no
+ * attestation for buyers to read.
  *
  * Configured store first, disk second — the same order the writes take. The
  * store is actually pinged rather than assumed: credentials that are present but

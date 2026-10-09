@@ -19,15 +19,16 @@ const nextConfig: NextConfig = {
    * makes the guarantee independent of how well static analysis does: these
    * files are in the deployment because they were asked for.
    *
-   * `/*` rather than a list of routes — five of them read attestations, and a
-   * sixth added later should not silently ship without them.
+   * `/*` rather than a list of routes — several read attestations, and one added
+   * later should not silently ship without them.
    *
    * Without this the build warns "Dynamic filesystem access causes tracing of
    * the whole project" and does what it says: every source file is deployed as
    * part of the server code.
    */
   outputFileTracingIncludes: {
-    "/*": ["./inventory/attestations/**", "./inventory/evidence/attestations/**"],
+    // Phase 2: the attestations for the deployment the app talks to.
+    "/*": ["./inventory/phase2/attestations/**"],
   },
 };
 

@@ -3,11 +3,9 @@
  *
  *   POST /api/tx/submit  { xdr }  → { hash, successful, failure?, explorer }
  *
- * A rejected transaction is a normal, successful outcome for this endpoint: the
- * transfer screen has a control that deliberately submits an unapproved transfer
- * so the contract's refusal can be seen rather than described. That refusal comes
- * back here as `successful: false` with the reason, and with a hash a reviewer can
- * open — not as an error.
+ * A rejected transaction is a normal outcome for this endpoint, not an error: it
+ * comes back as `successful: false` with the contract's reason, and with a hash a
+ * reviewer can open.
  */
 
 import { TransactionBuilder, type Transaction } from "@stellar/stellar-sdk";

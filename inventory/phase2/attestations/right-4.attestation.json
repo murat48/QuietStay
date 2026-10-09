@@ -1,0 +1,32 @@
+{
+  "payload": {
+    "schema": "quietstay.attestation.v2",
+    "network": "Test SDF Network ; September 2015",
+    "contract": "CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD",
+    "right_id": 4,
+    "record_digest": "f50768340ae7065a4c7314c4064e6605feef598d9223f4b11a822cb3adc04f38",
+    "issuer": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "week_valid": true,
+    "property": {
+      "region": "Schladming, Austria",
+      "bedrooms": 2,
+      "sleeps": 6,
+      "features": [
+        "ski-in ski-out",
+        "sauna",
+        "fireplace",
+        "wifi"
+      ]
+    },
+    "maintenance_fees_current": false,
+    "fees_paid_through": "2025-12-31",
+    "issued_at": "2026-10-09T11:46:53.613Z",
+    "not_before": "2026-10-09T11:46:53.613Z",
+    "expires_at": "2027-10-09T11:46:53.613Z"
+  },
+  "signature": {
+    "alg": "ed25519",
+    "key": "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE",
+    "value": "X4XurqVrh/dGpU2WygT29H+IQB116Bu4hyOQe9fC/JrGiJtfIFS7JjxhF4GDuKvjEkqCtjm0XyoeXuyBWBqXAw=="
+  }
+}

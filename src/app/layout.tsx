@@ -10,7 +10,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "QuietStay — tokenized vacation usage rights",
   description:
-    "Phase 1 reference application: issue, list, verify, and transfer tokenized vacation usage rights on Stellar testnet.",
+    "Reference application: issue, list, verify, and transfer tokenized vacation usage rights on Stellar testnet, each transfer authorized by an on-chain ownership proof.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <div className="shell">
             <footer className="foot">
-              Phase 1, Stellar testnet only. Transfer of usage rights only — no payment, escrow, or
+              Phase 2, Stellar testnet only. Transfer of usage rights only — no payment, escrow, or
               settlement, and no legal title transfer. Contract{" "}
               <a href={explorer.contract()} target="_blank" rel="noreferrer">
                 <code>{CONTRACT_ID}</code>

@@ -32,9 +32,8 @@
  * untouched, because this script learns nothing new about either.
  */
 
-import { signAttestation } from "../src/lib/attestation";
+import { attestationIsAuthentic, signAttestation } from "../src/lib/attestation";
 import { loadAttestation, saveAttestation } from "../src/lib/attestation-store";
-import { digestsMatch } from "../src/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, issuerSecret } from "../src/lib/config";
 import { readRight } from "../src/lib/contract";
 import type { PropertyFacts } from "../src/lib/record";
@@ -123,17 +122,20 @@ async function main(): Promise<void> {
     );
   }
 
-  // The attestation on file must already be about the record the ledger holds. If
-  // it is not, the store is out of step with the chain and re-signing would
-  // launder that discrepancy into a fresh, valid-looking signature.
-  if (!digestsMatch(existing.payload.commitment, right.commitment)) {
-    throw new Error(
-      `the attestation on file commits to a different record than the ledger holds:\n` +
-        `  on file   0x${existing.payload.commitment}\n` +
-        `  on chain  0x${right.commitment}`,
-    );
+  // The attestation on file must already be this issuer's genuine statement about
+  // this right on this contract. If it is not, re-signing would launder whatever
+  // is wrong with it into a fresh, valid-looking signature.
+  if (
+    !attestationIsAuthentic(existing, {
+      contract: CONTRACT_ID,
+      network: NETWORK_PASSPHRASE,
+      rightId,
+      contractIssuer: right.issuer,
+    })
+  ) {
+    throw new Error(`the attestation on file is not this issuer's signed statement about right #${rightId}`);
   }
-  log.ok(`the attestation on file matches the ledger, 0x${right.commitment}`);
+  log.ok(`the attestation on file is authentic, for record digest ${existing.payload.record_digest.slice(0, 16)}…`);
 
   if (existing.payload.property) {
     log.warn(
@@ -158,7 +160,8 @@ async function main(): Promise<void> {
     contract: CONTRACT_ID,
     network: NETWORK_PASSPHRASE,
     rightId,
-    commitment: right.commitment,
+    // The record is unchanged, so its digest carries over.
+    recordDigest: existing.payload.record_digest,
     // Carried over untouched. This script knows nothing new about whether the week
     // is a real interval or what is owed on it, and dropping either would quietly
     // un-attest the week on the way through.

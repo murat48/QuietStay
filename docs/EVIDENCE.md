@@ -138,6 +138,8 @@ Phase 1's full authorization for a sale of right #2: the holder's signature and 
 - Error on chain: `Error(Contract, #16)` — WrongSignalCount
 - **Look for:** Status: failed, result invoke_host_function_trapped. Two authorization entries — the holder's and the issuer's — and Error(Contract, #16): no public signals, so no proof.
 
+> In plain terms: this transfer carried both signatures that were enough in Phase 1 — the owner's and the issuer's — but no proof, and the contract counted the proof's values, found none, and refused it (WrongSignalCount means "no proof attached"). So the issuer's signature does not stand in for the proof: without the proof, nothing moves.
+
 #### Issuer transferring a held week to itself — rejected on chain
 
 The issuer builds, signs and pays for a transfer of right #2 from its holder to itself. It has neither the holder's signature nor the holder's secret.
@@ -146,6 +148,8 @@ The issuer builds, signs and pays for a transfer of right #2 from its holder to 
 - Signed by: source account (the issuer)
 - Error on chain: `Error(Auth, InvalidAction)` — a required signature is missing
 - **Look for:** Status: failed, result invoke_host_function_trapped. Source account: the issuer. Error(Auth, InvalidAction) — the holder never authorized it, so nothing past the first check ran.
+
+> In plain terms: the issuer tried to move someone else's week to itself, and the contract's very first check — has the week's holder signed this? — said no (Error(Auth, InvalidAction) means "a required signature is missing"). The issuer cannot sign for the holder, so the issuer cannot take someone else's week.
 
 Where Stellar Expert shows a refusal: open the transaction; it is marked failed,
 the operation's result is `invoke_host_function_trapped`, and the error sits in the

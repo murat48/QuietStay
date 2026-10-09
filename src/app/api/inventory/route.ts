@@ -81,7 +81,6 @@ export async function GET(): Promise<Response> {
             network: NETWORK_PASSPHRASE,
             rightId: right.id,
             contractIssuer: right.issuer,
-            onChainCommitment: right.commitment,
           })
             ? onFile
             : null;

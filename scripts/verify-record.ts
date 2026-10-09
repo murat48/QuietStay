@@ -14,16 +14,22 @@
  * so the tool has to demonstrate it rather than quietly require a deed.
  *
  * Verifies with no document at all:
- *   npm run verify-record -- 3 inventory/attestations/right-3.attestation.json
+ *   npm run verify-record -- 3 inventory/phase2/attestations/right-3.attestation.json
  *
- * The same week, with the record also disclosed:
- *   npm run verify-record -- 3 inventory/attestations/right-3.attestation.json \
+ * The same week, with the record disclosed and checked against the attestation:
+ *   npm run verify-record -- 3 inventory/phase2/attestations/right-3.attestation.json \
  *     inventory/records/week-03.json
  *
+ * And the last step the browser does not take — the record against the ledger's
+ * commitment C = Poseidon(d, title holder, h), which needs the holder's secret
+ * hash h (disclosed with the record; never the secret itself):
+ *   npm run verify-record -- 3 <attestation> inventory/records/week-03.json --secret-hash <h>
+ *
  * A week that should fail, because it carries unpaid fees:
- *   npm run verify-record -- 4 inventory/attestations/right-4.attestation.json
+ *   npm run verify-record -- 4 inventory/phase2/attestations/right-4.attestation.json
  */
 
+import type { JsonValue } from "../src/lib/canonical";
 import { verifyAttestation, type Check } from "../src/lib/attestation";
 import { digestsMatch } from "../src/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE } from "../src/lib/config";
@@ -35,6 +41,8 @@ import {
   type OwnershipRecord,
 } from "../src/lib/record";
 import { fatal, loadEnv, log, readJson } from "./lib/cli";
+import { commitment as poseidonCommitment, splitRecordDigest } from "./lib/zk";
+import { fr } from "./lib/zk-encode";
 
 loadEnv();
 
@@ -51,10 +59,13 @@ function classify(paths: string[]): { attestation?: string; record?: string } {
 }
 
 async function main(): Promise<void> {
-  const [rawId, ...files] = process.argv.slice(2);
+  const argv = process.argv.slice(2);
+  const hAt = argv.indexOf("--secret-hash");
+  const secretHash = hAt === -1 ? undefined : argv[hAt + 1];
+  const [rawId, ...files] = argv.filter((_, i) => hAt === -1 || (i !== hAt && i !== hAt + 1));
   if (!rawId || files.length === 0) {
     console.error(
-      "usage: npm run verify-record -- <right_id> <attestation.json> [record.json]",
+      "usage: npm run verify-record -- <right_id> <attestation.json> [record.json [--secret-hash <h>]]",
     );
     process.exit(1);
   }
@@ -98,16 +109,28 @@ async function main(): Promise<void> {
 
   if (recordPath) {
     record = validateRecord(readJson(recordPath));
+    // d, as sha256sum would give it. The attestation check below compares it with
+    // what the issuer signed.
     recomputed = await recordCommitment(record);
-    const commitmentMatches = digestsMatch(recomputed, right.commitment);
-    checks.push({
-      id: "record",
-      label: "Disclosed record hashes to the on-chain commitment",
-      ok: commitmentMatches,
-      detail: commitmentMatches
-        ? `SHA-256 over the canonical record = 0x${recomputed}`
-        : `record hashes to 0x${recomputed}, ledger holds 0x${right.commitment}`,
-    });
+    log.info(`record d 0x${recomputed}`);
+
+    // The step only the command line takes: C = Poseidon(d, title holder, h).
+    if (secretHash !== undefined) {
+      const d = await splitRecordDigest(record as unknown as JsonValue);
+      const titleHolder = right.holdings[0]?.holder ?? "";
+      const c = fr(await poseidonCommitment(d, titleHolder, BigInt(secretHash)));
+      const matches = digestsMatch(c, right.commitment);
+      checks.push({
+        id: "record-commitment",
+        label: "The record and h give the commitment the ledger holds",
+        ok: matches,
+        detail: matches
+          ? `Poseidon(d, ${titleHolder.slice(0, 8)}…, h) = 0x${c}`
+          : `Poseidon(d, ${titleHolder.slice(0, 8)}…, h) = 0x${c}, the ledger holds 0x${right.commitment}`,
+      });
+    } else {
+      log.warn("no --secret-hash: the record is checked against the attestation, not against C on chain");
+    }
   }
 
   // --- leg 2: the attestation ----------------------------------------------
@@ -118,8 +141,7 @@ async function main(): Promise<void> {
       rightId,
       // From the contract, never from the attestation itself.
       contractIssuer: right.issuer,
-      onChainCommitment: right.commitment,
-      recomputedCommitment: recomputed,
+      recordDigest: recomputed,
     });
     checks.push(...verification.checks);
   } else {

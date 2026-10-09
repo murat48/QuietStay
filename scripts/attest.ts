@@ -11,9 +11,18 @@
  *   - an attestation has expired and needs reissuing;
  *   - the deployment's attestation store was lost and needs rebuilding.
  *
- * The commitment is not taken on trust. It is recomputed from the record and
- * checked against what the contract holds, so this cannot mint an attestation for
- * a record the ledger never committed to.
+ * The record is not taken on trust. Under Phase 2 the ledger holds
+ * `C = Poseidon(d, owner, h)`, so the record is checked against it in one of two
+ * ways, the stronger first:
+ *
+ *   --secret-hash <h>   the owner's secret hash, as the issuer received it at
+ *                       issuance: C is recomputed from the record and compared
+ *                       with the ledger's
+ *   (otherwise)         the record's digest d is compared with the one the issuer
+ *                       recorded at issuance in inventory/phase2/issued.json
+ *
+ * Either way this cannot mint an attestation for a record the issuer never
+ * issued. The attestation it signs binds d, the right id and the contract.
  *
  * ## Fee status is not read off the record alone
  *
@@ -54,10 +63,13 @@
 
 import { signAttestation } from "../src/lib/attestation";
 import { saveAttestation } from "../src/lib/attestation-store";
-import { digestsMatch } from "../src/lib/canonical";
+import { existsSync, readFileSync } from "node:fs";
+import { digestsMatch, type JsonValue } from "../src/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, issuerSecret } from "../src/lib/config";
 import { readRight } from "../src/lib/contract";
 import { feesAreCurrent, propertyFacts, recordCommitment, validateRecord } from "../src/lib/record";
+import { commitment as poseidonCommitment, splitRecordDigest } from "./lib/zk";
+import { fr } from "./lib/zk-encode";
 import { fatal, loadEnv, log, readJson } from "./lib/cli";
 import { Keypair } from "@stellar/stellar-sdk";
 
@@ -84,6 +96,7 @@ async function main(): Promise<void> {
   const regionOverride = valued("--region");
   const rawSleeps = valued("--sleeps");
   const rawFeatures = valued("--features");
+  const secretHashFlag = valued("--secret-hash");
 
   const positional = args.filter((a, i) => !a.startsWith("--") && !valueSlots.has(i));
   const [rawId, recordPath] = positional;
@@ -137,18 +150,43 @@ async function main(): Promise<void> {
     );
   }
 
-  // The record must be the one the ledger committed to. Without this check the
+  // The record must be the one this right was issued for. Without this check the
   // script would happily sign an attestation binding an arbitrary document to a
   // right, which is precisely the substitution the commitment exists to prevent.
-  const commitment = await recordCommitment(record);
-  if (!digestsMatch(commitment, right.commitment)) {
-    throw new Error(
-      `the record does not match right #${rightId}:\n` +
-        `  record hashes to  0x${commitment}\n` +
-        `  the ledger holds  0x${right.commitment}`,
-    );
+  const recordDigest = await recordCommitment(record);
+  if (secretHashFlag !== undefined) {
+    const d = await splitRecordDigest(record as unknown as JsonValue);
+    const titleHolder = right.holdings[0]?.holder ?? "";
+    const c = fr(await poseidonCommitment(d, titleHolder, BigInt(secretHashFlag)));
+    if (!digestsMatch(c, right.commitment)) {
+      throw new Error(
+        `the record and h do not give right #${rightId}'s commitment:\n` +
+          `  Poseidon(d, ${titleHolder.slice(0, 8)}…, h) = ${c}\n` +
+          `  the ledger holds                          ${right.commitment}`,
+      );
+    }
+    log.ok(`record + h give the on-chain commitment C = ${c.slice(0, 16)}…`);
+  } else {
+    const issuedFile = "inventory/phase2/issued.json";
+    const issued = existsSync(issuedFile)
+      ? (JSON.parse(readFileSync(issuedFile, "utf8")) as { contract: string; rights: { right_id: number; record_digest: string }[] })
+      : null;
+    const recorded = issued?.contract === CONTRACT_ID ? issued.rights.find((r) => r.right_id === rightId) : undefined;
+    if (!recorded) {
+      throw new Error(
+        `cannot tie the record to right #${rightId}: pass --secret-hash <h> (the owner's secret hash), ` +
+          `or issue it with npm run zk:reissue so ${issuedFile} records its digest`,
+      );
+    }
+    if (!digestsMatch(recordDigest, recorded.record_digest)) {
+      throw new Error(
+        `the record is not the one right #${rightId} was issued for:\n` +
+          `  record hashes to      ${recordDigest}\n` +
+          `  issued for the digest ${recorded.record_digest}`,
+      );
+    }
+    log.ok(`record digest d = ${recordDigest.slice(0, 16)}… is the one right #${rightId} was issued for`);
   }
-  log.ok(`record matches the on-chain commitment 0x${commitment}`);
 
   // The record is the default; the flags are the issuer restating what it now
   // knows. Without that override a week attested unclean could never become
@@ -226,7 +264,7 @@ async function main(): Promise<void> {
     contract: CONTRACT_ID,
     network: NETWORK_PASSPHRASE,
     rightId,
-    commitment,
+    recordDigest,
     weekValid: true,
     property,
     feesCurrent: clean,

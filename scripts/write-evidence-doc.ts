@@ -11,7 +11,7 @@
 
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 
-import { CONTRACT_ID, NETWORK_PASSPHRASE, explorer } from "../src/lib/config";
+import { NETWORK_PASSPHRASE, PHASE1_CONTRACT_ID as CONTRACT_ID, explorer } from "../src/lib/config";
 import { fatal, log, readJson } from "./lib/cli";
 
 const WASM_PATH = "contracts/target/wasm32v1-none/release/quietstay_rights.wasm";
@@ -109,6 +109,23 @@ interface Phase2Issued {
     issue_tx: string;
   }[];
 }
+
+/**
+ * For a reader with no technical background: why the error is what it is, and
+ * what that proves. Keyed by evidence id.
+ */
+const PLAIN: Record<string, string> = {
+  "rejected-issuer-signed-no-proof":
+    "In plain terms: this transfer carried both signatures that were enough in Phase 1 — " +
+    "the owner's and the issuer's — but no proof, and the contract counted the proof's " +
+    "values, found none, and refused it (WrongSignalCount means \"no proof attached\"). " +
+    "So the issuer's signature does not stand in for the proof: without the proof, nothing moves.",
+  "rejected-issuer-seizure":
+    "In plain terms: the issuer tried to move someone else's week to itself, and the " +
+    "contract's very first check — has the week's holder signed this? — said no " +
+    "(Error(Auth, InvalidAction) means \"a required signature is missing\"). The issuer " +
+    "cannot sign for the holder, so the issuer cannot take someone else's week.",
+};
 
 /** Contract error codes the Phase 2 evidence can show, by number. */
 const ERROR_NAMES: Record<string, string> = {
@@ -226,7 +243,7 @@ ${t.claim}
 
 - Transaction: [\`${t.hash}\`](${t.explorer})
 - Signed by: ${t.signers.map(role).join(", ")}${t.error ? `\n- Error on chain: \`${t.error}\` — ${ERROR_NAMES[t.error] ?? ""}` : ""}
-- **Look for:** ${t.look_for}`,
+- **Look for:** ${t.look_for}${PLAIN[t.id] ? `\n\n> ${PLAIN[t.id]}` : ""}`,
   )
   .join("\n\n")}
 
@@ -369,8 +386,8 @@ contract rather than by good behaviour, and
 | | |
 | --- | --- |
 | **Network** | \`${NETWORK_PASSPHRASE}\` (testnet) |
-| **Contract address** | [\`${CONTRACT_ID}\`](${explorer.contract()}) |
-| **Explorer** | ${explorer.contract()} |
+| **Contract address** | [\`${CONTRACT_ID}\`](${explorer.contract(CONTRACT_ID)}) |
+| **Explorer** | ${explorer.contract(CONTRACT_ID)} |
 | **Source** | [\`contracts/quietstay-rights/src/\`](${REPO}/tree/${PHASE1.commit}/contracts/quietstay-rights/src) at the last Phase 1 commit |
 | **Tests** | [\`src/test.rs\`](${REPO}/blob/${PHASE1.commit}/contracts/quietstay-rights/src/test.rs) — ${tests} tests, \`git checkout ${PHASE1.commit.slice(0, 7)} && cd contracts && cargo test\` |${
     wasmBytes === null

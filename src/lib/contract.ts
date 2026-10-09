@@ -2,17 +2,20 @@
  * Client for the deployed QuietStay rights registry.
  *
  * Reads go through simulation, so they cost nothing and need no signature.
- * Writes follow the two-signature flow the contract requires:
+ * A transfer (Phase 2) is built from an ownership proof the holder made with the
+ * command-line prover:
  *
- *   1. build the invocation with the holder's account as source
- *   2. simulate — the host reports that the issuer's approval is also required
- *   3. the issuer signs that authorization entry (this is the SEP-8 analogue,
- *      and it happens in `/api/approve-transfer`, never in the browser)
- *   4. the holder signs the transaction envelope and submits
+ *   1. build `transfer(from, to, right_id, expires_at, proof, public_signals)`
+ *      with the holder's account as source
+ *   2. simulate — the host reports which signatures the contract wants: the
+ *      holder's, which the envelope signature covers, and on a sale the buyer's
+ *      over `(right_id, h')`
+ *   3. on a sale, put in the consent the buyer signed when asking for the week
+ *   4. the holder's wallet signs the envelope and it is submitted
  *
- * Step 3 is what the contract enforces. Skip it and the transfer is rejected on
- * chain — `scripts/produce-evidence.ts` submits exactly that transaction on
- * purpose, so the rejection is a thing a reviewer can open in an explorer.
+ * The issuer appears nowhere in a transfer. The contract verifies the proof on
+ * chain; a transaction carrying a bad one is refused there, which is what
+ * docs/EVIDENCE.md's rejected transactions show.
  */
 
 import {
@@ -22,7 +25,6 @@ import {
   Keypair,
   Operation,
   TransactionBuilder,
-  authorizeEntry,
   nativeToScVal,
   rpc,
   scValToNative,
@@ -31,7 +33,7 @@ import {
 } from "@stellar/stellar-sdk";
 
 import { toHex } from "./canonical";
-import { APPROVAL_VALIDITY_LEDGERS, CONTRACT_ID, NETWORK_PASSPHRASE, RPC_URL } from "./config";
+import { CONTRACT_ID, NETWORK_PASSPHRASE, RPC_URL } from "./config";
 import { describeContractFailure, isRightNotFound } from "./errors";
 
 export const server = new rpc.Server(RPC_URL);
@@ -297,20 +299,29 @@ export async function readInventory(contractId?: string): Promise<
 
 // --- writes --------------------------------------------------------------
 
-export interface TransferTerms {
+/** A transfer as the command-line prover wrote it (`transfer.json`). */
+export interface ProvenTransfer {
   from: string;
   to: string;
   rightId: number;
   /** Unix seconds for a rental; `null` for a sale. */
   expiresAt: number | null;
+  /** G1, G2, G1 in Soroban's byte layout, hex. */
+  proof: { a: string; b: string; c: string };
+  /** The eleven public signals, decimal, in docs/CIRCUIT.md §7 order. */
+  signals: string[];
 }
 
-function transferArgs(terms: TransferTerms): xdr.ScVal[] {
+const bytesHex = (hex: string): xdr.ScVal => xdr.ScVal.scvBytes(Buffer.from(hex, "hex"));
+
+function transferArgs(t: ProvenTransfer): xdr.ScVal[] {
   return [
-    addr(terms.from),
-    addr(terms.to),
-    u64(terms.rightId),
-    option(terms.expiresAt === null ? null : u64(terms.expiresAt)),
+    addr(t.from),
+    addr(t.to),
+    u64(t.rightId),
+    option(t.expiresAt === null ? null : u64(t.expiresAt)),
+    struct({ a: bytesHex(t.proof.a), b: bytesHex(t.proof.b), c: bytesHex(t.proof.c) }),
+    xdr.ScVal.scvVec(t.signals.map((s) => nativeToScVal(BigInt(s), { type: "u256" }))),
   ];
 }
 
@@ -331,8 +342,6 @@ async function buildInvocation(
     .build();
 }
 
-export const buildTransferTx = (terms: TransferTerms, contractId?: string) =>
-  buildInvocation(terms.from, "transfer", transferArgs(terms), contractId);
 
 export const buildIssueTx = (
   params: {
@@ -381,11 +390,8 @@ function entryAddress(entry: xdr.SorobanAuthorizationEntry): string | null {
  * everything else — crucially the Soroban resource footprint.
  *
  * `TransactionBuilder.cloneFrom` deliberately does *not* carry `sorobanData`
- * over unless the caller passes it (only `assembleTransaction` does). Cloning
- * without it yields an invocation with no declared resources, which the network
- * rejects as `txMalformed` at submission — before it reaches a ledger, and so
- * before the contract gets to reject it. For the unapproved-transfer evidence
- * that distinction is the whole artifact, so the footprint is preserved here.
+ * over unless the caller passes it (only `assembleTransaction` does), so it is
+ * preserved here when present.
  *
  * The fee is left to `cloneFrom`, which subtracts the resource fee to recover the
  * classic portion; the builder adds it back when `sorobanData` is present.
@@ -425,85 +431,98 @@ async function simulateOrThrow(
 }
 
 /**
- * Sign the issuer's authorization entry and return a transaction that is ready
- * for the holder to sign and submit.
+ * A proof-authorized transfer, ready for the holder's wallet to sign.
  *
- * The issuer signs *one* entry out of the transaction's authorization tree — the
- * one bound to the invocation `(contract, "transfer", from, to, right_id,
- * expires_at)`. It does not sign the envelope, so it cannot alter the terms, add
- * operations, or submit anything by itself. That asymmetry is the whole reason a
- * trusted-attester issuer is not also an issuer that can take your week.
+ * Simulated twice. The first run reports which signatures the contract wants;
+ * a buyer's, on a sale, is replaced by the consent the buyer signed in advance
+ * (`src/lib/consent.ts`). The second run, with that signed consent in place,
+ * checks the whole call — proof included — and sets the resources. A proof the
+ * contract would refuse fails here, with the contract's reason, before the
+ * holder is asked to sign anything.
  */
-export async function approveTransferAsIssuer(
-  tx: Transaction,
-  issuer: Keypair,
-): Promise<{ tx: Transaction; approvedEntries: string[]; validUntilLedger: number }> {
-  const sim = await simulateOrThrow(tx);
-  const entries = simulationAuthEntries(sim);
+export async function buildProvenTransferTx(
+  t: ProvenTransfer,
+  buyerConsent: string | null,
+  contractId: string = CONTRACT_ID,
+): Promise<Transaction> {
+  const tx = await buildInvocation(t.from, "transfer", transferArgs(t), contractId);
+  const first = await simulateOrThrow(tx);
 
-  const { sequence } = await server.getLatestLedger();
-  const validUntilLedger = sequence + APPROVAL_VALIDITY_LEDGERS;
-
-  const approvedEntries: string[] = [];
-  const signed = await Promise.all(
-    entries.map(async (entry) => {
-      const address = entryAddress(entry);
-      if (address !== issuer.publicKey()) return entry;
-      approvedEntries.push(address);
-      return authorizeEntry(entry, issuer, validUntilLedger, NETWORK_PASSPHRASE);
-    }),
-  );
-
-  if (approvedEntries.length === 0) {
-    // The issuer transferring a week it holds itself — a resort selling its own
-    // unsold inventory. `buildTransferTx` makes `from` the source account, so
-    // when `from` is the issuer both `from.require_auth()` and the issuer's
-    // approval are satisfied by the envelope signature, and Soroban emits no
-    // separate address-credentials entry for either. There is genuinely nothing
-    // to co-sign, and the transfer is fully authorized once the envelope is
-    // signed — so this returns the prepared transaction rather than refusing a
-    // transfer the contract would accept.
-    if (tx.source === issuer.publicKey()) {
-      return { tx: rpc.assembleTransaction(tx, sim).build(), approvedEntries, validUntilLedger };
+  const auth = simulationAuthEntries(first).map((entry) => {
+    const who = entryAddress(entry);
+    if (who === null) return entry; // the holder, covered by the envelope signature
+    if (who === t.to && t.expiresAt === null) {
+      if (!buyerConsent) {
+        throw new ContractCallError(
+          "a sale needs the buyer's signed consent, which the buyer gives when asking for the week",
+          who,
+        );
+      }
+      return xdr.SorobanAuthorizationEntry.fromXDR(buyerConsent, "base64");
     }
-    throw new ContractCallError(
-      "this transaction does not ask for the issuer's approval — nothing to sign",
-      entries.map(entryAddress),
-    );
-  }
+    throw new ContractCallError(`the contract asks for a signature from ${who}, which this app cannot supply`, who);
+  });
 
-  // Re-simulate with the signatures attached so the resource footprint accounts
-  // for their size, then keep our signed entries (assembleTransaction preserves
-  // existing auth) while taking the fresh resources.
-  const authed = rebuildWithAuth(tx, signed);
-  const finalSim = await simulateOrThrow(authed);
-  return {
-    tx: rpc.assembleTransaction(authed, finalSim).build(),
-    approvedEntries,
-    validUntilLedger,
-  };
+  const withAuth = rebuildWithAuth(tx, auth);
+  const second = await simulateOrThrow(withAuth);
+  return rpc.assembleTransaction(withAuth, second).build();
+}
+
+/** One `transfer` the contract accepted, as its event records it. */
+export interface TransferEvent {
+  txHash: string;
+  ledger: number;
+  closedAt: string;
+  from: string;
+  to: string;
+  rightId: number;
+  expiresAt: number | null;
+  commitment: string;
 }
 
 /**
- * Prepare a transfer with the issuer's approval deliberately withheld.
+ * The accepted transfers of a right that the RPC still remembers.
  *
- * The footprint comes from an approved simulation, so the transaction is valid
- * enough to reach the ledger — and is then rejected by the contract when the
- * missing authorization is checked. That is the point: it produces a real,
- * openable transaction hash showing enforcement, rather than a claim that
- * enforcement exists.
+ * Every one of them is a proof the contract verified: `transfer` emits its
+ * event only after the pairing check passes, and there is no other way to move a
+ * right. The RPC keeps events for a limited window (about a week on testnet), so
+ * an empty answer means "none recently", not "never".
  */
-export async function prepareUnapprovedTransfer(
-  tx: Transaction,
-  issuer: Keypair,
-): Promise<Transaction> {
-  const approved = await approveTransferAsIssuer(tx, issuer);
-  const op = approved.tx.operations[0];
-  if (!op || op.type !== "invokeHostFunction") {
-    throw new Error("expected a single invokeHostFunction operation");
+export async function readTransferEvents(rightId: number, contractId: string = CONTRACT_ID): Promise<TransferEvent[]> {
+  const latest = await server.getLatestLedger();
+  const topic = xdr.ScVal.scvSymbol("transfer").toXDR("base64");
+  const filters = [{ type: "contract" as const, contractIds: [contractId], topics: [[topic, "*", "*"]] }];
+
+  // The node scans a bounded range of ledgers per request (about 10,000 on
+  // testnet) and hands back a cursor, so a window reaching back a week takes a
+  // dozen pages. A cursor is "<toid>-<index>" and a toid carries the ledger
+  // sequence in its top 32 bits, which is how the loop knows it has caught up.
+  const ledgerOf = (cursor: string) => Number(BigInt(cursor.split("-")[0] ?? "0") >> 32n);
+  const events: rpc.Api.EventResponse[] = [];
+  let page = await server.getEvents({ startLedger: Math.max(1, latest.sequence - 120_000), filters, limit: 200 });
+  events.push(...page.events);
+  for (let i = 0; i < 30 && page.cursor && ledgerOf(page.cursor) < page.latestLedger; i += 1) {
+    page = await server.getEvents({ cursor: page.cursor, filters, limit: 200 });
+    events.push(...page.events);
   }
-  const withoutIssuer = (op.auth ?? []).filter((e) => entryAddress(e) !== issuer.publicKey());
-  return rebuildWithAuth(approved.tx, withoutIssuer);
+
+  const out: TransferEvent[] = [];
+  for (const event of events) {
+    const topics = event.topic.map((t) => scValToNative(t));
+    const data = scValToNative(event.value) as { right_id: bigint; expires_at: bigint | null; commitment: Buffer };
+    if (Number(data.right_id) !== rightId) continue;
+    out.push({
+      txHash: event.txHash,
+      ledger: event.ledger,
+      closedAt: event.ledgerClosedAt,
+      from: String(topics[1]),
+      to: String(topics[2]),
+      rightId,
+      expiresAt: data.expires_at === null || data.expires_at === undefined ? null : Number(data.expires_at),
+      commitment: toHex(new Uint8Array(data.commitment)),
+    });
+  }
+  return out;
 }
 
 /** Simulate, apply resources, and return a transaction ready to sign. */

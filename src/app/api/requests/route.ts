@@ -18,19 +18,20 @@
  * already its holder. All three are read from the contract, not from the body.
  *
  * Also refused: an offer on a week that is out on a term. Only the account holding
- * that term can have listed it, so the offer is a sub-let, which this issuer
- * declines to approve — the account holding title is not consulted by `transfer`
- * and would have no say. Such a request could never be accepted.
+ * that term can have listed it, so the offer is a sub-let — and only the title
+ * holder can prove a transfer. Such a request could never be accepted.
  *
- * Not checked: whether the issuer would approve the resulting transfer on fee
- * grounds. A week in arrears **can** be asked for, because the holder may settle
- * the fees precisely *because* somebody asked. Refusing there would make the
- * arrears self-fulfilling. The registry marks such weeks, and the transfer itself
- * would decline until they are paid.
+ * Not checked: fee status. A week in arrears can be asked for and transferred —
+ * no attestation is a condition of a transfer. The registry marks such weeks so
+ * a buyer knows.
+ *
+ * Asking to buy needs the buyer's consent to the sale (src/lib/consent.ts),
+ * checked here before anything is recorded.
  */
 
 import { randomUUID } from "node:crypto";
 
+import { assembleConsent, parseSecretHash } from "@/lib/consent";
 import { ContractCallError, readInventory } from "@/lib/contract";
 import {
   RequestStoreUnavailable,
@@ -52,7 +53,11 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let body: { right_id?: unknown };
+  let body: {
+    right_id?: unknown;
+    /** Required to ask to buy: from /api/requests/consent, plus the wallet's signature. */
+    consent?: { next_secret_hash?: unknown; entry?: unknown; signature?: unknown; valid_until_ledger?: unknown };
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -79,16 +84,16 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: "you already hold this week" }, { status: 409 });
     }
     // A week out on a term can only have been listed by the account holding that
-    // term, so any offer on one is a sub-let. The contract permits it and this
-    // issuer declines to approve it, which means such a request could never be
-    // accepted — recording one would only invite an ask that goes nowhere. The
+    // term, so any offer on one is a sub-let — and no renter can carry one out:
+    // proving a transfer takes the record secret, which only the title holder
+    // has. Recording the ask would only invite something that goes nowhere. The
     // screen hides the control; this is what enforces it.
     if (row.holding.expiresAt !== null) {
       return Response.json(
         {
           error:
             "this offer is a sub-let — the account offering it holds the week on a term, not " +
-            "by title, and this issuer does not approve sub-lets",
+            "by title, and only the title holder can prove a transfer",
           term_ends: row.holding.expiresAt,
           title_holder: row.right.holdings[0]?.holder ?? null,
         },
@@ -104,6 +109,51 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
+    // Asking to buy carries the buyer's consent to the sale (src/lib/consent.ts):
+    // without it the holder's proof could not be submitted. Checked here — for
+    // this buyer, this week and this h' — so a bad one is refused at the ask.
+    let consent: TransferRequest["consent"];
+    if (row.listing.termSecs === null) {
+      const c = body.consent;
+      if (!c) {
+        return Response.json(
+          {
+            error:
+              "asking to buy needs your consent to the sale: your record secret's hash h' " +
+              "(from `npm run zk:secret`), signed by your wallet",
+          },
+          { status: 400 },
+        );
+      }
+      let h: bigint;
+      try {
+        h = parseSecretHash(c.next_secret_hash);
+      } catch (error) {
+        return Response.json({ error: (error as Error).message }, { status: 400 });
+      }
+      const validUntil = Number(c.valid_until_ledger);
+      if (typeof c.entry !== "string" || typeof c.signature !== "string" || !Number.isInteger(validUntil)) {
+        return Response.json({ error: "consent needs entry, signature and valid_until_ledger" }, { status: 400 });
+      }
+      let authEntry: string;
+      try {
+        authEntry = await assembleConsent({
+          buyer: caller,
+          rightId,
+          nextSecretHash: h,
+          entry: c.entry,
+          signature: c.signature,
+          validUntilLedger: validUntil,
+        });
+      } catch (error) {
+        return Response.json(
+          { error: `the consent did not check out: ${error instanceof Error ? error.message : String(error)}` },
+          { status: 400 },
+        );
+      }
+      consent = { next_secret_hash: h.toString(), auth_entry: authEntry, valid_until_ledger: validUntil };
+    }
+
     const record: TransferRequest = {
       id: randomUUID(),
       right_id: rightId,
@@ -114,6 +164,7 @@ export async function POST(request: Request): Promise<Response> {
       term_secs: row.listing.termSecs,
       requested_at: new Date().toISOString(),
       status: "open",
+      ...(consent ? { consent } : {}),
     };
 
     const all = await loadRequests(rightId);

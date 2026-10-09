@@ -3,8 +3,7 @@
  *
  * Proves that whoever is using the app controls a particular Stellar account. The
  * app needs this in two places: the issue screen must only work for the issuer,
- * and the transfer screen must only ask for approval on behalf of the account
- * that actually holds the week.
+ * and a transfer must only be built for the account that actually holds the week.
  *
  * The whole handshake is `WebAuth` out of `@stellar/stellar-sdk`. Nothing here
  * builds or checks a signature by hand:

@@ -17,11 +17,14 @@
  * person could supply, and a hand-typed salt is the one field that reliably comes
  * out malformed.
  *
- * The commitment is computed here, in the browser, before anything is sent — so
- * the person issuing can see the hash and the canonical byte count and confirm
- * they match what they would get from `npm run commit-record` or `sha256sum`. The
- * record itself never goes further than the issuer's own server, and none of it
- * reaches the ledger.
+ * The record's digest `d` — SHA-256 over its canonical bytes — is computed here,
+ * in the browser, before anything is sent, so the person issuing can see it and
+ * confirm it matches `npm run commit-record` or `sha256sum`. What goes on chain is
+ * the commitment `C = Poseidon(d, owner, h)` (docs/CIRCUIT.md §2), from the hash
+ * `h` of a secret only the owner holds. Poseidon runs only in the command-line
+ * tools, never in a browser, so the issuer computes `C` with
+ * `npm run zk:commitment` and pastes it here. The record itself never goes further
+ * than the issuer's own server, and none of it reaches the ledger.
  *
  * Only the issuer can do this. The contract enforces that; SEP-10 keeps the
  * deployment's issuing key from being driven by anyone who finds the URL.
@@ -160,6 +163,7 @@ interface Preview {
 
 interface IssueResult {
   right_id: number;
+  record_digest: string;
   commitment: string;
   tx: string;
   explorer: string;
@@ -178,6 +182,8 @@ export default function IssueScreen() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<IssueResult | null>(null);
+  // C, pasted from `npm run zk:commitment` — Poseidon does not run in a browser.
+  const [commitmentC, setCommitmentC] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   // Generate the two commitment fields once the component is in the browser.
@@ -303,7 +309,7 @@ export default function IssueScreen() {
     try {
       const response = await authFetch("/api/issue", {
         method: "POST",
-        body: JSON.stringify({ record: JSON.parse(recordText) }),
+        body: JSON.stringify({ record: JSON.parse(recordText), commitment: commitmentC.trim() }),
       });
       const body = (await response.json()) as IssueResult & { error?: string };
       if (!response.ok) throw new Error(body.error ?? "issuance failed");
@@ -313,7 +319,7 @@ export default function IssueScreen() {
     } finally {
       setBusy(false);
     }
-  }, [authFetch, recordText]);
+  }, [authFetch, recordText, commitmentC]);
 
   // Taken from the registry rather than compared against configuration, so the
   // button agrees with what the contract would actually accept.
@@ -327,7 +333,8 @@ export default function IssueScreen() {
     <>
       <h1>Issue a usage right</h1>
       <p className="lede">
-        The ownership record stays off chain. What goes on chain is a SHA-256 commitment to it, the
+        The ownership record stays off chain. What goes on chain is a commitment that wraps its
+        SHA-256 with the owner&apos;s account and the hash of a secret only the owner holds, the
         week&apos;s dates, the use year, and the first holder — nothing else.
       </p>
 
@@ -676,7 +683,7 @@ export default function IssueScreen() {
           <>
             <h3>What will be committed</h3>
             <dl className="facts">
-              <dt>Commitment</dt>
+              <dt>Record digest d</dt>
               <dd className="hash">0x{preview.commitment}</dd>
               <dt>Canonical form</dt>
               <dd>
@@ -763,19 +770,40 @@ export default function IssueScreen() {
         is gated.
       */}
       <RoleGate requires="issuer" action="Issuing a usage right">
+        <div className="card">
+          <div className="field">
+            <label htmlFor="commitment-c">Commitment C, from the command line</label>
+            <input
+              id="commitment-c"
+              value={commitmentC}
+              onChange={(event) => setCommitmentC(event.target.value)}
+              placeholder="64 hex digits"
+              spellCheck={false}
+            />
+          </div>
+          <p className="muted" style={{ marginBottom: 0 }}>
+            The owner makes a secret on their own machine with <code>npm run zk:secret</code> and
+            sends you only its hash <code>h</code>. Then, with this record saved to a file:
+          </p>
+          <pre>{`npm run zk:commitment -- --record <this record>.json \\
+  --owner ${text("owner.stellar_account") || "<owner G…>"} --secret-hash <the owner's h>`}</pre>
+          <p className="muted" style={{ marginBottom: 0 }}>
+            Poseidon, which C needs, runs only in the command-line tools — never in a browser. You
+            never learn the owner&apos;s secret, so you can never prove a transfer of the week.
+          </p>
+        </div>
         {readOnly ? (
           <div className="note warn">
             <strong>This deployment cannot issue.</strong> It does not hold the issuer key, on
-            purpose: the key signs every attestation and authorizes every transfer, and the
-            contract fixed its issuer at construction, so a key that leaked could never be
-            replaced. Everything above still works — the commitment is computed in your browser
-            and needs no key at all. Issuing is done from wherever the key already lives.
+            purpose: the key signs every attestation, and the contract fixed its issuer at
+            construction, so a key that leaked could never be replaced. Everything above still
+            works — the record digest is computed in your browser and needs no key at all. Issuing is done from wherever the key already lives.
           </div>
         ) : (
           <button
             className="primary"
             onClick={() => void issue()}
-            disabled={busy || !preview || !isIssuer}
+            disabled={busy || !preview || !isIssuer || !/^[0-9a-fA-F]{64}$/.test(commitmentC.trim())}
           >
             {busy ? "issuing…" : "Issue on testnet"}
           </button>
@@ -792,7 +820,9 @@ export default function IssueScreen() {
           </div>
           <div className="card">
             <dl className="facts">
-              <dt>Commitment</dt>
+              <dt>Record digest d</dt>
+              <dd className="hash">0x{result.record_digest}</dd>
+              <dt>Commitment C</dt>
               <dd className="hash">0x{result.commitment}</dd>
               <dt>Transaction</dt>
               <dd>

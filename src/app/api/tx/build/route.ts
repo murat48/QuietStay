@@ -4,10 +4,9 @@
  *   POST /api/tx/build  { action: "list" | "unlist", by, rightId, termSecs? }
  *     → { xdr }
  *
- * Only for the actions that need no issuer involvement — publishing and
- * withdrawing an offer. A transfer goes through `/api/approve-transfer` instead,
- * because it needs the issuer's authorization entry attached before the holder
- * signs.
+ * For publishing and withdrawing an offer. A transfer goes through
+ * `/api/tx/proven-transfer`, because it carries an ownership proof and, on a
+ * sale, the buyer's signed consent.
  *
  * The server does the simulation because that is where the RPC lives, not because
  * it has any authority: the transaction comes back unsigned, and the holder's

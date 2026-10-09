@@ -3,8 +3,9 @@
  *
  * An attestation is the issuer saying, in a form anyone can check: *this usage
  * right is a real week, it carries no unpaid maintenance fees, and it is in this
- * part of the world.* It is the one place Phase 1 rests on trusting the issuer,
- * and it does so explicitly.
+ * part of the world.* Under Phase 2 it is the one thing that still rests on
+ * trusting the issuer, and it decides nothing: no transfer depends on it, so
+ * withholding one cannot freeze a week. It is there for the buyer to read.
  *
  * ## Why the property description is here and not in the listing
  *
@@ -23,8 +24,8 @@
  * Where the line falls is set out on `PropertyFacts` in `record.ts`: the town but
  * not the resort, what the place is but not which apartment it is.
  *
- * Phase 2's per-field commitments would let a seller prove these against the
- * ledger without the issuer vouching for them at all; until then this is the
+ * Selective disclosure — proving such fields against the ledger without the
+ * issuer vouching for them — is out of scope for Phase 2; until then this is the
  * honest version, and it says out loud whose word it rests on.
  *
  * ## What it is not
@@ -40,24 +41,27 @@
  * `Keypair.sign` / `Keypair.verify` — the same primitive that signs every Stellar
  * transaction. No cryptography is implemented here.
  *
- *     signing input = "QuietStay-Attestation-v1:" || canonical(payload)
+ *     signing input = "QuietStay-Attestation-v2:" || canonical(payload)
  *
  * The prefix is domain separation: it makes the signed bytes unmistakably an
  * attestation and not a transaction envelope or any other payload the same key
  * might sign.
  *
- * ## Binding
+ * ## Binding (v2)
  *
- * Four fields tie an attestation to exactly one thing, so it cannot be lifted
- * onto another week, another deployment, or mainnet:
+ * Four signed fields tie an attestation to exactly one thing, so it cannot be
+ * lifted onto another week, another deployment, or mainnet:
  *
- * - `right_id`  — the specific right
- * - `commitment`— the specific off-chain record
- * - `contract`  — the specific deployment
- * - `network`   — the specific network passphrase
+ * - `record_digest` — `d`, the SHA-256 of the canonical off-chain record
+ * - `right_id`      — the specific right
+ * - `contract`      — the specific deployment
+ * - `network`       — the specific network passphrase
  *
- * A verifier checks all four against what the contract actually says.
- * `docs/ATTESTATION.md` states the procedure in full.
+ * v1 bound the on-chain commitment instead. Under Phase 2 the ledger holds
+ * `C = Poseidon(d, holder, h)`, which changes on every sale and which nobody
+ * can recompute without `h` and Poseidon — so the attestation binds `d`, which
+ * never changes, and the step from `d` to the ledger's `C` is
+ * `npm run verify-record`'s. `docs/ATTESTATION.md` states the procedure in full.
  */
 
 import { Keypair } from "@stellar/stellar-sdk";
@@ -65,8 +69,8 @@ import { Keypair } from "@stellar/stellar-sdk";
 import { canonicalBytes, digestsMatch, type JsonValue } from "./canonical";
 import type { PropertyFacts } from "./record";
 
-export const ATTESTATION_SCHEMA = "quietstay.attestation.v1";
-export const SIGNING_PREFIX = "QuietStay-Attestation-v1:";
+export const ATTESTATION_SCHEMA = "quietstay.attestation.v2";
+export const SIGNING_PREFIX = "QuietStay-Attestation-v2:";
 
 export interface AttestationPayload {
   schema: typeof ATTESTATION_SCHEMA;
@@ -76,8 +80,8 @@ export interface AttestationPayload {
   contract: string;
   /** The right being attested. */
   right_id: number;
-  /** Lowercase hex SHA-256 of the canonical off-chain record. */
-  commitment: string;
+  /** `d`: lowercase hex SHA-256 of the canonical off-chain record. */
+  record_digest: string;
   /** The issuer's account, which is also the signing key. */
   issuer: string;
   /** The issuer asserts the week is a real, allocated interval. */
@@ -126,7 +130,8 @@ export interface AttestationTerms {
   contract: string;
   network: string;
   rightId: number;
-  commitment: string;
+  /** `d`, the record's SHA-256. */
+  recordDigest: string;
   weekValid: boolean;
   /** Public property description. Omitted, not blank, when there is none. */
   property?: PropertyFacts;
@@ -148,7 +153,7 @@ export function signAttestation(issuer: Keypair, terms: AttestationTerms): Attes
     network: terms.network,
     contract: terms.contract,
     right_id: terms.rightId,
-    commitment: terms.commitment.toLowerCase(),
+    record_digest: terms.recordDigest.toLowerCase(),
     issuer: issuer.publicKey(),
     week_valid: terms.weekValid,
     // Spread rather than assigned: canonical JSON has no representation for
@@ -178,10 +183,11 @@ export interface AttestationExpectation {
   rightId: number;
   /** `issuer()` as read from the contract — not from the attestation. */
   contractIssuer: string;
-  /** `commitment(right_id)` as read from the contract. */
-  onChainCommitment: string;
-  /** Recomputed from the off-chain record the counterparty disclosed, if any. */
-  recomputedCommitment?: string;
+  /**
+   * `d` recomputed from the off-chain record the counterparty disclosed, if any —
+   * SHA-256 over its canonical bytes, in the verifier's own hands.
+   */
+  recordDigest?: string;
   now?: Date;
 }
 
@@ -295,25 +301,16 @@ export function verifyAttestation(
       : "signature does not verify against the payload — it was altered or signed by another key",
   );
 
-  const commitmentOnChain = digestsMatch(payload.commitment, expect.onChainCommitment);
-  add(
-    "commitment-onchain",
-    "Attested commitment matches the ledger",
-    commitmentOnChain,
-    commitmentOnChain
-      ? `0x${expect.onChainCommitment}`
-      : `attestation commits to ${payload.commitment}, the ledger holds ${expect.onChainCommitment}`,
-  );
-
-  if (expect.recomputedCommitment !== undefined) {
-    const recomputedMatches = digestsMatch(expect.recomputedCommitment, expect.onChainCommitment);
+  if (expect.recordDigest !== undefined) {
+    const matches =
+      typeof payload.record_digest === "string" && digestsMatch(payload.record_digest, expect.recordDigest);
     add(
-      "commitment-record",
-      "Disclosed record hashes to the on-chain commitment",
-      recomputedMatches,
-      recomputedMatches
-        ? "SHA-256 over the canonical record equals the committed hash"
-        : `the record hashes to ${expect.recomputedCommitment}, the ledger holds ${expect.onChainCommitment}`,
+      "record",
+      "The disclosed record is the one the issuer attested",
+      matches,
+      matches
+        ? `SHA-256 over the canonical record is ${expect.recordDigest.slice(0, 16)}…, as attested`
+        : `the record hashes to ${expect.recordDigest}, the attestation is for ${String(payload.record_digest)}`,
     );
   }
 

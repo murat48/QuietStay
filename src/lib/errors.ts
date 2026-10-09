@@ -58,6 +58,34 @@ export const CONTRACT_ERRORS: Record<number, { name: string; message: string }> 
   13: { name: "AlreadyListed", message: "This right is already listed. Withdraw the offer first." },
   14: { name: "NotListed", message: "This right is not currently listed." },
   15: { name: "InvalidTerm", message: "A rental term must be longer than zero seconds." },
+  // --- Phase 2: the ownership proof ---
+  16: { name: "WrongSignalCount", message: "No ownership proof was attached — a transfer needs one." },
+  17: {
+    name: "NonCanonicalSignal",
+    message: "The proof's values are not in the form the contract accepts. Make the proof again with `npm run zk:prove`.",
+  },
+  18: { name: "NotAnAccount", message: "Weeks can only be held by ordinary Stellar accounts (G…), not by contracts." },
+  19: {
+    name: "CommitmentMismatch",
+    message:
+      "This proof is for a different record secret than the one this week is committed to. After a sale only the buyer can prove; a renter never can.",
+  },
+  20: { name: "RightMismatch", message: "This proof was made for a different week." },
+  21: { name: "WrongAccount", message: "This proof names a different account than the one sending the week." },
+  22: { name: "RecipientMismatch", message: "This proof was made for a different recipient." },
+  23: {
+    name: "ModeMismatch",
+    message: "This proof was made for a different kind of transfer — a sale instead of a rental, or a rental ending at another time.",
+  },
+  24: { name: "ProofExpired", message: "This proof's window has passed. Make a fresh one with `npm run zk:prove`." },
+  25: { name: "ExpiryBeyondWindow", message: "This proof claims to stay valid for longer than the contract allows (about an hour)." },
+  26: {
+    name: "NextSecretHashMismatch",
+    message: "A sale needs the buyer's secret hash in the proof, and a rental must not carry one.",
+  },
+  27: { name: "NullifierUsed", message: "This proof has already been used. Each proof is good for one transfer." },
+  28: { name: "InvalidProof", message: "The ownership proof did not verify. The week did not move." },
+  29: { name: "MalformedVerifyingKey", message: "The contract was deployed with a malformed verification key." },
 };
 
 /**
@@ -99,8 +127,8 @@ export function describeContractFailure(raw: unknown): string {
 
   if (/InvalidAction|Auth, InvalidAction|authorization|Unauthorized/i.test(text)) {
     return (
-      "The contract rejected this transfer because a required authorization was missing. " +
-      "A transfer needs both the holder's signature and the issuer's approval."
+      "The contract rejected this because a required signature was missing. A transfer needs " +
+      "the holder's signature, and a sale the buyer's consent as well — never the issuer's."
     );
   }
 

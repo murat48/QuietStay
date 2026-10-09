@@ -43,6 +43,10 @@ interface Kit {
     xdr: string,
     opts?: { networkPassphrase?: string; address?: string },
   ): Promise<{ signedTxXdr: string; signerAddress?: string }>;
+  signAuthEntry(
+    preimageXdr: string,
+    opts?: { networkPassphrase?: string; address?: string },
+  ): Promise<{ signedAuthEntry: string; signerAddress?: string }>;
   getNetwork(): Promise<{ network: string; networkPassphrase: string }>;
   disconnect(): Promise<void>;
 }
@@ -79,7 +83,7 @@ export function walletKit(): Promise<Kit> {
     ]);
 
     StellarWalletsKit.init({
-      // Testnet only. Phase 1 does not deploy to mainnet and has no switch for it.
+      // Testnet only. This phase does not deploy to mainnet and has no switch for it.
       network: Networks.TESTNET,
       modules: [
         new FreighterModule(),
@@ -142,7 +146,7 @@ export async function walletNetwork(): Promise<string | null> {
 export class NetworkMismatch extends Error {
   constructor(readonly walletNetworkName: string) {
     super(
-      `Your wallet is on ${walletNetworkName}. QuietStay Phase 1 is testnet only — ` +
+      `Your wallet is on ${walletNetworkName}. QuietStay is testnet only — ` +
         "switch networks and reconnect.",
     );
     this.name = "NetworkMismatch";
@@ -158,6 +162,24 @@ export async function signWithWallet(xdr: string, address: string): Promise<stri
   });
   if (!signedTxXdr) throw new Error("the wallet returned no signature");
   return signedTxXdr;
+}
+
+/**
+ * Sign a Soroban authorization preimage — a buyer's consent to a sale — with the
+ * connected wallet. Returns the base64 signature.
+ *
+ * Of the five wallets enabled here, Freighter and Hana implement this; xBull,
+ * Albedo and Rabet refuse it, and the kit passes their refusal through. A buyer
+ * using one of those can sign the consent from the command line instead.
+ */
+export async function signAuthEntryWithWallet(preimageXdr: string, address: string): Promise<string> {
+  const kit = await walletKit();
+  const { signedAuthEntry } = await kit.signAuthEntry(preimageXdr, {
+    networkPassphrase: NETWORK_PASSPHRASE,
+    address,
+  });
+  if (!signedAuthEntry) throw new Error("the wallet returned no signature");
+  return signedAuthEntry;
 }
 
 export async function disconnectWallet(): Promise<void> {

@@ -99,10 +99,10 @@ export interface OwnershipRecord {
    * issued, and it goes on saying that forever.
    *
    * The current position lives in the issuer's attestation, which is re-signable
-   * and expires. A verifier and the approval service both read fee status from
-   * there — see `maintenance_fees_current` in `src/lib/attestation.ts` — so a week
-   * whose arrears are later settled becomes transferable without reissuing
-   * anything.
+   * and expires. A verifier and the registry read fee status from there — see
+   * `maintenance_fees_current` in `src/lib/attestation.ts` — so a week whose
+   * arrears are later settled reads as clean without reissuing anything. (No
+   * attestation decides whether a week can be transferred.)
    */
   maintenance_fees: {
     annual_amount: string;

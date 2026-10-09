@@ -48,31 +48,31 @@ export default function Home() {
           </p>
         </div>
         <div className="step">
-          <h4>Only its hash goes on chain</h4>
+          <h4>Only a commitment goes on chain</h4>
           <p>
-            SHA-256 over the record&apos;s canonical bytes — 32 bytes standing in for the whole
-            document. A random salt blinds it, so the digest cannot be reversed by guessing.
+            32 bytes that wrap the record&apos;s SHA-256 together with your account and the hash of a
+            secret only you hold. Nothing in it can be reversed into the record.
           </p>
         </div>
         <div className="step">
-          <h4>The issuer signs what it can vouch for</h4>
+          <h4>You prove it to move it</h4>
           <p>
-            That the week is real, that no maintenance fees are outstanding, and where it is. Signed
-            with the same key that signs Stellar transactions, and bound to one right.
+            Renting out or selling takes a zero-knowledge proof that you know the week&apos;s secret,
+            made on your own machine and checked by the contract on chain. Nobody approves it.
           </p>
         </div>
         <div className="step">
-          <h4>A buyer checks all three</h4>
+          <h4>A buyer checks the rest</h4>
           <p>
-            Against the contract, in their own browser: the signature, the holder the ledger names,
-            and — if you disclose the record — that it still hashes to what was committed.
+            The issuer&apos;s signed word on fees, the holder the ledger names, and the proofs the
+            contract accepted — in their own browser, with no account.
           </p>
         </div>
       </div>
 
       <p className="section-title">One transfer primitive</p>
       <div className="chain">
-        <span>transfer(from, to, right_id, expires_at)</span>
+        <span>transfer(from, to, right_id, expires_at, proof, public_signals)</span>
       </div>
       <div className="split" style={{ marginTop: "0.7rem" }}>
         <div className="card">
@@ -103,7 +103,10 @@ export default function Home() {
               <strong>A right id</strong> and its week
             </li>
             <li>
-              <strong>A 32-byte hash</strong>
+              <strong>A 32-byte commitment</strong>
+            </li>
+            <li>
+              <strong>A proof</strong> and its public values — none of them reveal the record
             </li>
             <li>A rental&apos;s term end. A sale carries none.</li>
           </ul>
@@ -120,7 +123,7 @@ export default function Home() {
             <li>
               <strong>What you owe</strong>, and to whom
             </li>
-            <li>The record itself, in any form</li>
+            <li>The record itself, in any form, or the secret behind it</li>
           </ul>
         </div>
       </div>
@@ -136,24 +139,24 @@ export default function Home() {
           <h3 style={{ marginTop: 0 }}>Cannot — enforced by the contract</h3>
           <ul>
             <li>Move, reassign, freeze or burn a week you hold</li>
-            <li>Claw one back after a transfer</li>
-            <li>Overwrite a right, or alter a commitment</li>
+            <li>Block or approve your transfers — it has no part in them</li>
+            <li>Overwrite a right, alter a commitment, or change the contract&apos;s code</li>
           </ul>
           <p className="muted" style={{ marginBottom: 0 }}>
-            Demonstrated on chain: the issuer signs and pays for a transfer of a held week to itself,
-            and the contract refuses it.
+            Demonstrated on chain: the issuer tries to move a held week to itself, and a transfer
+            signed by the holder and the issuer but carrying no proof — both refused.
           </p>
         </div>
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Can — and it is stated, not glossed</h3>
           <ul>
-            <li>Decline a transfer it should have approved</li>
-            <li>Attest something untrue</li>
-            <li>Deploy a new version of the contract</li>
+            <li>Issue new weeks</li>
+            <li>Attest something untrue about a week&apos;s fees</li>
           </ul>
           <p className="muted" style={{ marginBottom: 0 }}>
-            Verification proves the issuer <em>said</em> something, not that it was honest. Reducing
-            that reliance is the next phase&apos;s objective, and it is funded separately.
+            The fee attestation is the issuer&apos;s word, shown to buyers; it never decides whether a
+            week can move. And the proving keys come from a development setup, labelled
+            non-production — a production ceremony is a later phase.
           </p>
         </div>
       </div>
@@ -174,9 +177,8 @@ export default function Home() {
         </dl>
         <p className="muted" style={{ marginBottom: 0 }}>
           Everything a reviewer needs is a set of explorer links with nothing to install — the
-          deployed contract, an approved transfer, one the contract rejected, and the issuer&apos;s
-          attempt to seize a week being refused. See <code>docs/EVIDENCE.md</code> in the
-          repository. The registry itself needs a wallet; verification does not.
+          deployed contract, a proof-authorized rental and sale, and five transfers the contract
+          refused. See <code>docs/EVIDENCE.md</code> in the repository. The registry itself needs a wallet; verification does not.
         </p>
       </div>
     </>

@@ -35,6 +35,7 @@ inventory/evidence/canonical/*
 # more than the registry discloses about anybody — and they are messages between
 # two parties, not evidence. None of them belongs in a published repository.
 inventory/requests/
+inventory/phase2/requests/
 
 # Attestations carry no identity — no name, no email, no resort, no unit, no deed,
 # no fee amount — and are served publicly at /api/attestation/<id> because they are

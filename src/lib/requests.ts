@@ -19,14 +19,13 @@
  *
  * **It is not on chain, and it binds nobody.** A request is a message between two
  * parties, kept by the deployment so the holder can act on it. Accepting one runs
- * exactly the transfer that was always there: the holder's signature, the issuer's
- * approval, the contract checking both. Nothing here can move a week.
+ * exactly the transfer that was always there: the holder's ownership proof and
+ * signature, and on a sale the buyer's consent, which an ask to buy carries.
+ * Nothing here can move a week.
  *
  * **The issuer is not part of it.** Requests travel between holder and requester
- * only. Putting the issuer in this path would let it suppress interest in a week
- * as well as decline its transfer — which, between them, is what freezing an asset
- * means. Its approval stays exactly where it is: at the moment of transfer, as a
- * signature the contract requires.
+ * only — and under Phase 2 the issuer has no part in the transfer either, so
+ * nothing about a week's interest or movement passes through it.
  *
  * ## Visibility
  *
@@ -38,13 +37,14 @@
 import { accessSync, constants, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
-import { DATA_ROOT } from "./config";
+import { CONTRACT_ID, DATA_ROOT } from "./config";
 import { kvGet, kvIsConfigured, kvIsReachable, kvSet } from "./kv";
 
-export const REQUESTS_DIR = "inventory/requests";
+/** Per deployment, like attestations: every contract numbers its rights from 1. */
+export const REQUESTS_DIR = "inventory/phase2/requests";
 
 /** The store's key for a right's requests. Namespaced, since attestations share it. */
-const kvKey = (rightId: number) => `quietstay:requests:${rightId}`;
+const kvKey = (rightId: number) => `quietstay:${CONTRACT_ID}:requests:${rightId}`;
 
 export type RequestStatus = "open" | "accepted" | "declined" | "withdrawn";
 
@@ -63,6 +63,21 @@ export interface TransferRequest {
   term_secs: number | null;
   requested_at: string;
   status: RequestStatus;
+  /**
+   * A sale's buyer consent, given when asking (Phase 2). The buyer chooses a
+   * record secret off line (`npm run zk:secret`), sends its hash `h'`, and signs
+   * the authorization the contract demands of a buyer — over exactly
+   * `(right_id, h')` — so the holder's proof can be built on `h'` and the sale
+   * submitted without the buyer present. Absent on a rental ask.
+   */
+  consent?: {
+    /** `h'`, decimal. */
+    next_secret_hash: string;
+    /** The signed SorobanAuthorizationEntry, base64 XDR. */
+    auth_entry: string;
+    /** The last ledger at which the signature is valid. */
+    valid_until_ledger: number;
+  };
   /** Set when accepted: the transaction that carried it out. */
   tx?: string;
   /** Set when declined, if the holder gave one. Never required. */

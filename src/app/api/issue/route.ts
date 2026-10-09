@@ -1,18 +1,23 @@
 /**
  * Issue a usage right.
  *
- *   POST /api/issue  { record }  → { right_id, commitment, tx, attestation }
+ *   POST /api/issue  { record, commitment }  → { right_id, record_digest, tx, attestation }
  *
  * Only the issuer can issue, and the contract enforces that independently. This
  * route additionally requires the caller to have proved control of the issuer's
  * account over SEP-10, so the deployment's issuing key cannot be driven by anyone
  * who merely finds the URL.
  *
- * What happens here, in order: validate the record, commit to it, issue on chain,
- * and — only if the record itself says maintenance fees are settled — sign an
- * attestation to that effect. The issuer is trusted to attest honestly, and
- * attesting a week it can see carries arrears would be exactly the dishonesty the
- * trust model is supposed to make visible.
+ * What happens here, in order: validate the record, compute its digest `d`,
+ * issue on chain with the commitment `C`, and sign an attestation bound to `d`,
+ * this right and this contract, saying whether maintenance fees are settled.
+ *
+ * `C = Poseidon(d, owner, h)` is computed by the issuer with the command-line
+ * tool (`npm run zk:commitment`), from the `h` the owner sent: Poseidon runs only
+ * in the circuit and the CLI, never in this app. The contract refuses a value
+ * that is not a canonical field element. That `C` really wraps this record is
+ * the issuer's own computation — it is the issuer's issuance — and any holder or
+ * buyer can confirm it later with `npm run verify-record`.
  */
 
 import { Keypair } from "@stellar/stellar-sdk";
@@ -40,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
       {
         error:
           "this deployment is read-only: it does not hold the issuer key, so it cannot " +
-          "issue, attest, or approve a transfer. Browsing and verification need no key.",
+          "issue or attest. Browsing, verifying and transfers need no issuer key.",
         read_only: true,
       },
       { status: 503 },
@@ -48,17 +53,16 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // Asked here, before anything is submitted, because the issuance cannot be
-  // undone and the attestation is not optional: a right issued without one is a
-  // right nobody can transfer. A host holding the key but with nothing writable
-  // — a serverless deployment given the key by mistake — used to get as far as
-  // the ledger and fail on `EROFS` afterwards.
+  // undone: a right issued with nowhere to put its attestation would leave buyers
+  // nothing to read. A host holding the key but with nothing writable — a
+  // serverless deployment given the key by mistake — used to get as far as the
+  // ledger and fail on `EROFS` afterwards.
   if (!(await attestationStoreIsWritable())) {
     return Response.json(
       {
         error:
-          "this deployment cannot issue: it has nowhere to record the attestation, and a " +
-          "right issued without one could never be transferred. Issue where the issuer key " +
-          "and its records live.",
+          "this deployment cannot issue: it has nowhere to record the attestation. Issue " +
+          "where the issuer key and its records live.",
         read_only: true,
       },
       { status: 503 },
@@ -85,9 +89,9 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let body: { record?: unknown };
+  let body: { record?: unknown; commitment?: unknown };
   try {
-    body = (await request.json()) as { record?: unknown };
+    body = (await request.json()) as { record?: unknown; commitment?: unknown };
   } catch {
     return Response.json({ error: "expected a JSON body" }, { status: 400 });
   }
@@ -95,7 +99,19 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const record = validateRecord(body.record);
     const canonical = canonicalText(record as never);
-    const commitment = await recordCommitment(record);
+    // d — what the attestation binds. Phase 1 stored it on chain; Phase 2 wraps it.
+    const recordDigest = await recordCommitment(record);
+    const commitment = typeof body.commitment === "string" ? body.commitment.trim().toLowerCase() : "";
+    if (!/^[0-9a-f]{64}$/.test(commitment)) {
+      return Response.json(
+        {
+          error:
+            "commitment must be the 64-hex-digit C from `npm run zk:commitment -- --record <file> " +
+            "--owner <G…> --secret-hash <the owner's h>`",
+        },
+        { status: 400 },
+      );
+    }
     const windows = onChainWindows(record);
 
     const rightId = await readNextId();
@@ -120,7 +136,7 @@ export async function POST(request: Request): Promise<Response> {
       contract: CONTRACT_ID,
       network: NETWORK_PASSPHRASE,
       rightId,
-      commitment,
+      recordDigest,
       weekValid: true,
       // Where it is, how big it is, what it offers — everything someone
       // deciding to take the week needs, and nothing that names the apartment.
@@ -130,13 +146,13 @@ export async function POST(request: Request): Promise<Response> {
       validForDays: 365,
     });
 
-    // Record it. The approval service will not approve a transfer of a week the
-    // issuer has no attestation for, so a right issued without this step would be
-    // untransferable — returning the attestation to the browser is not enough.
+    // Record it, so the registry and buyers can read it — returning it to the
+    // browser is not enough. No transfer depends on it.
     const attestationPath = await saveAttestation(rightId, attestation);
 
     return Response.json({
       right_id: rightId,
+      record_digest: recordDigest,
       commitment,
       canonical_bytes: canonical.length,
       windows,

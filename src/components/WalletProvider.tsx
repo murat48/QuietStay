@@ -34,6 +34,7 @@ import {
   connectWallet,
   connectedAddress,
   disconnectWallet,
+  signAuthEntryWithWallet,
   signWithWallet,
   walletNetwork,
 } from "@/lib/wallet-kit";
@@ -78,6 +79,8 @@ interface WalletState {
   /** Re-read the account's standing, e.g. after a transfer changes it. */
   refreshStanding: () => Promise<void>;
   sign: (xdr: string) => Promise<string>;
+  /** Sign a Soroban authorization preimage (a buyer's consent). Freighter and Hana only. */
+  signAuth: (preimageXdr: string) => Promise<string>;
   authFetch: (input: string, init?: RequestInit) => Promise<Response>;
 }
 
@@ -203,6 +206,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [address],
   );
 
+  const signAuth = useCallback(
+    async (preimageXdr: string): Promise<string> => {
+      if (!address) throw new Error("connect a wallet first");
+      return signAuthEntryWithWallet(preimageXdr, address);
+    },
+    [address],
+  );
+
   const authFetch = useCallback(
     (input: string, init: RequestInit = {}) =>
       fetch(input, {
@@ -230,9 +241,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       disconnect,
       refreshStanding,
       sign,
+      signAuth,
       authFetch,
     }),
-    [address, token, standing, readOnly, canRequest, busy, error, connect, disconnect, refreshStanding, sign, authFetch],
+    [address, token, standing, readOnly, canRequest, busy, error, connect, disconnect, refreshStanding, sign, signAuth, authFetch],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
