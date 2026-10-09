@@ -11,7 +11,10 @@ crate-type = ["lib", "cdylib"]
 doctest = false
 
 [dependencies]
-soroban-sdk = { workspace = true }
+# hazmat-address: Address::to_payload, to read a G… account's 32-byte key as an
+# identifier the proof binds to (auth.rs). Authentication stays with require_auth.
+soroban-sdk = { workspace = true, features = ["hazmat-address"] }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+serde_json = "1"

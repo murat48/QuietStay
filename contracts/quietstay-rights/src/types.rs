@@ -44,14 +44,17 @@ pub struct Holding {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Right {
     pub id: u64,
-    /// The party that issued this right and whose approval a transfer requires.
+    /// The party that issued this right. It attests maintenance-fee status off
+    /// chain; under Phase 2 it has no part in any transfer.
     pub issuer: Address,
     /// The occupancy window of the week.
     pub period: Period,
     /// The lifetime of the right itself.
     pub validity: Validity,
-    /// SHA-256 over the canonical serialization of the off-chain ownership record.
-    /// The record itself never touches the ledger.
+    /// The Poseidon commitment `C` of docs/CIRCUIT.md §2, as a 32-byte
+    /// big-endian field element: it wraps the SHA-256 digest of the off-chain
+    /// ownership record together with the holder's account and secret hash. The
+    /// record itself never touches the ledger. Replaced on every sale.
     pub commitment: BytesN<32>,
     /// Title holder first, then finite-term grants in the order they were made.
     pub holdings: Vec<Holding>,
@@ -95,4 +98,9 @@ pub enum DataKey {
     Listing(u64),
     /// Persistent: `i128`, the number of rights an address holds title to.
     Balance(Address),
+    /// Instance: the Groth16 verification key, fixed by the constructor.
+    VerificationKey,
+    /// Temporary: a spent proof's nullifier, holding its `expiry_ledger`. Lives
+    /// past that ledger, after which the proof is refused as expired anyway.
+    Nullifier(BytesN<32>),
 }

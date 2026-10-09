@@ -47,4 +47,39 @@ pub enum Error {
     NotListed = 14,
     /// A listed rental term must be greater than zero seconds.
     InvalidTerm = 15,
+
+    // --- the ownership proof (Phase 2; docs/CIRCUIT.md) ---
+    /// Not exactly eleven public signals.
+    WrongSignalCount = 16,
+    /// A public signal, or a commitment at issuance, is not below the BLS12-381
+    /// scalar field modulus — the same value could otherwise appear in two
+    /// encodings.
+    NonCanonicalSignal = 17,
+    /// The sender or recipient is a contract address. A proof binds an Ed25519
+    /// account key, so only `G…` accounts can hold a right.
+    NotAnAccount = 18,
+    /// The proof is for a different commitment than the one stored for this right.
+    CommitmentMismatch = 19,
+    /// The proof is for a different right.
+    RightMismatch = 20,
+    /// The proof names a different sending account than the one transferring.
+    WrongAccount = 21,
+    /// The proof names a different recipient.
+    RecipientMismatch = 22,
+    /// The proof is for a sale where this is a rental, a rental where this is a
+    /// sale, or a rental ending at a different time.
+    ModeMismatch = 23,
+    /// The proof's last valid ledger has passed.
+    ProofExpired = 24,
+    /// The proof claims to stay valid longer than the maximum window.
+    ExpiryBeyondWindow = 25,
+    /// A sale's next secret hash is zero, or a rental's is not.
+    NextSecretHashMismatch = 26,
+    /// This proof's nullifier has been used: the proof was already spent.
+    NullifierUsed = 27,
+    /// The pairing check failed: the proof does not prove these signals.
+    InvalidProof = 28,
+    /// The verification key given at deployment does not have one point per
+    /// public signal plus one.
+    MalformedVerifyingKey = 29,
 }

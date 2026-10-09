@@ -8,7 +8,6 @@ extern crate std;
 
 use soroban_sdk::{
     crypto::bls12_381::{Bls12381G1Affine, Bls12381G2Affine},
-    testutils::cost_estimate::CostEstimate,
     Bytes, Env, Vec, U256,
 };
 
