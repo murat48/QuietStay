@@ -301,26 +301,51 @@ transaction cannot avoid it.
 
 circomlib's Poseidon constants were generated for BN254's scalar field. They are
 **not** valid for BLS12-381, and compiling with `circom -p bls12381` does not
-change them. New constants and MDS matrices will be generated for this field with
-the Poseidon authors' reference tooling — `generate_parameters_grain.sage` and
-`calc_round_numbers.py` from the Hades/Poseidon reference repository — using the
-same settings that produced circomlib's: x^5 S-box (`alpha = 5`), `R_F = 8`,
-128-bit security, and `R_P` as computed by the round-number script for this
-field and each width. `gcd(5, r − 1) = 1` is checked before use.
+change them. The constants this circuit uses were generated for BLS12-381 with
+the Poseidon authors' reference tooling only, by the procedure that produced
+circomlib's. Generated 2026-10-09.
 
-Recorded here in Step 2, from the actual run:
-
-| | t = 2 | t = 6 | t = 7 |
+| | t = 2 (`Poseidon(1)`) | t = 6 (`Poseidon(5)`) | t = 7 (`Poseidon(6)`) |
 | --- | --- | --- | --- |
 | field prime | `r` above | `r` above | `r` above |
-| alpha | _pending_ | _pending_ | _pending_ |
-| R_F | _pending_ | _pending_ | _pending_ |
-| R_P | _pending_ | _pending_ | _pending_ |
-| command, tool commit | _pending_ | _pending_ | _pending_ |
+| S-box, alpha | x^5, 5 | x^5, 5 | x^5, 5 |
+| R_F | 8 | 8 | 8 |
+| R_P | 56 | 60 | 63 |
+| round constants | 128 | 408 | 497 |
+| command | `sage generate_parameters_grain.sage 1 0 255 2 8 56 0x73eda…0001` | `… 1 0 255 6 8 60 0x73eda…0001` | `… 1 0 255 7 8 63 0x73eda…0001` |
 
-The same constants feed both the circuit and the CLI prover. If the reference
-tooling cannot be run cleanly, work stops and the choice comes back to you — the
-curve is not switched silently.
+- **Tooling.** `generate_parameters_grain.sage` and `calc_round_numbers.py` from
+  [hadeshash](https://extgit.iaik.tugraz.at/krypto/hadeshash) at commit
+  `208b5a164c6a252b137997694d90931b2bb851c5`, run under SageMath 10.4
+  (`sagemath/sagemath@sha256:8d657a42f33a407b8dbc9a3cb5818cb6b4df8aacc7b291ba675132ee55d4db73`).
+  The authors' own file lists the BLS12-381 invocation in exactly this form.
+- **Round numbers.** `calc_round_numbers.py` (x^5, 128-bit security, with
+  security margin) gives `R_F = 8` and `R_P = 56, 57, 57` for `t = 2, 6, 7`;
+  rounded up to a multiple of `t`, as circomlib does, that is `56, 60, 63`.
+  `gcd(5, r − 1) = 1`. For BLS12-381 the values equal circomlib's BN254 table at
+  every width used, so circomlib's `N_ROUNDS_P` array applies unchanged.
+- **Same procedure as circomlib — checked, not claimed.** Run for BN254 with the
+  same settings, the same tool and iden3's own optimizer reproduce every value
+  of `POSEIDON_C`, `S`, `M` and `P` in circomlib 2.0.5's
+  `poseidon_constants.circom` at `t = 2, 6, 7`.
+- **Same function as the authors'.** The BLS12-381 constants, run through the
+  reference permutation, give the authors' published test vectors for this
+  field, `poseidonperm_x5_255_3` and `poseidonperm_x5_255_5`.
+- **Circuit and CLI agree.** The circuit tests build every witness from the
+  JavaScript Poseidon and check it against the R1CS, so the circuit's Poseidon
+  and the CLI's are the same function at all three widths.
+
+The optimized form circomlib's template consumes (`C`, `S`, `M`, `P`) comes from
+iden3's `poseidon_optimize_constants.js`, changed only so the field is a parameter
+(`circuits/poseidon/optimize.mjs`). The template itself is circomlib's, with one
+`include` line changed (`circuits/lib/poseidon.circom`).
+
+```
+npm run zk:check-poseidon            # all of the above, offline, from circuits/poseidon/raw/
+bash circuits/poseidon/generate.sh   # regenerate raw/ from scratch (Docker); reproduces it byte for byte
+```
+
+circomlib and circomlibjs are GPL-3.0; the files derived from them say so.
 
 ### Trusted setup
 
@@ -329,6 +354,101 @@ builder, non-production**, reproduced by `scripts/setup-dev.sh`. The
 verification key is committed; the toxic waste is not kept. Anyone who did keep
 it could forge proofs — which, as above, still cannot move a week without the
 holder's wallet signature. A production multi-party ceremony is Phase 3.
+
+Run 2026-10-09 (`npm run zk:setup`): powers of tau on bls12-381 at `2^12`, one
+contribution per phase, `snarkjs zkey verify` → `ZKey Ok!`. The keys in
+`circuits/keys/` and their hashes (`circuits/keys/SHA256SUMS`):
+
+```
+a4d547d3f811715705330e75652873de14ce94fc97b3e33418c3207264786ebf  transfer.zkey
+e07eed7b33a25605e0493b0e595d0f1ee3d70fd61f22cccc4aac00c9c494018b  verification_key.json
+eafe5e6905aa60612e3cf62bffd68993b49ff09040ddd186e84d5c458315936d  transfer.wasm
+d58ebebeeb8fbfaabc0cfea05e85cacc3dbd8830b511bdaba1b953208e2a37ea  transfer.r1cs
+```
+
+Rerunning the setup makes new, different keys; proofs made with these stop
+verifying against them.
+
+---
+
+## Step 2: built and measured
+
+Completed 2026-10-09. Tool versions: circom 2.2.2 (`e410b0d5`), snarkjs 0.7.5,
+circomlib 2.0.5, soroban-sdk 27.0.6, stellar-cli 27.0.0.
+
+### The circuit
+
+`circuits/transfer.circom`, compiled with `npm run zk:compile`
+(`circom … -p bls12381`): **1,221 non-linear and 1,831 linear constraints**,
+11 public inputs, 3 private inputs, no outputs. `npm run zk:test` — 11 circuit
+tests, all passing: an honest sale and an honest rental satisfy the R1CS; the
+public signals sit at wires 1–11 in §7's order; a wrong secret, an account the
+commitment does not name, a different record, a nullifier from a different
+recipient, mode, rental length, right or deadline, a freely chosen nullifier, and
+a next commitment for a different `h'` are all refused.
+
+### The prover
+
+`npm run zk:prove -- --record … --secret … --right … --from … --to … (--sale --next-secret-hash … | --rental-until …)`
+proves in **1.2 s** on the builder's laptop, then runs `snarkjs groth16 verify`
+before writing anything; `npx snarkjs groth16 verify` on its output also prints
+`OK!`. `npm run zk:secret -- <file>` makes a secret and prints the shareable `h`.
+
+### On-chain verification
+
+The soroban-examples verifier, adapted so the key is fixed in the constructor and
+public signals are refused unless canonical (`contracts/quietstay-verifier`,
+6 unit tests passing). Its interface is `__constructor` and `verify`, nothing
+else.
+
+| | |
+| --- | --- |
+| Contract | [`CDMUMMOF3TM453RY4QZL6UWV2FT2QP3JUWW24SFIH5ICWSVGRB4IK5BK`](https://stellar.expert/explorer/testnet/contract/CDMUMMOF3TM453RY4QZL6UWV2FT2QP3JUWW24SFIH5ICWSVGRB4IK5BK) |
+| Deployed in | [`05d90907…`](https://stellar.expert/explorer/testnet/tx/05d90907ebcda152597b4c1deb5d70a930ea3321c538bb81ec01117bd1c4ca44) |
+| **First on-chain verification** | [`8e16b7cdfccd15cd475b5c2c0a58a72000546b8bbbf70068e87a1efe30c52645`](https://stellar.expert/explorer/testnet/tx/8e16b7cdfccd15cd475b5c2c0a58a72000546b8bbbf70068e87a1efe30c52645) — returned `true` |
+
+One check of the SDK found on the way: `Bls12381Fr::from(U256)` reduces values
+`>= r` modulo `r` without complaint. A contract that took public signals as `Fr`
+would accept `N` and `N + r` as the same proof while storing them as different
+nullifiers. So signals arrive as `U256` and are refused at `>= r` before
+conversion; a unit test submits the nullifier plus `r` and gets
+`NonCanonicalSignal`.
+
+### Cost
+
+| Measured | Value | Command |
+| --- | --- | --- |
+| CPU, simulated | **78,896,206** instructions | `npm run zk:measure -- CDMUMM… proofs/step2-sale` |
+| Minimum resource fee, simulated | 71,341 stroops | same |
+| Ledger bytes read / written | 0 / 0 | same |
+| Fee charged, real transaction `8e16b7cd…` | **61,756 stroops** (0.0061756 XLM): 100 inclusion + 61,616 non-refundable + 40 refundable; 9,685 refunded | `stellar contract invoke … --send=yes --cost -- verify …` |
+| CPU and memory, the `verify` call alone (local host budget) | 75,126,535 instructions, **350,344 bytes** | `cargo test -p quietstay-verifier honest -- --nocapture` |
+| Testnet limits per transaction | 400,000,000 instructions, 41,943,040 bytes memory | `stellar network settings --network testnet` |
+| Phase 1 approved transfer `b19b0a0a…` (for comparison) | 2,346,768 instructions declared, 45,309 stroops charged | Horizon `/transactions/b19b0a0a…` |
+
+The RPC's simulation response does not report memory, so memory comes from the
+local host budget, which uses the same cost model; the CPU figures from the two
+agree to within 5%.
+
+**Estimate, not yet measured** — verification plus transfer in one transaction:
+about **82 million instructions** (78.9 M verification + 2.3 M Phase 1 transfer
+logic + a little for the signal checks, the account conversions and one nullifier
+write), about **21% of the per-transaction limit**; memory well under 1 MB of
+40 MB; a fee of roughly **0.011 XLM**. Step 3 replaces this estimate with a
+measurement.
+
+**Recommendation: the one-transaction flow.** Verification uses a fifth of the
+CPU a transaction may spend, so verification and transfer fit together with
+room to spare. One transaction means no recorded-but-unconsumed authorization,
+no second ledger window to reason about, and one place for every rejection test.
+The two-transaction flow solves a cost problem this circuit does not have, and
+the hashed-public-input fallback would add a SHA-256 step to save about ten of
+the eleven `g1_mul`s — a saving the margin does not call for.
+
+**Testnet's minimum temporary TTL is 720 ledgers** — the same as the proof
+window. A nullifier entry left at the minimum TTL could therefore lapse just before
+a proof made at the edge of the window does, so Step 3 extends each
+nullifier's TTL explicitly past its `expiry_ledger`, as §6 requires.
 
 ---
 

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["quietstay-rights"]
+members = ["quietstay-rights", "quietstay-verifier"]
 
 [workspace.dependencies]
 soroban-sdk = "27.0.6"

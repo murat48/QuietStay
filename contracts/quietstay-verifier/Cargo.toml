@@ -1,0 +1,18 @@
+[package]
+name = "quietstay-verifier"
+version = "0.1.0"
+edition = "2021"
+description = "QuietStay Phase 2, Step 2 — standalone Groth16/BLS12-381 verifier with the verification key fixed at deployment"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+serde_json = "1"
