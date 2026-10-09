@@ -173,9 +173,9 @@ npm run verify-record -- <right_id> <attestation.json> <record.json> --secret-ha
 ```
 
 It recomputes `C = Poseidon(d, title holder, h)` and compares it with
-`commitment(right_id)`. Poseidon runs only in the circuit and the command-line
-tools, never in a browser, which is why this check is here and not on the verify
-screen. The screen says so in one sentence.
+`commitment(right_id)`. Poseidon runs in the circuit, the command-line tools and
+the issuing server, never in a browser, which is why this check is here and not on
+the verify screen. The screen says so in one sentence.
 
 ## When the issuer says a week is not clean
 

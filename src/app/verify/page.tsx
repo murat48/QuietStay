@@ -35,8 +35,8 @@
  * (RFC 8785) and hashed with SHA-256 via WebCrypto into its digest `d`, which must
  * equal the `d` the issuer signed for this right on this contract. The last link
  * — that this `d` is inside the ledger's commitment `C = Poseidon(d, holder, h)` —
- * needs Poseidon and the holder's secret hash `h`. Poseidon runs only in the
- * circuit and the command-line tools, never in a browser, so that step is
+ * needs Poseidon and the holder's secret hash `h`. Poseidon never runs in a
+ * browser (it runs in the circuit, the command line and the issuing server), so that step is
  * `npm run verify-record`, and this screen says so.
  *
  * **On chain — the proofs.** Every transfer of a week is an ownership proof the
@@ -589,8 +589,8 @@ export default function VerifyScreen() {
             </p>
             <p className="muted" style={{ margin: "0.3rem 0 0" }}>
               The last link — that this document is the one inside the ledger&apos;s commitment C —
-              takes the holder&apos;s secret hash and a Poseidon hash, which runs only in the
-              command-line tools, so it is{" "}
+              takes the holder&apos;s secret hash and a Poseidon hash, which does not run in a
+              browser, so it is{" "}
               <code>npm run verify-record -- &lt;id&gt; &lt;attestation&gt; &lt;record&gt; --secret-hash &lt;h&gt;</code>.
             </p>
           </div>

@@ -24,7 +24,7 @@ The issuer, which approved every transfer in Phase 1, has no part in them any mo
 | Contract | [`CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD`](https://stellar.expert/explorer/testnet/contract/CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD) — proof-gated transfers, verification key fixed at deployment |
 | Network | `Test SDF Network ; September 2015` |
 | The proof | [CIRCUIT.md](./docs/CIRCUIT.md) — opens with a one-page summary; circuit in [`circuits/gpl/transfer.circom`](./circuits/gpl/transfer.circom) |
-| Tests | [62 contract tests](./contracts/quietstay-rights/src/test.rs), every transfer carrying a real proof · 11 circuit tests · 41 end-to-end checks |
+| Tests | [62 contract tests](./contracts/quietstay-rights/src/test.rs), every transfer carrying a real proof · 11 circuit tests · 52 end-to-end checks |
 | Demo video, Phase 2 | _add link after recording_ |
 
 ## Reviewing this?
@@ -83,6 +83,13 @@ a one-time nullifier. The contract checks every public value against its own sta
 verifies the proof, and records the nullifier so it cannot be used twice. A sale
 also replaces `C` with one the proof computed for the buyer, from a secret the buyer
 chose — so only the buyer can prove next.
+
+**What leaves whose machine.** "The record and the secret never leave the holder's
+machine" is a claim about *proving*: the prover runs there, and nothing it reads is
+sent anywhere. Issuing is different, and always has been since Phase 1: the record
+goes to the issuer, who validates it, computes `d` and attests it. What Phase 2 adds
+to the issuer's side is only `h`, from which the issuer's server computes `C`. The
+secret `s` reaches the server at no stage.
 
 Renting and selling are **one contract function**, separated by whether the grant
 has an end date. A rental ends on its own: no return transaction, and a renter whose
@@ -217,11 +224,14 @@ One directory is the exception. [`circuits/gpl/`](./circuits/gpl/) — the owner
 circuit, the circomlib Poseidon template it includes, iden3's constant optimizer and
 the JavaScript Poseidon the prover uses — derives from iden3's circomlib and
 circomlibjs, and is **GPL-3.0** with its own [LICENSE](./circuits/gpl/LICENSE). It
-serves the command-line prover only.
+serves the command-line tools and one server route: `/api/issue` imports the same
+Poseidon module to compute the commitment `C` when the issuer issues a week. That
+route runs on the issuer's server and is never sent to a browser.
 
-**The browser bundle contains no GPL-3.0 code at all.** No web-app module imports
-`circuits/gpl/` or any iden3 package, and no copyleft package the app depends on
-reaches `.next/static`. That includes the Lobstr wallet module, whose signer
+**The browser bundle contains no GPL-3.0 code at all.** No page or browser module
+imports `circuits/gpl/` or any iden3 package — the one file under `src/` that does
+is that route handler, which nothing imports — and no copyleft package the app
+depends on reaches `.next/static`. That includes the Lobstr wallet module, whose signer
 library is GPL-3.0: Phase 1 shipped it, and Phase 2 removed it, which is why the
 app offers five wallets rather than six. `npm run build && npm run zk:check-bundle`
 checks all of this against the built bundle.

@@ -39,12 +39,24 @@ import { server } from "./contract";
 /** `h'` must be a canonical BLS12-381 scalar, as every public signal must. */
 const R = 52435875175126190479447740508185965837690552500527637822603658699938581184513n;
 
+/**
+ * A secret hash — the owner's `h` at issuance, the buyer's `h'` on a sale — as a
+ * canonical field element. Throws with a message fit for a 400.
+ */
 export function parseSecretHash(value: unknown): bigint {
-  if (typeof value !== "string" || !/^\d{1,78}$/.test(value.trim())) {
-    throw new Error("the secret hash must be the decimal number `npm run zk:secret` printed");
+  // Decimal, as `npm run zk:secret` prints it, or hex — `0x`-prefixed, or bare
+  // when it has a letter in it. A bare string of digits is always decimal.
+  const text = typeof value === "string" ? value.trim() : "";
+  let h: bigint;
+  if (/^\d{1,78}$/.test(text)) h = BigInt(text);
+  else if (/^0x[0-9a-fA-F]{1,64}$/.test(text)) h = BigInt(text);
+  else if (/^[0-9a-fA-F]{1,64}$/.test(text)) h = BigInt(`0x${text}`);
+  else {
+    throw new Error("the secret hash must be the number `npm run zk:secret` printed, in decimal or hex");
   }
-  const h = BigInt(value.trim());
-  if (h === 0n || h >= R) throw new Error("the secret hash is not a valid field element");
+  if (h === 0n || h >= R) {
+    throw new Error("the secret hash is not a BLS12-381 scalar: it must be above 0 and below the field modulus r");
+  }
   return h;
 }
 

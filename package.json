@@ -36,6 +36,7 @@
     "@creit.tech/stellar-wallets-kit": "^2.5.0",
     "@stellar/stellar-sdk": "^16.2.0",
     "canonicalize": "^2.1.0",
+    "ffjavascript": "0.2.63",
     "jose": "^6.1.0",
     "next": "^16.3.0",
     "react": "^19.1.1",
@@ -46,7 +47,6 @@
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "circomlib": "2.0.5",
-    "ffjavascript": "0.2.63",
     "snarkjs": "0.7.5",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"

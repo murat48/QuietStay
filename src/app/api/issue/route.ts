@@ -1,30 +1,38 @@
 /**
  * Issue a usage right.
  *
- *   POST /api/issue  { record, commitment }  → { right_id, record_digest, tx, attestation }
+ *   POST /api/issue  { record, secret_hash }  → { right_id, record_digest, commitment, tx, attestation }
  *
  * Only the issuer can issue, and the contract enforces that independently. This
  * route additionally requires the caller to have proved control of the issuer's
  * account over SEP-10, so the deployment's issuing key cannot be driven by anyone
  * who merely finds the URL.
  *
- * What happens here, in order: validate the record, compute its digest `d`,
- * issue on chain with the commitment `C`, and sign an attestation bound to `d`,
- * this right and this contract, saying whether maintenance fees are settled.
+ * What happens here, in order: validate the record and the owner's `h`, compute
+ * the record's digest `d` and the commitment `C = Poseidon(d, owner, h)`, issue on
+ * chain with `C`, and sign an attestation bound to `d`, this right and this
+ * contract, saying whether maintenance fees are settled.
  *
- * `C = Poseidon(d, owner, h)` is computed by the issuer with the command-line
- * tool (`npm run zk:commitment`), from the `h` the owner sent: Poseidon runs only
- * in the circuit and the CLI, never in this app. The contract refuses a value
- * that is not a canonical field element. That `C` really wraps this record is
- * the issuer's own computation — it is the issuer's issuance — and any holder or
- * buyer can confirm it later with `npm run verify-record`.
+ * `h = Poseidon(s)` is all the owner sends; the secret `s` never reaches this
+ * server. `C` is computed with `commitment` from scripts/lib/zk.ts — the module
+ * `npm run zk:commitment` and `zk:issue` use, on the one Poseidon implementation
+ * in circuits/gpl/ — so the app and the command line cannot disagree about it.
+ * Poseidon runs in the circuit, the command line and here; never in the contract
+ * and never in a browser (`npm run zk:check-bundle`). Any holder or buyer can
+ * confirm `C` later with `npm run verify-record -- … --secret-hash <h>`.
  */
 
 import { Keypair } from "@stellar/stellar-sdk";
 
+// Server only: a route handler, never part of the browser bundle. GPL-3.0 code
+// is reached through this import — see the license section of the README.
+import { commitment as poseidonCommitment, splitRecordDigest } from "../../../../scripts/lib/zk";
+import { fr } from "../../../../scripts/lib/zk-encode";
+
 import { signAttestation } from "@/lib/attestation";
 import { attestationStoreIsWritable, saveAttestation } from "@/lib/attestation-store";
-import { canonicalText } from "@/lib/canonical";
+import { canonicalText, type JsonValue } from "@/lib/canonical";
+import { parseSecretHash } from "@/lib/consent";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, hasIssuerSecret, issuerSecret } from "@/lib/config";
 import { ContractCallError, buildIssueTx, prepare, readNextId, signWith, submit } from "@/lib/contract";
 import {
@@ -89,9 +97,9 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let body: { record?: unknown; commitment?: unknown };
+  let body: { record?: unknown; secret_hash?: unknown };
   try {
-    body = (await request.json()) as { record?: unknown; commitment?: unknown };
+    body = (await request.json()) as { record?: unknown; secret_hash?: unknown };
   } catch {
     return Response.json({ error: "expected a JSON body" }, { status: 400 });
   }
@@ -101,17 +109,19 @@ export async function POST(request: Request): Promise<Response> {
     const canonical = canonicalText(record as never);
     // d — what the attestation binds. Phase 1 stored it on chain; Phase 2 wraps it.
     const recordDigest = await recordCommitment(record);
-    const commitment = typeof body.commitment === "string" ? body.commitment.trim().toLowerCase() : "";
-    if (!/^[0-9a-f]{64}$/.test(commitment)) {
+    // Checked before anything is submitted: a malformed h would otherwise make a
+    // commitment nobody can prove against, and the issuance cannot be undone.
+    let h: bigint;
+    try {
+      h = parseSecretHash(body.secret_hash);
+    } catch (caught) {
       return Response.json(
-        {
-          error:
-            "commitment must be the 64-hex-digit C from `npm run zk:commitment -- --record <file> " +
-            "--owner <G…> --secret-hash <the owner's h>`",
-        },
+        { error: `secret_hash: ${caught instanceof Error ? caught.message : "not valid"}` },
         { status: 400 },
       );
     }
+    const d = await splitRecordDigest(record as unknown as JsonValue);
+    const commitment = fr(await poseidonCommitment(d, record.owner.stellar_account, h));
     const windows = onChainWindows(record);
 
     const rightId = await readNextId();

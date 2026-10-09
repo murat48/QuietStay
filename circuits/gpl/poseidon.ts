@@ -2,7 +2,8 @@
 // Derived from circomlibjs 0.1.7 src/poseidon_reference.js (iden3, GPL-3.0).
 
 /**
- * Poseidon over the BLS12-381 scalar field, for the command-line tools only.
+ * Poseidon over the BLS12-381 scalar field, for the command-line tools and the
+ * issuing server route (src/app/api/issue/route.ts).
  *
  * This is circomlibjs's `src/poseidon_reference.js` with two changes and no
  * others: the field is BLS12-381's scalar field instead of bn128's, and the
@@ -10,9 +11,10 @@
  * produced by the Poseidon authors' reference tool. The permutation loop is
  * line-for-line the upstream one.
  *
- * Poseidon runs in two places in this repository: inside the circuit, and here.
- * The contract never computes it — commitments and nullifiers reach it as public
- * signals and are only compared and stored — and the browser never computes it.
+ * Poseidon runs in the circuit, and here — called by the command-line tools and
+ * by the server route that issues a week. The contract never computes it —
+ * commitments and nullifiers reach it as public signals and are only compared and
+ * stored — and the browser never computes it (`npm run zk:check-bundle`).
  *
  * Checked by `npm run zk:check-poseidon` against the authors' published test
  * vectors for this field, and by the circuit tests against the circuit itself.

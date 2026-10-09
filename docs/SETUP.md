@@ -95,7 +95,7 @@ contract binds its issuer at deployment and has no setter. To issue, deploy your
 ## Issuing a week from the terminal
 
 On a contract whose issuer key is in `.env.local`, one command does what the Issue
-screen and `zk:secret` / `zk:commitment` do between them:
+screen does, without a browser or a running app:
 
 ```bash
 npm run zk:issue -- --contract <C…> --owner <G…> --check-in 2026-12-05 --check-out 2026-12-12
@@ -200,13 +200,16 @@ parameters in [CIRCUIT.md](./CIRCUIT.md#poseidon-parameters-over-bls12-381).
 
 ## End-to-end test
 
-`npm run e2e` drives the running app over HTTP with the demo keys, proving with the
-same code as `zk:prove`: SEP-10, issuance with a CLI-computed `C`, attestation v2,
-offers, a proven rental, a replay refused, someone else's proof refused, a tampered
+`npm run e2e` drives the running app over HTTP with the demo keys: SEP-10;
+issuance the way the Issue screen does it — record and `h`, in decimal and in hex —
+with five malformed `h` refused (400) and nothing issued, and the server's `C` equal
+to the CLI's; `npm run verify-record` confirming each `C` on chain from the record
+as the screen saves it; attestation v2; offers; a rental proved by
+`npm run zk:prove` from that saved record; a replay refused, someone else's proof refused, a tampered
 proof refused, a sale refused without the buyer's consent, a forged consent refused,
 the sale with a real one, the verify screen's transfer list, and — on an app that
 reads the evidence contract — the evidence links it falls back to once the event
-window has passed: 41 checks.
+window has passed: 52 checks.
 
 It issues weeks, so **run it against a throwaway deployment**, never the one in
 EVIDENCE.md — and give the app its own data directory, because every contract

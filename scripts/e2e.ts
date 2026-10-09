@@ -10,10 +10,15 @@
  *
  *   1. SEP-10 for the issuer, owner, renter and buyer; a forged response refused
  *   2. routes refuse callers without a session, and non-issuers cannot issue
- *   3. issue two weeks — C computed as the CLI computes it, attestation v2 bound
- *      to d, the right id and the contract
+ *   3. issue two weeks the way the Issue screen does — the record and the
+ *      owner's h, one in decimal and one in hex; the server computes C, and it
+ *      is the C the CLI computes. A malformed h, or one not below the field
+ *      modulus, is refused with 400 before anything is issued. Each week's C on
+ *      chain is then confirmed by `npm run verify-record` from the record the
+ *      screen lets the issuer save
  *   4. publish an offer and withdraw it
- *   5. the renter asks; the owner proves a rental and uploads it; it goes through
+ *   5. the renter asks; the owner proves a rental with `npm run zk:prove` from
+ *      that saved record and uploads it; it goes through
  *   6. the same proof again is refused — the nullifier is spent
  *   7. the renter cannot submit the owner's proof; nor can a tampered proof pass
  *   8. a sale needs the buyer's consent: proved without one it is refused; the
@@ -32,18 +37,22 @@
  * every contract numbers its rights from 1 (docs/SETUP.md, "End-to-end test").
  */
 
+import { spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { hash, Keypair, TransactionBuilder, type Transaction } from "@stellar/stellar-sdk";
 
 import { verifyAttestation } from "../src/lib/attestation";
 import { commit, type JsonValue } from "../src/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, issuerSecret } from "../src/lib/config";
-import { readCommitment, readHolder, readIsActive, readRight, server } from "../src/lib/contract";
+import { readCommitment, readHolder, readIsActive, readNextId, readRight, server } from "../src/lib/contract";
 import evidenceFile from "../docs/evidence-phase2.json";
 import type { OwnershipRecord } from "../src/lib/record";
 import { fatal, loadEnv, log } from "./lib/cli";
-import { commitment as poseidonCommitment, randomSecret, secretHash, splitRecordDigest } from "./lib/zk";
+import { R, commitment as poseidonCommitment, randomSecret, secretHash, splitRecordDigest } from "./lib/zk";
 import { fr } from "./lib/zk-encode";
 import { proveTransfer, type TransferFile } from "./lib/zk-prove";
 
@@ -133,6 +142,12 @@ function freshRecord(ownerAccount: string, checkIn: string, checkOut: string): O
 
 const unix = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 1000;
 
+/** Run one of the command-line tools as a person would, with this process's environment. */
+function cli(script: string, args: string[]): { status: number | null; output: string } {
+  const run = spawnSync("node_modules/.bin/tsx", [script, ...args], { encoding: "utf8", env: process.env });
+  return { status: run.status, output: `${run.stdout}${run.stderr}` };
+}
+
 async function main(): Promise<void> {
   const issuer = Keypair.fromSecret(issuerSecret());
   const owner = requireSecret("DEMO_OWNER_SECRET");
@@ -163,29 +178,66 @@ async function main(): Promise<void> {
   check((await post("/api/tx/proven-transfer", { transfer: {} })).status === 401, "building a transfer needs a session (401)");
   check((await post("/api/requests/consent", { right_id: 1, next_secret_hash: "1" })).status === 401, "preparing a consent needs a session (401)");
   check((await post("/api/issue", { record: {} })).status === 401, "issuing needs a session (401)");
-  const notIssuer = await post("/api/issue", { record: freshRecord(owner.publicKey(), "2026-11-28", "2026-12-05"), commitment: "00".repeat(32) }, ownerToken);
+  const notIssuer = await post("/api/issue", { record: freshRecord(owner.publicKey(), "2026-11-28", "2026-12-05"), secret_hash: "1" }, ownerToken);
   check(notIssuer.status === 403, "issuing as a non-issuer is refused (403)", notIssuer.status);
 
   // --- 3. issue two weeks -------------------------------------------------
-  log.step("3. Issue two weeks, each committed to the owner's secret");
-  const issueWeek = async (checkIn: string, checkOut: string) => {
+  log.step("3. Issue two weeks from the screen: the record and the owner's h");
+  // What the Issue screen sends: the record and h. The server computes C.
+  const nextBefore = await readNextId();
+  const badHashes: [string, unknown][] = [
+    ["not a number", "twelve"],
+    ["the field modulus r itself", R.toString()],
+    ["r + 1, in hex", `0x${(R + 1n).toString(16)}`],
+    ["zero", "0"],
+    ["missing", undefined],
+  ];
+  for (const [what, value] of badHashes) {
+    const response = await post("/api/issue", { record: freshRecord(owner.publicKey(), "2026-11-28", "2026-12-05"), secret_hash: value }, issuerToken);
+    const body = (await response.json()) as { error?: string };
+    check(response.status === 400 && /secret_hash/.test(body.error ?? ""), `h ${what}: refused (400)`, { status: response.status, body });
+  }
+  check((await readNextId()) === nextBefore, "and nothing was issued for any of them");
+
+  const work = mkdtempSync(join(tmpdir(), "quietstay-e2e-"));
+  const issueWeek = async (checkIn: string, checkOut: string, encode: (h: bigint) => string) => {
     const record = freshRecord(owner.publicKey(), checkIn, checkOut);
     // The owner's side: a secret, and only its hash handed over.
     const secret = randomSecret();
     const h = await secretHash(secret);
+    // The record text as the screen holds it — what its "Save record" downloads.
+    const recordText = JSON.stringify(record, null, 2);
+    const response = await post("/api/issue", { record: JSON.parse(recordText), secret_hash: encode(h) }, issuerToken);
+    const body = (await response.json()) as { right_id?: number; record_digest?: string; commitment?: string; error?: string };
+    check(response.ok && typeof body.right_id === "number", `week ${checkIn} issued with h in ${encode === hex ? "hex" : "decimal"}`, body);
     // The issuer's side, as `npm run zk:commitment` computes it.
     const d = await splitRecordDigest(record as unknown as JsonValue);
     const c = fr(await poseidonCommitment(d, owner.publicKey(), h));
-    const response = await post("/api/issue", { record, commitment: c }, issuerToken);
-    const body = (await response.json()) as { right_id?: number; record_digest?: string; commitment?: string; error?: string };
-    check(response.ok && typeof body.right_id === "number", `week ${checkIn} issued`, body);
-    return { record, secret, rightId: body.right_id!, c, d: body.record_digest };
+    check(body.commitment === c, "the server's C is the C the command line computes");
+    // The two files the owner keeps.
+    const recordFile = join(work, `right-${body.right_id}.record.json`);
+    writeFileSync(recordFile, recordText);
+    const secretFile = join(work, `right-${body.right_id}.secret.json`);
+    writeFileSync(secretFile, JSON.stringify({ secret: secret.toString() }), { mode: 0o600 });
+    return { record, secret, h, rightId: body.right_id!, c, d: body.record_digest, recordFile, secretFile };
   };
-  const forRent = await issueWeek("2026-11-28", "2026-12-05");
-  const forSale = await issueWeek("2026-12-05", "2026-12-12");
-  check((await readCommitment(forRent.rightId)) === forRent.c, "the ledger holds the commitment the issuer computed");
+  const hex = (h: bigint) => `0x${h.toString(16)}`;
+  const forRent = await issueWeek("2026-11-28", "2026-12-05", (h) => h.toString());
+  const forSale = await issueWeek("2026-12-05", "2026-12-12", hex);
+  check((await readCommitment(forRent.rightId)) === forRent.c, "the ledger holds the commitment the server computed");
   check(await readIsActive(forRent.rightId), "the new week is inside its validity window");
   check(forRent.d === (await commit(forRent.record as never)), "the app reports d = SHA-256 of the record");
+
+  for (const week of [forRent, forSale]) {
+    const attestationFile = join(work, `right-${week.rightId}.attestation.json`);
+    writeFileSync(attestationFile, await (await fetch(`${BASE}/api/attestation/${week.rightId}`)).text());
+    const verified = cli("scripts/verify-record.ts", [String(week.rightId), attestationFile, week.recordFile, "--secret-hash", week.h.toString()]);
+    check(
+      verified.status === 0 && verified.output.includes("The record and h give the commitment the ledger holds"),
+      `npm run verify-record: the saved record and h give right #${week.rightId}'s C on chain`,
+      verified.output.slice(-600),
+    );
+  }
 
   const attestation = await (await fetch(`${BASE}/api/attestation/${forRent.rightId}`)).json();
   const verified = verifyAttestation(attestation, {
@@ -220,16 +272,19 @@ async function main(): Promise<void> {
   log.step("5. The renter asks; the owner proves a rental and submits it");
   const ask = await post("/api/requests", { right_id: forRent.rightId }, renterToken);
   check(ask.ok, "the renter's ask is recorded", await ask.clone().json());
-  const latest = (await server.getLatestLedger()).sequence;
-  const rental = await proveTransfer(forRent.record as unknown as JsonValue, forRent.secret, {
-    rightId: BigInt(forRent.rightId),
-    from: owner.publicKey(),
-    to: renter.publicKey(),
-    expiresAt: BigInt(unix("2026-12-05")),
-    expiryLedger: BigInt(latest + 360),
-    nextSecretHash: 0n,
-  });
-  log.info(`rental proved in ${rental.seconds.toFixed(1)} s`);
+  // The owner's machine: `npm run zk:prove` on the record saved from the Issue screen.
+  const proofDir = join(work, "rental");
+  const proved = cli("scripts/prove.ts", [
+    "--record", forRent.recordFile,
+    "--secret", forRent.secretFile,
+    "--right", String(forRent.rightId),
+    "--from", owner.publicKey(),
+    "--to", renter.publicKey(),
+    "--rental-until", String(unix("2026-12-05")),
+    "--out", proofDir,
+  ]);
+  check(proved.status === 0, "npm run zk:prove proves the rental from the saved record", proved.output.slice(-600));
+  const rental = { file: JSON.parse(readFileSync(join(proofDir, "transfer.json"), "utf8")) as TransferFile };
   const built = await buildProven(rental.file, ownerToken);
   check(built.status === 200 && !!built.body.xdr, "the app builds the rental from the proof file", built.body);
   check(typeof built.body.request_id === "string", "and links it to the renter's ask");
@@ -351,6 +406,8 @@ async function main(): Promise<void> {
   if (BASE !== evidenceBase) {
     check(otherApp.evidence?.length === 0, "an app on another contract shows no other contract's evidence", otherApp.evidence);
   }
+
+  rmSync(work, { recursive: true, force: true });
 
   log.step("Result");
   log.info(`${passed} passed, ${failed} failed`);

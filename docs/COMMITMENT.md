@@ -34,7 +34,7 @@ C = Poseidon_5(d_hi, d_lo, a_hi, a_lo, h)         ← what commitment(right_id) 
 So checking a record against the ledger is now two steps. The first is the one
 below, with `sha256sum`, exactly as before. The second needs `h`, which the holder
 discloses along with the record (never the secret `s` behind it), and Poseidon,
-which runs in the command-line tools only:
+which a browser does not run — so it is a command-line step:
 
 ```bash
 npm run zk:commitment -- --record inventory/records/week-02.json \

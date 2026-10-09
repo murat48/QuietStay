@@ -38,14 +38,23 @@ verified by the contract on chain, and by nobody's permission.
 
 | Artifact | Where it lives | What it is |
 | --- | --- | --- |
-| Ownership record | Off chain, with the parties | Owner identity, resort, unit, deed reference, fee history, and a 32-byte salt. [Schema](./COMMITMENT.md). |
+| Ownership record | Off chain: with the holder, and with the issuer from issuance | Owner identity, resort, unit, deed reference, fee history, and a 32-byte salt. [Schema](./COMMITMENT.md). |
 | Record digest `d` | Off chain; in the attestation | `SHA-256(canonical(record))` — what `sha256sum` gives. |
 | Record secret `s` | **Only on the holder's machine** | A random field element. Knowing it is what the proof proves. |
-| Secret hash `h` | Off chain; disclosed with the record | `Poseidon(s)`. Shareable: it checks a record against the commitment, proves nothing alone. |
+| Secret hash `h` | Off chain; given to the issuer at issuance, disclosed with the record | `Poseidon(s)`. Shareable: it checks a record against the commitment, proves nothing alone. |
 | Commitment `C` | **On chain**, in the right | `Poseidon(d, holder's account, h)`. Replaced on every sale. |
 | Attestation | Off chain, issuer-signed | The issuer's statement about validity and fees, bound to `d`, the right and the contract. [Schema](./ATTESTATION.md). |
 | Usage right | **On chain** | Issuer, week, use year, `C`, and the holding chain. |
 | Ownership proof | In the transfer's call | Groth16 over BLS12-381: three curve points and eleven public signals. [Specification](./CIRCUIT.md). |
+
+**What leaves whose machine.** The record and `s` stay on the holder's machine
+*when proving*: the prover runs there and sends only the proof and its public
+signals. At issuance the record goes to the issuer — as it has since Phase 1, since
+the issuer validates it, computes `d` and attests it — and so does `h`, from which
+the issuer's server computes `C` (Poseidon runs in the circuit, the CLI and that
+server; never in the contract or a browser — [CIRCUIT.md](./CIRCUIT.md#decisions)).
+`h` is the only thing Phase 2 newly sends to the server. `s` is sent to it at no
+stage, so neither the issuer nor its server can ever prove a transfer.
 
 The salt matters more under Phase 2 than it did in Phase 1: after a sale the buyer's
 `h'` is public, so `C'` is hidden only because `d` cannot be guessed — and `d` cannot

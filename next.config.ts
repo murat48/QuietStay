@@ -29,6 +29,9 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     // Phase 2: the attestations for the deployment the app talks to.
     "/*": ["./inventory/phase2/attestations/**"],
+    // The Poseidon constants /api/issue reads at run time to compute C — the
+    // file circuits/gpl/poseidon.ts loads, the same one the command line uses.
+    "/api/issue": ["./circuits/poseidon/bls12381.json"],
   },
 };
 

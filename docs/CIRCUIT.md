@@ -164,8 +164,8 @@ What does change, stated plainly as a trust-model change:
   precondition** for a transfer, so withholding one cannot freeze a week.
 - **A buyer checks the record against `C` with `h`.** The seller discloses the
   record and `h` (not `s`). The buyer computes `d` and `C` and compares with the
-  ledger. Computing `C` is Poseidon, and Poseidon runs only in the circuit and the
-  CLI, so this last step is `npm run verify-record`. The `/verify` page still
+  ledger. Computing `C` is Poseidon, and Poseidon does not run in a browser, so
+  this last step is `npm run verify-record`. The `/verify` page still
   computes `d` from a pasted record (SHA-256, in the browser) and shows the
   on-chain verification result; it says in one sentence why the final
   `d → C` step happens in the CLI.
@@ -574,11 +574,21 @@ the issuer to approve anything.
   attestation ([ATTESTATION.md](./ATTESTATION.md)), lists the week's accepted
   transfers from the contract's events — each one a proof the contract verified —
   and says in one sentence why `d → C` is `npm run verify-record --secret-hash`.
-  Poseidon never runs in the browser or the app's server.
-- **`npm run e2e`** covers the flow end to end — 41 checks, including a replayed
-  proof, someone else's proof, a tampered proof, a sale without consent and a
-  forged consent — run against a throwaway deployment so it issues nothing on the
-  evidence contract ([SETUP.md](./SETUP.md#end-to-end-test)).
+  Poseidon never runs in the browser.
+- **`/issue`** takes the record and the owner's `h` (decimal or hex). The server
+  computes `C` with `commitment` from `scripts/lib/zk.ts` — the module
+  `npm run zk:commitment` and `zk:issue` use, on the one Poseidon in
+  `circuits/gpl/poseidon.ts` — and refuses an `h` that does not parse or is not
+  below `r` with 400, before anything is issued. The screen then offers the record
+  exactly as issued for download; with it and the owner's secret file,
+  `npm run zk:prove` proves a transfer.
+- **`npm run e2e`** covers the flow end to end — 52 checks, including five
+  malformed `h` refused with nothing issued, the server's `C` equal to the
+  command line's, `npm run verify-record` confirming each week's `C` on chain from
+  the saved record, `npm run zk:prove` proving a rental from that record, a
+  replayed proof, someone else's proof, a tampered proof, a sale without consent
+  and a forged consent — run against a throwaway deployment so it issues nothing
+  on the evidence contract ([SETUP.md](./SETUP.md#end-to-end-test)).
 - **When the event window has passed.** The RPC keeps events for about a week, so
   *Verified on chain* falls back to the deployment's evidence transactions from
   `docs/evidence-phase2.json` — two accepted, five refused, each a Stellar Expert
@@ -602,5 +612,17 @@ Approved 2026-10-09.
 3. **The window** (§6). 720 ledgers. A used nullifier's temporary-storage TTL
    always outlives the proof's `expiry_ledger`; a unit test shows the entry is
    not gone while the proof could still be replayed.
+4. **Where Poseidon runs** (approved 2026-10-10, replacing "only in the circuit
+   and the CLI"). **Poseidon runs in the circuit, in the CLI and on the server;
+   it does not run in the contract or in the browser.** The server is the
+   `/api/issue` route, which computes `C` from the record and the owner's `h` so
+   the issuer no longer copies a record into a file and `C` back into a form.
+   Conditions: the route imports the CLI's own module — there is no second
+   Poseidon and no copy of its constants; it refuses an `h` that does not parse
+   as decimal or hex or is not below `r` (400, tested); `npm run zk:check-bundle`
+   still exits 0, and now also confirms the server build does contain the code
+   it finds absent from the browser's. The secret `s` reaches the server at no
+   stage — only `h`, which the issuer was always given. This rule is ours, from
+   `phase2.md`; the SOW sets none on where Poseidon runs.
 
 Written against `phase2.md`, which is aligned with the approved Phase 2 SOW.

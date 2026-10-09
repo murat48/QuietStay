@@ -21,10 +21,10 @@
  * in the browser, before anything is sent, so the person issuing can see it and
  * confirm it matches `npm run commit-record` or `sha256sum`. What goes on chain is
  * the commitment `C = Poseidon(d, owner, h)` (docs/CIRCUIT.md §2), from the hash
- * `h` of a secret only the owner holds. Poseidon runs only in the command-line
- * tools, never in a browser, so the issuer computes `C` with
- * `npm run zk:commitment` and pastes it here. The record itself never goes further
- * than the issuer's own server, and none of it reaches the ledger.
+ * `h` of a secret only the owner holds. The issuer pastes the owner's `h` here and
+ * the server computes `C` when the week is issued — Poseidon runs in the circuit,
+ * the command line and the server, never in a browser. The record itself never
+ * goes further than the issuer's own server, and none of it reaches the ledger.
  *
  * Only the issuer can do this. The contract enforces that; SEP-10 keeps the
  * deployment's issuing key from being driven by anyone who finds the URL.
@@ -163,6 +163,8 @@ interface Preview {
 
 interface IssueResult {
   right_id: number;
+  /** The record text exactly as it was issued — what "Save record" downloads. */
+  issuedText: string;
   record_digest: string;
   commitment: string;
   tx: string;
@@ -182,8 +184,8 @@ export default function IssueScreen() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<IssueResult | null>(null);
-  // C, pasted from `npm run zk:commitment` — Poseidon does not run in a browser.
-  const [commitmentC, setCommitmentC] = useState("");
+  // The owner's h, from `npm run zk:secret` on their machine. The server computes C.
+  const [secretHash, setSecretHash] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   // Generate the two commitment fields once the component is in the browser.
@@ -309,17 +311,18 @@ export default function IssueScreen() {
     try {
       const response = await authFetch("/api/issue", {
         method: "POST",
-        body: JSON.stringify({ record: JSON.parse(recordText), commitment: commitmentC.trim() }),
+        body: JSON.stringify({ record: JSON.parse(recordText), secret_hash: secretHash.trim() }),
       });
-      const body = (await response.json()) as IssueResult & { error?: string };
+      const body = (await response.json()) as Omit<IssueResult, "issuedText"> & { error?: string };
       if (!response.ok) throw new Error(body.error ?? "issuance failed");
-      setResult(body);
+      // Kept as sent: an edit made after issuing must not change what is saved.
+      setResult({ ...body, issuedText: recordText });
     } catch (caught) {
       setError(describeError(caught));
     } finally {
       setBusy(false);
     }
-  }, [authFetch, recordText, commitmentC]);
+  }, [authFetch, recordText, secretHash]);
 
   // Taken from the registry rather than compared against configuration, so the
   // button agrees with what the contract would actually accept.
@@ -772,24 +775,21 @@ export default function IssueScreen() {
       <RoleGate requires="issuer" action="Issuing a usage right">
         <div className="card">
           <div className="field">
-            <label htmlFor="commitment-c">Commitment C, from the command line</label>
+            <label htmlFor="secret-hash">The owner&apos;s h</label>
             <input
-              id="commitment-c"
-              value={commitmentC}
-              onChange={(event) => setCommitmentC(event.target.value)}
-              placeholder="64 hex digits"
+              id="secret-hash"
+              value={secretHash}
+              onChange={(event) => setSecretHash(event.target.value)}
+              placeholder="the number npm run zk:secret printed — decimal or hex"
               spellCheck={false}
             />
           </div>
           <p className="muted" style={{ marginBottom: 0 }}>
             The owner makes a secret on their own machine with <code>npm run zk:secret</code> and
-            sends you only its hash <code>h</code>. Then, with this record saved to a file:
-          </p>
-          <pre>{`npm run zk:commitment -- --record <this record>.json \\
-  --owner ${text("owner.stellar_account") || "<owner G…>"} --secret-hash <the owner's h>`}</pre>
-          <p className="muted" style={{ marginBottom: 0 }}>
-            Poseidon, which C needs, runs only in the command-line tools — never in a browser. You
-            never learn the owner&apos;s secret, so you can never prove a transfer of the week.
+            sends you only its hash <code>h</code>. When you issue, the server computes the
+            commitment <code>C = Poseidon(d, owner, h)</code> from this record and that{" "}
+            <code>h</code>. The secret itself never reaches you or this server, so you can never
+            prove a transfer of the week.
           </p>
         </div>
         {readOnly ? (
@@ -803,7 +803,7 @@ export default function IssueScreen() {
           <button
             className="primary"
             onClick={() => void issue()}
-            disabled={busy || !preview || !isIssuer || !/^[0-9a-fA-F]{64}$/.test(commitmentC.trim())}
+            disabled={busy || !preview || !isIssuer || secretHash.trim() === ""}
           >
             {busy ? "issuing…" : "Issue on testnet"}
           </button>
@@ -849,11 +849,18 @@ export default function IssueScreen() {
               <a
                 className="btn primary"
                 download={`right-${result.right_id}.record.json`}
-                href={`data:application/json,${encodeURIComponent(recordText)}`}
+                href={`data:application/json,${encodeURIComponent(result.issuedText)}`}
               >
                 Save record for right #{result.right_id}
               </a>
             </p>
+            <p className="muted">
+              Send it to the owner. With it and their secret file they can prove a transfer of the
+              week:
+            </p>
+            <pre>{`npm run zk:prove -- --record right-${result.right_id}.record.json --secret <their secret>.json \\
+  --right ${result.right_id} --from ${readPath(JSON.parse(result.issuedText) as Doc, "owner.stellar_account") || "<owner G…>"} --to <G…> \\
+  ( --rental-until <unix seconds> | --sale --next-secret-hash <buyer's h'> )`}</pre>
 
             <h3>Issuer attestation</h3>
             <p className="muted" style={{ marginTop: 0 }}>

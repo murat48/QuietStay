@@ -5,7 +5,7 @@
  *       [--like inventory/records/week-03.json] [--record <existing record.json>]
  *       [--secret <owner secret.json>] [--dir <folder>]
  *
- * What the Issue screen and three commands do between them, in one:
+ * What the Issue screen does, without a browser or a running app:
  *
  *   1. the record — an existing one (--record), or a new one built from a sample
  *      (--like, default week 03) with a fresh record_id and 32-byte salt, the
