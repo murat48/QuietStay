@@ -10,12 +10,15 @@
  *
  *   1. SEP-10 for the issuer, owner, renter and buyer; a forged response refused
  *   2. routes refuse callers without a session, and non-issuers cannot issue
- *   3. issue two weeks the way the Issue screen does — the record and the
- *      owner's h, one in decimal and one in hex; the server computes C, and it
- *      is the C the CLI computes. A malformed h, or one not below the field
- *      modulus, is refused with 400 before anything is issued. Each week's C on
- *      chain is then confirmed by `npm run verify-record` from the record the
- *      screen lets the issuer save
+ *   3. the owner asks for issuance with their h, from their own session — asking
+ *      in another account's name, or with an h that is not a number below the
+ *      field modulus, is refused. The Issue screen shows the issuer the form and
+ *      the ask, and everyone else only the ask box. The issuer issues one week
+ *      from the ask — h taken from it, the first holder bound to the asker, the
+ *      ask closed — and one from an h given directly, in hex. The server's C is
+ *      the CLI's; a malformed h is refused with 400 before anything is issued.
+ *      Each week's C on chain is confirmed by `npm run verify-record` from the
+ *      record the screen lets the issuer save
  *   4. publish an offer and withdraw it
  *   5. the renter asks; the owner proves a rental with `npm run zk:prove` from
  *      that saved record and uploads it; it goes through
@@ -51,6 +54,8 @@ import { CONTRACT_ID, NETWORK_PASSPHRASE, issuerSecret } from "../src/lib/config
 import { readCommitment, readHolder, readIsActive, readNextId, readRight, server } from "../src/lib/contract";
 import evidenceFile from "../docs/evidence-phase2.json";
 import type { OwnershipRecord } from "../src/lib/record";
+import type { IssuanceRequest } from "../src/lib/requests";
+import { issueScreenView, type AccountStanding } from "../src/lib/roles";
 import { fatal, loadEnv, log } from "./lib/cli";
 import { R, commitment as poseidonCommitment, randomSecret, secretHash, splitRecordDigest } from "./lib/zk";
 import { fr } from "./lib/zk-encode";
@@ -180,9 +185,37 @@ async function main(): Promise<void> {
   check((await post("/api/issue", { record: {} })).status === 401, "issuing needs a session (401)");
   const notIssuer = await post("/api/issue", { record: freshRecord(owner.publicKey(), "2026-11-28", "2026-12-05"), secret_hash: "1" }, ownerToken);
   check(notIssuer.status === 403, "issuing as a non-issuer is refused (403)", notIssuer.status);
+  check((await post("/api/requests/issuance", { secret_hash: "1" })).status === 401, "asking for issuance needs a session (401)");
+  // What the Issue screen renders, from the standing /api/me reports for each account.
+  const viewFor = async (token: string) => {
+    const me = (await (await fetch(`${BASE}/api/me`, { headers: { authorization: `Bearer ${token}` } })).json()) as { is_issuer?: boolean };
+    return issueScreenView({ isIssuer: me.is_issuer === true } as AccountStanding);
+  };
+  check((await viewFor(ownerToken)) === "request" && (await viewFor(renterToken)) === "request", "the Issue screen shows other accounts only the request box, not the form");
+  check((await viewFor(issuerToken)) === "issue", "and shows the issuer the form");
 
   // --- 3. issue two weeks -------------------------------------------------
-  log.step("3. Issue two weeks from the screen: the record and the owner's h");
+  log.step("3. The owner asks for issuance; the issuer issues from the ask, and from an h given directly");
+  const work = mkdtempSync(join(tmpdir(), "quietstay-e2e-"));
+  const hex = (h: bigint) => `0x${h.toString(16)}`;
+  const issuanceAsks = async (token: string) =>
+    ((await (await fetch(`${BASE}/api/requests/issuance`, { headers: { authorization: `Bearer ${token}` } })).json()) as { requests: IssuanceRequest[] }).requests;
+
+  // The owner's side: a secret on their machine, and only its hash sent — from their session.
+  const rentSecret = randomSecret();
+  const rentHash = await secretHash(rentSecret);
+  const forOther = await post("/api/requests/issuance", { secret_hash: rentHash.toString(), owner: renter.publicKey() }, ownerToken);
+  check(forOther.status === 403, "asking in another account's name is refused (403)", forOther.status);
+  for (const [what, value] of [["not a number", "twelve"], ["the field modulus r", R.toString()]] as const) {
+    const bad = await post("/api/requests/issuance", { secret_hash: value }, ownerToken);
+    check(bad.status === 400, `asking with h ${what} is refused (400)`, bad.status);
+  }
+  const asked = await post("/api/requests/issuance", { secret_hash: rentHash.toString() }, ownerToken);
+  const issuanceAsk = ((await asked.json()) as { request?: IssuanceRequest }).request;
+  check(asked.ok && issuanceAsk?.by === owner.publicKey() && issuanceAsk.secret_hash === rentHash.toString(), "the owner's ask is recorded for their own account, with h and nothing else", issuanceAsk);
+  check(!(await issuanceAsks(renterToken)).some((r) => r.id === issuanceAsk?.id), "another account cannot see it");
+  check((await issuanceAsks(issuerToken)).some((r) => r.id === issuanceAsk?.id && r.status === "open"), "the issuer sees it among the pending requests");
+
   // What the Issue screen sends: the record and h. The server computes C.
   const nextBefore = await readNextId();
   const badHashes: [string, unknown][] = [
@@ -197,19 +230,23 @@ async function main(): Promise<void> {
     const body = (await response.json()) as { error?: string };
     check(response.status === 400 && /secret_hash/.test(body.error ?? ""), `h ${what}: refused (400)`, { status: response.status, body });
   }
+  const wrongHolder = await post("/api/issue", { record: freshRecord(renter.publicKey(), "2026-11-28", "2026-12-05"), request_id: issuanceAsk?.id }, issuerToken);
+  check(wrongHolder.status === 400, "issuing from the ask to anyone but the asker is refused (400)", wrongHolder.status);
   check((await readNextId()) === nextBefore, "and nothing was issued for any of them");
 
-  const work = mkdtempSync(join(tmpdir(), "quietstay-e2e-"));
-  const issueWeek = async (checkIn: string, checkOut: string, encode: (h: bigint) => string) => {
+  type Via = { request: IssuanceRequest } | { encode: (h: bigint) => string };
+  const issueWeek = async (checkIn: string, checkOut: string, secret: bigint, via: Via) => {
     const record = freshRecord(owner.publicKey(), checkIn, checkOut);
-    // The owner's side: a secret, and only its hash handed over.
-    const secret = randomSecret();
     const h = await secretHash(secret);
     // The record text as the screen holds it — what its "Save record" downloads.
     const recordText = JSON.stringify(record, null, 2);
-    const response = await post("/api/issue", { record: JSON.parse(recordText), secret_hash: encode(h) }, issuerToken);
+    const response = await post(
+      "/api/issue",
+      "request" in via ? { record: JSON.parse(recordText), request_id: via.request.id } : { record: JSON.parse(recordText), secret_hash: via.encode(h) },
+      issuerToken,
+    );
     const body = (await response.json()) as { right_id?: number; record_digest?: string; commitment?: string; error?: string };
-    check(response.ok && typeof body.right_id === "number", `week ${checkIn} issued with h in ${encode === hex ? "hex" : "decimal"}`, body);
+    check(response.ok && typeof body.right_id === "number", `week ${checkIn} issued ${"request" in via ? "from the owner's ask" : "with h given directly, in hex"}`, body);
     // The issuer's side, as `npm run zk:commitment` computes it.
     const d = await splitRecordDigest(record as unknown as JsonValue);
     const c = fr(await poseidonCommitment(d, owner.publicKey(), h));
@@ -221,9 +258,13 @@ async function main(): Promise<void> {
     writeFileSync(secretFile, JSON.stringify({ secret: secret.toString() }), { mode: 0o600 });
     return { record, secret, h, rightId: body.right_id!, c, d: body.record_digest, recordFile, secretFile };
   };
-  const hex = (h: bigint) => `0x${h.toString(16)}`;
-  const forRent = await issueWeek("2026-11-28", "2026-12-05", (h) => h.toString());
-  const forSale = await issueWeek("2026-12-05", "2026-12-12", hex);
+  const forRent = await issueWeek("2026-11-28", "2026-12-05", rentSecret, { request: issuanceAsk! });
+  check(!(await issuanceAsks(issuerToken)).some((r) => r.id === issuanceAsk?.id), "the issued ask drops off the issuer's list");
+  const closed = (await issuanceAsks(ownerToken)).find((r) => r.id === issuanceAsk?.id);
+  check(closed?.status === "issued" && closed.right_id === forRent.rightId, `the owner sees it issued as right #${forRent.rightId}`, closed);
+  const again = await post("/api/issue", { record: freshRecord(owner.publicKey(), "2026-12-12", "2026-12-19"), request_id: issuanceAsk?.id }, issuerToken);
+  check(again.status === 409, "an ask cannot be issued twice (409)", again.status);
+  const forSale = await issueWeek("2026-12-05", "2026-12-12", randomSecret(), { encode: hex });
   check((await readCommitment(forRent.rightId)) === forRent.c, "the ledger holds the commitment the server computed");
   check(await readIsActive(forRent.rightId), "the new week is inside its validity window");
   check(forRent.d === (await commit(forRent.record as never)), "the app reports d = SHA-256 of the record");

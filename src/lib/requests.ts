@@ -1,5 +1,5 @@
 /**
- * Transfer requests — the buyer's side of the marketplace.
+ * Requests — the buyer's side of the marketplace, and the owner's side of issuance.
  *
  * Until now a transfer was a push: the holder typed a recipient's address and
  * sent the week. That worked, but it left two gaps. The person who wanted the
@@ -32,6 +32,15 @@
  * A request names an account that wants a particular week, which is more than the
  * registry says about anyone. It is served only to the two parties: the account
  * that made it, and the account holding the week it is for.
+ *
+ * ## Asking to have a week issued
+ *
+ * The same store keeps the owner's side of issuance. An owner signs in, enters
+ * the hash `h` of a record secret made on their own machine, and asks the issuer
+ * to issue a week to them. The account comes from the session, as on a transfer
+ * ask; the secret `s` is never sent. The issuer picks the ask on the Issue screen,
+ * which fills in the first holder and `h` from it, and the ask is closed when the
+ * week is issued. Served to the account that made it and to the issuer only.
  */
 
 import { accessSync, constants, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -43,8 +52,14 @@ import { kvGet, kvIsConfigured, kvIsReachable, kvSet } from "./kv";
 /** Per deployment, like attestations: every contract numbers its rights from 1. */
 export const REQUESTS_DIR = "inventory/phase2/requests";
 
-/** The store's key for a right's requests. Namespaced, since attestations share it. */
-const kvKey = (rightId: number) => `quietstay:${CONTRACT_ID}:requests:${rightId}`;
+/**
+ * Where a list lives: a right's transfer requests, or the deployment's issuance
+ * requests. One store, one key space, one directory.
+ */
+type Slot = number | "issuance";
+
+/** The store's key for a list. Namespaced, since attestations share it. */
+const kvKey = (slot: Slot) => `quietstay:${CONTRACT_ID}:requests:${slot}`;
 
 export type RequestStatus = "open" | "accepted" | "declined" | "withdrawn";
 
@@ -89,8 +104,10 @@ export interface TransferRequest {
  * Unlike attestations, requests are only ever written here — nothing ships with
  * the build — so there is one location rather than a search order.
  */
-function pathFor(rightId: number): string {
-  return resolve(DATA_ROOT, REQUESTS_DIR, `right-${rightId}.requests.json`);
+const fileName = (slot: Slot) => (slot === "issuance" ? "issuance.requests.json" : `right-${slot}.requests.json`);
+
+function pathFor(slot: Slot): string {
+  return resolve(DATA_ROOT, REQUESTS_DIR, fileName(slot));
 }
 
 /**
@@ -100,11 +117,15 @@ function pathFor(rightId: number): string {
  * the build, so wherever this deployment writes is the only place a request has
  * ever been.
  */
-export async function loadRequests(rightId: number): Promise<TransferRequest[]> {
+export function loadRequests(rightId: number): Promise<TransferRequest[]> {
+  return loadSlot<TransferRequest>(rightId);
+}
+
+async function loadSlot<T>(slot: Slot): Promise<T[]> {
   if (kvIsConfigured()) {
     try {
-      const stored = await kvGet(kvKey(rightId));
-      return stored ? (JSON.parse(stored) as TransferRequest[]) : [];
+      const stored = await kvGet(kvKey(slot));
+      return stored ? (JSON.parse(stored) as T[]) : [];
     } catch {
       // Unreachable store. An empty list is the honest answer — it says nobody
       // has asked, which is what the holder would see anyway, rather than
@@ -114,7 +135,7 @@ export async function loadRequests(rightId: number): Promise<TransferRequest[]> 
   }
 
   try {
-    return JSON.parse(readFileSync(pathFor(rightId), "utf8")) as TransferRequest[];
+    return JSON.parse(readFileSync(pathFor(slot), "utf8")) as T[];
   } catch {
     return [];
   }
@@ -158,22 +179,23 @@ export async function requestStoreIsWritable(): Promise<boolean> {
   }
 }
 
-export async function saveRequests(
-  rightId: number,
-  requests: TransferRequest[],
-): Promise<string> {
-  const body = `${JSON.stringify(requests, null, 2)}\n`;
+export function saveRequests(rightId: number, requests: TransferRequest[]): Promise<string> {
+  return saveSlot(rightId, requests);
+}
+
+async function saveSlot(slot: Slot, items: unknown[]): Promise<string> {
+  const body = `${JSON.stringify(items, null, 2)}\n`;
 
   if (kvIsConfigured()) {
     try {
-      await kvSet(kvKey(rightId), body);
-      return kvKey(rightId);
+      await kvSet(kvKey(slot), body);
+      return kvKey(slot);
     } catch (error) {
       throw new RequestStoreUnavailable(error);
     }
   }
 
-  const path = pathFor(rightId);
+  const path = pathFor(slot);
   try {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, body, "utf8");
@@ -181,7 +203,7 @@ export async function saveRequests(
     // EROFS, EACCES, ENOSPC — all the same answer to the caller: not here.
     throw new RequestStoreUnavailable(error);
   }
-  return join(REQUESTS_DIR, `right-${rightId}.requests.json`);
+  return join(REQUESTS_DIR, fileName(slot));
 }
 
 /**
@@ -219,4 +241,43 @@ export async function openRequestBy(
 ): Promise<TransferRequest | null> {
   const all = await loadRequests(rightId);
   return all.find((r) => r.by === account && r.status === "open") ?? null;
+}
+
+export type IssuanceStatus = "open" | "issued";
+
+/** An owner's ask to have a week issued to them. */
+export interface IssuanceRequest {
+  id: string;
+  /** The account asking — the week's first holder — proved over SEP-10. */
+  by: string;
+  /** `h = Poseidon(s)`, decimal. Never `s`. */
+  secret_hash: string;
+  requested_at: string;
+  status: IssuanceStatus;
+  /** Set when issued. */
+  right_id?: number;
+  tx?: string;
+  issued_at?: string;
+}
+
+/** Every issuance request this deployment has taken, newest last. */
+export function loadIssuanceRequests(): Promise<IssuanceRequest[]> {
+  return loadSlot<IssuanceRequest>("issuance");
+}
+
+export function saveIssuanceRequests(requests: IssuanceRequest[]): Promise<string> {
+  return saveSlot("issuance", requests);
+}
+
+/** Close an issuance request once its week is on chain. Same read-modify-write caveat as above. */
+export async function markIssued(
+  requestId: string,
+  issued: { right_id: number; tx: string },
+): Promise<IssuanceRequest | null> {
+  const all = await loadIssuanceRequests();
+  const index = all.findIndex((r) => r.id === requestId);
+  if (index === -1) return null;
+  all[index] = { ...all[index]!, status: "issued", ...issued, issued_at: new Date().toISOString() };
+  await saveIssuanceRequests(all);
+  return all[index]!;
 }

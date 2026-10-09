@@ -191,7 +191,7 @@ to verify a signature, which stays with `require_auth`.
 3. **Optionally, the record is the attested one.** If the seller discloses it, the
    browser computes `d` with SHA-256 and checks it against the attestation. The last
    link — that `d` is inside the ledger's `C` — needs the holder's `h` and Poseidon,
-   which runs only in the command line: `npm run verify-record --secret-hash`.
+   which does not run in a browser: `npm run verify-record --secret-hash`.
 4. **The week has only ever moved by proof.** The verify screen lists the week's
    accepted transfers from the contract's events; each one is a proof the contract
    verified.
@@ -313,7 +313,14 @@ Deliberate, and stated so nobody discovers them as surprises:
    included, by design.
 5. **A sale needs a buyer whose wallet can sign an authorization entry** in the web
    app — Freighter or Hana. Others can sign from the command line.
-6. **Proving is command-line only.** In-browser proving is out of scope for Phase 2.
+6. **Who still uses the command line: the owner, not the issuer.** Issuance runs in
+   the app end to end. The owner signs in on the Issue screen and asks for a week
+   with their `h`; the issuer, on the same screen, picks the ask — which fills in the
+   first holder and `h` and locks both — enters the record, and issues. The server
+   computes `C`; `s` never reaches it. The owner still makes the secret and its `h`
+   (`npm run zk:secret`) and the transfer proof (`npm run zk:prove`) on the command
+   line, because both need Poseidon and the browser does not run it. Moving those two
+   steps into the browser is Phase 3; in-browser proving is out of scope for Phase 2.
 7. **`burn` needs the holder's wallet, not the holder's proof.** Someone who steals a
    holder's wallet key cannot transfer the week — that needs the secret too — but can
    burn it, destroying it for everyone. The issuer can do neither. Binding `burn` to
@@ -326,7 +333,9 @@ Deliberate, and stated so nobody discovers them as surprises:
     records availability and term only.
 12. **Requests are off chain.** An ask is a message the deployment keeps. A sale ask
     carries the buyer's signed consent, which the contract checks when the sale is
-    submitted; the ask itself binds nobody.
+    submitted; the ask itself binds nobody. An owner's ask for issuance is kept in
+    the same store and carries only the asker's account, from their session, and
+    their `h`.
 13. **Sub-grant depth is capped at 4** — a resource bound; under Phase 2 no renter can
     sub-grant anyway.
 
@@ -334,7 +343,8 @@ Deliberate, and stated so nobody discovers them as surprises:
 
 Mainnet, a security audit, and a production multi-party trusted-setup ceremony —
 together the step from a testnet demonstration to something real money could rest on.
-Binding `burn` to the proof belongs there too.
+Binding `burn` to the proof belongs there too, and so does taking the command line out
+of the owner's hands: making the record secret and proving a transfer in the browser.
 
 **Out of scope for Phase 2, and absent from this repository:** mainnet deployment, a
 security audit, a production trusted-setup ceremony, in-browser proving, selective

@@ -575,14 +575,22 @@ the issuer to approve anything.
   transfers from the contract's events — each one a proof the contract verified —
   and says in one sentence why `d → C` is `npm run verify-record --secret-hash`.
   Poseidon never runs in the browser.
-- **`/issue`** takes the record and the owner's `h` (decimal or hex). The server
+- **`/issue`** reads the role. An owner signs in and asks for issuance with their
+  `h` (`/api/requests/issuance`, the account taken from the session, `h` checked as
+  below). The issuer sees the pending asks; picking one fills in and locks the
+  first holder and `h`, and issuing closes it. The issuer can also take an `h`
+  given directly. Either way the route takes the record and the owner's `h`
+  (decimal or hex). The server
   computes `C` with `commitment` from `scripts/lib/zk.ts` — the module
   `npm run zk:commitment` and `zk:issue` use, on the one Poseidon in
   `circuits/gpl/poseidon.ts` — and refuses an `h` that does not parse or is not
   below `r` with 400, before anything is issued. The screen then offers the record
   exactly as issued for download; with it and the owner's secret file,
   `npm run zk:prove` proves a transfer.
-- **`npm run e2e`** covers the flow end to end — 52 checks, including five
+- **`npm run e2e`** covers the flow end to end — 65 checks, including an
+  owner's ask issued and closed, an ask in another account's name and asks with
+  an invalid `h` refused, the Issue screen showing the form to the issuer only,
+  five
   malformed `h` refused with nothing issued, the server's `C` equal to the
   command line's, `npm run verify-record` confirming each week's `C` on chain from
   the saved record, `npm run zk:prove` proving a rental from that record, a

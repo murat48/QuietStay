@@ -2,6 +2,11 @@
  * Issue a usage right.
  *
  *   POST /api/issue  { record, secret_hash }  → { right_id, record_digest, commitment, tx, attestation }
+ *   POST /api/issue  { record, request_id }   → the same, from an owner's issuance request
+ *
+ * With `request_id` the owner's `h` comes from their request
+ * (/api/requests/issuance), the record's first holder must be the account that
+ * asked, and the request is closed once the week is on chain.
  *
  * Only the issuer can issue, and the contract enforces that independently. This
  * route additionally requires the caller to have proved control of the issuer's
@@ -43,6 +48,7 @@ import {
   recordCommitment,
   validateRecord,
 } from "@/lib/record";
+import { RequestStoreUnavailable, loadIssuanceRequests, markIssued } from "@/lib/requests";
 import { authenticatedAccount } from "@/lib/sep10";
 
 export async function POST(request: Request): Promise<Response> {
@@ -97,9 +103,9 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let body: { record?: unknown; secret_hash?: unknown };
+  let body: { record?: unknown; secret_hash?: unknown; request_id?: unknown };
   try {
-    body = (await request.json()) as { record?: unknown; secret_hash?: unknown };
+    body = (await request.json()) as { record?: unknown; secret_hash?: unknown; request_id?: unknown };
   } catch {
     return Response.json({ error: "expected a JSON body" }, { status: 400 });
   }
@@ -112,13 +118,31 @@ export async function POST(request: Request): Promise<Response> {
     // Checked before anything is submitted: a malformed h would otherwise make a
     // commitment nobody can prove against, and the issuance cannot be undone.
     let h: bigint;
-    try {
-      h = parseSecretHash(body.secret_hash);
-    } catch (caught) {
-      return Response.json(
-        { error: `secret_hash: ${caught instanceof Error ? caught.message : "not valid"}` },
-        { status: 400 },
-      );
+    let requestId: string | null = null;
+    if (body.request_id !== undefined) {
+      // From an owner's ask: h is theirs, and so is the week.
+      const ask = (await loadIssuanceRequests()).find((r) => r.id === body.request_id);
+      if (!ask) return Response.json({ error: "no such issuance request" }, { status: 404 });
+      if (ask.status !== "open") {
+        return Response.json({ error: `this request was already ${ask.status}`, request: ask }, { status: 409 });
+      }
+      if (record.owner.stellar_account !== ask.by) {
+        return Response.json(
+          { error: `the record's first holder must be the account that asked, ${ask.by}` },
+          { status: 400 },
+        );
+      }
+      h = parseSecretHash(ask.secret_hash);
+      requestId = ask.id;
+    } else {
+      try {
+        h = parseSecretHash(body.secret_hash);
+      } catch (caught) {
+        return Response.json(
+          { error: `secret_hash: ${caught instanceof Error ? caught.message : "not valid"}` },
+          { status: 400 },
+        );
+      }
     }
     const d = await splitRecordDigest(record as unknown as JsonValue);
     const commitment = fr(await poseidonCommitment(d, record.owner.stellar_account, h));
@@ -160,6 +184,16 @@ export async function POST(request: Request): Promise<Response> {
     // browser is not enough. No transfer depends on it.
     const attestationPath = await saveAttestation(rightId, attestation);
 
+    // The week is on chain whatever happens here; a request left open is said so.
+    let requestNote: string | undefined;
+    if (requestId) {
+      try {
+        await markIssued(requestId, { right_id: rightId, tx: result.hash });
+      } catch (caught) {
+        requestNote = caught instanceof RequestStoreUnavailable ? caught.message : "the request could not be closed";
+      }
+    }
+
     return Response.json({
       right_id: rightId,
       record_digest: recordDigest,
@@ -171,6 +205,8 @@ export async function POST(request: Request): Promise<Response> {
       attested_clean: clean,
       attestation,
       attestation_path: attestationPath,
+      ...(requestId ? { request_id: requestId } : {}),
+      ...(requestNote ? { request_note: requestNote } : {}),
       note: clean
         ? "The issuer attests this week is valid and free of unpaid maintenance fees."
         : "Issued, but NOT attested clean: the record shows maintenance fees outstanding. " +

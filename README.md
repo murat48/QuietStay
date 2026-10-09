@@ -24,7 +24,7 @@ The issuer, which approved every transfer in Phase 1, has no part in them any mo
 | Contract | [`CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD`](https://stellar.expert/explorer/testnet/contract/CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD) — proof-gated transfers, verification key fixed at deployment |
 | Network | `Test SDF Network ; September 2015` |
 | The proof | [CIRCUIT.md](./docs/CIRCUIT.md) — opens with a one-page summary; circuit in [`circuits/gpl/transfer.circom`](./circuits/gpl/transfer.circom) |
-| Tests | [62 contract tests](./contracts/quietstay-rights/src/test.rs), every transfer carrying a real proof · 11 circuit tests · 52 end-to-end checks |
+| Tests | [62 contract tests](./contracts/quietstay-rights/src/test.rs), every transfer carrying a real proof · 11 circuit tests · 65 end-to-end checks |
 | Demo video, Phase 2 | _add link after recording_ |
 
 ## Reviewing this?

@@ -201,7 +201,9 @@ parameters in [CIRCUIT.md](./CIRCUIT.md#poseidon-parameters-over-bls12-381).
 ## End-to-end test
 
 `npm run e2e` drives the running app over HTTP with the demo keys: SEP-10;
-issuance the way the Issue screen does it — record and `h`, in decimal and in hex —
+the owner's ask for issuance (asking for another account and an invalid `h`
+refused; the Issue screen's form shown to the issuer only); issuance from that ask
+and from an `h` given directly, in hex —
 with five malformed `h` refused (400) and nothing issued, and the server's `C` equal
 to the CLI's; `npm run verify-record` confirming each `C` on chain from the record
 as the screen saves it; attestation v2; offers; a rental proved by
@@ -209,7 +211,7 @@ as the screen saves it; attestation v2; offers; a rental proved by
 proof refused, a sale refused without the buyer's consent, a forged consent refused,
 the sale with a real one, the verify screen's transfer list, and — on an app that
 reads the evidence contract — the evidence links it falls back to once the event
-window has passed: 52 checks.
+window has passed: 65 checks.
 
 It issues weeks, so **run it against a throwaway deployment**, never the one in
 EVIDENCE.md — and give the app its own data directory, because every contract

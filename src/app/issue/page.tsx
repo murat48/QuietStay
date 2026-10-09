@@ -28,6 +28,12 @@
  *
  * Only the issuer can do this. The contract enforces that; SEP-10 keeps the
  * deployment's issuing key from being driven by anyone who finds the URL.
+ *
+ * **The screen reads the role** (`issueScreenView`). The issuer sees the form
+ * and the owners' pending issuance requests; picking one fills in the first
+ * holder and `h` and locks both, so the issuer only enters the record. Every
+ * other account sees just the box for asking to have a week issued: it sends
+ * `h` — never the secret — for the account signed in, and nothing else.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -37,6 +43,8 @@ import { useWallet } from "@/components/WalletProvider";
 import { canonicalText, commit } from "@/lib/canonical";
 import { explorer } from "@/lib/config";
 import { describeError, formatDate } from "@/lib/format";
+import type { IssuanceRequest } from "@/lib/requests";
+import { issueScreenView } from "@/lib/roles";
 import {
   isoWeekNumber,
   onChainWindows,
@@ -175,7 +183,7 @@ interface IssueResult {
 }
 
 export default function IssueScreen() {
-  const { standing, readOnly, authFetch } = useWallet();
+  const { standing, readOnly, authFetch, authenticated } = useWallet();
 
   const [tab, setTab] = useState<Tab>("form");
   const [recordText, setRecordText] = useState(() => JSON.stringify(TEMPLATE, null, 2));
@@ -186,6 +194,10 @@ export default function IssueScreen() {
   const [result, setResult] = useState<IssueResult | null>(null);
   // The owner's h, from `npm run zk:secret` on their machine. The server computes C.
   const [secretHash, setSecretHash] = useState("");
+  // The owners' open issuance requests, and the one being issued from, if any.
+  const [asks, setAsks] = useState<IssuanceRequest[]>([]);
+  const [asksError, setAsksError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<IssuanceRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Generate the two commitment fields once the component is in the browser.
@@ -309,28 +321,79 @@ export default function IssueScreen() {
     setError(null);
     setResult(null);
     try {
+      const record: unknown = JSON.parse(recordText);
       const response = await authFetch("/api/issue", {
         method: "POST",
-        body: JSON.stringify({ record: JSON.parse(recordText), secret_hash: secretHash.trim() }),
+        body: JSON.stringify(
+          selected ? { record, request_id: selected.id } : { record, secret_hash: secretHash.trim() },
+        ),
       });
       const body = (await response.json()) as Omit<IssueResult, "issuedText"> & { error?: string };
       if (!response.ok) throw new Error(body.error ?? "issuance failed");
       // Kept as sent: an edit made after issuing must not change what is saved.
       setResult({ ...body, issuedText: recordText });
+      // An issued request drops off the list.
+      if (selected) {
+        setAsks((current) => current.filter((ask) => ask.id !== selected.id));
+        setSelected(null);
+        setSecretHash("");
+      }
     } catch (caught) {
       setError(describeError(caught));
     } finally {
       setBusy(false);
     }
-  }, [authFetch, recordText, secretHash]);
+  }, [authFetch, recordText, secretHash, selected]);
 
   // Taken from the registry rather than compared against configuration, so the
   // button agrees with what the contract would actually accept.
   const isIssuer = standing?.isIssuer === true;
+
+  // The issuer's queue: open requests from owners, read when the issuer signs in.
+  useEffect(() => {
+    if (!isIssuer || !authenticated) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await authFetch("/api/requests/issuance");
+        const body = (await response.json()) as { requests?: IssuanceRequest[]; error?: string };
+        if (!response.ok) throw new Error(body.error ?? "could not read the requests");
+        if (!cancelled) setAsks(body.requests ?? []);
+      } catch (caught) {
+        if (!cancelled) setAsksError(describeError(caught));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isIssuer, authenticated, authFetch]);
+
+  const pick = useCallback(
+    (ask: IssuanceRequest | null) => {
+      setSelected(ask);
+      setSecretHash(ask ? ask.secret_hash : "");
+      if (ask) setField("owner.stellar_account", ask.by);
+    },
+    [setField],
+  );
   const feesOutstanding =
     preview !== null && Number.parseFloat(preview.feesOutstanding) !== 0;
 
   const text = (path: string) => readPath(parsed, path);
+  const ownerMatchesAsk = selected === null || text("owner.stellar_account") === selected.by;
+
+  if (issueScreenView(standing) === "request") {
+    return (
+      <>
+        <h1>Ask for a week to be issued</h1>
+        <p className="lede">
+          The issuer issues usage rights. To have a week issued to you, send the issuer the hash of
+          a secret only you hold. The issuer enters the record; the week arrives in this account.
+        </p>
+        <IssuanceAsk />
+      </>
+    );
+  }
 
   return (
     <>
@@ -340,6 +403,34 @@ export default function IssueScreen() {
         SHA-256 with the owner&apos;s account and the hash of a secret only the owner holds, the
         week&apos;s dates, the use year, and the first holder — nothing else.
       </p>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Requests from owners</h3>
+        {asksError ? <div className="note bad">{asksError}</div> : null}
+        {asks.length === 0 ? (
+          <p className="muted" style={{ marginBottom: 0 }}>
+            No pending requests. An owner asks on this screen, signed in with their own wallet.
+          </p>
+        ) : (
+          <ul>
+            {asks.map((ask) => (
+              <li key={ask.id}>
+                <code>{ask.by}</code>{" "}
+                <span className="muted">· asked {formatDate(Date.parse(ask.requested_at) / 1000)}</span>{" "}
+                {selected?.id === ask.id ? (
+                  <button type="button" onClick={() => pick(null)}>
+                    Deselect
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => pick(ask)}>
+                    Issue to this account
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="card">
         <div className="tabs" role="tablist" aria-label="Record editor">
@@ -429,10 +520,14 @@ export default function IssueScreen() {
                       placeholder="G…"
                       spellCheck={false}
                       value={text("owner.stellar_account")}
+                      readOnly={selected !== null}
                       onChange={(event) =>
                         setField("owner.stellar_account", event.target.value.trim())
                       }
                     />
+                    {selected ? (
+                      <p className="muted">From the owner&apos;s request — it cannot be edited.</p>
+                    ) : null}
                     <p className="muted">
                       The only part of this block that reaches the ledger. The name and email stay in
                       the record.
@@ -779,14 +874,24 @@ export default function IssueScreen() {
             <input
               id="secret-hash"
               value={secretHash}
+              readOnly={selected !== null}
               onChange={(event) => setSecretHash(event.target.value)}
               placeholder="the number npm run zk:secret printed — decimal or hex"
               spellCheck={false}
             />
           </div>
+          {selected ? (
+            <p className="muted">From the owner&apos;s request — it cannot be edited.</p>
+          ) : null}
+          {!ownerMatchesAsk ? (
+            <div className="note warn">
+              The record&apos;s first holder is no longer the account that asked,{" "}
+              <code>{selected?.by}</code>. Put it back, or deselect the request.
+            </div>
+          ) : null}
           <p className="muted" style={{ marginBottom: 0 }}>
             The owner makes a secret on their own machine with <code>npm run zk:secret</code> and
-            sends you only its hash <code>h</code>. When you issue, the server computes the
+            sends you only its hash <code>h</code> — by asking on this screen, or directly. When you issue, the server computes the
             commitment <code>C = Poseidon(d, owner, h)</code> from this record and that{" "}
             <code>h</code>. The secret itself never reaches you or this server, so you can never
             prove a transfer of the week.
@@ -803,7 +908,7 @@ export default function IssueScreen() {
           <button
             className="primary"
             onClick={() => void issue()}
-            disabled={busy || !preview || !isIssuer || secretHash.trim() === ""}
+            disabled={busy || !preview || !isIssuer || secretHash.trim() === "" || !ownerMatchesAsk}
           >
             {busy ? "issuing…" : "Issue on testnet"}
           </button>
@@ -870,6 +975,138 @@ export default function IssueScreen() {
             <pre>{JSON.stringify(result.attestation, null, 2)}</pre>
           </div>
         </>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * The owner's side: ask the issuer to issue a week to the account signed in.
+ *
+ * The account is the session's — shown, never typed — and the only other thing
+ * sent is `h`. The secret it hashes stays in the owner's file.
+ */
+function IssuanceAsk() {
+  const { address, authenticated, standing, busy: connecting, connect, authFetch } = useWallet();
+  const [hashText, setHashText] = useState("");
+  const [mine, setMine] = useState<IssuanceRequest[]>([]);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const response = await authFetch("/api/requests/issuance");
+    const body = (await response.json()) as { requests?: IssuanceRequest[]; error?: string };
+    if (!response.ok) throw new Error(body.error ?? "could not read your requests");
+    setMine(body.requests ?? []);
+  }, [authFetch]);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    load().catch((caught: unknown) => setError(describeError(caught)));
+  }, [authenticated, load]);
+
+  const ask = useCallback(async () => {
+    setSending(true);
+    setError(null);
+    setNote(null);
+    try {
+      const response = await authFetch("/api/requests/issuance", {
+        method: "POST",
+        body: JSON.stringify({ secret_hash: hashText.trim() }),
+      });
+      const body = (await response.json()) as { note?: string; error?: string };
+      if (!response.ok) throw new Error(body.error ?? "the request was not recorded");
+      setNote(body.note ?? "Asked.");
+      setHashText("");
+      await load();
+    } catch (caught) {
+      setError(describeError(caught));
+    } finally {
+      setSending(false);
+    }
+  }, [authFetch, hashText, load]);
+
+  if (!address || !authenticated) {
+    return (
+      <div className="note">
+        <strong>Asking for a week needs a verified account</strong> — the one the week will be
+        issued to.
+        <p style={{ margin: "0.5rem 0 0.75rem" }}>
+          Connect a wallet and complete the SEP-10 handshake.
+        </p>
+        <button className="primary" onClick={() => void connect()} disabled={connecting}>
+          {connecting ? "connecting…" : "Connect wallet"}
+        </button>
+      </div>
+    );
+  }
+  if (!standing) return <p className="muted">Reading your standing from the registry…</p>;
+
+  return (
+    <>
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Request issuance</h3>
+        <dl className="facts">
+          <dt>Issued to</dt>
+          <dd>
+            <code>{standing.account}</code> <span className="muted">· the account signed in</span>
+          </dd>
+        </dl>
+        <p className="muted">
+          First, on your own machine, make the week&apos;s secret. Keep the file: with it you can
+          rent the week out or sell it, and nobody else can — the issuer included.
+        </p>
+        <pre>npm run zk:secret -- .secrets/my-week.json</pre>
+        <div className="field">
+          <label htmlFor="ask-secret-hash">Your h</label>
+          <input
+            id="ask-secret-hash"
+            className="mono"
+            value={hashText}
+            onChange={(event) => setHashText(event.target.value)}
+            placeholder="the number npm run zk:secret printed — decimal or hex"
+            spellCheck={false}
+          />
+          <p className="muted">
+            Only this hash is sent. The secret in the file never leaves your machine.
+          </p>
+        </div>
+        <button className="primary" onClick={() => void ask()} disabled={sending || hashText.trim() === ""}>
+          {sending ? "sending…" : "Request issuance"}
+        </button>
+        {error ? <div className="note bad" style={{ marginTop: "1rem" }}>{error}</div> : null}
+        {note ? <div className="note accent" style={{ marginTop: "1rem" }}>{note}</div> : null}
+      </div>
+
+      {mine.length > 0 ? (
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>Your requests</h3>
+          <ul>
+            {mine.map((r) => (
+              <li key={r.id}>
+                asked {formatDate(Date.parse(r.requested_at) / 1000)} ·{" "}
+                {r.status === "issued" && r.right_id !== undefined ? (
+                  <>
+                    <strong>issued as right #{r.right_id}</strong>
+                    {r.tx ? (
+                      <>
+                        {" "}
+                        ·{" "}
+                        <a href={explorer.tx(r.tx)} target="_blank" rel="noreferrer">
+                          transaction
+                        </a>
+                      </>
+                    ) : null}
+                    <span className="muted"> — ask the issuer for the record file</span>
+                  </>
+                ) : (
+                  <span className="muted">waiting for the issuer</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
     </>
   );

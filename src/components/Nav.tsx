@@ -20,11 +20,11 @@ import { useWallet } from "@/components/WalletProvider";
  * aimed at people who are already inside.
  *
  * Once connected, what changes is which screens are *offered*, not how many
- * exist. Issue is the issuer's screen, so it is hidden from everyone else rather
- * than shown as a link that leads to a refusal.
+ * exist. Issue is offered to everyone: the issuer issues there, and everyone else
+ * asks there to have a week issued to them (`issueScreenView`).
  */
 const SCREENS = [
-  { href: "/issue", label: "Issue", requires: "issuer" as const },
+  { href: "/issue", label: "Issue", requires: null },
   { href: "/list", label: "List", requires: null },
   { href: "/verify", label: "Verify", requires: null },
   { href: "/transfer", label: "Transfer", requires: "holder" as const },
@@ -43,7 +43,6 @@ export function Nav() {
     // account, so the role-gated screens stay listed and explain themselves when
     // opened. Hiding them would make the menu flicker as the answer arrives.
     if (!standing) return true;
-    if (screen.requires === "issuer") return standing.isIssuer;
     return standing.owned.length > 0 || standing.renting.length > 0 || standing.isIssuer;
   });
 

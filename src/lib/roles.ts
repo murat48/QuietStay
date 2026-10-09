@@ -158,6 +158,18 @@ export function canIssue(standing: AccountStanding | null): boolean {
   return standing?.isIssuer === true;
 }
 
+/**
+ * What the Issue screen shows this account: the issuer gets the issuance form and
+ * the owners' pending requests; every other account — and anyone not signed in —
+ * gets only the box for asking to have a week issued, never the form.
+ *
+ * The interface's choice, not the boundary: /api/issue refuses anyone but the
+ * issuer, and the contract refuses them again.
+ */
+export function issueScreenView(standing: AccountStanding | null): "issue" | "request" {
+  return canIssue(standing) ? "issue" : "request";
+}
+
 /** Whether the account has anything it could transfer right now. */
 export function canTransfer(standing: AccountStanding | null): boolean {
   if (!standing) return false;
