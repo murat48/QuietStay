@@ -92,6 +92,26 @@ done                                 # → DEMO_OWNER_SECRET, DEMO_RENTER_SECRET
 `issue` on the existing deployment will not work with your own issuer key: the
 contract binds its issuer at deployment and has no setter. To issue, deploy your own.
 
+## Issuing a week from the terminal
+
+On a contract whose issuer key is in `.env.local`, one command does what the Issue
+screen and `zk:secret` / `zk:commitment` do between them:
+
+```bash
+npm run zk:issue -- --contract <C…> --owner <G…> --check-in 2026-12-05 --check-out 2026-12-12
+```
+
+It builds the record from a sample (`--like`, default `inventory/records/week-03.json`)
+with a fresh `record_id` and `salt`, makes the owner's secret, computes `C`, calls
+`issue` and signs the attestation. Record, secret and a summary go to
+`.secrets/<first 8 of the contract>/`. `--record <file>` issues an existing record
+instead; `--secret <file>` reuses a secret the owner already made. The attestation
+lands in `inventory/phase2/attestations/` only for the contract that folder belongs
+to — commit and push it for the live app to show it — and next to the secret otherwise.
+
+Owner and issuer are one person here, which suits a demo. In real use the owner runs
+`zk:secret` on their own machine and hands over only `h`.
+
 ## Proving a transfer
 
 The holder's side of a transfer, on their own machine:
@@ -228,6 +248,7 @@ attests them. The CLI reads the contract and the data directory before
 | `npm run typecheck` | `tsc --noEmit` over app, scripts and circuit tests. |
 | `npm run zk:secret -- <file>` | Make a record secret; print its shareable hash `h`. |
 | `npm run zk:commitment -- --record … --owner … --secret-hash …` | The commitment `C` the issuer issues with. |
+| `npm run zk:issue -- --contract … --owner … --check-in … --check-out …` | Record, secret, `C`, `issue` and attestation in one step. |
 | `npm run zk:prove -- …` | Prove a transfer; write `transfer.json`. |
 | `npm run zk:submit -- <contract> <proof dir>` | Submit a proven transfer from the command line. |
 | `npm run zk:reissue -- <contract>` | Issue the sample inventory with Poseidon commitments. |

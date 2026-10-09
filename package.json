@@ -29,7 +29,8 @@
     "zk:commitment": "tsx scripts/zk/commitment.ts",
     "zk:submit": "tsx scripts/zk/submit-transfer.ts",
     "zk:reissue": "tsx scripts/zk/reissue-inventory.ts",
-    "zk:evidence": "tsx scripts/zk/produce-evidence.ts"
+    "zk:evidence": "tsx scripts/zk/produce-evidence.ts",
+    "zk:issue": "tsx scripts/zk/issue-week.ts"
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "^2.5.0",
