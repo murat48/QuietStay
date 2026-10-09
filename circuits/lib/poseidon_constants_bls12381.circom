@@ -322,6 +322,7 @@ function POSEIDON_C(t) {
             0x15fac89b6ae73cdcc3024bfa93d296ea03752d272750982f32f5d14e362c89cb
         ];
     } else {
+        assert(0);
         return [0];
     }
 }
@@ -1984,6 +1985,7 @@ function POSEIDON_S(t) {
             0x50b231d119be7ead6d58f51040bcabc740105d3f87e7b95834dc9430554aa554
         ];
     } else {
+        assert(0);
         return [0];
     }
 }
@@ -2118,7 +2120,8 @@ function POSEIDON_M(t) {
             ]
         ];
     } else {
-        return [0];
+        assert(0);
+        return [[0]];
     }
 }
 
@@ -2252,6 +2255,7 @@ function POSEIDON_P(t) {
             ]
         ];
     } else {
-        return [0];
+        assert(0);
+        return [[0]];
     }
 }

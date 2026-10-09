@@ -102,7 +102,10 @@ function main() {
         : "[\n" + v.map((x) => `            ${x}`).join(",\n") + "\n        ]";
       return `    ${k === 0 ? "if" : "} else if"} (t==${t}) {\n        return ${body};`;
     });
-    return `function ${name}(t) {\n${branches.join("\n")}\n    } else {\n        return [0];\n    }\n}\n`;
+    // circomlib's own fallback: an unsupported width is an error at compile time,
+    // and the dummy return matches the branches' dimensions so the typer accepts it.
+    const empty = Array.isArray(opt[key][0][0]) ? "[[0]]" : "[0]";
+    return `function ${name}(t) {\n${branches.join("\n")}\n    } else {\n        assert(0);\n        return ${empty};\n    }\n}\n`;
   };
 
   const circom = [

@@ -51,3 +51,8 @@ quietstay_phase1_build_prompt.md
 # reissues the transactions EVIDENCE.md cites, which is no longer safe to
 # suggest now that those hashes are quoted in a submitted document.
 docs/DEMO_SCRIPT.md
+circuits/build/
+
+# Phase 2: record secrets never enter git; proofs are regenerated on demand.
+.secrets/
+proofs/

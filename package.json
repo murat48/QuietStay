@@ -18,7 +18,14 @@
     "check-privacy": "tsx scripts/check-privacy.ts",
     "e2e": "tsx scripts/e2e.ts",
     "evidence-doc": "tsx scripts/write-evidence-doc.ts",
-    "zk:check-poseidon": "tsx scripts/zk/check-poseidon.ts"
+    "zk:check-poseidon": "tsx scripts/zk/check-poseidon.ts",
+    "zk:compile": "circom circuits/transfer.circom --r1cs --wasm --sym -p bls12381 -o circuits/build",
+    "zk:test": "tsx --test circuits/test/*.test.ts",
+    "zk:setup": "bash scripts/setup-dev.sh",
+    "zk:secret": "tsx scripts/zk/secret.ts",
+    "zk:prove": "tsx scripts/prove.ts",
+    "zk:encode-vk": "tsx scripts/zk/encode-vk.ts",
+    "zk:measure": "tsx scripts/zk/measure.ts"
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "^2.5.0",
