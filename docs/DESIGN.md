@@ -280,10 +280,44 @@ secret `s`, and every owner's secret hash `h`.
 | The proof and its eleven public signals | Parameters | What the contract verifies. Reveal nothing about `s` or the record. [CIRCUIT.md §8](./CIRCUIT.md#8-what-the-proof-reveals-and-what-it-hides). |
 | The buyer's `h'`, on a sale | Parameters | Public signal 10, and what the buyer signs. Proves nothing without `s`. |
 | The week's dates and use year | Contract state | An offer has to say what it is offering. |
-| A rental's end time | Parameters | The contract cannot enforce a term it cannot see. |
+| An offer: the account offering it and the rental term | Contract state | A marketplace has to show what is on offer. |
+| A rental's end time | Parameters, event data, contract state | The contract cannot enforce a term it cannot see. |
 
 The honest residual is Phase 1's: an observer learns that some pseudonymous account
 holds a week with these dates and moved it to another. Not whose, not where.
+
+### Against the SOW's "no names, contract numbers, or travel dates"
+
+**Names and contract numbers: never on chain.** No owner name, email, resort, unit,
+deed reference or registry, as the check above confirms.
+
+**Dates: the week's, yes; a person's, no.** The week's date range is public because
+the week *is* the offer — a listing that hid its dates could not be shopped. A
+rental's end is public because the rental ends by itself, with no transaction, and
+the contract can only do that if it knows when. Both are facts about an **account**
+holding a week, not about a person: who stands behind an account is in the record,
+and the record is off chain.
+
+### What could be hidden, and what it would cost
+
+| What | Could it be hidden? | Cost |
+| --- | --- | --- |
+| The week's date range | Yes, by a contract change: the dates are already inside `d`; listings would show them from the attestation | A fresh deployment and new evidence; the dates stop being the chain's guarantee and become the issuer's word |
+| Offers on chain | Yes, by moving them to the app's store | Offers stop being publicly checkable; no proof depends on them |
+| The buyer's `h'` | Yes, by a circuit change, signing `C'` instead | A new circuit and key for almost no gain — `h'` proves nothing alone |
+| Who holds a week | Not in this design | The SOW binds a proof to the submitting account; hiding holders means ownership without accounts — a different design |
+| A rental's end | Not in this design | A term that ends by itself needs the contract to see it |
+| That a transfer happened, and of which right | No | Every Stellar transaction is public |
+
+Hiding the last three is selective disclosure, which the SOW places out of scope.
+
+### The measure that needs no code: one account per week
+
+What links an account to a person is how the account is used — an exchange that knows
+its owner, an address posted publicly. An owner who holds each week in its own
+account, and a renter who rents with one, leave nothing that ties two weeks, or two
+stays, to the same person. The dates above then describe an account that does nothing
+else.
 
 ## Relationship to SEP-41, and where it diverges
 

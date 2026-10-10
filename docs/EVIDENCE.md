@@ -172,6 +172,12 @@ commitment, the proof's three curve points and its eleven public signals (see
 rental's end time, and on a sale the buyer's next secret hash `h'` — which
 proves nothing without the record and the buyer's secret.
 
+Against the SOW's "no names, contract numbers, or travel dates": no name or contract
+number is on chain. The week's dates and a rental's end are, because an offer has to
+say what it offers and a term that ends by itself has to be visible to the contract;
+they describe an account, not a person. What else could be hidden, and the cost of
+each: [DESIGN.md § what the ledger reveals](./DESIGN.md#what-the-ledger-reveals).
+
 ### Phase 2: the sample inventory
 
 The four sample weeks, re-issued on this contract with Poseidon commitments

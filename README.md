@@ -91,6 +91,14 @@ goes to the issuer, who validates it, computes `d` and attests it. What Phase 2 
 to the issuer's side is only `h`, from which the issuer's server computes `C`. The
 secret `s` reaches the server at no stage.
 
+**What the ledger shows.** No name, email, resort, unit or deed reference — checked
+against the real transactions by `npm run check-privacy -- --phase2`. Public by design:
+account addresses, the week's dates, and a rental's end, because a listing has to say
+what it offers and a rental that ends by itself needs the contract to know when. Those
+describe an account, not a person; holding each week in its own account keeps them
+that way. What else could be hidden, and at what cost:
+[DESIGN.md § what the ledger reveals](./docs/DESIGN.md#what-the-ledger-reveals).
+
 Renting and selling are **one contract function**, separated by whether the grant
 has an end date. A rental ends on its own: no return transaction, and a renter whose
 term has lapsed is not the holder at all.
