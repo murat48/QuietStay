@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Nav } from "@/components/Nav";
+import { SiteAnalytics } from "@/components/SiteAnalytics";
 import { WalletButton, WalletProvider } from "@/components/WalletProvider";
 import { CONTRACT_ID, explorer } from "@/lib/config";
 
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </footer>
           </div>
         </WalletProvider>
+        <SiteAnalytics />
       </body>
     </html>
   );

@@ -91,6 +91,11 @@ goes to the issuer, who validates it, computes `d` and attests it. What Phase 2 
 to the issuer's side is only `h`, from which the issuer's server computes `C`. The
 secret `s` reaches the server at no stage.
 
+**Traffic counts.** The deployed app reports page views to Vercel Web Analytics
+(cookieless), for the Phase 2 customer-development report. Each view is sent as the
+page's path only: [SiteAnalytics.tsx](./src/components/SiteAnalytics.tsx) drops the
+query string first, so the `h` in an `/issue?h=…` link is not reported.
+
 **What the ledger shows.** No name, email, resort, unit or deed reference — checked
 against the real transactions by `npm run check-privacy -- --phase2`. Public by design:
 account addresses, the week's dates, and a rental's end, because a listing has to say
