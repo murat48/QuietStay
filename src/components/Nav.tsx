@@ -2,61 +2,63 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
+import { useState } from "react";
 import { useWallet } from "@/components/WalletProvider";
 
-/**
- * The four screens — four, deliberately; see docs/DESIGN.md on scope.
- *
- * **Nothing is listed until the account is verified.** Not merely connected:
- * connecting claims an address, and only the SEP-10 handshake proves it. Until
- * then the header is a name and a connect button, and the landing page does the
- * explaining — a menu of four screens means nothing to somebody who has not been
- * told what the thing does, and three of the four would refuse them anyway.
- *
- * Verify is the exception that is worth stating, because it needs no account and
- * that is a claim the design rests on. It stays reachable — the landing page and
- * the registry's own gate both offer it by name — it is simply not in a menu
- * aimed at people who are already inside.
- *
- * Once connected, what changes is which screens are *offered*, not how many
- * exist. Issue is offered to everyone: the issuer issues there, and everyone else
- * asks there to have a week issued to them (`issueScreenView`).
- */
-const SCREENS = [
-  { href: "/issue", label: "Issue", requires: null },
-  { href: "/list", label: "List", requires: null },
-  { href: "/verify", label: "Verify", requires: null },
-  { href: "/transfer", label: "Transfer", requires: "holder" as const },
+const PUBLIC_SCREENS = [
+  { href: "/list", label: "Marketplace" },
+  { href: "/verify", label: "Verify" },
 ];
 
 export function Nav() {
   const pathname = usePathname();
+  // Only matters on a phone, where the links fold behind a menu button.
+  const [open, setOpen] = useState(false);
   const { address, standing, authenticated } = useWallet();
+  const signedIn = Boolean(address && authenticated);
+  // Preserve the original role-aware transfer navigation. Screens and APIs
+  // retain their own existing authorization checks.
+  const showTransfer = signedIn && (!standing || standing.owned.length > 0 || standing.renting.length > 0 || standing.isIssuer);
+  const screens = [
+    ...PUBLIC_SCREENS,
+    ...(signedIn ? [{ href: "/issue", label: "Issue" }] : []),
+    ...(showTransfer ? [{ href: "/transfer", label: "Transfer" }] : []),
+  ];
 
-  // Unproven, no menu. The landing page is the way in.
-  if (!address || !authenticated) return null;
-
-  const visible = SCREENS.filter((screen) => {
-    if (screen.requires === null) return true;
-    // Signed in, but standing has not come back yet: nothing is known about the
-    // account, so the role-gated screens stay listed and explain themselves when
-    // opened. Hiding them would make the menu flicker as the answer arrives.
-    if (!standing) return true;
-    return standing.owned.length > 0 || standing.renting.length > 0 || standing.isIssuer;
-  });
+  // Keep the welcome screen focused on its introduction and wallet connection.
+  // Public routes remain available elsewhere; Verify is linked from the intro.
+  if (pathname === "/" && !signedIn) return null;
 
   return (
-    <nav className="screens">
-      {visible.map((screen) => (
-        <Link
-          key={screen.href}
-          href={screen.href}
-          aria-current={pathname === screen.href ? "page" : undefined}
-        >
-          {screen.label}
-        </Link>
-      ))}
+    <nav
+      className={`screens${open ? " is-open" : ""}`}
+      aria-label="Main navigation"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        className="nav-toggle"
+        aria-expanded={open}
+        aria-controls="nav-links"
+        aria-label={open ? "Close menu" : "Open menu"}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span aria-hidden="true" />
+      </button>
+      <div id="nav-links" className="nav-links">
+        {screens.map((screen) => (
+          <Link
+            key={screen.href}
+            href={screen.href}
+            aria-current={pathname === screen.href ? "page" : undefined}
+            onClick={() => setOpen(false)}
+          >
+            {screen.label}
+          </Link>
+        ))}
+      </div>
     </nav>
   );
 }

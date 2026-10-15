@@ -30,7 +30,8 @@
     "zk:submit": "tsx scripts/zk/submit-transfer.ts",
     "zk:reissue": "tsx scripts/zk/reissue-inventory.ts",
     "zk:evidence": "tsx scripts/zk/produce-evidence.ts",
-    "zk:issue": "tsx scripts/zk/issue-week.ts"
+    "zk:issue": "tsx scripts/zk/issue-week.ts",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "^2.5.0",
@@ -48,6 +49,8 @@
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "circomlib": "2.0.5",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.0",
     "snarkjs": "0.7.5",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"

@@ -3,11 +3,10 @@
 /**
  * What the signed-in account is, and what that lets them do next.
  *
- * This is the "different entry per role" the app needs, and it is one component on
- * the landing page rather than a separate dashboard route — the deliverable is four
- * screens, and a fifth would be the scope creep the SOW warns against. An owner and
- * a renter arrive at different content and different links; they do not arrive at
- * different applications.
+ * Not mounted on any screen at present. The List screen's "Yours" tab and the
+ * header's role tags already answer it, and a dashboard route of its own would
+ * be a fifth screen — the deliverable is four, and a fifth is the scope creep
+ * the SOW warns against.
  *
  * Nothing here is a permission. It reflects the registry, which the contract
  * enforces regardless of what this renders.
@@ -104,7 +103,9 @@ export function StandingPanel() {
       </div>
 
       <p className="muted" style={{ marginTop: "0.4rem" }}>
-        {roles.map((role) => ROLE_LABELS[role].blurb).join(" ")}
+        {roles.map((role) => role === "lessee"
+          ? "Holds a week for a fixed term. Phase 2 transfers require the title holder's ownership proof."
+          : ROLE_LABELS[role].blurb).join(" ")}
       </p>
       <p className="muted" style={{ marginTop: "-0.3rem" }}>
         Read from the contract, not chosen — there is no role to pick anywhere in this
@@ -163,11 +164,11 @@ export function StandingPanel() {
           <WeekList
             rights={renting}
             empty=""
-            note="You hold these on a term. You can sublet within it — but not sell, because an open-ended transfer would outlast the term you hold, and the contract rejects that."
+            note="You hold these for a fixed term. In Phase 2, transferring requires the record secret held by the title holder, so renters cannot prepare a transfer proof."
           />
           <p style={{ marginTop: "0.9rem", marginBottom: 0 }}>
             <Link className="btn" href="/transfer">
-              Sublet a week →
+              View transfer requirements →
             </Link>
           </p>
         </>

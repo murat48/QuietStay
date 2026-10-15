@@ -26,9 +26,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Link from "next/link";
 
+import { photosFor, StayCover, StayGallery } from "@/components/StayPhotos";
 import { useWallet } from "@/components/WalletProvider";
 import { explorer } from "@/lib/config";
-import { describeError, formatDate, formatDays, shortAddress } from "@/lib/format";
+import { describeError, formatDate, formatDays, shortAddress, weekIsOver } from "@/lib/format";
 import { unixToIsoDate } from "@/lib/record";
 
 interface RightRow {
@@ -128,8 +129,11 @@ const feesWarning = (right: RightRow): boolean => right.fees === null || !right.
  */
 const isSublet = (right: RightRow): boolean => right.rented_out && right.listing !== null;
 
-/** An offer nobody can take up — a sub-let. Kept out of the shop window. */
-const isBlocked = (right: RightRow): boolean => isSublet(right);
+/** A week whose check-out has passed. See `weekIsOver`. */
+const isOver = (right: RightRow): boolean => weekIsOver(right.week.end);
+
+/** An offer nobody can take up — a sub-let, or a week already over. Kept out of the shop window. */
+const isBlocked = (right: RightRow): boolean => isSublet(right) || isOver(right);
 
 interface Inventory {
   contract: string;
@@ -155,6 +159,8 @@ export default function ListScreen() {
   // Which card is showing the placeholder's explanation. Per right, so two cards
   // with arrears cannot share one open notice.
   const [payNotice, setPayNotice] = useState<number | null>(null);
+  // The one card opened into its full view: photos, then everything else.
+  const [opened, setOpened] = useState<number | null>(null);
   const [requests, setRequests] = useState<{ incoming: TransferRequest[]; outgoing: TransferRequest[] }>(
     { incoming: [], outgoing: [] },
   );
@@ -457,12 +463,13 @@ export default function ListScreen() {
   );
 
   // Connected is not verified: an address can be claimed without proving it, and
-  // the nav appears only once SEP-10 has. The registry holds to the same line, so
+  // only SEP-10 proves control. The registry holds to the same line, so
   // that "signed in" means one thing across the app rather than two.
   if (!address || !authenticated) {
     return (
       <>
-        <h1>The registry</h1>
+        <p className="eyebrow">EXPLORE QUIETSTAY</p>
+        <h1>Marketplace</h1>
         <p className="lede">
           {address
             ? "Sign in to browse the weeks on offer. Your wallet is connected, but connecting only claims an address — one signature proves it."
@@ -491,7 +498,8 @@ export default function ListScreen() {
 
   return (
     <>
-      <h1>The registry — every week, and what is on offer</h1>
+      <p className="eyebrow">EXPLORE QUIETSTAY</p>
+      <h1>Find your next week away</h1>
       <p className="lede">
         The shop window and the public record in one, read live from testnet. A week&apos;s date
         range and its use year are public, because an offer has to say what it is offering. Who owns
@@ -631,6 +639,7 @@ export default function ListScreen() {
               // An offer on a week that is out on a term is a sub-let, which this
               // issuer declines and which no later phase has committed to.
               const sublet = isSublet(right);
+              const over = isOver(right);
               // Under "Awaiting an answer" the card is on screen for exactly one
               // reason, so the controls for *running* a week — the issuer's fee
               // entry, the holder's own offer — stand down. Answering an ask is a
@@ -663,13 +672,40 @@ export default function ListScreen() {
                 null;
               // The dues year runs to the day before the use year closes.
               const defaultThrough = unixToIsoDate(right.validity.until - 86_400);
+              // Photos only for a week the issuer has described: with no country
+              // and no features, any picture would be a claim nobody made.
+              const photos =
+                right.property === null
+                  ? null
+                  : photosFor(right.id, right.property.region, right.property.features);
+              const isOpen = opened === right.id && photos !== null;
 
               return (
-                <div className="card" key={right.id}>
+                <div className={`card listing${isOpen ? " is-open" : ""}`} key={right.id} id={`right-${right.id}`}>
+                  {photos === null ? null : isOpen ? (
+                    <StayGallery photos={photos} />
+                  ) : (
+                    <StayCover
+                      photos={photos}
+                      onOpen={() => {
+                        setOpened(right.id);
+                        // The opened card takes a full row and may move; follow it.
+                        requestAnimationFrame(() =>
+                          document
+                            .getElementById(`right-${right.id}`)
+                            ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                        );
+                      }}
+                    />
+                  )}
                   <div className="spread">
-                    <h3 style={{ margin: 0 }}>Right #{right.id}</h3>
+                    <h3 style={{ margin: 0 }}>
+                      {right.property?.region ?? `Right #${right.id}`}
+                      {right.property ? <span className="muted listing-id"> · Right #{right.id}</span> : null}
+                    </h3>
                     <div className="row" style={{ gap: "0.3rem" }}>
                       {right.active ? null : <span className="tag bad">expired</span>}
+                      {right.active && over ? <span className="tag">week over</span> : null}
                       {right.fees !== null && !right.fees.current ? (
                         <span className="tag bad">fees due</span>
                       ) : null}
@@ -696,6 +732,12 @@ export default function ListScreen() {
                       {ownedButRentedOut ? <span className="tag ok">yours, on loan</span> : null}
                     </div>
                   </div>
+
+                  {isOpen ? (
+                    <button type="button" className="listing-close" onClick={() => setOpened(null)}>
+                      Close details
+                    </button>
+                  ) : null}
 
                   <dl className="facts" style={{ marginTop: "0.6rem" }}>
                     {/*
@@ -916,7 +958,15 @@ export default function ListScreen() {
                     given to a stranger, and by design nobody — the issuer least of
                     all — can bring it back.
                   */}
-                  {right.listing && !sublet && !mine && canRequest ? (
+                  {right.listing && over && !mine ? (
+                    <p className="muted" style={{ marginTop: "0.7rem", marginBottom: 0 }}>
+                      This week ended on {formatDate(right.week.end)}. The offer is still on the
+                      ledger, but it can no longer be taken: a rental would end in the past, which
+                      the contract refuses.
+                    </p>
+                  ) : null}
+
+                  {right.listing && !sublet && !over && !mine && canRequest ? (
                     <div style={{ marginTop: "0.7rem" }}>
                       {myRequest ? (
                         <div className="row" style={{ gap: "0.5rem", alignItems: "center" }}>
@@ -969,7 +1019,7 @@ export default function ListScreen() {
                     </div>
                   ) : null}
 
-                  {right.listing && !sublet && !mine && !canRequest ? (
+                  {right.listing && !sublet && !over && !mine && !canRequest ? (
                     <p className="muted" style={{ marginTop: "0.7rem", marginBottom: 0 }}>
                       This deployment cannot record a request — it has no writable store, so an ask
                       would be taken and then lost. The week is really on offer; reach its holder
@@ -1098,6 +1148,12 @@ export default function ListScreen() {
                         >
                           {busyRight === right.id ? "working…" : "Withdraw offer"}
                         </button>
+                      ) : mayOffer && over ? (
+                        <p className="muted" style={{ margin: 0 }}>
+                          This week ended on {formatDate(right.week.end)}, so there is nothing left
+                          to offer: a rental would end in the past, which the contract refuses, and
+                          a sale would pass on a week already used.
+                        </p>
                       ) : mayOffer ? (
                         <>
                           <button

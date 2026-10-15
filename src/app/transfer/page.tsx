@@ -66,6 +66,7 @@ function parseFile(text: string): TransferFile {
 export default function TransferScreen() {
   return (
     <>
+      <p className="eyebrow">YOUR NEXT CHAPTER</p>
       <h1>Rent out or sell a week</h1>
       <p className="lede">
         You prove you own the week, and the contract checks that proof on chain. Nobody approves

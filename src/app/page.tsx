@@ -1,186 +1,163 @@
-/**
- * The landing screen.
- *
- * This is the only page that has to explain the protocol before it asks for
- * anything, because the registry now sits behind a wallet: somebody who arrives
- * with no Stellar account should still leave understanding what the thing does
- * and why the record stays off chain.
- *
- * Two doors stay open to them. **Verify** needs no account — that is the whole
- * claim of the design, and a visitor who cannot check a week without signing in
- * would be evidence against it. And the evidence document is a set of explorer
- * links a reviewer can open with nothing installed.
- */
-
+import Image from "next/image";
 import Link from "next/link";
-
 import { ConnectGate } from "@/components/ConnectGate";
-import { CONTRACT_ID, NETWORK_PASSPHRASE, explorer } from "@/lib/config";
+import { Icon } from "@/components/Icon";
+import { Reveal } from "@/components/Reveal";
+import mark from "../../public/brand/quietstay-mark.png";
+import resort from "../../public/images/mediterranean-resort.jpg";
+import styles from "./page.module.css";
 
 export default function Home() {
   return (
-    <>
-      <section className="hero">
-        <p className="eyebrow">Stellar testnet · Soroban</p>
-        <h1>Rent or sell a timeshare week without publishing your life</h1>
-        <p className="lede">
-          An owner who cannot travel this year has no simple way to pass the week on. Transfers are
-          slow and broker-dependent, and a buyer cannot easily check who really holds the week or
-          whether it carries unpaid maintenance fees. Putting it all on a public ledger fixes the
-          trust problem and creates a new one — ownership history and travel plans become visible to
-          everyone.
-        </p>
-        <div className="row">
-          <ConnectGate />
-          <Link className="btn" href="/verify">
-            Verify a week — no account needed
-          </Link>
+    <div className="landing">
+      <section className={styles.hero} aria-labelledby="hero-title">
+        <Image
+          className={styles.heroImage}
+          src={resort}
+          alt="A Mediterranean resort pool overlooking the sea and whitewashed Santorini villas"
+          fill
+          sizes="100vw"
+          preload
+          placeholder="blur"
+        />
+        <div className={styles.heroShade} />
+        <div className={styles.heroInner}>
+          <p className={styles.eyebrow}>A WARM WELCOME TO QUIETSTAY</p>
+          <h1 id="hero-title">Your holiday. <br /><span className={styles.headlineAccent}>Your way.</span></h1>
+          <p className={styles.description}>
+            A simpler way to rent or sell your timeshare rights.
+            Make room for your next getaway, with privacy and trust.
+          </p>
+          <div className={styles.actions}>
+            <ConnectGate />
+          </div>
+          <p className={styles.heroNote}>Your wallet. Your vacation rights.</p>
+          <ul className={styles.technology} aria-label="Built with">
+            <li><Icon name="transfer" /> Built on Stellar</li>
+            <li><Icon name="shield" /> Ownership verified with ZK proofs</li>
+            <li className={styles.testnet}>Testnet MVP</li>
+          </ul>
         </div>
       </section>
 
-      <p className="section-title">How it works</p>
-      <div className="steps">
-        <div className="step">
-          <h4>The record stays with you</h4>
-          <p>
-            Your name, the resort, the unit, the deed, the fee history. One document, held by the
-            people it concerns. No endpoint serves it and nothing stores it for you.
-          </p>
-        </div>
-        <div className="step">
-          <h4>Only a commitment goes on chain</h4>
-          <p>
-            32 bytes that wrap the record&apos;s SHA-256 together with your account and the hash of a
-            secret only you hold. Nothing in it can be reversed into the record.
-          </p>
-        </div>
-        <div className="step">
-          <h4>You prove it to move it</h4>
-          <p>
-            Renting out or selling takes a zero-knowledge proof that you know the week&apos;s secret,
-            made on your own machine and checked by the contract on chain. Nobody approves it.
-          </p>
-        </div>
-        <div className="step">
-          <h4>A buyer checks the rest</h4>
-          <p>
-            The issuer&apos;s signed word on fees, the holder the ledger names, and the proofs the
-            contract accepted — in their own browser, with no account.
-          </p>
-        </div>
-      </div>
+      <Reveal>
+        <section className={styles.intro} id="how-it-works" aria-labelledby="intro-title">
+          <div className={styles.introLead}>
+            <Image className={styles.introMark} src={mark} alt="" width={72} height={72} />
+            <div>
+              <p className={styles.sectionEyebrow}>MORE POSSIBILITIES. LESS WORRY.</p>
+              <h2 id="intro-title">A fresh start for your vacation rights.</h2>
+            </div>
+          </div>
+          <div className={styles.introCopy}>
+            <p>
+              QuietStay connects people who want to make more of their timeshare weeks.
+              Verify your rights, offer a week for rent or sale, and transfer it with an ownership proof.
+            </p>
+            <Link href="/verify">Verify a right — no wallet needed <Icon name="arrow" /></Link>
+            <p className={styles.phaseNote}>
+              ZK proofs are prepared locally today. Full automated integration is planned for Phase 3.
+            </p>
+          </div>
+        </section>
+      </Reveal>
 
-      <p className="section-title">One transfer primitive</p>
-      <div className="chain">
-        <span>transfer(from, to, right_id, expires_at, proof, public_signals)</span>
-      </div>
-      <div className="split" style={{ marginTop: "0.7rem" }}>
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>A sale</h3>
-          <p className="muted" style={{ margin: 0 }}>
-            <code>expires_at = None</code>. Title moves and stays moved.
-          </p>
-        </div>
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>A rental</h3>
-          <p className="muted" style={{ margin: 0 }}>
-            <code>expires_at = Some(t)</code>. The week comes back on its own — no return
-            transaction, no reminder, no trust. A renter whose term has passed is simply not the
-            holder any more.
-          </p>
-        </div>
-      </div>
+      <Reveal className={styles.band}>
+        <section className={styles.section} aria-labelledby="steps-title">
+          <p className={styles.sectionEyebrow}>HOW IT WORKS</p>
+          <h2 id="steps-title" className={styles.sectionTitle}>Rent out or sell your week in four steps.</h2>
+          <ol className={styles.steps}>
+            {STEPS.map((step, i) => (
+              <li key={step.title}>
+                <span className={styles.stepNumber}>{i + 1}</span>
+                <span className={styles.stepIcon}><Icon name={step.icon} /></span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </Reveal>
 
-      <p className="section-title">What reaches the ledger, and what never does</p>
-      <div className="split">
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Public</h3>
-          <ul>
-            <li>
-              <strong>Two account addresses</strong> — pseudonymous
-            </li>
-            <li>
-              <strong>A right id</strong> and its week
-            </li>
-            <li>
-              <strong>A 32-byte commitment</strong>
-            </li>
-            <li>
-              <strong>A proof</strong> and its public values — none of them reveal the record
-            </li>
-            <li>A rental&apos;s term end. A sale carries none.</li>
-          </ul>
-        </div>
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Never on chain</h3>
-          <ul>
-            <li>
-              <strong>Your name and email</strong>
-            </li>
-            <li>
-              <strong>The resort, the unit, the deed</strong>
-            </li>
-            <li>
-              <strong>What you owe</strong>, and to whom
-            </li>
-            <li>The record itself, in any form, or the secret behind it</li>
-          </ul>
-        </div>
-      </div>
-      <p className="muted">
-        Checked against the real chain by <code>npm run check-privacy</code>, which reads the
-        evidence transactions back and searches every layer. Not asserted —{" "}
-        <a href="/docs/EVIDENCE.md">measured</a>.
-      </p>
+      <Reveal>
+        <section className={`${styles.section} ${styles.sides}`} aria-labelledby="sides-title">
+          <h2 id="sides-title" className={styles.visuallyHidden}>For owners and for renters</h2>
+          {SIDES.map((side) => (
+            <div key={side.title} className={styles.side}>
+              <p className={styles.sectionEyebrow}>{side.eyebrow}</p>
+              <h3>{side.title}</h3>
+              <ul>
+                {side.points.map((point) => (
+                  <li key={point}><Icon name="check" /> {point}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      </Reveal>
 
-      <p className="section-title">What the issuer can, and cannot, do</p>
-      <div className="split">
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Cannot — enforced by the contract</h3>
-          <ul>
-            <li>Move, reassign, freeze or burn a week you hold</li>
-            <li>Block or approve your transfers — it has no part in them</li>
-            <li>Overwrite a right, alter a commitment, or change the contract&apos;s code</li>
-          </ul>
-          <p className="muted" style={{ marginBottom: 0 }}>
-            Demonstrated on chain: the issuer tries to move a held week to itself, and a transfer
-            signed by the holder and the issuer but carrying no proof — both refused.
+      <Reveal>
+        <section className={styles.closing} aria-labelledby="closing-title">
+          <Image className={styles.closingMark} src={mark} alt="" width={64} height={64} />
+          <h2 id="closing-title">Take a look around.</h2>
+          <p>
+            Browse the weeks on offer, or check any right yourself — no wallet needed to verify.
           </p>
-        </div>
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Can — and it is stated, not glossed</h3>
-          <ul>
-            <li>Issue new weeks</li>
-            <li>Attest something untrue about a week&apos;s fees</li>
-          </ul>
-          <p className="muted" style={{ marginBottom: 0 }}>
-            The fee attestation is the issuer&apos;s word, shown to buyers; it never decides whether a
-            week can move. And the proving keys come from a development setup, labelled
-            non-production — a production ceremony is a later phase.
+          <div className={styles.closingActions}>
+            <Link className="btn primary" href="/list">Explore the marketplace</Link>
+            <Link className="btn" href="/verify">Verify a right</Link>
+          </div>
+          <p className={styles.closingNote}>
+            Stellar testnet only. QuietStay transfers usage rights; no payment moves through it yet.
           </p>
-        </div>
-      </div>
-
-      <p className="section-title">Reviewing this?</p>
-      <div className="card">
-        <dl className="facts">
-          <dt>Contract</dt>
-          <dd>
-            <a href={explorer.contract()} target="_blank" rel="noreferrer">
-              <code>{CONTRACT_ID}</code>
-            </a>
-          </dd>
-          <dt>Network</dt>
-          <dd>
-            <code>{NETWORK_PASSPHRASE}</code>
-          </dd>
-        </dl>
-        <p className="muted" style={{ marginBottom: 0 }}>
-          Everything a reviewer needs is a set of explorer links with nothing to install — the
-          deployed contract, a proof-authorized rental and sale, and five transfers the contract
-          refused. See <code>docs/EVIDENCE.md</code> in the repository. The registry itself needs a wallet; verification does not.
-        </p>
-      </div>
-    </>
+        </section>
+      </Reveal>
+    </div>
   );
 }
+
+type IconName = Parameters<typeof Icon>[0]["name"];
+
+const STEPS: { icon: IconName; title: string; text: string }[] = [
+  {
+    icon: "stay",
+    title: "Get your week verified",
+    text: "The issuer confirms you own it. Only a sealed fingerprint goes on Stellar — no names, no documents.",
+  },
+  {
+    icon: "listing",
+    title: "List it",
+    text: "Offer it for rent or for sale. Renters and buyers see the town, the dates and whether fees are paid.",
+  },
+  {
+    icon: "shield",
+    title: "Approve with a proof",
+    text: "When someone asks, your device creates a proof that the week is yours. It reveals nothing else.",
+  },
+  {
+    icon: "transfer",
+    title: "It's theirs",
+    text: "The week moves instantly. A rental comes back to you when it ends; a sale makes the buyer the new owner, under a key only they hold.",
+  },
+];
+
+const SIDES = [
+  {
+    eyebrow: "FOR OWNERS",
+    title: "Rent out or sell the week you won't use.",
+    points: [
+      "Prove ownership without sending your contract or ID",
+      "No waiting on anyone's approval for each transfer",
+      "Your week comes back automatically when a rental ends",
+    ],
+  },
+  {
+    eyebrow: "FOR RENTERS AND BUYERS",
+    title: "Know what you're getting before you commit.",
+    points: [
+      "See that the seller really holds the week",
+      "See whether maintenance fees are paid",
+      "Check any right yourself, with no account needed",
+    ],
+  },
+];

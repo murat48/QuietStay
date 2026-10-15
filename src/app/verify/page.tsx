@@ -373,12 +373,8 @@ export default function VerifyScreen() {
 
   return (
     <>
-      {/*
-        "before you take it on" rather than "before you commit": this project uses
-        "commitment" throughout for the on-chain hash, and reusing the word for
-        "agree to a deal" a paragraph later reads as the same thing twice.
-      */}
-      <h1>Check a week before you take it on</h1>
+      <p className="eyebrow">PEACE OF MIND, VERIFIED</p>
+      <h1>Verify a timeshare right</h1>
       <p className="lede">
         Three questions get answered. <strong>Does the issuer vouch that this week is real and
         carries no unpaid fees?</strong> <strong>Is the person offering it actually the one holding

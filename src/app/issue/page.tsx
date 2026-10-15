@@ -390,7 +390,8 @@ export default function IssueScreen() {
   if (issueScreenView(standing) === "request") {
     return (
       <>
-        <h1>Ask for a week to be issued</h1>
+        <p className="eyebrow">START WITH YOUR RIGHTS</p>
+        <h1>Request a timeshare right</h1>
         <p className="lede">
           The issuer issues usage rights. To have a week issued to you, send the issuer the hash of
           a secret only you hold. The issuer enters the record; the week arrives in this account.
@@ -402,6 +403,7 @@ export default function IssueScreen() {
 
   return (
     <>
+      <p className="eyebrow">ISSUER WORKSPACE</p>
       <h1>Issue a usage right</h1>
       <p className="lede">
         The ownership record stays off chain. What goes on chain is a commitment that wraps its

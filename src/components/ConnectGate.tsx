@@ -10,7 +10,7 @@
  * attention.
  *
  * Three states, because connecting and verifying are two different things and
- * the nav appears only after the second. This is the one control on the page,
+ * a session exists only after the second. This is the main landing-page control,
  * so if it stopped at "connected" it would leave somebody mid-handshake looking
  * at a landing page with no way onward and no menu.
  */
@@ -20,25 +20,28 @@ import Link from "next/link";
 import { useWallet } from "@/components/WalletProvider";
 
 export function ConnectGate() {
-  const { address, authenticated, busy, connect } = useWallet();
+  const { address, authenticated, busy, error, connect } = useWallet();
 
   if (address && authenticated) {
     return (
       <Link className="btn primary" href="/list">
-        Open the registry
+        Explore Marketplace
       </Link>
     );
   }
 
   return (
-    <button className="primary" onClick={() => void connect()} disabled={busy}>
-      {address
-        ? busy
-          ? "signing…"
-          : "Sign in to open the registry"
-        : busy
-          ? "connecting…"
-          : "Connect a wallet to browse"}
-    </button>
+    <>
+      <button className="primary" onClick={() => void connect()} disabled={busy}>
+        {address
+          ? busy
+            ? "signing…"
+            : "Sign In to Continue"
+          : busy
+            ? "connecting…"
+            : "Connect Wallet"}
+      </button>
+      {error ? <p role="alert">{error}</p> : null}
+    </>
   );
 }
