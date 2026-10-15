@@ -14,7 +14,8 @@
  */
 
 import { authenticatedAccount } from "@/lib/sep10";
-import { ContractCallError, buildListTx, buildUnlistTx, prepare } from "@/lib/contract";
+import { ContractCallError, buildListTx, buildUnlistTx, prepare, readRight } from "@/lib/contract";
+import { formatDate, weekIsOver } from "@/lib/format";
 
 interface BuildRequest {
   action?: "list" | "unlist";
@@ -49,6 +50,20 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
+    // A week already over is refused here rather than published: the contract
+    // would accept the listing, but nobody could ever take it up.
+    if (action === "list") {
+      const right = await readRight(rightId);
+      if (weekIsOver(right.period.end)) {
+        return Response.json(
+          {
+            error: `right #${rightId}'s week ended on ${formatDate(right.period.end)} — there is nothing left to offer`,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     const tx =
       action === "list"
         ? await buildListTx({ by, rightId, termSecs: body.termSecs ?? null })

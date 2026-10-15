@@ -33,6 +33,7 @@ import { randomUUID } from "node:crypto";
 
 import { assembleConsent, parseSecretHash } from "@/lib/consent";
 import { ContractCallError, readInventory } from "@/lib/contract";
+import { formatDate, weekIsOver } from "@/lib/format";
 import {
   RequestStoreUnavailable,
   loadRequests,
@@ -82,6 +83,14 @@ export async function POST(request: Request): Promise<Response> {
     }
     if (row.holding.holder === caller) {
       return Response.json({ error: "you already hold this week" }, { status: 409 });
+    }
+    // An offer left up after the week ended. A rental of it would be refused on
+    // chain (its end is in the past) and a sale would buy nothing.
+    if (weekIsOver(row.right.period.end)) {
+      return Response.json(
+        { error: `this week ended on ${formatDate(row.right.period.end)} — it can no longer be taken` },
+        { status: 409 },
+      );
     }
     // A week out on a term can only have been listed by the account holding that
     // term, so any offer on one is a sub-let — and no renter can carry one out:

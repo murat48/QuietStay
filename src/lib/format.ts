@@ -70,3 +70,16 @@ export function describeError(caught: unknown): string {
 
   return "something went wrong, and whatever threw it gave no reason";
 }
+
+/**
+ * Whether a week's dates are behind us.
+ *
+ * The contract still lets the holder list such a week — it checks only the use
+ * year — but no rental of it can ever go through: a rental ends at the week's
+ * check-out, and `transfer` refuses an end in the past (`ExpiryInThePast`). Nor is
+ * there anything left to sell. So the app treats a finished week as off the
+ * market: no new offer, no ask, and kept out of "For rent" and "For sale".
+ */
+export function weekIsOver(weekEnd: number, nowSecs: number = Date.now() / 1000): boolean {
+  return weekEnd <= nowSecs;
+}
