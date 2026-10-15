@@ -20,7 +20,7 @@ The issuer, which approved every transfer in Phase 1, has no part in them any mo
 
 | | |
 | --- | --- |
-| Live app | **[quietstay.vercel.app](https://quietstay.vercel.app)** — verify a week without an account or a wallet |
+| Live app | **[quietstay.app](https://quietstay.app)** — verify a week without an account or a wallet |
 | Contract | [`CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD`](https://stellar.expert/explorer/testnet/contract/CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD) — proof-gated transfers, verification key fixed at deployment |
 | Network | `Test SDF Network ; September 2015` |
 | The proof | [CIRCUIT.md](./docs/CIRCUIT.md) — opens with a one-page summary; circuit in [`circuits/gpl/transfer.circom`](./circuits/gpl/transfer.circom) |
@@ -38,7 +38,7 @@ Everything is links to open. Nothing to clone, install, or build.
    signatures but no proof, and the issuer trying to move a held week to itself. Each
    is listed with the error code the ledger recorded and what to look for in the
    explorer.
-2. **[quietstay.vercel.app/verify](https://quietstay.vercel.app/verify)** — no
+2. **[quietstay.app/verify](https://quietstay.app/verify)** — no
    account. Type a week number and press Verify:
    - **`3`** — rented out by proof on 9 October. The issuer's attestation checks
      pass, the holder is the renter until 28 November, and *Verified on chain*

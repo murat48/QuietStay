@@ -553,7 +553,7 @@ Four screens, connected to the deployed contract:
 | [Verify](../src/app/verify/page.tsx) | A counterparty checks a disclosed record and attestation, entirely client-side. |
 | [Transfer](../src/app/transfer/page.tsx) | Rent or sell through one form, with issuer approval — plus a control that submits **without** approval so the refusal can be watched. |
 
-Live at **[quietstay.vercel.app](https://quietstay.vercel.app)**, on testnet.
+Live at **[quietstay.app](https://quietstay.app)**, on testnet.
 Verifying needs no account and no wallet — enter a right id on the verify screen,
 \`3\` for instance, and every check runs in your own browser against the deployed
 contract. The registry screen asks for a signed-in wallet, which is a product

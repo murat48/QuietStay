@@ -97,7 +97,7 @@ Both deployments need these:
 | `NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID` | the same |
 | `QUIETSTAY_SEP10_SERVER_SECRET` | the SEP-10 challenge key — rotatable, safe here |
 | `QUIETSTAY_SESSION_SECRET` | 32+ random characters |
-| `QUIETSTAY_HOME_DOMAIN` | the deployment's host, e.g. `quietstay.vercel.app` |
+| `QUIETSTAY_HOME_DOMAIN` | the deployment's host, e.g. `quietstay.app` |
 
 The full deployment adds:
 
@@ -117,7 +117,7 @@ and named rather than failing somewhere further in.
 
 ### The domain is a host, and it is read at runtime
 
-`quietstay.vercel.app`. Not `https://quietstay.vercel.app`, not with a trailing
+`quietstay.app`. Not `https://quietstay.app`, not with a trailing
 slash — SEP-10 puts `<home domain> auth` in the challenge the wallet displays,
 and it wants a host there. A scheme or a path is stripped rather than carried
 into a challenge no standard wallet would recognise, so a pasted address-bar URL
