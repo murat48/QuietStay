@@ -176,3 +176,6 @@ export function sessionSecret(): Uint8Array {
   }
   return new TextEncoder().encode(secret);
 }
+
+/** The customer-discovery survey linked from the home page and the footer. */
+export const SURVEY_URL = "https://forms.gle/X3ismSnCbhAjkAu1A";

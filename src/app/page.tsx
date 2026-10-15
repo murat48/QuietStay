@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ConnectGate } from "@/components/ConnectGate";
 import { Icon } from "@/components/Icon";
 import { Reveal } from "@/components/Reveal";
+import { SURVEY_URL } from "@/lib/config";
 import mark from "../../public/brand/quietstay-mark.png";
 import resort from "../../public/images/mediterranean-resort.jpg";
 import styles from "./page.module.css";
@@ -93,6 +94,22 @@ export default function Home() {
               </ul>
             </div>
           ))}
+        </section>
+      </Reveal>
+
+      <Reveal>
+        <section className={styles.survey} aria-labelledby="survey-title">
+          <span className={styles.surveyIcon}><Icon name="listing" /></span>
+          <div className={styles.surveyCopy}>
+            <h2 id="survey-title">Own a timeshare, or rented one?</h2>
+            <p>
+              Help shape QuietStay: five quick questions about how you check who owns a week.
+              Two minutes, anonymous unless you leave an email.
+            </p>
+          </div>
+          <a className="btn primary" href={SURVEY_URL} target="_blank" rel="noreferrer">
+            Take the survey ↗
+          </a>
         </section>
       </Reveal>
 

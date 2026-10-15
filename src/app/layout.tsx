@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { SiteAnalytics } from "@/components/SiteAnalytics";
 import { WalletButton, WalletProvider } from "@/components/WalletProvider";
-import { CONTRACT_ID, explorer } from "@/lib/config";
+import { CONTRACT_ID, SURVEY_URL, explorer } from "@/lib/config";
 
 import mark from "../../public/brand/quietstay-mark.png";
 import "./globals.css";
@@ -59,6 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <Wordmark />
                 </Link>
                 <p>A little more freedom. A lot more peace of mind.</p>
+                <a className="footer-survey" href={SURVEY_URL} target="_blank" rel="noreferrer">2-minute survey ↗</a>
                 <a href={explorer.contract()} target="_blank" rel="noreferrer">View on Stellar ↗</a>
               </div>
               <p className="footer-disclosure">

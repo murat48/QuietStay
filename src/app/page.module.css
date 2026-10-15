@@ -511,3 +511,65 @@
 .band {
   background: linear-gradient(180deg, transparent 0%, #edf2fa 14%, #f3f0e8 86%, transparent 100%);
 }
+
+/* The survey invitation: a light card between the steps and the closing band. */
+.survey {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  max-width: 1136px;
+  margin: 8px auto 24px;
+  padding: 28px 32px;
+  border: 1px solid rgb(214 162 74 / 35%);
+  border-radius: 22px;
+  background: linear-gradient(120deg, #fbf5e9 0%, #ffffff 55%, #eef3fb 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.surveyIcon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #d6a24a, #e9c27a);
+  color: #fff;
+  box-shadow: 0 8px 18px rgb(214 162 74 / 30%);
+}
+
+.surveyIcon svg { width: 24px; height: 24px; }
+
+.surveyCopy { flex: 1; }
+
+.survey h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  letter-spacing: -.02em;
+  color: var(--navy);
+}
+
+.survey p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.survey :global(.btn) {
+  flex: none;
+  border-radius: 999px;
+  padding-left: 22px;
+  padding-right: 22px;
+}
+
+@media (max-width: 700px) {
+  .survey {
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 8px 16px 24px;
+    padding: 24px 22px;
+  }
+
+  .survey :global(.btn) { width: 100%; text-align: center; }
+}
