@@ -599,7 +599,7 @@ the issuer to approve anything.
   replayed proof, someone else's proof, a tampered proof, a sale without consent
   and a forged consent — run against a throwaway deployment so it issues nothing
   on the evidence contract ([SETUP.md](./SETUP.md#end-to-end-test)).
-- **When the event window has passed.** The RPC keeps events for about a week, so
+- **When the event window has passed.** The public testnet RPC keeps events only briefly (about a day as of October 2026), so
   *Verified on chain* falls back to the deployment's evidence transactions from
   `docs/evidence-phase2.json` — two accepted, five refused, each a Stellar Expert
   link — and says in one sentence why. The e2e checks this on a week with no

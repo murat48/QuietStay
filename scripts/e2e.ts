@@ -33,7 +33,7 @@
  *      commitment is now the buyer's
  *  10. the week's proof-verified transfers are listed for the verify screen
  *  11. a week with no transfer in the RPC's event window — which every week is,
- *      a week after its last transfer — gets the evidence transactions instead,
+ *      a day or so after its last transfer — gets the evidence transactions instead,
  *      so the verify screen never shows an empty list. Checked on an app that
  *      reads the evidence contract: E2E_EVIDENCE_BASE_URL, or the app under test
  *      if that is the one
@@ -434,7 +434,7 @@ async function main(): Promise<void> {
     );
   } else {
     // Any week the RPC has no recent transfer for is in the state every week
-    // reaches a week after its last transfer.
+    // reaches a day or so after its last transfer.
     let quiet: { id: number; body: { transfers: unknown[]; evidence: { tx: string; accepted: boolean; error: string | null; explorer: string }[] } } | null = null;
     for (const r of reads.rights) {
       const body = await (await fetch(`${evidenceBase}/api/right/${r.id}/transfers`)).json();

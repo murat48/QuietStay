@@ -479,8 +479,8 @@ export default function VerifyScreen() {
           ) : transfers.length === 0 ? (
             <div data-testid="evidence-fallback">
               <p className="muted">
-                The network keeps a contract&apos;s events for only about a week, so this week&apos;s
-                own transfers are not listed here once they are older than that — instead, these are
+                The network keeps a contract&apos;s events only briefly — about a day on testnet — so
+                this week&apos;s own transfers are not listed here once they are older than that — instead, these are
                 the contract&apos;s evidence transactions, permanent and each openable in the
                 explorer, showing what it accepts and what it refuses.
               </p>

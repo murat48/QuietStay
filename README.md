@@ -53,8 +53,8 @@ Everything is links to open. Nothing to clone, install, or build.
    attested. Change one character inside a value — the unit, say — and that check
    fails.
 
-   *Verified on chain* reads the contract's events, which the network keeps for
-   about a week. After that it says so, and the explorer links in EVIDENCE.md are
+   *Verified on chain* reads the contract's events, which the public testnet RPC
+   keeps only briefly — about a day as of October 2026. After that it says so, and the explorer links in EVIDENCE.md are
    the permanent record.
 3. **[docs/CIRCUIT.md](./docs/CIRCUIT.md)** — one page on what the proof reveals,
    hides and prevents, then every detail, and the measured cost: about 80 million

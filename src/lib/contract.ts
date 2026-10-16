@@ -485,7 +485,7 @@ export interface TransferEvent {
  *
  * Every one of them is a proof the contract verified: `transfer` emits its
  * event only after the pairing check passes, and there is no other way to move a
- * right. The RPC keeps events for a limited window (about a week on testnet), so
+ * right. The RPC keeps events for a limited window (about a day on testnet today), so
  * an empty answer means "none recently", not "never".
  */
 export async function readTransferEvents(rightId: number, contractId: string = CONTRACT_ID): Promise<TransferEvent[]> {
@@ -498,12 +498,51 @@ export async function readTransferEvents(rightId: number, contractId: string = C
   // dozen pages. A cursor is "<toid>-<index>" and a toid carries the ledger
   // sequence in its top 32 bits, which is how the loop knows it has caught up.
   const ledgerOf = (cursor: string) => Number(BigInt(cursor.split("-")[0] ?? "0") >> 32n);
-  const events: rpc.Api.EventResponse[] = [];
-  let page = await server.getEvents({ startLedger: Math.max(1, latest.sequence - 120_000), filters, limit: 200 });
-  events.push(...page.events);
-  for (let i = 0; i < 30 && page.cursor && ledgerOf(page.cursor) < page.latestLedger; i += 1) {
-    page = await server.getEvents({ cursor: page.cursor, filters, limit: 200 });
-    events.push(...page.events);
+
+  // How far back events reach is the node's choice, and narrower than its ledger
+  // retention: testnet's public RPC keeps about a day of events while
+  // `getHealth` reports a week of ledgers, and the nodes behind it disagree a
+  // little about where that day starts — a request, or a cursor from another
+  // node, can land outside the range of the node that serves it. A refusal
+  // names the range; the whole read then starts again well inside it. The RPC
+  // also sheds load ("request exceeded processing limit threshold"), which is
+  // retried after a pause.
+  const pause = (ms: number) => new Promise((done) => setTimeout(done, ms));
+  const messageOf = (error: unknown) => {
+    // The RPC client rejects with a plain { code, message }, not an Error.
+    const message = (error as { message?: unknown } | null)?.message;
+    return typeof message === "string" ? message : String(error);
+  };
+  const readFrom = async (startLedger: number) => {
+    const found: rpc.Api.EventResponse[] = [];
+    let page = await server.getEvents({ startLedger, filters, limit: 200 });
+    found.push(...page.events);
+    for (let i = 0; i < 30 && page.cursor && ledgerOf(page.cursor) < page.latestLedger; i += 1) {
+      page = await server.getEvents({ cursor: page.cursor, filters, limit: 200 });
+      found.push(...page.events);
+    }
+    return found;
+  };
+
+  let start = Math.max(1, latest.sequence - 120_000);
+  let events: rpc.Api.EventResponse[] | null = null;
+  for (let attempt = 0; events === null; attempt += 1) {
+    try {
+      events = await readFrom(start);
+    } catch (error) {
+      if (attempt >= 5) throw error;
+      const message = messageOf(error);
+      const range = /ledger range:\s*(\d+)\s*-\s*(\d+)/.exec(message);
+      if (range) {
+        // A day is about 17,000 ledgers; keep well clear of the oldest edge.
+        start = Math.max(Number(range[1]) + 3_000, Number(range[2]) - 14_000);
+        await pause(500 * attempt);
+      } else if (/processing limit|rate limit|timeout/i.test(message)) {
+        await pause(1_000 * (attempt + 1));
+      } else {
+        throw error;
+      }
+    }
   }
 
   const out: TransferEvent[] = [];

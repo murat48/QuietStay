@@ -8,7 +8,7 @@
  *
  * Each transfer is an ownership proof the contract verified on chain: `transfer`
  * publishes its event only after the pairing check passes, and nothing else can
- * move a right. But the RPC keeps events for about a week, so after that a week's
+ * move a right. But the RPC keeps events only briefly (about a day on testnet), so after that a week's
  * own transfers drop out of `transfers` — the explorer still has them.
  *
  * `evidence` is what the verify screen shows instead: the accepted and refused
