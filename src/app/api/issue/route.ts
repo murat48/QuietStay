@@ -143,6 +143,18 @@ export async function POST(request: Request): Promise<Response> {
           { status: 400 },
         );
       }
+      // Typed in rather than picked from the list, but the same ask: the owner's
+      // account and the very h they sent. Close it too, or it stays on the
+      // issuer's list as though the week were still owed. A store that cannot be
+      // read costs nothing here — there is then no list to tidy.
+      try {
+        const same = (await loadIssuanceRequests()).find(
+          (r) => r.status === "open" && r.by === record.owner.stellar_account && parseSecretHash(r.secret_hash) === h,
+        );
+        if (same) requestId = same.id;
+      } catch {
+        // No readable store: nothing to close.
+      }
     }
     const d = await splitRecordDigest(record as unknown as JsonValue);
     const commitment = fr(await poseidonCommitment(d, record.owner.stellar_account, h));
