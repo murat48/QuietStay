@@ -994,7 +994,7 @@ export default function IssueScreen() {
  * sent is `h`. The secret it hashes stays in the owner's file.
  */
 function IssuanceAsk() {
-  const { address, authenticated, standing, busy: connecting, connect, authFetch } = useWallet();
+  const { address, authenticated, standing, readOnly, busy: connecting, connect, authFetch } = useWallet();
   const [hashText, setHashText] = useState("");
   // Filled from the link `npm run zk:secret` prints, once in the browser.
   useEffect(() => {
@@ -1067,6 +1067,18 @@ function IssuanceAsk() {
 
   return (
     <>
+      {/*
+        Said up front on a deployment without the issuer key: the ask is kept
+        here, but the issuer issues from their own machine, so the week does
+        not arrive the moment the ask is sent.
+      */}
+      {readOnly ? (
+        <div className="note accent">
+          <strong>Requests here are handled by hand.</strong> This site does not hold the
+          issuer&apos;s key, so the issuer reviews your request and issues the week from their own
+          machine. It appears in your account once they have; nothing more is needed from you.
+        </div>
+      ) : null}
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Request issuance</h3>
         <dl className="facts">
