@@ -391,7 +391,7 @@ export default function IssueScreen() {
     return (
       <>
         <p className="eyebrow">START WITH YOUR RIGHTS</p>
-        <h1>Request a timeshare right</h1>
+        <h1>Add your week to QuietStay</h1>
         <p className="lede">
           The issuer issues usage rights. To have a week issued to you, send the issuer the hash of
           a secret only you hold. The issuer enters the record; the week arrives in this account.

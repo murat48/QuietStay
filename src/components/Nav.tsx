@@ -19,9 +19,14 @@ export function Nav() {
   // Preserve the original role-aware transfer navigation. Screens and APIs
   // retain their own existing authorization checks.
   const showTransfer = signedIn && (!standing || standing.owned.length > 0 || standing.renting.length > 0 || standing.isIssuer);
+  // Issue is for everyone: the issuer issues there, and anyone else asks for
+  // their own week to be added — the way a newcomer becomes an owner. The
+  // screen itself asks for a wallet when there is none, so the tab does not wait
+  // for one. Named for what the reader does there.
+  const issueLabel = signedIn && standing?.isIssuer ? "Issue" : "Add my week";
   const screens = [
     ...PUBLIC_SCREENS,
-    ...(signedIn ? [{ href: "/issue", label: "Issue" }] : []),
+    { href: "/issue", label: issueLabel },
     ...(showTransfer ? [{ href: "/transfer", label: "Transfer" }] : []),
   ];
 
