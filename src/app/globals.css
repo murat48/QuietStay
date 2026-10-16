@@ -1313,3 +1313,9 @@ button.stay-cover:not(.primary):not(.danger):hover:not(:disabled) {
 @media (prefers-reduced-motion: reduce) {
   .reveal, .reveal li { opacity: 1; transform: none; }
 }
+
+/* Phase notes on Transfer and Add my week: the two phase tags read inline. */
+.phase-note .tag {
+  margin-right: 0.35rem;
+  vertical-align: 1px;
+}

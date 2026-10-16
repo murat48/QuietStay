@@ -73,6 +73,12 @@ export default function TransferScreen() {
         it — not the issuer, not this site — and nothing about you or the week&apos;s record is
         revealed by the proof.
       </p>
+      <div className="note accent phase-note">
+        <span className="tag accent">Phase 2</span> Making the proof is a manual step today: you run{" "}
+        <code>npm run zk:prove</code> on your own computer and upload the file it writes.{" "}
+        <span className="tag ok">Phase 3</span> The app will create the proof for you, in your
+        browser, with one click — your secret still never leaves your device.
+      </div>
       <RoleGate requires="holder" action="Transferring a week">
         <TransferForm />
       </RoleGate>

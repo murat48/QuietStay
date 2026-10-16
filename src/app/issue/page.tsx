@@ -396,6 +396,12 @@ export default function IssueScreen() {
           The issuer issues usage rights. To have a week issued to you, send the issuer the hash of
           a secret only you hold. The issuer enters the record; the week arrives in this account.
         </p>
+        <div className="note accent phase-note">
+          <span className="tag accent">Phase 2</span> Making your secret is a manual step today: you
+          run <code>npm run zk:secret</code> on your own computer and paste the h it prints.{" "}
+          <span className="tag ok">Phase 3</span> The app will make the secret for you, in your
+          browser, and fill in h automatically — the secret still never leaves your device.
+        </div>
         <IssuanceAsk />
       </>
     );
