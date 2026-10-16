@@ -162,10 +162,17 @@ export default function ListScreen() {
   const [payNotice, setPayNotice] = useState<number | null>(null);
   // The one card opened into its full view: photos, then everything else.
   const [opened, setOpened] = useState<number | null>(null);
+  // On a small screen a card opens where it is, not as a lightbox: an overlay
+  // the size of the phone adds nothing but a second way to scroll.
+  const [inline, setInline] = useState(false);
+  const openCard = (id: number) => {
+    setInline(window.matchMedia("(max-width: 900px)").matches);
+    setOpened(id);
+  };
   // While a card is open as a lightbox: Escape closes it, and the page behind
   // holds still rather than scrolling under the overlay.
   useEffect(() => {
-    if (opened === null) return;
+    if (opened === null || inline) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpened(null);
     };
@@ -176,7 +183,7 @@ export default function ListScreen() {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = overflow;
     };
-  }, [opened]);
+  }, [opened, inline]);
   const [requests, setRequests] = useState<{ incoming: TransferRequest[]; outgoing: TransferRequest[] }>(
     { incoming: [], outgoing: [] },
   );
@@ -699,18 +706,18 @@ export default function ListScreen() {
               // The card, the same whether it sits in the grid or opens over the page.
               const card = (
                 <div
-                  className={`card listing${isOpen ? " is-open" : ""}`}
+                  className={`card listing${isOpen ? (inline ? " is-inline" : " is-open") : ""}`}
                   id={`right-${right.id}`}
-                  role={isOpen ? "dialog" : undefined}
-                  aria-modal={isOpen ? true : undefined}
-                  aria-label={isOpen ? `${right.property?.region ?? "Week"}, right #${right.id}` : undefined}
+                  role={isOpen && !inline ? "dialog" : undefined}
+                  aria-modal={isOpen && !inline ? true : undefined}
+                  aria-label={isOpen && !inline ? `${right.property?.region ?? "Week"}, right #${right.id}` : undefined}
                 >
                   {isOpen ? (
                     <button
                       type="button"
                       className="lightbox-close"
-                      aria-label="Close"
-                      autoFocus
+                      aria-label={inline ? "Close photos" : "Close"}
+                      autoFocus={!inline}
                       onClick={() => setOpened(null)}
                     >
                       ✕
@@ -719,7 +726,7 @@ export default function ListScreen() {
                   {photos === null ? null : isOpen ? (
                     <StayGallery photos={photos} />
                   ) : (
-                    <StayCover photos={photos} onOpen={() => setOpened(right.id)} />
+                    <StayCover photos={photos} onOpen={() => openCard(right.id)} />
                   )}
                   <div className="spread">
                     <h3 style={{ margin: 0 }}>
@@ -1206,7 +1213,7 @@ export default function ListScreen() {
                 </div>
               );
 
-              if (!isOpen || photos === null) return <Fragment key={right.id}>{card}</Fragment>;
+              if (!isOpen || photos === null || inline) return <Fragment key={right.id}>{card}</Fragment>;
 
               return (
                 <Fragment key={right.id}>
@@ -1217,7 +1224,7 @@ export default function ListScreen() {
                     pin it in the wrong place or under the header.
                   */}
                   <div className="card listing listing-ghost" aria-hidden="true">
-                    <StayCover photos={photos} onOpen={() => setOpened(right.id)} />
+                    <StayCover photos={photos} onOpen={() => openCard(right.id)} />
                     <h3 style={{ margin: 0 }}>{right.property?.region ?? `Right #${right.id}`}</h3>
                   </div>
                   {createPortal(
