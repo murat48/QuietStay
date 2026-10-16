@@ -46,12 +46,19 @@ inventory/phase2/requests/
 # as deliverable evidence, so neither belongs in it.
 2.pdf
 quietstay_phase1_build_prompt.md
+phase2.md
 
 # Production notes for the demo video. Kept locally: it did its job once the
 # recording existed, and it carried a fallback step — `npm run evidence` — that
 # reissues the transactions EVIDENCE.md cites, which is no longer safe to
 # suggest now that those hashes are quoted in a submitted document.
 docs/DEMO_SCRIPT.md
+
+# The owner's step-by-step rental guide, with rehearsal accounts in it. Local.
+docs/KIRALAMA_KILAVUZU.md
+
+# Claude Code's per-machine permissions.
+.claude/settings.local.json
 circuits/build/
 
 # Phase 2: record secrets never enter git; proofs are regenerated on demand.
