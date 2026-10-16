@@ -1108,14 +1108,54 @@ button.stay-cover:not(.primary):not(.danger):hover:not(:disabled) {
   content: " →";
 }
 
+/* Opened, a listing card is a lightbox: centred over a navy veil, gallery on the
+   left and the card's own facts and actions on the right. */
+.lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgb(8 22 50 / 72%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: qs-fade-in 0.3s var(--ease) both;
+}
+
+@keyframes qs-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes qs-pop {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
 .card.listing.is-open {
-  grid-column: 1 / -1;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 100;
+  width: min(1120px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2.5rem);
+  max-height: calc(100dvh - 2.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 2rem;
+  border: none;
+  border-radius: 22px;
+  box-shadow: 0 40px 90px rgb(0 0 0 / 35%);
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   column-gap: 2rem;
   row-gap: 0;
   align-items: start;
-  animation: qs-rise 0.5s var(--ease) both;
+  transform: translate(-50%, -50%);
+  animation: qs-pop 0.4s var(--ease) both;
+}
+
+.card.listing.is-open:hover {
+  box-shadow: 0 40px 90px rgb(0 0 0 / 35%);
 }
 
 .card.listing.is-open > * {
@@ -1125,15 +1165,34 @@ button.stay-cover:not(.primary):not(.danger):hover:not(:disabled) {
 .card.listing.is-open > .stay-gallery {
   grid-column: 1;
   grid-row: 1 / span 40;
+  position: sticky;
+  top: 0;
 }
 
-.listing-close {
-  justify-self: start;
-  margin-top: 0.6rem;
-  min-height: 34px;
-  padding: 0.3rem 0.8rem;
-  font-size: 0.8rem;
-  border-radius: 999px;
+/* The stand-in left in the grid while its card is open: dimmed, inert. */
+.listing-ghost {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.card.listing.is-open > .lightbox-close {
+  grid-column: auto;
 }
 
 .stay-gallery {
@@ -1200,12 +1259,23 @@ button.stay-cover:not(.primary):not(.danger):hover:not(:disabled) {
 }
 
 @media (max-width: 900px) {
+  /* On a phone the lightbox is a full-height sheet, photos on top. */
   .card.listing.is-open {
     display: block;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    max-height: 100dvh;
+    height: 100dvh;
+    padding: 1.15rem;
+    border-radius: 0;
+    transform: none;
+    animation: qs-rise 0.35s var(--ease) both;
   }
 
   .card.listing.is-open > .stay-gallery {
-    margin-bottom: 1rem;
+    position: static;
+    margin: 2.6rem 0 1rem;
   }
 }
 

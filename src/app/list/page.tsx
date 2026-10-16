@@ -22,7 +22,7 @@
  * require them to sign in first. The gate links it by name.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Link from "next/link";
 
@@ -161,6 +161,21 @@ export default function ListScreen() {
   const [payNotice, setPayNotice] = useState<number | null>(null);
   // The one card opened into its full view: photos, then everything else.
   const [opened, setOpened] = useState<number | null>(null);
+  // While a card is open as a lightbox: Escape closes it, and the page behind
+  // holds still rather than scrolling under the overlay.
+  useEffect(() => {
+    if (opened === null) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpened(null);
+    };
+    document.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [opened]);
   const [requests, setRequests] = useState<{ incoming: TransferRequest[]; outgoing: TransferRequest[] }>(
     { incoming: [], outgoing: [] },
   );
@@ -681,22 +696,43 @@ export default function ListScreen() {
               const isOpen = opened === right.id && photos !== null;
 
               return (
-                <div className={`card listing${isOpen ? " is-open" : ""}`} key={right.id} id={`right-${right.id}`}>
+                <Fragment key={right.id}>
+                  {/*
+                    Opened, the card itself becomes the lightbox. A stand-in keeps
+                    its place in the grid so nothing behind the overlay moves, and
+                    a click on the backdrop closes it.
+                  */}
+                  {isOpen && photos !== null ? (
+                    <>
+                      <div className="card listing listing-ghost" aria-hidden="true">
+                        <StayCover photos={photos} onOpen={() => setOpened(right.id)} />
+                        <h3 style={{ margin: 0 }}>{right.property?.region ?? `Right #${right.id}`}</h3>
+                      </div>
+                      <div className="lightbox-backdrop" onClick={() => setOpened(null)} />
+                    </>
+                  ) : null}
+                <div
+                  className={`card listing${isOpen ? " is-open" : ""}`}
+                  id={`right-${right.id}`}
+                  role={isOpen ? "dialog" : undefined}
+                  aria-modal={isOpen ? true : undefined}
+                  aria-label={isOpen ? `${right.property?.region ?? "Week"}, right #${right.id}` : undefined}
+                >
+                  {isOpen ? (
+                    <button
+                      type="button"
+                      className="lightbox-close"
+                      aria-label="Close"
+                      autoFocus
+                      onClick={() => setOpened(null)}
+                    >
+                      ✕
+                    </button>
+                  ) : null}
                   {photos === null ? null : isOpen ? (
                     <StayGallery photos={photos} />
                   ) : (
-                    <StayCover
-                      photos={photos}
-                      onOpen={() => {
-                        setOpened(right.id);
-                        // The opened card takes a full row and may move; follow it.
-                        requestAnimationFrame(() =>
-                          document
-                            .getElementById(`right-${right.id}`)
-                            ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-                        );
-                      }}
-                    />
+                    <StayCover photos={photos} onOpen={() => setOpened(right.id)} />
                   )}
                   <div className="spread">
                     <h3 style={{ margin: 0 }}>
@@ -732,12 +768,6 @@ export default function ListScreen() {
                       {ownedButRentedOut ? <span className="tag ok">yours, on loan</span> : null}
                     </div>
                   </div>
-
-                  {isOpen ? (
-                    <button type="button" className="listing-close" onClick={() => setOpened(null)}>
-                      Close details
-                    </button>
-                  ) : null}
 
                   <dl className="facts" style={{ marginTop: "0.6rem" }}>
                     {/*
@@ -1187,6 +1217,7 @@ export default function ListScreen() {
                     </div>
                   ) : null}
                 </div>
+                </Fragment>
               );
             })}
           </div>
