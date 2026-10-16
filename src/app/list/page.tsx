@@ -25,6 +25,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 
 import { photosFor, StayCover, StayGallery } from "@/components/StayPhotos";
 import { useWallet } from "@/components/WalletProvider";
@@ -695,22 +696,8 @@ export default function ListScreen() {
                   : photosFor(right.id, right.property.region, right.property.features);
               const isOpen = opened === right.id && photos !== null;
 
-              return (
-                <Fragment key={right.id}>
-                  {/*
-                    Opened, the card itself becomes the lightbox. A stand-in keeps
-                    its place in the grid so nothing behind the overlay moves, and
-                    a click on the backdrop closes it.
-                  */}
-                  {isOpen && photos !== null ? (
-                    <>
-                      <div className="card listing listing-ghost" aria-hidden="true">
-                        <StayCover photos={photos} onOpen={() => setOpened(right.id)} />
-                        <h3 style={{ margin: 0 }}>{right.property?.region ?? `Right #${right.id}`}</h3>
-                      </div>
-                      <div className="lightbox-backdrop" onClick={() => setOpened(null)} />
-                    </>
-                  ) : null}
+              // The card, the same whether it sits in the grid or opens over the page.
+              const card = (
                 <div
                   className={`card listing${isOpen ? " is-open" : ""}`}
                   id={`right-${right.id}`}
@@ -1217,6 +1204,30 @@ export default function ListScreen() {
                     </div>
                   ) : null}
                 </div>
+              );
+
+              if (!isOpen || photos === null) return <Fragment key={right.id}>{card}</Fragment>;
+
+              return (
+                <Fragment key={right.id}>
+                  {/*
+                    A stand-in keeps the card's place in the grid, so nothing
+                    behind the lightbox moves. The lightbox itself is portalled to
+                    <body>: inside the page, an animated or stacked ancestor could
+                    pin it in the wrong place or under the header.
+                  */}
+                  <div className="card listing listing-ghost" aria-hidden="true">
+                    <StayCover photos={photos} onOpen={() => setOpened(right.id)} />
+                    <h3 style={{ margin: 0 }}>{right.property?.region ?? `Right #${right.id}`}</h3>
+                  </div>
+                  {createPortal(
+                    <div className="lightbox" onClick={() => setOpened(null)}>
+                      <div className="lightbox-frame" onClick={(event) => event.stopPropagation()}>
+                        {card}
+                      </div>
+                    </div>,
+                    document.body,
+                  )}
                 </Fragment>
               );
             })}

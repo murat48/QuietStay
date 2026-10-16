@@ -1108,12 +1108,17 @@ button.stay-cover:not(.primary):not(.danger):hover:not(:disabled) {
   content: " →";
 }
 
-/* Opened, a listing card is a lightbox: centred over a navy veil, gallery on the
-   left and the card's own facts and actions on the right. */
-.lightbox-backdrop {
+/* Opened, a listing card is shown in a lightbox: portalled to <body>, over a
+   navy veil, centred by flex (no transform to fight with), scrolling as a
+   whole when it is taller than the screen. */
+.lightbox {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  z-index: 100;
+  display: flex;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: rgb(8 22 50 / 72%);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
@@ -1125,33 +1130,24 @@ button.stay-cover:not(.primary):not(.danger):hover:not(:disabled) {
   to { opacity: 1; }
 }
 
-@keyframes qs-pop {
-  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
-  to { opacity: 1; transform: translate(-50%, -50%); }
+.lightbox-frame {
+  width: min(1120px, 100%);
+  margin: auto;
+  animation: qs-rise 0.4s var(--ease) both;
 }
 
 .card.listing.is-open {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  z-index: 100;
-  width: min(1120px, calc(100vw - 2rem));
-  max-height: calc(100vh - 2.5rem);
-  max-height: calc(100dvh - 2.5rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
   margin: 0;
   padding: 2rem;
   border: none;
   border-radius: 22px;
   box-shadow: 0 40px 90px rgb(0 0 0 / 35%);
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   column-gap: 2rem;
   row-gap: 0;
   align-items: start;
-  transform: translate(-50%, -50%);
-  animation: qs-pop 0.4s var(--ease) both;
 }
 
 .card.listing.is-open:hover {
@@ -1165,8 +1161,6 @@ button.stay-cover:not(.primary):not(.danger):hover:not(:disabled) {
 .card.listing.is-open > .stay-gallery {
   grid-column: 1;
   grid-row: 1 / span 40;
-  position: sticky;
-  top: 0;
 }
 
 /* The stand-in left in the grid while its card is open: dimmed, inert. */
@@ -1259,24 +1253,16 @@ button.stay-cover:not(.primary):not(.danger):hover:not(:disabled) {
 }
 
 @media (max-width: 900px) {
-  /* On a phone the lightbox is a full-height sheet, photos on top. */
+  /* On a phone the lightbox fills the screen, photos on top. */
+  .lightbox { padding: 0; }
+  .lightbox-frame { width: 100%; min-height: 100%; margin: 0; }
   .card.listing.is-open {
     display: block;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    max-height: 100dvh;
-    height: 100dvh;
+    min-height: 100dvh;
     padding: 1.15rem;
     border-radius: 0;
-    transform: none;
-    animation: qs-rise 0.35s var(--ease) both;
   }
-
-  .card.listing.is-open > .stay-gallery {
-    position: static;
-    margin: 2.6rem 0 1rem;
-  }
+  .card.listing.is-open > .stay-gallery { margin: 2.6rem 0 1rem; }
 }
 
 @media (max-width: 600px) {
