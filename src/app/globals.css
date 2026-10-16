@@ -1306,28 +1306,9 @@ button.stay-cover:not(.primary):not(.danger):hover:not(:disabled) {
   vertical-align: 1px;
 }
 
-/* A card opened in place on a small screen: the gallery sits where the cover
-   was, with the close button over its top-right corner. */
-.card.listing.is-inline {
-  position: relative;
-  overflow: hidden;
-}
-
-.card.listing.is-inline > .stay-gallery {
-  margin: calc(-1 * var(--pad)) calc(-1 * var(--pad)) 1rem;
-}
-
-.card.listing.is-inline .stay-stage {
-  border-radius: 0;
-}
-
-.card.listing.is-inline .stay-thumbs,
-.card.listing.is-inline .stay-gallery figcaption {
-  padding: 0 var(--pad);
-}
-
-.card.listing.is-inline > .lightbox-close {
-  top: 0.6rem;
-  right: 0.6rem;
-  background: rgb(255 255 255 / 90%);
+/* On a phone the cover is only a picture: no zoom cursor, no "photos · details". */
+@media (max-width: 900px) {
+  .stay-cover { cursor: default; }
+  .stay-count { display: none; }
+  .stay-cover:hover img { transform: none; filter: none; }
 }
