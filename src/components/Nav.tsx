@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWallet } from "@/components/WalletProvider";
 
 const PUBLIC_SCREENS = [
@@ -14,11 +14,34 @@ export function Nav() {
   const pathname = usePathname();
   // Only matters on a phone, where the links fold behind a menu button.
   const [open, setOpen] = useState(false);
-  const { address, standing, authenticated } = useWallet();
+  const { address, standing, authenticated, canRequest, authFetch } = useWallet();
   const signedIn = Boolean(address && authenticated);
-  // Preserve the original role-aware transfer navigation. Screens and APIs
-  // retain their own existing authorization checks.
-  const showTransfer = signedIn && (!standing || standing.owned.length > 0 || standing.renting.length > 0 || standing.isIssuer);
+  // Asks for this account's weeks that still want an answer. Re-read on every
+  // screen change, so the tab goes once the last one is carried out.
+  const [awaiting, setAwaiting] = useState(0);
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    authFetch("/api/requests")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { incoming?: { status: string }[] } | null) => {
+        if (!live || !body?.incoming) return;
+        setAwaiting(body.incoming.filter((r) => r.status === "open" || r.status === "accepted").length);
+      })
+      .catch(() => {
+        // The tab simply stays hidden; the List screen still shows every ask.
+      });
+    return () => {
+      live = false;
+    };
+  }, [signedIn, authFetch, pathname]);
+  // Transfer is where an owner carries out an ask, so it appears when one is
+  // waiting. Two exceptions: on the screen itself, and on a deployment that
+  // cannot keep asks — there a renter's address arrives some other way, so a
+  // title holder keeps the tab.
+  const holdsTitle = Boolean(standing && standing.owned.length > 0);
+  const showTransfer =
+    signedIn && (awaiting > 0 || pathname === "/transfer" || (!canRequest && holdsTitle));
   // Issue is for everyone: the issuer issues there, and anyone else asks for
   // their own week to be added — the way a newcomer becomes an owner. The
   // screen itself asks for a wallet when there is none, so the tab does not wait
@@ -27,7 +50,7 @@ export function Nav() {
   const screens = [
     ...PUBLIC_SCREENS,
     { href: "/issue", label: issueLabel },
-    ...(showTransfer ? [{ href: "/transfer", label: "Transfer" }] : []),
+    ...(showTransfer ? [{ href: "/transfer", label: "Transfer", badge: awaiting }] : []),
   ];
 
   // Keep the welcome screen focused on its introduction and wallet connection.
@@ -61,6 +84,9 @@ export function Nav() {
             onClick={() => setOpen(false)}
           >
             {screen.label}
+            {"badge" in screen && screen.badge ? (
+              <span className="nav-badge" aria-label={`${screen.badge} waiting`}>{screen.badge}</span>
+            ) : null}
           </Link>
         ))}
       </div>

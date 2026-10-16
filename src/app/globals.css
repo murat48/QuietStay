@@ -165,6 +165,23 @@ nav.screens .nav-links {
   min-width: 0;
 }
 
+/* How many asks wait on the reader: a small gold count beside Transfer. */
+.nav-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 0.35rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #d6a24a, #e9c27a);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: 1px;
+}
+
 /* Hidden until a phone-width screen; three bars that turn into a cross. */
 .nav-toggle {
   display: none;
