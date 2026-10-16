@@ -190,6 +190,30 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [loadStanding]);
 
+  // A session lasts an hour (SESSION_LIFETIME in sep10.ts). When it ends, say so
+  // and offer Sign in again, rather than keep showing a signed-in account whose
+  // every request the server now refuses as "not authenticated".
+  const endSession = useCallback(() => {
+    setToken(null);
+    setError("Your session ended — sign in again to continue.");
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    let expiresAt: number | null = null;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/"))) as {
+        exp?: number;
+      };
+      expiresAt = typeof payload.exp === "number" ? payload.exp * 1000 : null;
+    } catch {
+      // An unreadable token is left to the server's 401 below.
+    }
+    if (expiresAt === null) return;
+    const timer = setTimeout(endSession, Math.max(0, expiresAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [token, endSession]);
+
   const disconnect = useCallback(() => {
     setToken(null);
     setAddress(null);
@@ -215,16 +239,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 
   const authFetch = useCallback(
-    (input: string, init: RequestInit = {}) =>
-      fetch(input, {
+    async (input: string, init: RequestInit = {}) => {
+      const response = await fetch(input, {
         ...init,
         headers: {
           "content-type": "application/json",
           ...(token ? { authorization: `Bearer ${token}` } : {}),
           ...init.headers,
         },
-      }),
-    [token],
+      });
+      // Sent a token and was told there is no session: it expired, or the server's
+      // signing settings changed under it. Either way it is gone.
+      if (token && response.status === 401) endSession();
+      return response;
+    },
+    [token, endSession],
   );
 
   const value = useMemo<WalletState>(
