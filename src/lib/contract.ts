@@ -537,7 +537,7 @@ export async function readTransferEvents(rightId: number, contractId: string = C
         // A day is about 17,000 ledgers; keep well clear of the oldest edge.
         start = Math.max(Number(range[1]) + 3_000, Number(range[2]) - 14_000);
         await pause(500 * attempt);
-      } else if (/processing limit|rate limit|timeout/i.test(message)) {
+      } else if (/processing limit|rate limit|timeout|fetch failed|ECONNRESET|socket hang up|network/i.test(message)) {
         await pause(1_000 * (attempt + 1));
       } else {
         throw error;

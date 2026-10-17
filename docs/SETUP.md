@@ -213,7 +213,7 @@ as the screen saves it; attestation v2; offers; a rental proved by
 proof refused, a sale refused without the buyer's consent, a forged consent refused,
 the sale with a real one, the verify screen's transfer list, and — on an app that
 reads the evidence contract — the evidence links it falls back to once the event
-window has passed: 73 checks.
+window has passed: 76 checks — including an h that already secures a week refused for the next, from an ask or typed in.
 
 It issues weeks, so **run it against a throwaway deployment**, never the one in
 EVIDENCE.md — and give the app its own data directory, because every contract

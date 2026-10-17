@@ -258,6 +258,11 @@ export interface IssuanceRequest {
   right_id?: number;
   tx?: string;
   issued_at?: string;
+  /**
+   * Not an ask: the issuer issued directly, with an h typed in. Recorded only so
+   * that h is known to be spent; hidden from every list of requests.
+   */
+  direct?: true;
 }
 
 /** Every issuance request this deployment has taken, newest last. */
@@ -267,6 +272,50 @@ export function loadIssuanceRequests(): Promise<IssuanceRequest[]> {
 
 export function saveIssuanceRequests(requests: IssuanceRequest[]): Promise<string> {
   return saveSlot("issuance", requests);
+}
+
+/**
+ * The issued week, if any, that an h already secures.
+ *
+ * One secret per week: the same h on two weeks ties both to one secret file,
+ * so losing or leaking it costs every one of them. Not a matter of soundness —
+ * each week's commitment and nullifier still differ — but of keeping a lost
+ * key to one week. Compared as numbers, so decimal and hex spellings agree.
+ */
+export async function weekSecuredBy(h: bigint): Promise<IssuanceRequest | null> {
+  const all = await loadIssuanceRequests();
+  return all.find((r) => r.status === "issued" && sameHash(r.secret_hash, h)) ?? null;
+}
+
+function sameHash(stored: string, h: bigint): boolean {
+  try {
+    return BigInt(stored) === h;
+  } catch {
+    return false;
+  }
+}
+
+/** Note an h the issuer used directly, so a later ask or issuance cannot reuse it. */
+export async function recordDirectIssuance(issued: {
+  owner: string;
+  secret_hash: string;
+  right_id: number;
+  tx: string;
+}): Promise<void> {
+  const all = await loadIssuanceRequests();
+  const now = new Date().toISOString();
+  all.push({
+    id: crypto.randomUUID(),
+    by: issued.owner,
+    secret_hash: issued.secret_hash,
+    requested_at: now,
+    status: "issued",
+    right_id: issued.right_id,
+    tx: issued.tx,
+    issued_at: now,
+    direct: true,
+  });
+  await saveIssuanceRequests(all);
 }
 
 /** Close an issuance request once its week is on chain. Same read-modify-write caveat as above. */

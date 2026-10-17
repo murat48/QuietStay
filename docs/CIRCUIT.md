@@ -588,7 +588,7 @@ the issuer to approve anything.
   below `r` with 400, before anything is issued. The screen then offers the record
   exactly as issued for download; with it and the owner's secret file,
   `npm run zk:prove` proves a transfer.
-- **`npm run e2e`** covers the flow end to end — 73 checks, including the
+- **`npm run e2e`** covers the flow end to end — 76 checks, including the
   `zk:secret` link filling the owner's box and an invalid `h` in it flagged and
   refused, an owner's ask issued and closed, an ask in another account's name and asks with
   an invalid `h` refused, the Issue screen showing the form to the issuer only,

@@ -74,6 +74,17 @@ export async function POST(request: Request): Promise<Response> {
         { status: 409 },
       );
     }
+    const spent = all.find((r) => r.status === "issued" && r.secret_hash === h.toString());
+    if (spent) {
+      return Response.json(
+        {
+          error:
+            `this h already secures week #${spent.right_id} — make a new secret for each week: ` +
+            "npm run zk:secret -- .secrets/<new-file>.json",
+        },
+        { status: 409 },
+      );
+    }
 
     const record: IssuanceRequest = {
       id: randomUUID(),
@@ -107,7 +118,9 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const [issuer, all] = await Promise.all([readIssuer(), loadIssuanceRequests()]);
     const requests =
-      caller === issuer ? all.filter((r) => r.status === "open") : all.filter((r) => r.by === caller);
+      caller === issuer
+        ? all.filter((r) => r.status === "open")
+        : all.filter((r) => r.by === caller && !r.direct);
     return Response.json({ requests, as_issuer: caller === issuer });
   } catch (error) {
     return Response.json(

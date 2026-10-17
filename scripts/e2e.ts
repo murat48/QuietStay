@@ -284,6 +284,15 @@ async function main(): Promise<void> {
   const again = await post("/api/issue", { record: freshRecord(owner.publicKey(), "2026-12-12", "2026-12-19"), request_id: issuanceAsk?.id }, issuerToken);
   check(again.status === 409, "an ask cannot be issued twice (409)", again.status);
   const forSale = await issueWeek("2026-12-05", "2026-12-12", randomSecret(), { encode: hex });
+  // One secret per week: an h that already secures a week is refused for the
+  // next, whichever way it arrives — the owner's ask, or the issuer typing it in,
+  // in either spelling.
+  const reAsk = await post("/api/requests/issuance", { secret_hash: rentHash.toString() }, ownerToken);
+  check(reAsk.status === 409, "asking again with the h of an issued week is refused (409)", reAsk.status);
+  const reuseAsked = await post("/api/issue", { record: freshRecord(owner.publicKey(), "2026-12-12", "2026-12-19"), secret_hash: rentHash.toString() }, issuerToken);
+  check(reuseAsked.status === 409, "the issuer cannot issue a week with an h from an issued ask (409)", reuseAsked.status);
+  const reuseDirect = await post("/api/issue", { record: freshRecord(owner.publicKey(), "2026-12-12", "2026-12-19"), secret_hash: forSale.h.toString() }, issuerToken);
+  check(reuseDirect.status === 409, "nor with an h it gave directly before, in another spelling (409)", reuseDirect.status);
   check((await readCommitment(forRent.rightId)) === forRent.c, "the ledger holds the commitment the server computed");
   check(await readIsActive(forRent.rightId), "the new week is inside its validity window");
   check(forRent.d === (await commit(forRent.record as never)), "the app reports d = SHA-256 of the record");

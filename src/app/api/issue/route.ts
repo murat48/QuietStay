@@ -48,7 +48,7 @@ import {
   recordCommitment,
   validateRecord,
 } from "@/lib/record";
-import { RequestStoreUnavailable, loadIssuanceRequests, markIssued } from "@/lib/requests";
+import { RequestStoreUnavailable, loadIssuanceRequests, markIssued, recordDirectIssuance, weekSecuredBy } from "@/lib/requests";
 import { authenticatedAccount } from "@/lib/sep10";
 
 export async function POST(request: Request): Promise<Response> {
@@ -156,6 +156,24 @@ export async function POST(request: Request): Promise<Response> {
         // No readable store: nothing to close.
       }
     }
+    // One secret per week (see `weekSecuredBy`): refused before anything goes on
+    // chain. A deployment without a readable request store has no record of
+    // spent h's to consult, and issues as before.
+    try {
+      const spent = await weekSecuredBy(h);
+      if (spent && spent.id !== requestId) {
+        return Response.json(
+          {
+            error:
+              `this h already secures week #${spent.right_id} — the owner should make a new ` +
+              "secret for this week: npm run zk:secret -- .secrets/<new-file>.json",
+          },
+          { status: 409 },
+        );
+      }
+    } catch (caught) {
+      if (!(caught instanceof RequestStoreUnavailable)) throw caught;
+    }
     const d = await splitRecordDigest(record as unknown as JsonValue);
     const commitment = fr(await poseidonCommitment(d, record.owner.stellar_account, h));
     const windows = onChainWindows(record);
@@ -198,12 +216,19 @@ export async function POST(request: Request): Promise<Response> {
 
     // The week is on chain whatever happens here; a request left open is said so.
     let requestNote: string | undefined;
-    if (requestId) {
-      try {
+    try {
+      if (requestId) {
         await markIssued(requestId, { right_id: rightId, tx: result.hash });
-      } catch (caught) {
-        requestNote = caught instanceof RequestStoreUnavailable ? caught.message : "the request could not be closed";
+      } else {
+        await recordDirectIssuance({
+          owner: record.owner.stellar_account,
+          secret_hash: h.toString(),
+          right_id: rightId,
+          tx: result.hash,
+        });
       }
+    } catch (caught) {
+      requestNote = caught instanceof RequestStoreUnavailable ? caught.message : "the request could not be closed";
     }
 
     return Response.json({
