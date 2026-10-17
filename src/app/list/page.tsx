@@ -9,17 +9,17 @@
  *
  * The holder of a week can publish or withdraw an offer here.
  *
- * **A verified account is required to see the registry at all** — a SEP-10
- * session, not merely a connected wallet, because connecting claims an address
- * and only the signature proves it. Reading needs no key and the contract would
- * answer anyone, so this is a product decision rather than a security one: a shop
- * window is for people who might take something from it. Everything past the gate
- * can therefore assume a proven account, which is why the controls below test
- * only *who* the account is and not whether it signed in.
+ * **Anyone may browse.** Everything here is read from the public contract, and
+ * someone deciding whether QuietStay is for them should not have to install a
+ * wallet first. Acting is another matter: asking for a week or offering one
+ * takes a SEP-10 session, not merely a connected wallet, because connecting only
+ * claims an address and the signature proves it. So `address` below is the
+ * *signed-in* account, null for a visitor and for a wallet that has not signed —
+ * which is why the controls test only who the account is.
  *
  * Verification stays open to everybody, because a design whose whole claim is
  * that a counterparty can check a week without trusting anyone cannot then
- * require them to sign in first. The gate links it by name.
+ * require them to sign in first.
  */
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -146,7 +146,12 @@ interface Inventory {
 }
 
 export default function ListScreen() {
-  const { address, authenticated, readOnly, canRequest, sign, signAuth, authFetch, connect, busy } = useWallet();
+  const { address: walletAddress, authenticated, readOnly, canRequest, sign, signAuth, authFetch, connect, busy } =
+    useWallet();
+  // Anyone may browse; only a proved account acts. A wallet connected but not
+  // signed in is treated as a visitor, so no owner's control is offered to an
+  // address nobody has proved.
+  const address = authenticated ? walletAddress : null;
   const [inventory, setInventory] = useState<Inventory | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyRight, setBusyRight] = useState<number | null>(null);
@@ -484,40 +489,6 @@ export default function ListScreen() {
     [authFetch, load],
   );
 
-  // Connected is not verified: an address can be claimed without proving it, and
-  // only SEP-10 proves control. The registry holds to the same line, so
-  // that "signed in" means one thing across the app rather than two.
-  if (!address || !authenticated) {
-    return (
-      <>
-        <p className="eyebrow">EXPLORE QUIETSTAY</p>
-        <h1>Marketplace</h1>
-        <p className="lede">
-          {address
-            ? "Sign in to browse the weeks on offer. Your wallet is connected, but connecting only claims an address — one signature proves it."
-            : "Connect a wallet to browse the weeks on offer."}{" "}
-          Reading needs no key — the contract would answer anyone — so this is a doorway, not a
-          lock.
-        </p>
-        <div className="row">
-          <button className="primary" onClick={() => void connect()} disabled={busy}>
-            {address ? (busy ? "signing…" : "Sign in") : busy ? "connecting…" : "Connect a wallet"}
-          </button>
-          <Link className="btn" href="/verify">
-            Verify a week instead — no account needed
-          </Link>
-        </div>
-        <div className="note" style={{ marginTop: "1.5rem" }}>
-          <strong>Reviewing this without a wallet?</strong> The contract, a proof-authorized rental
-          and sale, five transfers the contract refused — a tampered proof, a replayed one, one from
-          the wrong account, one signed by the issuer with no proof, and the issuer trying to take a
-          week — are all explorer links in <code>docs/EVIDENCE.md</code>, with nothing to install. The verify
-          screen also runs entirely in your browser and asks for no account.
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <p className="eyebrow">EXPLORE QUIETSTAY</p>
@@ -543,6 +514,21 @@ export default function ListScreen() {
         issuer is not involved in listing — nor, under Phase 2, in the week changing hands: that
         takes the holder&apos;s ownership proof, which the contract checks itself.
       </p>
+
+      {/*
+        Browsing needs no wallet: everything here is read from the public
+        contract. Signing in is asked for only to act — to ask for a week, or to
+        offer one you hold.
+      */}
+      {!authenticated ? (
+        <div className="note accent">
+          You are browsing as a visitor. <strong>Sign in</strong> to ask for a week or to manage
+          your own.{" "}
+          <button className="primary" onClick={() => void connect()} disabled={busy}>
+            {walletAddress ? (busy ? "signing…" : "Sign in") : busy ? "connecting…" : "Connect wallet"}
+          </button>
+        </div>
+      ) : null}
 
       {error ? <div className="note bad">{error}</div> : null}
       {message ? <div className="note accent">{message}</div> : null}
@@ -989,7 +975,19 @@ export default function ListScreen() {
                     </p>
                   ) : null}
 
-                  {right.listing && !sublet && !over && !mine && canRequest ? (
+                  {right.listing && !sublet && !over && !authenticated ? (
+                    <div style={{ marginTop: "0.7rem" }}>
+                      <button className="primary" onClick={() => void connect()} disabled={busy}>
+                        {busy
+                          ? "signing in…"
+                          : right.listing.term_secs === null
+                            ? "Sign in to ask to buy"
+                            : "Sign in to ask to rent"}
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {right.listing && !sublet && !over && authenticated && !mine && canRequest ? (
                     <div style={{ marginTop: "0.7rem" }}>
                       {myRequest ? (
                         <div className="row" style={{ gap: "0.5rem", alignItems: "center" }}>
@@ -1042,7 +1040,7 @@ export default function ListScreen() {
                     </div>
                   ) : null}
 
-                  {right.listing && !sublet && !over && !mine && !canRequest ? (
+                  {right.listing && !sublet && !over && authenticated && !mine && !canRequest ? (
                     <p className="muted" style={{ marginTop: "0.7rem", marginBottom: 0 }}>
                       This deployment cannot record a request — it has no writable store, so an ask
                       would be taken and then lost. The week is really on offer; reach its holder

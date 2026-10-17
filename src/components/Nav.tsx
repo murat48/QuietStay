@@ -53,10 +53,6 @@ export function Nav() {
     ...(showTransfer ? [{ href: "/transfer", label: "Transfer", badge: awaiting }] : []),
   ];
 
-  // Keep the welcome screen focused on its introduction and wallet connection.
-  // Public routes remain available elsewhere; Verify is linked from the intro.
-  if (pathname === "/" && !signedIn) return null;
-
   return (
     <nav
       className={`screens${open ? " is-open" : ""}`}

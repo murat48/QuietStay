@@ -88,7 +88,21 @@
   color: #edf3fa;
 }
 
-.actions { margin: 31px 0 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 31px 0 12px; }
+
+/* The second way in: glass on the photo, beside the solid primary. */
+.actions.actions > a.secondaryAction {
+  background: rgb(255 255 255 / 12%);
+  border: 1px solid rgb(255 255 255 / 40%);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.actions.actions > a.secondaryAction:hover {
+  background: rgb(255 255 255 / 22%);
+  border-color: rgb(233 194 122 / 70%);
+}
 
 .actions.actions > button, .actions.actions > a {
   min-width: 210px;

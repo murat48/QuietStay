@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ConnectGate } from "@/components/ConnectGate";
 import { Icon } from "@/components/Icon";
 import { Reveal } from "@/components/Reveal";
 import { SURVEY_URL } from "@/lib/config";
@@ -26,17 +25,23 @@ export default function Home() {
           <p className={styles.eyebrow}>A WARM WELCOME TO QUIETSTAY</p>
           <h1 id="hero-title">Your holiday. <br /><span className={styles.headlineAccent}>Your way.</span></h1>
           <p className={styles.description}>
-            A simpler way to rent or sell your timeshare rights.
-            Make room for your next getaway, with privacy and trust.
+            A simpler way to verify, rent or sell timeshare rights.
+            More flexibility for your next getaway, with privacy and trust.
           </p>
+          {/*
+            Two ways in that need nothing installed. The wallet is asked for
+            only when someone acts — from the header, or on the screen where
+            they act.
+          */}
           <div className={styles.actions}>
-            <ConnectGate />
+            <Link className="btn primary" href="/list">Explore the marketplace</Link>
+            <Link className={`btn ${styles.secondaryAction}`} href="/verify">Verify a right</Link>
           </div>
-          <p className={styles.heroNote}>Your wallet. Your vacation rights.</p>
+          <p className={styles.heroNote}>No wallet needed to look around.</p>
           <ul className={styles.technology} aria-label="Built with">
             <li><Icon name="transfer" /> Built on Stellar</li>
-            <li><Icon name="shield" /> Ownership verified with ZK proofs</li>
-            <li className={styles.testnet}>Testnet MVP</li>
+            <li><Icon name="shield" /> Usage rights proved with ZK</li>
+            <li className={styles.testnet}>Testnet MVP · In development</li>
           </ul>
         </div>
       </section>
@@ -101,9 +106,10 @@ export default function Home() {
         <section className={styles.survey} aria-labelledby="survey-title">
           <span className={styles.surveyIcon}><Icon name="listing" /></span>
           <div className={styles.surveyCopy}>
-            <h2 id="survey-title">Own a timeshare, or rented one?</h2>
+            <h2 id="survey-title">Help shape QuietStay</h2>
             <p>
-              Help shape QuietStay: five quick questions about how you check who owns a week.
+              Own a timeshare, or rented one?
+              Five quick questions about how you check who owns a week.
               Two minutes, anonymous unless you leave an email.
             </p>
           </div>
@@ -139,12 +145,12 @@ const STEPS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: "stay",
     title: "Get your week verified",
-    text: "The issuer confirms you own it. Only a sealed fingerprint goes on Stellar — no names, no documents.",
+    text: "The issuer confirms your usage right. Only a sealed fingerprint goes on Stellar — no names, no documents.",
   },
   {
     icon: "listing",
     title: "List it",
-    text: "Offer it for rent or for sale. Renters and buyers see the town, the dates and whether fees are paid.",
+    text: "Offer it for rent or for sale. Renters and buyers see the town, the dates and the fee status the issuer attests.",
   },
   {
     icon: "shield",
@@ -154,7 +160,7 @@ const STEPS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: "transfer",
     title: "It's theirs",
-    text: "The week moves instantly. A rental comes back to you when it ends; a sale makes the buyer the new owner, under a key only they hold.",
+    text: "The week moves in a single transaction. A rental comes back to you when it ends; a sale makes the buyer the new holder of the usage right, under a key only they hold.",
   },
 ];
 
@@ -163,8 +169,8 @@ const SIDES = [
     eyebrow: "FOR OWNERS",
     title: "Rent out or sell the week you won't use.",
     points: [
-      "Prove ownership without sending your contract or ID",
-      "No waiting on anyone's approval for each transfer",
+      "Prove you hold the week without sending your contract or ID",
+      "No issuer approval for each transfer — your proof is enough",
       "Your week comes back automatically when a rental ends",
     ],
   },
@@ -173,7 +179,7 @@ const SIDES = [
     title: "Know what you're getting before you commit.",
     points: [
       "See that the seller really holds the week",
-      "See whether maintenance fees are paid",
+      "See the maintenance-fee status the issuer attests",
       "Check any right yourself, with no account needed",
     ],
   },
