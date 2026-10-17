@@ -63,12 +63,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <a href={explorer.contract()} target="_blank" rel="noreferrer">View on Stellar ↗</a>
               </div>
               <p className="footer-disclosure">
-                Phase 2, Stellar testnet only. Transfer of usage rights only — no payment, escrow, or
-                settlement, and no legal title transfer. Contract{" "}
+                Stellar testnet demo · Usage rights only — no payments, and no legal title transfer.
+                Contract{" "}
                 <a href={explorer.contract()} target="_blank" rel="noreferrer">
-                  <code>{CONTRACT_ID}</code>
+                  <code>{CONTRACT_ID}</code> ↗
                 </a>
-                .
               </p>
             </footer>
           </div>
