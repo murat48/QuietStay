@@ -38,6 +38,13 @@
   box-sizing: border-box;
 }
 
+/* Nothing may widen the page sideways. `clip`, not `hidden`, so the sticky
+   header keeps working. */
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
   background:
@@ -938,6 +945,7 @@ footer.foot::before {
 .footer-top p { flex: 1; font-size: 0.75rem; }
 .footer-top > a:last-child { font-size: 0.75rem; text-decoration: none; }
 .footer-top > a.footer-survey { font-size: 0.75rem; font-weight: 600; text-decoration: none; color: #b3822f; }
+.footer-disclosure code { word-break: break-all; }
 .footer-disclosure { padding-top: 1rem; margin-top: 1.25rem; border-top: 1px solid var(--border); font-size: 0.68rem; line-height: 1.8; overflow-wrap: anywhere; }
 @media (max-width: 1180px) {
   .top-inner { gap: 0.75rem; }

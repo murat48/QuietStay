@@ -2,6 +2,8 @@
 .hero {
   position: relative;
   isolation: isolate;
+  /* The drifting light moves past the edges; keep it inside the photo. */
+  overflow: hidden;
   display: flex;
   align-items: center;
   min-height: min(760px, 85svh);
