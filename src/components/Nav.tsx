@@ -53,6 +53,11 @@ export function Nav() {
     ...(showTransfer ? [{ href: "/transfer", label: "Transfer", badge: awaiting }] : []),
   ];
 
+  // Without a connected wallet the header stays to the brand and Connect: a
+  // visitor reaches the Marketplace and Verify from the home page's two
+  // buttons, and both screens work for them without a wallet.
+  if (!address) return null;
+
   return (
     <nav
       className={`screens${open ? " is-open" : ""}`}
