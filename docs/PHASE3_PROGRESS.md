@@ -24,7 +24,7 @@ actually run.
 | High | **Passkey sign-in.** The app's server routes (asks, issuance asks, building proven transfers) need a SEP-10 session, and SEP-10 works only for `G…` accounts. The spec did not say how a `C…` smart wallet signs in | 2 | resolved 2026-11-19 (review): SEP-45 with Anchor Platform's web-auth contract @ `dc5817fb`, working within the time box; no ping fallback needed |
 | Medium | The reused web-auth contract has `upgrade` gated by an admin, which conflicts with "no upgrade, no admin key". Deployed with an admin nobody can authorize (`CDA2IFOT…33G2`); checked on chain. Your review of this choice is asked for at this checkpoint | 2 (review) | open: for your review |
 | Medium | Fee route key: spec §13 named `qs-testnet-fee`; I had made `qs-fee-testnet` | 2 | resolved 2026-11-19 (review): `qs-fee-testnet` is the fee key, spec updated. You set `QUIETSTAY_TESTNET_FEE_SECRET` in Vercel and `.env.local`; its public key matches `GCGDZWCL…L77Z`. New identities: you create them |
-| Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device is still to do | 2 | open: ready for you, docs/PASSKEY_DEVICE_TEST.md |
+| Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device was still to do | 2 | resolved 2026-11-19: your device's passkey authorized `list` from wallet `CAMTPQ3B…44YLT`, tx `059bc1b3…`. Device, OS, browser and passkey type are not recorded yet |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
 | Low | This machine lacked the system libraries Playwright's browsers need | 2 | resolved 2026-11-19: you ran the install with sudo; the unpacked workaround is removed, and both browsers start on the system libraries |
 | Low | An e2e run once got a 500 from `/api/issue`, and another a 502 from `/api/me`. Neither recurred on a rerun with the same code; the response bodies were not kept. Probably testnet RPC flakiness, not confirmed | 2 (review) | open: watch |
@@ -367,6 +367,24 @@ of the spec, the rest at the second review of `def5eb6`.
     added and the transcript dropped.
   - `zk:check-bundle` passes. `next build --webpack` passes.
   - Lint: the same 7 findings as before Step 2.
+- **Your device's passkey (2026-11-19, docs/PASSKEY_DEVICE_TEST.md):**
+  - Wallet `CAMTPQ3B2PPQDTPGJB52K54X4VETQ3BM46VWGB74XLVFTTDLZOZ44YLT`,
+    created in your Chrome. It runs WASM `c514d35e…` (`stellar contract fetch`
+    + `sha256sum`).
+  - Right #4 (2026-12-19 → 12-26) issued to it on `CCR2Z4IQ…MAX5`:
+    `69d3705fbab2aad395698ce370c01ee63a5a878736ee297fba53f532e9a424ed`
+  - **Passkey-approved `list`:**
+    `059bc1b3e9156b3cec5bd0d1695afea05b7c1ef18540593ff8cca0fe6ae59afb`
+    (ledger 5,818,569, 2026-11-19T19:28:05Z). Read back from chain:
+    - the source is `qs-fee-testnet` (it only pays);
+    - the call is `list` on the rights contract;
+    - the one authorization is the wallet's, context rule 0, with an
+      External signer on the WebAuthn verifier `CC7EKIH…OM3F`;
+    - `get_listing(4)` now shows the offer, by the wallet, for 7 days.
+  - check-privacy, right after each transaction:
+    `evidence/privacy/2026-11-19-device-wallet-issue-69d3705f.txt` and
+    `…-device-passkey-list-059bc1b3.txt`. Both pass, meta and events
+    included.
 - **Review tx hashes (testnet):**
   - Web-auth contract deployed: `31f480413f355f51a545a2817ccdb1a8e163eab5a49d6f59a92debda5b825ff1`
   - **Passkey screens, approved with the passkey** (wallet

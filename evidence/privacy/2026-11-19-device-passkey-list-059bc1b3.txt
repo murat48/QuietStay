@@ -1,0 +1,23 @@
+  run 2026-11-19T19:29:14.908Z · network testnet · command: npm run check-privacy -- --network testnet --tx device-passkey-list=059bc1b3e9156b3cec5bd0d1695afea05b7c1ef18540593ff8cca0fe6ae59afb --record .secrets/CCR2Z4IQ/week-2026-12-19-record.json --secret .secrets/CCR2Z4IQ/week-2026-12-19-owner.json --out evidence/privacy/2026-11-19-device-passkey-list-059bc1b3.txt
+
+Checking on-chain exposure
+  1 transactions, 55 forbidden values
+  contract the contracts these testnet transactions call
+
+device-passkey-list — 059bc1b3e9156b3cec5bd0d1695afea05b7c1ef18540593ff8cca0fe6ae59afb
+  ✓ no record contents in 3 layers (7156 bytes: envelope, result, meta)
+  call        list(
+                "CAMTPQ3B2PPQDTPGJB52K54X4VETQ3BM46VWGB74XLVFTTDLZOZ44YLT",
+                "4",
+                "604800",
+              )
+  event topics ["list","CAMTPQ3B2PPQDTPGJB52K54X4VETQ3BM46VWGB74XLVFTTDLZOZ44YLT"]
+  event data   {"commitment":"0x42cdd0427bbc96749cd33e07612ee471337ad207dab7fa6a771817ee453e1366","right_id":"4","term_secs":"604800"}
+
+Result
+  ✓ No inventory record value appears in any of these 1 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 holder secret(s) given, or s' of 0 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • .secrets/CCR2Z4IQ/week-2026-12-19-record.json
+    • .secrets/CCR2Z4IQ/week-2026-12-19-owner.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

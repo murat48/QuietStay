@@ -1,0 +1,24 @@
+  run 2026-11-19T19:26:20.751Z · network testnet · command: npm run check-privacy -- --network testnet --tx device-wallet-issue=69d3705fbab2aad395698ce370c01ee63a5a878736ee297fba53f532e9a424ed --record .secrets/CCR2Z4IQ/week-2026-12-19-record.json --secret .secrets/CCR2Z4IQ/week-2026-12-19-owner.json --out evidence/privacy/2026-11-19-device-wallet-issue-69d3705f.txt
+
+Checking on-chain exposure
+  1 transactions, 55 forbidden values
+  contract the contracts these testnet transactions call
+
+device-wallet-issue — 69d3705fbab2aad395698ce370c01ee63a5a878736ee297fba53f532e9a424ed
+  ✓ no record contents in 3 layers (9780 bytes: envelope, result, meta)
+  call        issue(
+                "CAMTPQ3B2PPQDTPGJB52K54X4VETQ3BM46VWGB74XLVFTTDLZOZ44YLT",
+                {"end":"1798243200","start":"1797638400"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x42cdd0427bbc96749cd33e07612ee471337ad207dab7fa6a771817ee453e1366",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","CAMTPQ3B2PPQDTPGJB52K54X4VETQ3BM46VWGB74XLVFTTDLZOZ44YLT"]
+  event data   {"commitment":"0x42cdd0427bbc96749cd33e07612ee471337ad207dab7fa6a771817ee453e1366","right_id":"4"}
+
+Result
+  ✓ No inventory record value appears in any of these 1 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 holder secret(s) given, or s' of 0 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • .secrets/CCR2Z4IQ/week-2026-12-19-record.json
+    • .secrets/CCR2Z4IQ/week-2026-12-19-owner.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.
