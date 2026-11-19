@@ -5,7 +5,9 @@
 //! deployed one does; nothing about verification is stubbed.
 //!
 //! Accounts are fixed `G…` keys, because a proof binds the sender's and
-//! recipient's Ed25519 keys. Fixture scenarios are named after what they prove.
+//! recipient's Ed25519 keys; Phase 3 adds fixed `C…` addresses standing in for
+//! smart wallets, bound by their contract id under the contract tag. Fixture
+//! scenarios are named after what they prove.
 
 extern crate std;
 
@@ -51,6 +53,10 @@ fn fixture_json(name: &str) -> &'static str {
         "renter_sale" => include_str!("../tests/fixtures/renter_sale.json"),
         "rental_edge" => include_str!("../tests/fixtures/rental_edge.json"),
         "rental_again" => include_str!("../tests/fixtures/rental_again.json"),
+        "wallet_sale" => include_str!("../tests/fixtures/wallet_sale.json"),
+        "wallet_rental" => include_str!("../tests/fixtures/wallet_rental.json"),
+        "sale_to_wallet" => include_str!("../tests/fixtures/sale_to_wallet.json"),
+        "rental_to_wallet" => include_str!("../tests/fixtures/rental_to_wallet.json"),
         _ => panic!("no fixture {name}"),
     }
 }
@@ -102,6 +108,18 @@ fn vk(env: &Env) -> VerificationKey {
         delta: g2(env, &j["delta"]),
         ic,
     }
+}
+
+/// A fixed `C…` address standing in for a smart wallet (common.json `wallets`).
+fn wallet(env: &Env, name: &str) -> Address {
+    let common = json(COMMON);
+    Address::from_str(env, common["wallets"][name].as_str().unwrap())
+}
+
+/// `C` for the smart wallet holder: `Poseidon(d, wallet, h_wallet)`, with the
+/// wallet's address under the contract tag.
+fn wallet_commitment(env: &Env) -> BytesN<32> {
+    BytesN::from_array(env, &unhex::<32>(json(COMMON)["wallet_commitment"].as_str().unwrap()))
 }
 
 /// `C` for the owner, as issued: `Poseidon(d, owner, h_owner)`.
@@ -772,33 +790,30 @@ fn a_sale_without_a_next_secret_hash_is_rejected() {
 }
 
 #[test]
-fn only_accounts_can_send_or_receive() {
+fn a_contract_the_proof_does_not_name_cannot_receive() {
     let f = setup();
     issue_week(&f);
-    // A contract address has no Ed25519 key for a proof to bind.
+    // Phase 3 lets a C… address take part (D1), but only the one the proof
+    // names: this contract is not the recipient the proof was made for.
     let mut t = tx(&f.env, "rental");
     t.to = f.contract_id.clone();
-    assert_eq!(f.send(&t), Err(Error::NotAnAccount));
+    assert_eq!(f.send(&t), Err(Error::RecipientMismatch));
 }
 
 #[test]
-fn a_right_cannot_be_issued_to_a_contract_address() {
+fn a_right_can_be_issued_to_a_contract_address() {
     let f = setup();
-    // `to_payload()` gives a contract address a ContractIdHash, not an Ed25519
-    // key, so no proof could ever name it as the sender. Issuing to one would
-    // create a week that can never be transferred; `issue` refuses instead.
+    // Phase 3 (D1): a smart wallet is a C… address, and `to_payload()` gives it
+    // a 32-byte contract id that a proof can bind with the contract tag. Phase 2
+    // refused this, because no proof could name a contract then.
     f.env.mock_all_auths();
     let (period, validity) = week();
-    assert_eq!(
-        f.client.try_issue(
-            &Address::generate(&f.env),
-            &period,
-            &validity,
-            &owner_commitment(&f.env)
-        ),
-        Err(Ok(Error::NotAnAccount))
-    );
-    assert_eq!(f.client.next_id(), 1);
+    let wallet = wallet(&f.env, "holder");
+    let id = f
+        .client
+        .issue(&wallet, &period, &validity, &wallet_commitment(&f.env));
+    assert_eq!(f.client.holder(&id), wallet);
+    assert_eq!(f.client.balance(&wallet), 1);
 }
 
 // -------------------------------------------------------------------------
@@ -1404,4 +1419,280 @@ fn cost_of_one_proven_sale() {
         budget.memory_bytes_cost()
     );
     assert!(budget.cpu_instruction_cost() < 400_000_000);
+}
+
+// -------------------------------------------------------------------------
+// Phase 3: smart wallets (C… addresses) hold and receive rights (D1)
+// -------------------------------------------------------------------------
+
+/// A stand-in smart wallet. Its `__check_auth` is what the host calls when a
+/// contract address must authorize, just as the OpenZeppelin smart account
+/// checks a passkey signature through its WebAuthn verifier. Here the
+/// "signature" is a bool, so a test can sign or refuse without mocking: `true`
+/// is a passkey that signed, `false` one that did not (a failed or cancelled
+/// signing).
+mod test_wallet {
+    use soroban_sdk::{
+        auth::{Context, CustomAccountInterface},
+        contract, contracterror, contractimpl,
+        crypto::Hash,
+        Env, Vec,
+    };
+
+    #[contracterror]
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    #[repr(u32)]
+    pub enum WalletError {
+        NotSigned = 1,
+    }
+
+    #[contract]
+    pub struct TestWallet;
+
+    #[contractimpl]
+    impl CustomAccountInterface for TestWallet {
+        type Signature = bool;
+        type Error = WalletError;
+
+        fn __check_auth(
+            _env: Env,
+            _payload: Hash<32>,
+            signed: bool,
+            _contexts: Vec<Context>,
+        ) -> Result<(), WalletError> {
+            if signed {
+                Ok(())
+            } else {
+                Err(WalletError::NotSigned)
+            }
+        }
+    }
+}
+
+/// Issue right #1 to the smart wallet `wallet("holder")`, committed to the
+/// wallet's secret as the `wallet_*` fixtures were proved against.
+fn issue_week_to_wallet(f: &Fixture) -> Address {
+    f.env.mock_all_auths();
+    let (period, validity) = week();
+    let w = wallet(&f.env, "holder");
+    f.client
+        .issue(&w, &period, &validity, &wallet_commitment(&f.env));
+    w
+}
+
+/// An authorization entry signed (or refused) by `signer`, for `transfer` with
+/// `t`'s arguments, exactly as a transaction would carry it. Nothing is mocked:
+/// the host runs `signer`'s `__check_auth` on it.
+fn signed_entry(f: &Fixture, signer: &Address, t: &Tx, signed: bool) -> soroban_sdk::xdr::SorobanAuthorizationEntry {
+    use soroban_sdk::xdr::{
+        InvokeContractArgs, ScAddress, ScSymbol, ScVal, SorobanAddressCredentials,
+        SorobanAuthorizationEntry, SorobanAuthorizedFunction, SorobanAuthorizedInvocation,
+        SorobanCredentials, VecM,
+    };
+    use soroban_sdk::TryFromVal;
+    let args: std::vec::Vec<ScVal> = transfer_args(&f.env, t)
+        .iter()
+        .map(|v| ScVal::try_from_val(&f.env, &v).unwrap())
+        .collect();
+    SorobanAuthorizationEntry {
+        credentials: SorobanCredentials::Address(SorobanAddressCredentials {
+            address: ScAddress::from(signer),
+            nonce: 1,
+            signature_expiration_ledger: BASE_LEDGER + 100,
+            signature: ScVal::Bool(signed),
+        }),
+        root_invocation: SorobanAuthorizedInvocation {
+            function: SorobanAuthorizedFunction::ContractFn(InvokeContractArgs {
+                contract_address: ScAddress::from(&f.contract_id),
+                function_name: ScSymbol("transfer".try_into().unwrap()),
+                args: VecM::try_from(args).unwrap(),
+            }),
+            sub_invocations: VecM::default(),
+        },
+    }
+}
+
+/// Submit with exactly the authorization entries given, and nothing mocked.
+fn send_signed(f: &Fixture, t: &Tx, entries: &[soroban_sdk::xdr::SorobanAuthorizationEntry]) -> Result<(), ()> {
+    f.env.set_auths(entries);
+    match f
+        .client
+        .try_transfer(&t.from, &t.to, &t.right_id, &t.expires_at, &t.proof, &t.signals)
+    {
+        Ok(Ok(())) => Ok(()),
+        _ => Err(()),
+    }
+}
+
+#[test]
+fn a_smart_wallet_holder_can_prove_and_sell() {
+    let f = setup();
+    let w = issue_week_to_wallet(&f);
+    let t = tx(&f.env, "wallet_sale");
+    assert_eq!(t.from, w);
+    f.send(&t).unwrap();
+    // The wallet signed over the whole transfer, the buyer over h'.
+    let buyer_args: Vec<Val> = (t.right_id, t.next_secret_hash.clone()).into_val(&f.env);
+    assert_eq!(
+        required_signatures(&f),
+        std::vec![(w.clone(), transfer_args(&f.env, &t)), (f.buyer.clone(), buyer_args)]
+    );
+
+    assert_eq!(f.client.holder(&1), f.buyer);
+    assert_eq!(f.client.balance(&w), 0);
+    assert_eq!(f.client.balance(&f.buyer), 1);
+    // The buyer now holds the same commitment an ordinary sale gives them.
+    assert_eq!(f.client.commitment(&1), buyer_commitment(&f.env));
+}
+
+#[test]
+fn a_smart_wallet_holder_can_prove_and_rent_out() {
+    let f = setup();
+    let w = issue_week_to_wallet(&f);
+    f.send(&tx(&f.env, "wallet_rental")).unwrap();
+    assert_eq!(f.client.holder(&1), f.renter);
+    assert_eq!(f.client.balance(&w), 1);
+    assert_eq!(f.client.commitment(&1), wallet_commitment(&f.env));
+}
+
+#[test]
+fn an_account_can_sell_to_a_smart_wallet() {
+    let f = setup();
+    issue_week(&f);
+    let t = tx(&f.env, "sale_to_wallet");
+    let w = wallet(&f.env, "holder");
+    assert_eq!(t.to, w);
+    f.send(&t).unwrap();
+    let wallet_args: Vec<Val> = (t.right_id, t.next_secret_hash.clone()).into_val(&f.env);
+    assert_eq!(required_signatures(&f)[1], (w.clone(), wallet_args));
+
+    assert_eq!(f.client.holder(&1), w);
+    assert_eq!(f.client.balance(&w), 1);
+    // The wallet's commitment, under its own h': the wallet can prove next.
+    assert_eq!(f.client.commitment(&1), wallet_commitment(&f.env));
+}
+
+#[test]
+fn a_smart_wallet_that_bought_can_sell_on() {
+    let f = setup();
+    issue_week(&f);
+    f.send(&tx(&f.env, "sale_to_wallet")).unwrap();
+    f.send(&tx(&f.env, "wallet_sale")).unwrap();
+    assert_eq!(f.client.holder(&1), f.buyer);
+}
+
+#[test]
+fn an_account_can_rent_to_a_smart_wallet() {
+    let f = setup();
+    issue_week(&f);
+    f.send(&tx(&f.env, "rental_to_wallet")).unwrap();
+    assert_eq!(f.client.holder(&1), wallet(&f.env, "renter"));
+    assert_eq!(f.client.balance(&f.owner), 1);
+}
+
+/// The contract id `C…` whose 32 bytes are exactly a `G…` account's key.
+fn same_bytes_as_contract(env: &Env, account: &Address) -> Address {
+    use soroban_sdk::address_payload::AddressPayload;
+    match account.to_payload() {
+        Some(AddressPayload::AccountIdPublicKeyEd25519(key)) => {
+            AddressPayload::ContractIdHash(key).to_address(env)
+        }
+        _ => panic!("expected a G… account"),
+    }
+}
+
+#[test]
+fn a_contract_with_an_accounts_key_bytes_cannot_use_that_accounts_proof() {
+    let f = setup();
+    // The same 32 bytes as the owner's Ed25519 key, but as a contract id. The
+    // kind tag keeps the encodings apart, so the owner's proof does not name it.
+    let twin = same_bytes_as_contract(&f.env, &f.owner);
+    f.env.mock_all_auths();
+    let (period, validity) = week();
+    f.client
+        .issue(&twin, &period, &validity, &owner_commitment(&f.env));
+    let mut t = tx(&f.env, "sale");
+    t.from = twin;
+    assert_eq!(f.send(&t), Err(Error::WrongAccount));
+}
+
+#[test]
+fn a_contract_with_an_accounts_key_bytes_is_not_that_accounts_recipient() {
+    let f = setup();
+    issue_week(&f);
+    let mut t = tx(&f.env, "rental");
+    t.to = same_bytes_as_contract(&f.env, &f.renter);
+    assert_eq!(f.send(&t), Err(Error::RecipientMismatch));
+}
+
+#[test]
+fn an_accounts_proof_does_not_name_the_smart_wallet_and_vice_versa() {
+    let f = setup();
+    let w = issue_week_to_wallet(&f);
+    // The owner's proof against the wallet's right: different commitment.
+    assert_eq!(f.send(&tx(&f.env, "sale")), Err(Error::CommitmentMismatch));
+    // The wallet's proof, submitted as if from the owner.
+    let mut t = tx(&f.env, "wallet_sale");
+    t.from = f.owner.clone();
+    assert_eq!(f.send(&t), Err(Error::WrongAccount));
+    assert_eq!(f.client.holder(&1), w);
+}
+
+#[test]
+fn a_smart_wallet_transfer_runs_the_wallets_own_signature_check() {
+    let f = setup();
+    let w = issue_week_to_wallet(&f);
+    f.env.register_at(&w, test_wallet::TestWallet, ());
+    let t = tx(&f.env, "wallet_rental");
+
+    // The wallet refuses to sign (a failed or cancelled passkey prompt): the
+    // transfer fails and nothing moves, though the proof is valid.
+    assert_eq!(send_signed(&f, &t, &[signed_entry(&f, &w, &t, false)]), Err(()));
+    assert_eq!(f.client.holder(&1), w);
+
+    // No authorization entry at all: refused as well.
+    assert_eq!(send_signed(&f, &t, &[]), Err(()));
+    assert_eq!(f.client.holder(&1), w);
+
+    // The wallet signs: the same proof now goes through.
+    assert_eq!(send_signed(&f, &t, &[signed_entry(&f, &w, &t, true)]), Ok(()));
+    assert_eq!(f.client.holder(&1), f.renter);
+}
+
+#[test]
+fn a_smart_wallets_signature_for_one_transfer_does_not_authorize_another() {
+    let f = setup();
+    let w = issue_week_to_wallet(&f);
+    f.env.register_at(&w, test_wallet::TestWallet, ());
+    let rental = tx(&f.env, "wallet_rental");
+    // A valid wallet signature, but over the rental's arguments, offered for the
+    // sale. The host matches entries to invocations by their arguments.
+    let sale = tx(&f.env, "wallet_sale");
+    let entry_for_rental = signed_entry(&f, &w, &rental, true);
+    assert_eq!(send_signed(&f, &sale, &[entry_for_rental]), Err(()));
+    assert_eq!(f.client.holder(&1), w);
+}
+
+#[test]
+fn the_smart_wallet_secret_alone_is_not_enough() {
+    let f = setup();
+    let w = issue_week_to_wallet(&f);
+    // Someone with the wallet's secret but not its passkey: a valid proof, but
+    // the only signature on offer is another address's.
+    let t = tx(&f.env, "wallet_rental");
+    let someone_else = Address::generate(&f.env);
+    f.env.mock_auths(&[MockAuth {
+        address: &someone_else,
+        invoke: &MockAuthInvoke {
+            contract: &f.contract_id,
+            fn_name: "transfer",
+            args: transfer_args(&f.env, &t),
+            sub_invokes: &[],
+        },
+    }]);
+    assert!(f
+        .client
+        .try_transfer(&t.from, &t.to, &t.right_id, &t.expires_at, &t.proof, &t.signals)
+        .is_err());
+    assert_eq!(f.client.holder(&1), w);
 }

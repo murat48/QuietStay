@@ -23,12 +23,25 @@ export function split32(bytes: Uint8Array): [bigint, bigint] {
   return [be(bytes.subarray(0, 16)), be(bytes.subarray(16, 32))];
 }
 
-/** A `G…` account's 32-byte Ed25519 key, split. Contract (`C…`) addresses are refused. */
-export function splitAccount(account: string): [bigint, bigint] {
-  if (!StrKey.isValidEd25519PublicKey(account)) {
-    throw new Error(`${account} is not a G… account; only accounts can hold a right under Phase 2`);
+/** The kind tag a `C…` contract address carries in `hi` (docs/PHASE3_SPEC.md §1). */
+export const TAG_CONTRACT = 1n << 128n;
+
+/**
+ * `split(address)`: an address's 32-byte payload as (hi, lo), with the address
+ * kind tagged into hi (CIRCUIT.md §5, PHASE3_SPEC.md §1, decision D1):
+ *
+ *   G… account  → split(Ed25519 key)                 (Phase 2, unchanged)
+ *   C… contract → (2^128 + hi(contract id), lo(contract id))
+ *
+ * Mirrors `auth.rs::split_address`. Anything else is refused.
+ */
+export function splitAddress(address: string): [bigint, bigint] {
+  if (StrKey.isValidEd25519PublicKey(address)) return split32(StrKey.decodeEd25519PublicKey(address));
+  if (StrKey.isValidContract(address)) {
+    const [hi, lo] = split32(StrKey.decodeContract(address));
+    return [TAG_CONTRACT + hi, lo];
   }
-  return split32(StrKey.decodeEd25519PublicKey(account));
+  throw new Error(`${address} is neither a G… account nor a C… contract`);
 }
 
 /** `d = SHA-256(RFC 8785 canonical JSON of the record)`, split — Phase 1's commitment, unchanged. */
@@ -55,7 +68,7 @@ export function secretHash(s: bigint): Promise<bigint> {
 
 /** `C = Poseidon_5(d_hi, d_lo, a_hi, a_lo, h)`. */
 export function commitment(d: { hi: bigint; lo: bigint }, account: string, h: bigint): Promise<bigint> {
-  const [aHi, aLo] = splitAccount(account);
+  const [aHi, aLo] = splitAddress(account);
   return hash([d.hi, d.lo, aHi, aLo, h]);
 }
 
@@ -115,8 +128,8 @@ export async function circuitInput(
     if (v < 0n || v >= R) throw new Error(`${name} is not a canonical field element`);
   }
 
-  const [fromHi, fromLo] = splitAccount(ctx.from);
-  const [toHi, toLo] = splitAccount(ctx.to);
+  const [fromHi, fromLo] = splitAddress(ctx.from);
+  const [toHi, toLo] = splitAddress(ctx.to);
   const mode = transferMode(ctx.expiresAt);
   const h = await secretHash(secret);
 

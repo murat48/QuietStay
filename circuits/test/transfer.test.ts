@@ -23,7 +23,7 @@ import {
   circuitInput,
   randomSecret,
   secretHash,
-  splitAccount,
+  splitAddress,
   splitRecordDigest,
   type CircuitInput,
   type TransferContext,
@@ -111,7 +111,7 @@ describe("a dishonest prover", () => {
   it("cannot prove from an account the commitment does not name", async () => {
     // The stranger presents the owner's commitment as their own.
     const { input } = await circuitInput(d, secret, sale());
-    const [hi, lo] = splitAccount(stranger);
+    const [hi, lo] = splitAddress(stranger);
     await refuses({ ...input, from_hi: hi.toString(), from_lo: lo.toString() });
   });
 
@@ -152,7 +152,7 @@ describe("a dishonest prover", () => {
     const { input } = await circuitInput(d, secret, sale());
     const sellerHash = await secretHash(randomSecret());
     await refuses({ ...input, next_secret_hash: sellerHash.toString() });
-    const plantedC = await hash([d.hi, d.lo, ...splitAccount(buyer), sellerHash]);
+    const plantedC = await hash([d.hi, d.lo, ...splitAddress(buyer), sellerHash]);
     await refuses({ ...input, next_commitment: plantedC.toString() });
   });
 });

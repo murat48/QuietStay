@@ -18,7 +18,7 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { Keypair } from "@stellar/stellar-sdk";
+import { Keypair, StrKey } from "@stellar/stellar-sdk";
 import { groth16 } from "snarkjs";
 import type { JsonValue } from "../../src/lib/canonical";
 import { fatal, log } from "../lib/cli";
@@ -36,6 +36,9 @@ const WEEK_END = 1_783_728_000n;
 
 const account = (label: string) =>
   Keypair.fromRawEd25519Seed(createHash("sha256").update(`quietstay-test-account:${label}`).digest());
+/** A fixed `C…` address standing in for a smart wallet. The tests register a contract there. */
+const wallet = (label: string) =>
+  StrKey.encodeContract(createHash("sha256").update(`quietstay-test-wallet:${label}`).digest());
 const secret = (label: string) =>
   BigInt("0x" + createHash("sha256").update(`quietstay-test-secret:${label}`).digest("hex")) % R;
 
@@ -48,17 +51,21 @@ async function main() {
     ["issuer", "owner", "renter", "buyer", "stranger"].map((n) => [n, account(n).publicKey()]),
   ) as Record<"issuer" | "owner" | "renter" | "buyer" | "stranger", string>;
   const s = Object.fromEntries(
-    ["owner", "renter", "buyer", "stranger", "planted"].map((n) => [n, secret(n)]),
-  ) as Record<"owner" | "renter" | "buyer" | "stranger" | "planted", bigint>;
+    ["owner", "renter", "buyer", "stranger", "planted", "wallet"].map((n) => [n, secret(n)]),
+  ) as Record<"owner" | "renter" | "buyer" | "stranger" | "planted" | "wallet", bigint>;
+  // Phase 3 (D1): a smart wallet that holds a right, and one that rents one.
+  const wallets = { holder: wallet("holder"), renter: wallet("renter") };
   const h = {
     owner: await secretHash(s.owner),
     renter: await secretHash(s.renter),
     buyer: await secretHash(s.buyer),
     stranger: await secretHash(s.stranger),
     planted: await secretHash(s.planted),
+    wallet: await secretHash(s.wallet),
   };
   const ownerCommitment = await commitment(d, who.owner, h.owner);
   const buyerCommitment = await commitment(d, who.buyer, h.buyer);
+  const walletCommitment = await commitment(d, wallets.holder, h.wallet);
 
   const exp = BASE_LEDGER + WINDOW;
   const scenarios: Record<string, { secret: bigint; ctx: TransferContext; note: string }> = {
@@ -102,6 +109,26 @@ async function main() {
       secret: s.owner,
       ctx: { rightId: 1n, from: who.owner, to: who.stranger, expiresAt: WEEK_END + 7n * DAY, expiryLedger: 2000n + WINDOW, nextSecretHash: 0n },
     },
+    wallet_sale: {
+      note: "Phase 3: a smart wallet (C…) holding right 1 sells to buyer",
+      secret: s.wallet,
+      ctx: { rightId: 1n, from: wallets.holder, to: who.buyer, expiresAt: null, expiryLedger: exp, nextSecretHash: h.buyer },
+    },
+    wallet_rental: {
+      note: "Phase 3: a smart wallet (C…) holding right 1 rents to renter",
+      secret: s.wallet,
+      ctx: { rightId: 1n, from: wallets.holder, to: who.renter, expiresAt: WEEK_END, expiryLedger: exp, nextSecretHash: 0n },
+    },
+    sale_to_wallet: {
+      note: "Phase 3: owner sells to a smart wallet (C…), with the wallet's h'",
+      secret: s.owner,
+      ctx: { rightId: 1n, from: who.owner, to: wallets.holder, expiresAt: null, expiryLedger: exp, nextSecretHash: h.wallet },
+    },
+    rental_to_wallet: {
+      note: "Phase 3: owner rents to a smart wallet (C…)",
+      secret: s.owner,
+      ctx: { rightId: 1n, from: who.owner, to: wallets.renter, expiresAt: WEEK_END, expiryLedger: exp, nextSecretHash: 0n },
+    },
   };
 
   for (const [name, { secret: sec, ctx, note }] of Object.entries(scenarios)) {
@@ -140,8 +167,10 @@ async function main() {
     JSON.stringify(
       {
         accounts: who,
+        wallets,
         owner_commitment: fr(ownerCommitment),
         buyer_commitment: fr(buyerCommitment),
+        wallet_commitment: fr(walletCommitment),
         base_ledger: Number(BASE_LEDGER),
       },
       null,

@@ -4,34 +4,31 @@
 //! the contract decides whether one is allowed. A reviewer who wants to know what
 //! authorizes a transfer reads this file and stops.
 //!
-//! **Phase 1** required the issuer's co-signature here. **Phase 2** replaces it
+//! **Phase 1** required the issuer's co-signature here. **Phase 2** replaced it
 //! with an on-chain check of the ownership proof specified in `docs/CIRCUIT.md`:
 //! the holder proves they know the secret behind the commitment stored for the
-//! right, and the proof is bound to this exact transfer. The issuer appears
-//! nowhere in this file. `Contract::transfer` still calls `from.require_auth()`
-//! first, so a transfer needs the holder's wallet *and* the holder's secret.
+//! right, and the proof is bound to this exact transfer. **Phase 3** turns that
+//! check into one function, [`authorize_transfer`], which every flow that moves
+//! a right calls (docs/PHASE3_SPEC.md §3), and lets a smart wallet (`C…`
+//! address) hold a right (§1, decision D1).
 //!
-//! The check comes in two halves, both here:
-//!
-//! 1. [`check_transfer_proof`] — every public signal compared with the
-//!    contract's own state and the call's arguments, the buyer's signature over
-//!    the next secret hash, and the nullifier looked up. Cheap, and run before
-//!    the holding-chain rules, so a replayed proof is refused as a replay.
-//! 2. [`consume_transfer_proof`] — the pairing check, then the nullifier
-//!    recorded. Run after the holding-chain rules, so verification is only paid
-//!    for on a transfer that can actually happen.
+//! The issuer appears nowhere in this file. Each entry point obtains the
+//! holder's `require_auth` before calling in, so a transfer needs the holder's
+//! signature (a wallet key, or a passkey through a smart wallet) *and* the
+//! holder's secret.
 //!
 //! The contract never computes Poseidon. Commitments and nullifiers arrive as
 //! public signals and are only compared and stored.
 
-use soroban_sdk::{address_payload::AddressPayload, vec, Address, BytesN, Env, IntoVal, Vec, U256};
+use soroban_sdk::{address_payload::AddressPayload, Address, BytesN, Env, Vec, U256};
 
 use crate::error::Error;
+use crate::store;
 use crate::types::{DataKey, Right};
 use crate::verifier::{self, Proof, VerificationKey, PUBLIC_SIGNALS};
 
 /// The longest a proof may stay valid, in ledgers: about an hour at testnet's
-/// five-second ledgers (docs/CIRCUIT.md §6). Mirrored by the CLI prover.
+/// five-second ledgers (docs/CIRCUIT.md §6). Mirrored by the provers.
 pub const MAX_PROOF_WINDOW: u32 = 720;
 
 // Positions of the public signals, in the order the verifier receives them
@@ -48,13 +45,38 @@ const EXPIRY_LEDGER: u32 = 8;
 const NEXT_SECRET_HASH: u32 = 9;
 const NEXT_COMMITMENT: u32 = 10;
 
-/// A proof whose signals all match this transfer, not yet verified.
-pub struct CheckedProof {
-    signals: Vec<U256>,
-    nullifier: BytesN<32>,
-    expiry_ledger: u32,
-    /// The commitment to store after a sale; `None` for a rental.
-    pub next_commitment: Option<BytesN<32>>,
+/// What kind of transfer a proof authorizes. It fixes the `mode` signal and
+/// whether title moves.
+///
+/// Step 4 adds `Swap { counter_right_id }` (mode `2^64 + counter_right_id`,
+/// docs/PHASE3_SPEC.md §7).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransferMode {
+    /// Open-ended: title and the commitment move to `to`. Mode signal `0`.
+    Sale,
+    /// `to` holds until `expires_at`, then the right reverts with no further
+    /// transaction. Title and the commitment stay. Mode signal `expires_at`.
+    Rental { expires_at: u64 },
+}
+
+impl TransferMode {
+    /// The `mode` public signal this transfer must carry.
+    fn signal(&self) -> u64 {
+        match self {
+            TransferMode::Sale => 0,
+            // A real rental end is in the future, so it is never 0: the
+            // holding-chain rules refuse one that is not.
+            TransferMode::Rental { expires_at } => *expires_at,
+        }
+    }
+
+    /// The term the holding-chain rules grant: `None` is title.
+    fn term(&self) -> Option<u64> {
+        match self {
+            TransferMode::Sale => None,
+            TransferMode::Rental { expires_at } => Some(*expires_at),
+        }
+    }
 }
 
 /// A value as a 32-byte big-endian field element.
@@ -67,22 +89,35 @@ fn to_u256(env: &Env, value: &BytesN<32>) -> U256 {
     U256::from_be_bytes(env, &value.clone().into())
 }
 
-/// `split(key)`: the account's Ed25519 key as two 128-bit halves, big-endian,
-/// split at byte 16 (docs/CIRCUIT.md §5). Contract addresses are refused.
+/// `split(address)`: the address's 32-byte payload as two 128-bit halves,
+/// big-endian, split at byte 16, with the address kind tagged into the high
+/// half (docs/CIRCUIT.md §5, docs/PHASE3_SPEC.md §1):
+///
+/// ```text
+/// hi = t · 2^128 + int(k[0..16])     t = 0 for a G… account, 1 for a C… contract
+/// lo =             int(k[16..32])
+/// ```
+///
+/// For a `G…` account `k` is its Ed25519 key and the encoding is Phase 2's,
+/// unchanged. For a `C…` contract (a smart wallet) `k` is its contract id. The
+/// tag keeps the two kinds disjoint even when their 32 bytes are equal. Any
+/// other address kind is refused.
 ///
 /// `to_payload` sits behind soroban-sdk's `hazmat-address` feature because the
-/// key it returns is the account's master key, which need not be one of the
-/// account's signers — so it must not be used to verify signatures. It is not
-/// used for that here: it is an identifier the proof is bound to, and whether
-/// the account authorized the transfer is still decided by `require_auth`.
-fn split_account(env: &Env, account: &Address) -> Result<(U256, U256), Error> {
-    let key = match account.to_payload() {
-        Some(AddressPayload::AccountIdPublicKeyEd25519(key)) => key,
+/// key it returns for an account is its master key, which need not be one of
+/// its signers, so it must not be used to verify signatures. It is not used
+/// for that here: it is an identifier the proof is bound to, and whether the
+/// address authorized the transfer is still decided by `require_auth`.
+fn split_address(env: &Env, address: &Address) -> Result<(U256, U256), Error> {
+    let (bytes, tag) = match address.to_payload() {
+        Some(AddressPayload::AccountIdPublicKeyEd25519(key)) => (key.to_array(), 0u8),
+        Some(AddressPayload::ContractIdHash(id)) => (id.to_array(), 1u8),
         _ => return Err(Error::NotAnAccount),
     };
-    let bytes = key.to_array();
     let mut hi = [0u8; 32];
     let mut lo = [0u8; 32];
+    // Byte 15 is bit 128 of the big-endian 256-bit value.
+    hi[15] = tag;
     hi[16..].copy_from_slice(&bytes[..16]);
     lo[16..].copy_from_slice(&bytes[16..]);
     Ok((
@@ -91,14 +126,11 @@ fn split_account(env: &Env, account: &Address) -> Result<(U256, U256), Error> {
     ))
 }
 
-/// Refuse anything but a `G…` account as a holder. Used by `issue`, so a right
-/// is never created in the hands of an address no proof could name — such a
-/// right could never be transferred.
-pub fn require_account(account: &Address) -> Result<(), Error> {
-    match account.to_payload() {
-        Some(AddressPayload::AccountIdPublicKeyEd25519(_)) => Ok(()),
-        _ => Err(Error::NotAnAccount),
-    }
+/// Refuse any address a proof could not name: anything but a `G…` account or a
+/// `C…` contract. Used by `issue`, so a right is never created in hands that
+/// could never transfer it.
+pub fn require_holder_address(env: &Env, address: &Address) -> Result<(), Error> {
+    split_address(env, address).map(|_| ())
 }
 
 /// The verification key fixed in the constructor.
@@ -125,29 +157,50 @@ pub fn is_canonical(env: &Env, value: &BytesN<32>) -> bool {
     to_u256(env, value) < verifier::modulus(env)
 }
 
-/// Half one: does this proof claim to authorize exactly this transfer?
+/// **The one way a right moves.** Checks that `proof` authorizes exactly this
+/// transfer, then applies it to `right`.
 ///
-/// Every public signal is compared with what the contract already knows —
-/// nothing in it is taken on the prover's word except the nullifier and the
-/// next commitment, which are what the proof itself vouches for. Refused before
-/// any verification is paid for:
+/// It does not call `require_auth`: each entry point obtains the holder's
+/// authorization first, and any other signature its flow needs (for the
+/// Phase 2 `transfer`, the buyer's over `next_secret_hash`). The caller then
+/// stores `right` with `store::put_right` and emits its event.
 ///
-/// * the wrong number of signals, or one that is not a canonical field element;
-/// * a sender or recipient that is not an account;
-/// * a commitment other than the one stored for `right`;
-/// * a different right, sender, recipient, sale/rental mode or rental end;
-/// * a deadline already past, or more than [`MAX_PROOF_WINDOW`] ledgers ahead;
-/// * on a sale, a zero next secret hash, or one the buyer did not sign; on a
-///   rental, a non-zero one;
-/// * a nullifier already used.
-pub fn check_transfer_proof(
+/// `next_secret_hash` is the `h'` the caller expects, taken from state the
+/// buyer controls (their signature, or later their on-chain offer), never from
+/// the seller. It must be non-zero for a sale and zero for a rental.
+///
+/// In order, all before anything is written:
+///
+/// 1. **The right is inside its validity window, and the signals.** Exactly
+///    eleven, all canonical. The commitment is the one
+///    stored for `right`; the right, sender, recipient (with the tagged
+///    encoding above), mode and `h'` are the ones given; `expiry_ledger` is in
+///    `[now, now + MAX_PROOF_WINDOW]`; the nullifier is unspent.
+/// 2. **The holding chain:** the grant allowed by `store::grant` (the Phase 1
+///    rules).
+/// 3. **The pairing check** against the constructor's key, then the nullifier
+///    spent with a TTL past `expiry_ledger`.
+///
+/// Then the new chain is written to `right`, and on a sale the commitment
+/// becomes `next_commitment`, title balances move and the listing is removed.
+/// A rental also removes the listing, as Phase 2 did.
+///
+/// The cheap checks run first, so a proof for some other transfer, or one
+/// already spent, is refused as exactly that, and the pairing check is paid for
+/// only on a transfer that can happen.
+#[allow(clippy::too_many_arguments)]
+pub fn authorize_transfer(
     env: &Env,
-    right: &Right,
+    right: &mut Right,
     from: &Address,
     to: &Address,
-    expires_at: &Option<u64>,
+    mode: TransferMode,
+    next_secret_hash: &U256,
+    proof: &Proof,
     signals: &Vec<U256>,
-) -> Result<CheckedProof, Error> {
+) -> Result<(), Error> {
+    // --- 1. the right is live, and the signals --------------------------
+    store::require_active(env, right)?;
     if signals.len() != PUBLIC_SIGNALS {
         return Err(Error::WrongSignalCount);
     }
@@ -160,8 +213,8 @@ pub fn check_transfer_proof(
     let get = |i: u32| signals.get(i).unwrap();
     let small = |x: u64| U256::from_u128(env, x as u128);
 
-    let (from_hi, from_lo) = split_account(env, from)?;
-    let (to_hi, to_lo) = split_account(env, to)?;
+    let (from_hi, from_lo) = split_address(env, from)?;
+    let (to_hi, to_lo) = split_address(env, to)?;
 
     if get(COMMITMENT) != to_u256(env, &right.commitment) {
         return Err(Error::CommitmentMismatch);
@@ -175,9 +228,7 @@ pub fn check_transfer_proof(
     if get(TO_HI) != to_hi || get(TO_LO) != to_lo {
         return Err(Error::RecipientMismatch);
     }
-    // 0 for a sale; the rental's end time otherwise. A real rental end is in the
-    // future, so it is never 0 — the holding-chain rules refuse one that is not.
-    if get(MODE) != small(expires_at.unwrap_or(0)) {
+    if get(MODE) != small(mode.signal()) {
         return Err(Error::ModeMismatch);
     }
 
@@ -193,66 +244,50 @@ pub fn check_transfer_proof(
         return Err(Error::ExpiryBeyondWindow);
     }
 
-    let next_secret_hash = get(NEXT_SECRET_HASH);
+    // A sale hands the buyer a commitment to an h' only the buyer can prove
+    // against; a rental leaves the commitment where it is and carries none.
     let zero = U256::from_u32(env, 0);
-    let next_commitment = match expires_at {
-        None => {
-            if next_secret_hash == zero {
-                return Err(Error::NextSecretHashMismatch);
-            }
-            // The buyer chooses their secret and signs its hash, so a seller
-            // cannot plant a commitment the buyer could never prove against.
-            to.require_auth_for_args(vec![
-                env,
-                right.id.into_val(env),
-                next_secret_hash.into_val(env),
-            ]);
-            Some(to_bytes(&get(NEXT_COMMITMENT)))
-        }
-        Some(_) => {
-            if next_secret_hash != zero {
-                return Err(Error::NextSecretHashMismatch);
-            }
-            None
-        }
+    let moves_title = matches!(mode, TransferMode::Sale);
+    let h_ok = if moves_title {
+        *next_secret_hash != zero && get(NEXT_SECRET_HASH) == *next_secret_hash
+    } else {
+        *next_secret_hash == zero && get(NEXT_SECRET_HASH) == zero
     };
+    if !h_ok {
+        return Err(Error::NextSecretHashMismatch);
+    }
 
     let nullifier = to_bytes(&get(NULLIFIER));
-    if env
-        .storage()
-        .temporary()
-        .has(&DataKey::Nullifier(nullifier.clone()))
-    {
+    let nullifier_key = DataKey::Nullifier(nullifier);
+    if env.storage().temporary().has(&nullifier_key) {
         return Err(Error::NullifierUsed);
     }
 
-    Ok(CheckedProof {
-        signals: signals.clone(),
-        nullifier,
-        expiry_ledger,
-        next_commitment,
-    })
-}
+    // --- 2. the holding chain --------------------------------------------
+    let chain = store::grant(env, right, from, to, &mode.term())?;
 
-/// Half two: verify the proof against the key fixed at deployment, then spend
-/// its nullifier.
-///
-/// The nullifier goes to temporary storage, and its entry is made to outlive
-/// the proof's own `expiry_ledger`: there is no ledger at which the entry is
-/// gone while the proof would still be accepted. That cannot be left to the
-/// network's minimum TTL — on testnet it is 720 ledgers, the same as the window,
-/// so an entry written at the start of a proof's window would otherwise lapse
-/// just before the proof does.
-pub fn consume_transfer_proof(env: &Env, checked: CheckedProof, proof: &Proof) -> Result<(), Error> {
-    if !verifier::verify(env, &verification_key(env), proof, &checked.signals) {
+    // --- 3. the pairing check, then the nullifier is spent ----------------
+    if !verifier::verify(env, &verification_key(env), proof, signals) {
         return Err(Error::InvalidProof);
     }
-
-    let key = DataKey::Nullifier(checked.nullifier);
+    // The nullifier goes to temporary storage, made to outlive the proof's own
+    // `expiry_ledger`, so there is no ledger at which the entry is gone while
+    // the proof would still be accepted. That cannot be left to the network's
+    // minimum TTL: on testnet it is 720 ledgers, the same as the window.
     let storage = env.storage().temporary();
-    storage.set(&key, &checked.expiry_ledger);
+    storage.set(&nullifier_key, &expiry_ledger);
     // live-until = now + extend_to, so this makes it at least expiry_ledger + 1.
-    let extend_to = checked.expiry_ledger - env.ledger().sequence() + 1;
-    storage.extend_ttl(&key, extend_to, extend_to);
+    let extend_to = expiry_ledger - now + 1;
+    storage.extend_ttl(&nullifier_key, extend_to, extend_to);
+
+    // --- 4. applied --------------------------------------------------------
+    if moves_title {
+        store::adjust_balance(env, from, -1);
+        store::adjust_balance(env, to, 1);
+        right.commitment = to_bytes(&get(NEXT_COMMITMENT));
+    }
+    right.holdings = chain;
+    // A transfer supersedes any listing that was standing.
+    store::remove_listing(env, right.id);
     Ok(())
 }

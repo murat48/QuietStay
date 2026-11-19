@@ -47,7 +47,9 @@
 //! `balance` counts rights held as title. The divergences are enumerated in
 //! `docs/DESIGN.md`; nothing here claims drop-in fungible-token compatibility.
 
-use soroban_sdk::{contract, contractimpl, contractmeta, vec, Address, BytesN, Env, String, Vec, U256};
+use soroban_sdk::{
+    contract, contractimpl, contractmeta, vec, Address, BytesN, Env, IntoVal, String, Vec, U256,
+};
 
 pub mod auth;
 pub mod error;
@@ -59,6 +61,7 @@ pub mod verifier;
 #[cfg(test)]
 mod test;
 
+use auth::TransferMode;
 use error::Error;
 use events::{Burned, Issued, Listed, Transferred, Unlisted};
 use types::{Config, Holding, Listing, Period, Right, Validity};
@@ -137,7 +140,8 @@ impl QuietStayRights {
     /// `commitment` is `C = Poseidon(d, owner, h)` (docs/CIRCUIT.md §2), computed
     /// off chain from the owner's secret hash; the issuer never learns the secret.
     /// It must be a canonical field element, or no proof could ever match it, and
-    /// `owner` must be a `G…` account, or no proof could ever name it.
+    /// `owner` must be a `G…` account or a `C…` contract such as a smart wallet
+    /// (docs/PHASE3_SPEC.md §1), or no proof could ever name it.
     pub fn issue(
         env: Env,
         owner: Address,
@@ -148,7 +152,7 @@ impl QuietStayRights {
         let config = store::config(&env);
         config.issuer.require_auth();
 
-        auth::require_account(&owner)?;
+        auth::require_holder_address(&env, &owner)?;
         if !auth::is_canonical(&env, &commitment) {
             return Err(Error::NonCanonicalSignal);
         }
@@ -308,34 +312,33 @@ impl QuietStayRights {
         from.require_auth();
 
         let mut right = store::get_right(&env, right_id)?;
-        store::require_active(&env, &right)?;
 
-        // Cheap checks first: a proof for some other transfer, or one already
-        // spent, is refused as exactly that.
-        let checked =
-            auth::check_transfer_proof(&env, &right, &from, &to, &expires_at, &public_signals)?;
+        let zero = U256::from_u32(&env, 0);
+        let (mode, next_secret_hash) = match expires_at {
+            Some(expires_at) => (TransferMode::Rental { expires_at }, zero),
+            None => {
+                // The buyer chooses their secret and signs its hash, so a seller
+                // cannot plant a commitment the buyer could never prove against.
+                // A zero h' is refused by the check below without asking.
+                let h = public_signals.get(9).unwrap_or(zero.clone());
+                if h != zero {
+                    to.require_auth_for_args(vec![&env, right_id.into_val(&env), h.into_val(&env)]);
+                }
+                (TransferMode::Sale, h)
+            }
+        };
 
-        // Then the holding-chain rules, so the pairing check is only paid for on
-        // a transfer that could actually happen.
-        let chain = store::grant(&env, &right, &from, &to, &expires_at)?;
-
-        let next_commitment = checked.next_commitment.clone();
-        auth::consume_transfer_proof(&env, checked, &proof)?;
-
-        // Title moves only on an open-ended grant, and so does the commitment.
-        if expires_at.is_none() {
-            store::adjust_balance(&env, &from, -1);
-            store::adjust_balance(&env, &to, 1);
-        }
-        if let Some(next) = next_commitment {
-            right.commitment = next;
-        }
-
-        right.holdings = chain;
+        auth::authorize_transfer(
+            &env,
+            &mut right,
+            &from,
+            &to,
+            mode,
+            &next_secret_hash,
+            &proof,
+            &public_signals,
+        )?;
         store::put_right(&env, &right);
-
-        // A transfer supersedes any offer that was standing.
-        store::remove_listing(&env, right_id);
 
         Transferred {
             from,

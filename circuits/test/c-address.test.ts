@@ -14,8 +14,9 @@
  * sale proof is also written out in the contract's encoding, so it can be
  * verified on chain (docs/PHASE3_PROGRESS.md, Step 1 review).
  *
- * The tagged encoding lives here until Step 2 moves it into scripts/lib/zk.ts.
- * Until then the CLI still refuses C-addresses.
+ * The tagged encoding is `splitAddress` in scripts/lib/zk.ts (moved there in
+ * Step 2), the same one the CLI prover, the browser prover and the contract
+ * fixtures use.
  */
 
 import assert from "node:assert/strict";
@@ -26,22 +27,18 @@ import { randomBytes } from "node:crypto";
 import { Keypair, StrKey } from "@stellar/stellar-sdk";
 import { groth16 } from "snarkjs";
 import { hash, R } from "../gpl/poseidon";
-import { PUBLIC_SIGNALS, randomSecret, secretHash, split32, splitRecordDigest } from "../../scripts/lib/zk";
+import {
+  PUBLIC_SIGNALS,
+  randomSecret,
+  secretHash,
+  split32,
+  splitAddress,
+  splitRecordDigest,
+  TAG_CONTRACT,
+} from "../../scripts/lib/zk";
 import { encodeProof } from "../../scripts/lib/zk-encode";
 
 const KEYS = resolve("circuits/keys");
-const TAG_CONTRACT = 1n << 128n;
-
-/** The Phase 3 address encoding: G → (hi, lo) as Phase 2; C → (2^128 + hi, lo). */
-function splitAddress(address: string): [bigint, bigint] {
-  if (StrKey.isValidEd25519PublicKey(address)) return split32(StrKey.decodeEd25519PublicKey(address));
-  if (StrKey.isValidContract(address)) {
-    const [hi, lo] = split32(StrKey.decodeContract(address));
-    return [TAG_CONTRACT + hi, lo];
-  }
-  throw new Error(`${address} is neither a G… account nor a C… contract`);
-}
-
 interface Ctx {
   from: string;
   to: string;
