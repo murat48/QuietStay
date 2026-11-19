@@ -64,6 +64,10 @@ function serverKeypair(): Keypair {
 }
 
 /** The account a client must add as a signer trust anchor. Public information. */
+export function serverKeypairForWebAuth(): Keypair {
+  return serverKeypair();
+}
+
 export function serverAccount(): string {
   return serverKeypair().publicKey();
 }
@@ -159,14 +163,21 @@ export async function verifyChallenge(signedTransaction: string): Promise<{
     );
   }
 
-  const token = await new SignJWT({ sub: client, aud: WEB_AUTH_DOMAIN })
+  return { account: client, token: await issueSession(client) };
+}
+
+/**
+ * The session token for an account that has proved control: SEP-10 for a
+ * `G…` account, SEP-45 (src/lib/sep45.ts) for a `C…` smart wallet. Both get
+ * the same token, so every route reads either with `authenticatedAccount`.
+ */
+export function issueSession(account: string): Promise<string> {
+  return new SignJWT({ sub: account, aud: WEB_AUTH_DOMAIN })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuer(HOME_DOMAIN)
     .setIssuedAt()
     .setExpirationTime(SESSION_LIFETIME)
     .sign(sessionSecret());
-
-  return { account: client, token };
 }
 
 /**

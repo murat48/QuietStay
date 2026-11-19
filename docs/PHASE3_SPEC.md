@@ -1007,7 +1007,11 @@ the balance is a hard bound as well.
 
 **The key has no other role.**
 
-- It is a new identity, `qs-testnet-fee`, that you create.
+- It is the identity `qs-fee-testnet` (`GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z`).
+  Step 2 review (2026-11-19): you approved this existing identity as the
+  fee key and set its secret as `QUIETSTAY_TESTNET_FEE_SECRET` yourself, in
+  Vercel and `.env.local`. New identities are created by you, never by the
+  builder.
 - At startup the route refuses to run if the fee address equals the issuer,
   the arbiter, the SEP-10 key, or any holder named in the inventory.
 - `scripts/check-fee-account` checks on chain that it holds no rights and no

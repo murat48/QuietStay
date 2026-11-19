@@ -123,3 +123,18 @@ export async function kvIsReachable(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Set `key` only if it is absent, expiring after `ttlSecs`. True if this call
+ * set it: an atomic "first one wins", used for single-use nonces.
+ */
+export async function kvSetOnce(key: string, value: string, ttlSecs: number): Promise<boolean> {
+  return (await command(["SET", key, value, "NX", "EX", ttlSecs])) === "OK";
+}
+
+/** Add one to the counter at `key`, starting its `ttlSecs` window on first use. The new count. */
+export async function kvCount(key: string, ttlSecs: number): Promise<number> {
+  const n = Number(await command(["INCR", key]));
+  if (n === 1) await command(["EXPIRE", key, ttlSecs]);
+  return n;
+}

@@ -179,3 +179,32 @@ export function sessionSecret(): Uint8Array {
 
 /** The customer-discovery survey linked from the home page and the footer. */
 export const SURVEY_URL = "https://forms.gle/X3ismSnCbhAjkAu1A";
+
+// --- Phase 3: passkey smart wallets ------------------------------------------
+
+/**
+ * The SEP-45 web-auth contract (contracts/vendor/anchor-web-auth/, pinned and
+ * unmodified), deployed on testnet in Step 2 with an admin nobody can
+ * authorize. It holds nothing and the rights contract never calls it.
+ */
+export const WEB_AUTH_CONTRACT_ID =
+  process.env.NEXT_PUBLIC_QUIETSTAY_WEB_AUTH_CONTRACT_ID ?? "CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM";
+
+/** The OpenZeppelin smart-account build new wallets use (spec §12). */
+export const SMART_ACCOUNT_WASM_HASH = "c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1";
+/** The OpenZeppelin WebAuthn verifier on testnet (checked on chain in Step 2). */
+export const WEBAUTHN_VERIFIER_ID = "CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F";
+
+/**
+ * The testnet fee account's public address (`qs-fee-testnet`, decision D6).
+ * Public: a passkey transaction names it as source. Its secret is server-only.
+ */
+export const FEE_ACCOUNT =
+  process.env.NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT ?? "GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z";
+
+/** Server-only: the testnet fee key, for /api/tx/sponsor and nothing else. */
+export function testnetFeeSecret(): string {
+  const secret = process.env.QUIETSTAY_TESTNET_FEE_SECRET;
+  if (!secret) throw missing("QUIETSTAY_TESTNET_FEE_SECRET", "the testnet fee key (qs-fee-testnet).");
+  return secret;
+}

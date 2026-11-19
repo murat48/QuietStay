@@ -21,7 +21,14 @@ export interface App {
   stop(): Promise<void>;
 }
 
-export async function startApp(opts: { contract: string; issuer: Keypair; sep10: Keypair; port: number }): Promise<App> {
+export async function startApp(opts: {
+  contract: string;
+  issuer: Keypair;
+  sep10: Keypair;
+  port: number;
+  /** A throwaway fee account for /api/tx/sponsor; the real one is never used in tests. */
+  fee?: Keypair;
+}): Promise<App> {
   const host = `localhost:${opts.port}`;
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -36,6 +43,8 @@ export async function startApp(opts: { contract: string; issuer: Keypair; sep10:
     NEXT_PUBLIC_WEB_AUTH_DOMAIN: host,
     QUIETSTAY_DATA_DIR: mkdtempSync(join(tmpdir(), "qs-e2e-")),
     NEXT_PUBLIC_QS_E2E_WALLET: "1",
+    QUIETSTAY_TESTNET_FEE_SECRET: opts.fee?.secret() ?? "",
+    NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT: opts.fee?.publicKey() ?? "",
     UPSTASH_REDIS_REST_URL: "",
     UPSTASH_REDIS_REST_TOKEN: "",
     KV_REST_API_URL: "",

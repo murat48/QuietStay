@@ -31,6 +31,7 @@ import { commitment, randomSecret, secretHash, splitRecordDigest } from "../scri
 import { fr } from "../scripts/lib/zk-encode";
 import { proveTransfer } from "../scripts/lib/zk-prove";
 import { buildCall, issueArgs, transferArgs } from "../scripts/lib/zk-tx";
+import { startApp, type App } from "./lib/app";
 import { deployRights, fund, server, submit } from "./lib/testnet";
 
 const PORT = 4320;
@@ -43,6 +44,9 @@ const UNTIL = BigInt(Date.parse(`${CHECK_OUT}T00:00:00Z`) / 1000);
 const issuer = Keypair.random();
 const fee = Keypair.random();
 const renter = Keypair.random();
+// SEP-45: web_auth_verify asks for the server account's authorization, so it must exist.
+const sep10 = Keypair.random();
+let app: App;
 let contract: string;
 let http: Server;
 let page: Page;
@@ -106,8 +110,9 @@ async function provenRental(week: (typeof weeks)[number]) {
 
 test.beforeAll(async ({ browser }) => {
   test.setTimeout(10 * 60_000);
-  await Promise.all([issuer, fee, renter].map(fund));
+  await Promise.all([issuer, fee, renter, sep10].map(fund));
   contract = await deployRights(issuer);
+  app = await startApp({ contract, issuer, sep10, fee, port: 4322 });
 
   const js = (
     await build({
@@ -161,7 +166,8 @@ test.beforeAll(async ({ browser }) => {
   for (let i = 0; i < 3; i++) await issueToWallet();
 });
 
-test.afterAll(() => {
+test.afterAll(async () => {
+  await app?.stop();
   http?.closeAllConnections();
   http?.close();
   // snarkjs leaves its curve threads running; release them.
@@ -227,4 +233,70 @@ test("the app's check: supported with a platform passkey, unsupported without We
   expect(r.supported).toBe(false);
   expect(r.reason).toContain("no WebAuthn");
   expect(r.fallback).toContain("Freighter");
+});
+
+// --- SEP-45: the smart wallet signs in with its passkey -----------------------------
+
+import { decodeEntries, encodeEntries } from "../src/lib/sep45";
+
+/** A fresh challenge, with the wallet's entry signed by the passkey in the browser. */
+async function signedChallenge(): Promise<{ signed: string; entries: xdr.SorobanAuthorizationEntry[]; clientIndex: number }> {
+  const res = await fetch(`${app.url}/api/auth/contract?account=${wallet}`);
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as { authorization_entries: string; network_passphrase: string };
+  expect(body.network_passphrase).toBe(NETWORK_PASSPHRASE);
+  const entries = decodeEntries(body.authorization_entries);
+  const clientIndex = entries.findIndex((e) => Address.fromScAddress(e.credentials().address().address()).toString() === wallet);
+  expect(clientIndex).toBeGreaterThanOrEqual(0);
+  const latest = (await server.getLatestLedger()).sequence;
+  const signedEntry = await page.evaluate(([e, x]) => window.probe.sign(e, x), [entries[clientIndex]!.toXDR("base64"), latest + 20] as const);
+  const out = [...entries];
+  out[clientIndex] = xdr.SorobanAuthorizationEntry.fromXDR(signedEntry, "base64");
+  return { signed: encodeEntries(out), entries: out, clientIndex };
+}
+
+const postToken = (authorization_entries: string) =>
+  fetch(`${app.url}/api/auth/contract`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ authorization_entries }),
+  });
+
+test("SEP-45: the smart wallet signs in with its passkey, and the session names the wallet", async () => {
+  const { signed } = await signedChallenge();
+  const res = await postToken(signed);
+  const body = (await res.json()) as { token?: string; account?: string; error?: string };
+  expect(res.status, body.error).toBe(200);
+  expect(body.account).toBe(wallet);
+  const me = await fetch(`${app.url}/api/me`, { headers: { authorization: `Bearer ${body.token}` } });
+  expect(me.status).toBe(200);
+  expect(((await me.json()) as { account?: string }).account).toBe(wallet);
+});
+
+test("SEP-45: a challenge the passkey did not sign is refused", async () => {
+  const res = await fetch(`${app.url}/api/auth/contract?account=${wallet}`);
+  const { authorization_entries } = (await res.json()) as { authorization_entries: string };
+  const r = await postToken(authorization_entries);
+  expect(r.status).toBe(401);
+  console.log(`unsigned: ${((await r.json()) as { error: string }).error.slice(0, 160)}`);
+});
+
+test("SEP-45: a signed challenge works once and is refused the second time", async () => {
+  const { signed } = await signedChallenge();
+  expect((await postToken(signed)).status).toBe(200);
+  const again = await postToken(signed);
+  expect(again.status).toBe(401);
+  expect(((await again.json()) as { error: string }).error).toContain("already been used");
+});
+
+test("SEP-45: a challenge whose arguments were changed is refused", async () => {
+  const { entries } = await signedChallenge();
+  // Rewrite home_domain in every entry: the server's signature no longer covers it.
+  for (const e of entries) {
+    const map = e.rootInvocation().function().contractFn().args()[0]!.map()!;
+    for (const m of map) if (m.key().sym().toString() === "home_domain") m.val(xdr.ScVal.scvString("evil.example"));
+  }
+  const r = await postToken(encodeEntries(entries));
+  expect(r.status).toBe(401);
+  console.log(`tampered: ${((await r.json()) as { error: string }).error}`);
 });

@@ -1,6 +1,8 @@
 [workspace]
 resolver = "2"
 members = ["quietstay-rights", "quietstay-verifier", "quietstay-measure"]
+# Third-party code, built in its own workspace with its own lockfile.
+exclude = ["vendor"]
 
 [workspace.dependencies]
 soroban-sdk = "27.0.6"

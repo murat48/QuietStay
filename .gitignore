@@ -70,3 +70,4 @@ proofs/
 # Playwright
 /test-results/
 /playwright-report/
+/contracts/vendor/*/target/
