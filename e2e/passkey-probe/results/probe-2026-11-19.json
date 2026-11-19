@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-19T10:58:10.125Z",
+  "contract": "CCR2Z4IQNKXO2YCTQI2JBU5YLQTFXCXWVY6HV6H6TWNFWL5RAQ3IMAX5",
+  "fee_account": "GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z",
+  "renter": "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+  "browser": "Chromium 158.0.8127.18 (headless, CDP virtual authenticator ctap2/internal)",
+  "wallet": "CDSI6FMLEA5LRMCTFU2RBMVBMFHWH4TJN7PEMEWSK477S4KP2KAKOKWY",
+  "wallet_deploy_tx": "c5fabe85f29f732ef49c8381148a7ae851c093521dd9c2959674909f654217bd",
+  "right_id": 1,
+  "transfer_tx": "059a5ae5555e3522fb1b4869d580e5dd8954558d984ed7d3fc255baacadbbd95",
+  "transfer_ledger": 5812454,
+  "transfer_min_resource_fee": "355526",
+  "holding_after": {
+    "expires_at": 1797033600,
+    "holder": "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"
+  }
+}

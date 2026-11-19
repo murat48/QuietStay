@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
-  "description": "QuietStay Phase 1 — a marketplace for tokenized vacation usage rights on Stellar testnet",
+  "description": "QuietStay Phase 1 \u2014 a marketplace for tokenized vacation usage rights on Stellar testnet",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -31,7 +31,8 @@
     "zk:reissue": "tsx scripts/zk/reissue-inventory.ts",
     "zk:evidence": "tsx scripts/zk/produce-evidence.ts",
     "zk:issue": "tsx scripts/zk/issue-week.ts",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "passkey:probe": "tsx e2e/passkey-probe/probe.ts"
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "2.5.0",

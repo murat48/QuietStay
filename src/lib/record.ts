@@ -211,8 +211,9 @@ export function validateRecord(value: unknown): OwnershipRecord {
   if (!owner || typeof owner.name !== "string" || typeof owner.email !== "string") {
     return fail("owner.name and owner.email are required");
   }
-  if (typeof owner.stellar_account !== "string" || !/^G[A-Z2-7]{55}$/.test(owner.stellar_account)) {
-    return fail("owner.stellar_account must be a Stellar public key (G...)");
+  // A G… account, or (Phase 3, decision D1) a C… smart wallet.
+  if (typeof owner.stellar_account !== "string" || !/^[GC][A-Z2-7]{55}$/.test(owner.stellar_account)) {
+    return fail("owner.stellar_account must be a Stellar account (G...) or smart wallet (C...)");
   }
 
   const resort = record.resort as OwnershipRecord["resort"] | undefined;
