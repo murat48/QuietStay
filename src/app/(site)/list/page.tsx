@@ -32,6 +32,8 @@ import { useWallet } from "@/components/WalletProvider";
 import { explorer } from "@/lib/config";
 import { describeError, formatDate, formatDays, shortAddress, weekIsOver } from "@/lib/format";
 import { unixToIsoDate } from "@/lib/record";
+import { requestLink } from "@/lib/sealed";
+import { newSealKey, newSecret, sealKey } from "@/lib/vault";
 
 interface RightRow {
   id: number;
@@ -71,6 +73,32 @@ interface TransferRequest {
   reason?: string;
   /** A sale ask's consent: the buyer's h', which the holder proves with. */
   consent?: { next_secret_hash: string; valid_until_ledger: number };
+  /** Phase 3: the hash of the buyer's sealed-link key. */
+  key_hash?: string;
+}
+
+/**
+ * The buyer's request link for a sale ask, if this browser holds its key. The
+ * holder opens it to seal the week's record back to this browser.
+ */
+function BuyRequestLink({ ask }: { ask: TransferRequest }) {
+  const [link, setLink] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ask.key_hash) return;
+    void sealKey(ask.key_hash).then((key) => {
+      if (key) setLink(requestLink(window.location.origin, "buy", ask.id, key.publicRaw));
+    });
+  }, [ask]);
+  if (!link) return null;
+  return (
+    <div style={{ marginTop: "0.5rem", width: "100%" }}>
+      <p className="muted" style={{ margin: "0 0 0.3rem" }}>
+        Send the holder this link. They open it to seal the week&apos;s record to this browser; open
+        the reply link they send back here. Check the record before the sale goes ahead.
+      </p>
+      <textarea readOnly value={link} style={{ minHeight: "4rem", width: "100%" }} data-testid="buy-request-link" />
+    </div>
+  );
 }
 
 /**
@@ -389,10 +417,19 @@ export default function ListScreen() {
       setError(null);
       try {
         let consent: Record<string, unknown> | undefined;
+        let keyHash: string | undefined;
         if (sale) {
-          const h = (consentHash[rightId] ?? "").trim();
-          if (!/^\d+$/.test(h)) {
-            throw new Error("paste your h' — the number `npm run zk:secret` printed — before asking to buy");
+          // Phase 3: by default the buyer's next secret s' and a sealed-link key
+          // are made and kept in this browser; only h' and the key's hash leave
+          // it. The Phase 2 path, an h' pasted from `npm run zk:secret`, stays.
+          const pasted = (consentHash[rightId] ?? "").trim();
+          if (pasted !== "" && !/^\d+$/.test(pasted)) {
+            throw new Error("h' must be the decimal number `npm run zk:secret` printed");
+          }
+          let h = pasted;
+          if (pasted === "") {
+            h = (await newSecret(`buy right ${rightId}`)).toString();
+            keyHash = (await newSealKey(`buy right ${rightId}`)).keyHash;
           }
           const prep = await authFetch("/api/requests/consent", {
             method: "POST",
@@ -415,7 +452,7 @@ export default function ListScreen() {
         }
         const response = await authFetch("/api/requests", {
           method: "POST",
-          body: JSON.stringify({ right_id: rightId, ...(consent ? { consent } : {}) }),
+          body: JSON.stringify({ right_id: rightId, ...(consent ? { consent } : {}), ...(keyHash ? { key_hash: keyHash } : {}) }),
         });
         const body = (await response.json()) as { note?: string; error?: string };
         if (!response.ok) throw new Error(body.error ?? "could not record the request");
@@ -998,21 +1035,25 @@ export default function ListScreen() {
                           >
                             Withdraw request
                           </button>
+                          <BuyRequestLink ask={myRequest} />
                         </div>
                       ) : right.listing.term_secs === null ? (
                         <div>
-                          <div className="field" style={{ marginBottom: "0.5rem" }}>
-                            <label htmlFor={`h-${right.id}`}>
-                              Your h&apos; — from <code>npm run zk:secret -- my-secret.json</code>
-                            </label>
-                            <input
-                              id={`h-${right.id}`}
-                              value={consentHash[right.id] ?? ""}
-                              onChange={(e) => setConsentHash((m) => ({ ...m, [right.id]: e.target.value }))}
-                              placeholder="the shareable number it printed — never the secret file"
-                              spellCheck={false}
-                            />
-                          </div>
+                          <details style={{ marginBottom: "0.5rem" }}>
+                            <summary className="muted">Advanced: I made my secret with the command line</summary>
+                            <div className="field" style={{ marginBottom: "0.5rem" }}>
+                              <label htmlFor={`h-${right.id}`}>
+                                Your h&apos; — from <code>npm run zk:secret -- my-secret.json</code>
+                              </label>
+                              <input
+                                id={`h-${right.id}`}
+                                value={consentHash[right.id] ?? ""}
+                                onChange={(e) => setConsentHash((m) => ({ ...m, [right.id]: e.target.value }))}
+                                placeholder="leave empty to have this browser make and keep your secret"
+                                spellCheck={false}
+                              />
+                            </div>
+                          </details>
                           <button
                             className="primary"
                             disabled={busyRight === right.id}
@@ -1021,11 +1062,12 @@ export default function ListScreen() {
                             Sign my consent and ask to buy
                           </button>
                           <p className="muted" style={{ marginBottom: 0 }}>
-                            Buying a week means it will be committed to a secret only you hold, so
-                            you make one first, on your own machine, and give its hash here. Your
+                            Buying a week means it will be committed to a secret only you hold. This
+                            browser makes that secret and keeps it; only its hash is sent. Your
                             wallet then signs that hash for this week — the one signature a sale
                             asks of a buyer. Freighter and Hana can sign it; xBull, Albedo and Rabet
-                            cannot yet.
+                            cannot yet. Afterwards, send the holder the request link shown here, so
+                            the week&apos;s private record can come back to this browser sealed.
                           </p>
                         </div>
                       ) : (
@@ -1054,12 +1096,12 @@ export default function ListScreen() {
                         {asks.length === 1 ? "One account is asking" : `${asks.length} accounts are asking`}
                       </legend>
                       <p className="muted" style={{ marginTop: 0 }}>
-                        To accept, prove you own the week — on your own machine, with your record and
-                        your secret — then upload the result on the{" "}
-                        <a href="/transfer">Transfer</a> screen. The command below already has the
-                        asker&apos;s account{" "}
-                        {asks.some((r) => r.term_secs === null) ? "and, for a sale, their h'" : ""} in it,
-                        so there is no address to type.
+                        To accept, open the <a href="/transfer">Transfer</a> screen: your browser
+                        proves you own the week, with the record and secret it keeps, and the ask
+                        fills in the asker&apos;s account
+                        {asks.some((r) => r.term_secs === null) ? " and, for a sale, their h'" : ""}, so
+                        there is no address to type. A buyer will also send you a request link for the
+                        week&apos;s record; open it in this browser.
                       </p>
                       {asks.map((req) => (
                         <div key={req.id} style={{ marginTop: "0.6rem" }}>
@@ -1075,16 +1117,6 @@ export default function ListScreen() {
                               Decline
                             </button>
                           </div>
-                          {sublet ? null : (
-                            <pre>{req.term_secs === null
-                              ? `npm run zk:prove -- --record <your record>.json --secret <your secret>.json \\
-  --right ${right.id} --from ${address} --to ${req.by} \\
-  --sale --next-secret-hash ${req.consent?.next_secret_hash ?? "<missing — ask the buyer to ask again>"} \\
-  --out proofs/right-${right.id}`
-                              : `npm run zk:prove -- --record <your record>.json --secret <your secret>.json \\
-  --right ${right.id} --from ${address} --to ${req.by} \\
-  --rental-until ${right.week.end} --out proofs/right-${right.id}`}</pre>
-                          )}
                         </div>
                       ))}
                       {sublet ? (

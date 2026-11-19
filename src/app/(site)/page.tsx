@@ -3,8 +3,8 @@ import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { Reveal } from "@/components/Reveal";
 import { SURVEY_URL } from "@/lib/config";
-import mark from "../../public/brand/quietstay-mark.png";
-import resort from "../../public/images/mediterranean-resort.jpg";
+import mark from "../../../public/brand/quietstay-mark.png";
+import resort from "../../../public/images/mediterranean-resort.jpg";
 import styles from "./page.module.css";
 
 export default function Home() {

@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-19T11:22:00.082Z",
+  "browser": "chromium 158.0.8127.18 (Playwright 1.65.0, headless)",
+  "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.18 Safari/537.36",
+  "device": "Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz, 12 logical cores (hardwareConcurrency 12), 15 GiB RAM, Linux (WSL2)",
+  "proof": "rental, right 1, inventory/records/week-01.json, random test secret",
+  "signals_match_cli": true,
+  "first_proof_ms": 1159,
+  "runs_ms": [
+    673,
+    551,
+    441,
+    453,
+    503,
+    429,
+    498
+  ],
+  "median_ms": 498,
+  "median_full_prove_ms": 459,
+  "command": "npx tsx e2e/prover-bench.ts --runs 7 --browser chromium"
+}

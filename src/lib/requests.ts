@@ -93,6 +93,13 @@ export interface TransferRequest {
     /** The last ledger at which the signature is valid. */
     valid_until_ledger: number;
   };
+  /**
+   * Phase 3 (sealed links, spec §2): SHA-256 of the raw P-256 public key the
+   * asker's browser made, hex. The holder's browser seals the private record
+   * only to a link key that hashes to this. Absent on a rental ask: renters
+   * never prove, so they need no record.
+   */
+  key_hash?: string;
   /** Set when accepted: the transaction that carried it out. */
   tx?: string;
   /** Set when declined, if the holder gave one. Never required. */
@@ -252,6 +259,12 @@ export interface IssuanceRequest {
   by: string;
   /** `h = Poseidon(s)`, decimal. Never `s`. */
   secret_hash: string;
+  /**
+   * Phase 3 (D3): SHA-256 of the owner's sealed-link public key, hex. The
+   * issuer's browser seals the week's record only to a link key that hashes
+   * to this.
+   */
+  key_hash?: string;
   requested_at: string;
   status: IssuanceStatus;
   /** Set when issued. */
@@ -329,4 +342,13 @@ export async function markIssued(
   all[index] = { ...all[index]!, status: "issued", ...issued, issued_at: new Date().toISOString() };
   await saveIssuanceRequests(all);
   return all[index]!;
+}
+
+/** A sealed-link key hash: 64 lowercase hex characters, or absent. */
+export function parseKeyHash(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string" || !/^[0-9a-f]{64}$/.test(value)) {
+    throw new Error("key_hash must be 64 lowercase hex characters (a SHA-256 digest)");
+  }
+  return value;
 }

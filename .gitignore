@@ -64,3 +64,9 @@ circuits/build/
 # Phase 2: record secrets never enter git; proofs are regenerated on demand.
 .secrets/
 proofs/
+
+# Phase 3: the prover worker build (npm run zk:build-worker); outputs, not sources
+/public/zk/
+# Playwright
+/test-results/
+/playwright-report/

@@ -3,6 +3,11 @@
  *
  *   POST /api/requests/issuance  { secret_hash }  → the request, as recorded
  *   GET  /api/requests/issuance                   → { requests }
+ *   GET  /api/requests/issuance?id=<id>           → { request }, open or issued
+ *
+ * Phase 3: the ask may carry `key_hash`, the hash of the owner's sealed-link
+ * key, so the issuer's browser can send the week's record back sealed
+ * (docs/PHASE3_SPEC.md §2, D3).
  *
  * The owner's side of issuance, built like an ask for a week (../route.ts). The
  * first holder is taken **from the SEP-10 session**, never from the body: a body
@@ -23,6 +28,7 @@ import { readIssuer } from "@/lib/contract";
 import {
   RequestStoreUnavailable,
   loadIssuanceRequests,
+  parseKeyHash,
   saveIssuanceRequests,
   type IssuanceRequest,
 } from "@/lib/requests";
@@ -39,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let body: { secret_hash?: unknown; owner?: unknown };
+  let body: { secret_hash?: unknown; owner?: unknown; key_hash?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -59,10 +65,12 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   let h: bigint;
+  let keyHash: string | undefined;
   try {
     h = parseSecretHash(body.secret_hash);
+    keyHash = parseKeyHash(body.key_hash);
   } catch (error) {
-    return Response.json({ error: `secret_hash: ${(error as Error).message}` }, { status: 400 });
+    return Response.json({ error: (error as Error).message }, { status: 400 });
   }
 
   try {
@@ -90,6 +98,7 @@ export async function POST(request: Request): Promise<Response> {
       id: randomUUID(),
       by: caller,
       secret_hash: h.toString(),
+      ...(keyHash ? { key_hash: keyHash } : {}),
       requested_at: new Date().toISOString(),
       status: "open",
     };
@@ -117,6 +126,13 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     const [issuer, all] = await Promise.all([readIssuer(), loadIssuanceRequests()]);
+    // One ask by id, open or issued, for the issuer or the asker: what the
+    // issuer's browser reads to check a sealed-link key before sealing.
+    const id = new URL(request.url).searchParams.get("id");
+    if (id) {
+      const ask = all.find((r) => r.id === id && !r.direct && (caller === issuer || r.by === caller));
+      return ask ? Response.json({ request: ask }) : Response.json({ error: "no such request" }, { status: 404 });
+    }
     const requests =
       caller === issuer
         ? all.filter((r) => r.status === "open")

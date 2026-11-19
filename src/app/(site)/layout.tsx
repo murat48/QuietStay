@@ -4,11 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Nav } from "@/components/Nav";
+import { ProverNotice } from "@/components/ProverNotice";
 import { SiteAnalytics } from "@/components/SiteAnalytics";
 import { WalletButton, WalletProvider } from "@/components/WalletProvider";
 import { CONTRACT_ID, SURVEY_URL, explorer } from "@/lib/config";
 
-import mark from "../../public/brand/quietstay-mark.png";
+import mark from "../../../public/brand/quietstay-mark.png";
 import "./globals.css";
 
 // Body text, and the logo's own geometric capitals for the wordmark.
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <code>{CONTRACT_ID}</code> ↗
                 </a>
               </p>
+              <ProverNotice />
             </footer>
           </div>
         </WalletProvider>

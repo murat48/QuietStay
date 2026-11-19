@@ -38,6 +38,7 @@ import {
   RequestStoreUnavailable,
   loadRequests,
   openRequestBy,
+  parseKeyHash,
   saveRequests,
   type TransferRequest,
 } from "@/lib/requests";
@@ -58,6 +59,8 @@ export async function POST(request: Request): Promise<Response> {
     right_id?: unknown;
     /** Required to ask to buy: from /api/requests/consent, plus the wallet's signature. */
     consent?: { next_secret_hash?: unknown; entry?: unknown; signature?: unknown; valid_until_ledger?: unknown };
+    /** Phase 3: the buyer's sealed-link key hash (spec §2). */
+    key_hash?: unknown;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -68,6 +71,12 @@ export async function POST(request: Request): Promise<Response> {
   const rightId = Number(body.right_id);
   if (!Number.isInteger(rightId) || rightId < 1) {
     return Response.json({ error: "right_id must be a positive integer" }, { status: 400 });
+  }
+  let keyHash: string | undefined;
+  try {
+    keyHash = parseKeyHash(body.key_hash);
+  } catch (error) {
+    return Response.json({ error: (error as Error).message }, { status: 400 });
   }
 
   try {
@@ -174,6 +183,7 @@ export async function POST(request: Request): Promise<Response> {
       requested_at: new Date().toISOString(),
       status: "open",
       ...(consent ? { consent } : {}),
+      ...(keyHash && consent ? { key_hash: keyHash } : {}),
     };
 
     const all = await loadRequests(rightId);

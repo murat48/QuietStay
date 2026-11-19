@@ -44,12 +44,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { RoleGate } from "@/components/RoleGate";
 import { useWallet } from "@/components/WalletProvider";
-import { canonicalText, commit } from "@/lib/canonical";
+import { canonicalText, commit, type JsonValue } from "@/lib/canonical";
 import { explorer } from "@/lib/config";
 import { describeError, formatDate } from "@/lib/format";
 import type { IssuanceRequest } from "@/lib/requests";
 import { issueScreenView } from "@/lib/roles";
+import { proverSupported } from "@/lib/prover-client";
 import { issuanceRequestPrefill, parseSecretHash } from "@/lib/secret-hash";
+import { requestLink } from "@/lib/sealed";
+import { newSealKey, newSecret, putIssued, sealKey } from "@/lib/vault";
 import {
   isoWeekNumber,
   onChainWindows,
@@ -337,6 +340,17 @@ export default function IssueScreen() {
       if (!response.ok) throw new Error(body.error ?? "issuance failed");
       // Kept as sent: an edit made after issuing must not change what is saved.
       setResult({ ...body, issuedText: recordText });
+      // Phase 3 (D3): keep this browser's copy of the record, so the issuer can
+      // seal it to the owner from /receive when the owner sends a request link.
+      if (selected?.key_hash && body.right_id !== undefined) {
+        await putIssued({
+          right_id: body.right_id,
+          record: record as JsonValue,
+          owner: (record as { owner: { stellar_account: string } }).owner.stellar_account,
+          h: selected.secret_hash,
+          ask_id: selected.id,
+        });
+      }
       // An issued request drops off the list.
       if (selected) {
         setAsks((current) => current.filter((ask) => ask.id !== selected.id));
@@ -1034,26 +1048,61 @@ function IssuanceAsk() {
     load().catch((caught: unknown) => setError(describeError(caught)));
   }, [authenticated, load]);
 
-  const ask = useCallback(async () => {
-    setSending(true);
-    setError(null);
-    setNote(null);
-    try {
-      const response = await authFetch("/api/requests/issuance", {
-        method: "POST",
-        body: JSON.stringify({ secret_hash: hashText.trim() }),
-      });
-      const body = (await response.json()) as { note?: string; error?: string };
-      if (!response.ok) throw new Error(body.error ?? "the request was not recorded");
-      setNote(body.note ?? "Asked.");
-      setHashText("");
-      await load();
-    } catch (caught) {
-      setError(describeError(caught));
-    } finally {
-      setSending(false);
-    }
-  }, [authFetch, hashText, load]);
+  /**
+   * Phase 3 (D3): make the secret and a sealed-link key in this browser, keep
+   * both in its vault, and send only `h` and the key's hash. With `cliHash`,
+   * the Phase 2 path: an `h` made by `npm run zk:secret`, and no sealed link.
+   */
+  const ask = useCallback(
+    async (cliHash?: string) => {
+      setSending(true);
+      setError(null);
+      setNote(null);
+      try {
+        let payload: { secret_hash: string; key_hash?: string };
+        if (cliHash !== undefined) {
+          payload = { secret_hash: cliHash.trim() };
+        } else {
+          const h = await newSecret("issuance ask");
+          const key = await newSealKey("issuance ask");
+          payload = { secret_hash: h.toString(), key_hash: key.keyHash };
+        }
+        const response = await authFetch("/api/requests/issuance", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        const body = (await response.json()) as { note?: string; error?: string };
+        if (!response.ok) throw new Error(body.error ?? "the request was not recorded");
+        setNote(
+          cliHash !== undefined
+            ? (body.note ?? "Asked.")
+            : "Asked. Your week's secret was made and kept in this browser; only its hash was sent. " +
+                "Once the week is issued, send the issuer the request link below.",
+        );
+        setHashText("");
+        await load();
+      } catch (caught) {
+        setError(describeError(caught));
+      } finally {
+        setSending(false);
+      }
+    },
+    [authFetch, load],
+  );
+
+  // A request link for each ask this browser holds the key for.
+  const [links, setLinks] = useState<Record<string, string>>({});
+  useEffect(() => {
+    void (async () => {
+      const out: Record<string, string> = {};
+      for (const r of mine) {
+        if (!r.key_hash) continue;
+        const key = await sealKey(r.key_hash);
+        if (key) out[r.id] = requestLink(window.location.origin, "issue", r.id, key.publicRaw);
+      }
+      setLinks(out);
+    })();
+  }, [mine]);
 
   if (!address || !authenticated) {
     return (
@@ -1094,33 +1143,35 @@ function IssuanceAsk() {
           </dd>
         </dl>
         <p className="muted">
-          First, on your own machine, make the week&apos;s secret. Keep the file: with it you can
-          rent the week out or sell it, and nobody else can — the issuer included.
+          Your browser makes the week&apos;s secret and keeps it. Only its hash is sent. With the
+          secret, this browser can rent the week out or sell it, and nobody else can — the issuer
+          included. If this browser&apos;s storage is cleared, that ability is lost for good.
         </p>
-        <pre>npm run zk:secret -- .secrets/my-week.json</pre>
-        <div className="field">
-          <label htmlFor="ask-secret-hash">Your h</label>
-          <input
-            id="ask-secret-hash"
-            className="mono"
-            value={hashText}
-            onChange={(event) => setHashText(event.target.value)}
-            placeholder="the number npm run zk:secret printed — decimal or hex"
-            spellCheck={false}
-          />
-          {hashError ? <div className="note bad">{hashError}</div> : null}
-          <p className="muted">
-            Only this hash is sent. The secret in the file never leaves your machine. The link{" "}
-            <code>npm run zk:secret</code> prints fills it in.
-          </p>
-        </div>
-        <button
-          className="primary"
-          onClick={() => void ask()}
-          disabled={sending || hashText.trim() === "" || hashError !== null}
-        >
-          {sending ? "sending…" : "Request issuance"}
+        <button className="primary" onClick={() => void ask()} disabled={sending || !proverSupported()}>
+          {sending ? "making your secret…" : "Request issuance"}
         </button>
+        {!proverSupported() ? (
+          <div className="note bad">This browser cannot keep a secret for you: it lacks Web Workers, WebCrypto or IndexedDB.</div>
+        ) : null}
+        <details style={{ marginTop: "1rem" }}>
+          <summary>Advanced: I made my secret with the command line</summary>
+          <pre>npm run zk:secret -- .secrets/my-week.json</pre>
+          <div className="field">
+            <label htmlFor="ask-secret-hash">Your h</label>
+            <input
+              id="ask-secret-hash"
+              className="mono"
+              value={hashText}
+              onChange={(event) => setHashText(event.target.value)}
+              placeholder="the number npm run zk:secret printed — decimal or hex"
+              spellCheck={false}
+            />
+            {hashError ? <div className="note bad">{hashError}</div> : null}
+          </div>
+          <button onClick={() => void ask(hashText)} disabled={sending || hashText.trim() === "" || hashError !== null}>
+            Request issuance with this h
+          </button>
+        </details>
         {error ? <div className="note bad" style={{ marginTop: "1rem" }}>{error}</div> : null}
         {note ? <div className="note accent" style={{ marginTop: "1rem" }}>{note}</div> : null}
       </div>
@@ -1144,11 +1195,20 @@ function IssuanceAsk() {
                         </a>
                       </>
                     ) : null}
-                    <span className="muted"> — ask the issuer for the record file</span>
+                    {links[r.id] ? null : <span className="muted"> — ask the issuer for the record file</span>}
                   </>
                 ) : (
                   <span className="muted">waiting for the issuer</span>
                 )}
+                {links[r.id] ? (
+                  <>
+                    <p className="muted" style={{ margin: "0.4rem 0" }}>
+                      Send the issuer this request link. Once the week is issued they open it and
+                      send back a reply link; open that here, in this browser.
+                    </p>
+                    <textarea readOnly value={links[r.id]} style={{ minHeight: "4rem" }} data-testid="issue-request-link" />
+                  </>
+                ) : null}
               </li>
             ))}
           </ul>

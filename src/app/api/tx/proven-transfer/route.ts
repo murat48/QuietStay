@@ -37,8 +37,8 @@ function parseTransferFile(raw: unknown): ProvenTransfer {
   }
   const from = String(t.from);
   const to = String(t.to);
-  if (!/^G[A-Z2-7]{55}$/.test(from) || !/^G[A-Z2-7]{55}$/.test(to)) {
-    throw new Error("the transfer must be between two G… accounts");
+  if (!/^[GC][A-Z2-7]{55}$/.test(from) || !/^[GC][A-Z2-7]{55}$/.test(to)) {
+    throw new Error("the transfer must be between G… accounts or C… smart wallets");
   }
   const rightId = Number(t.right_id);
   if (!Number.isInteger(rightId) || rightId < 1) throw new Error("right_id is not a positive integer");

@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-19T11:22:09.163Z",
+  "browser": "firefox 159.0 (Playwright 1.65.0, headless)",
+  "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:159.0) Gecko/20100101 Firefox/159.0",
+  "device": "Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz, 12 logical cores (hardwareConcurrency 12), 15 GiB RAM, Linux (WSL2)",
+  "proof": "rental, right 1, inventory/records/week-01.json, random test secret",
+  "signals_match_cli": true,
+  "first_proof_ms": 1905,
+  "runs_ms": [
+    594,
+    573,
+    541,
+    643,
+    539,
+    556,
+    550
+  ],
+  "median_ms": 556,
+  "median_full_prove_ms": 512,
+  "command": "npx tsx e2e/prover-bench.ts --runs 7 --browser firefox"
+}

@@ -1,7 +1,17 @@
 /**
- * Check that no GPL-3.0 code reaches the web app's browser bundle.
+ * Check that no GPL-3.0 code reaches the web app's browser bundle, except the
+ * separate prover worker (Phase 3, decision D2).
  *
  *   npm run build && npm run zk:check-bundle
+ *
+ * Phase 3 proves in the browser, which cannot avoid GPL code: the compiled
+ * circuit itself derives from circomlib's Poseidon. All of it lives in one
+ * separately built file, public/zk/prover.worker.js (source: prover-worker/,
+ * GPL-3.0), which the Apache-2.0 app talks to only by postMessage. The checks
+ * below therefore cover the app's own bundle (.next/static, where none may
+ * appear), and section 4 checks the worker: that the markers are there and
+ * nowhere else, that its first line names the license and the source, and
+ * that the GPL text and the in-app notice ship with it.
  *
  * The GPL-3.0 code in this repository is circuits/gpl/ and the iden3 packages
  * it needs (snarkjs, ffjavascript, circomlib and their dependencies). It serves
@@ -170,9 +180,15 @@ function main() {
     // An error message unique to circuits/gpl/poseidon.ts; strings survive minification.
     "Poseidon: bad arity",
   ];
+  // The in-app license notice (D2) names snarkjs and circomlib in words. That
+  // one sentence is removed before searching; the names anywhere else still count.
+  const NOTICE =
+    "Proofs are made by an in-browser prover licensed under the GPL-3.0 (source: prover-worker/, " +
+    "built from snarkjs and circomlib). The rest of QuietStay is Apache-2.0.";
   const hits: string[] = [];
   for (const { f, text } of bundle) {
-    for (const m of markers) if (text.includes(m)) hits.push(`${f.replace(root + "/", "")}: ${m}`);
+    const code = text.split(NOTICE).join("");
+    for (const m of markers) if (code.includes(m)) hits.push(`${f.replace(root + "/", "")}: ${m}`);
   }
   report(hits.length === 0, `${files.length} files in .next/static, none containing ${markers.length} GPL-only markers`);
   for (const h of hits) console.log(`      ${h}`);
@@ -189,7 +205,34 @@ function main() {
     : [];
   report(serverHits.length > 0, `control: the server build does contain it (${serverHits.length} files under .next/server)`);
 
-  console.log(failed === 0 ? "\nNo GPL-3.0 code in the browser bundle." : `\n${failed} check(s) FAILED.`);
+  console.log("4. The GPL prover worker is separate, labelled, and licensed (D2)");
+  const workerFile = resolve("public/zk/prover.worker.js");
+  if (!existsSync(workerFile)) throw new Error("no public/zk/prover.worker.js — run `npm run zk:build-worker` first");
+  const worker = readFileSync(workerFile, "latin1");
+  const firstLine = worker.split("\n", 1)[0]!;
+  report(
+    firstLine.includes("SPDX-License-Identifier: GPL-3.0") && firstLine.includes("prover-worker/"),
+    "public/zk/prover.worker.js: its first line names GPL-3.0 and its source, prover-worker/",
+  );
+  const inWorker = markers.filter((m) => worker.includes(m));
+  report(inWorker.length >= 3, `control: the worker does contain the GPL code (${inWorker.length}/${markers.length} markers)`);
+  const gplText = (f: string) => existsSync(f) && readFileSync(f, "utf8").includes("GNU GENERAL PUBLIC LICENSE");
+  report(gplText(resolve("prover-worker/LICENSE")), "prover-worker/LICENSE is the GPL-3.0 text");
+  report(gplText(resolve("public/zk/LICENSE")), "public/zk/LICENSE is served with the worker");
+  report(
+    bundle.some(({ text }) => text.includes(NOTICE)),
+    "the in-app license notice is in the built app",
+  );
+  // The app reaches the worker by URL only; no module under src/ imports its source.
+  const workerImporters = sources.filter((f) => specifiersOf(f).some((sp) => sp.includes("prover-worker")));
+  report(workerImporters.length === 0, "no module under src/ imports prover-worker/ (the app loads it by URL)");
+  for (const f of workerImporters) console.log(`      ${f}`);
+
+  console.log(
+    failed === 0
+      ? "\nNo GPL-3.0 code in the app's browser bundle; all of it is in the separate prover worker."
+      : `\n${failed} check(s) FAILED.`,
+  );
   process.exit(failed === 0 ? 0 : 1);
 }
 
