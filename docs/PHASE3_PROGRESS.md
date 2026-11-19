@@ -9,7 +9,7 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: Step 2 in progress (2026-11-19)
+- Current step: Step 2 checkpoint (2026-11-19), waiting for your review
 
 ## Open issues
 
@@ -20,7 +20,10 @@ actually run.
 | High | D12: how the allowance is given | 1 (review) | resolved: approved, set by the offer calls; DESIGN.md documents the leftover allowance |
 | Medium | D4a: record-before-offer vs key hash in the offer | 1 (review 2) | resolved: option 1 approved with three additions (review 3) |
 | Medium | Upstash connection and plan | 1 (review 2) | resolved: you confirmed `upstash-kv-cobalt-pillow` (Upstash for Redis) is connected and on the Free plan (Vercel dashboard, 2026-11-19) |
-| Medium | Sealed-link page must load no analytics: separate root layout for `/receive`, no-leak test checks analytics endpoints | 1 (review 2) | open, Step 2 |
+| Medium | Sealed-link page must load no analytics: separate root layout for `/receive`, no-leak test checks analytics endpoints | 1 (review 2) | resolved 2026-11-19: `(sealed)` root layout; checked by e2e/no-leak.spec.ts |
+| High | **Passkey sign-in.** The app's server routes (asks, issuance asks, building proven transfers) need a SEP-10 session, and SEP-10 works only for `G…` accounts. The spec does not say how a `C…` smart wallet signs in, so the passkey screens are not built. Needs your decision | 2 | open |
+| Medium | Fee route key: spec §13 names `qs-testnet-fee`, made by you, with its secret in `QUIETSTAY_TESTNET_FEE_SECRET`. I made `qs-fee-testnet` for the probe only. `/api/tx/sponsor` is not built yet (it waits on passkey sign-in) | 2 | open |
+| Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device is still to do | 2 | open |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
 | Low | This machine lacks the system libraries Playwright's browsers need (`libnss3`, `libnspr4`, `libasound2t64`), and `sudo` needs your password. Workaround: the Ubuntu packages, unpacked without root into `~/.local/share/qs-playwright-deps`, plus `LD_LIBRARY_PATH`. Proper fix: `sudo npx playwright install-deps chromium firefox` | 2 | open |
 | Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
@@ -189,46 +192,116 @@ of the spec, the rest at the second review of `def5eb6`.
 - Open: none for Step 1. Step 2 starts in a new session.
 
 ### Step 2 — Browser proofs, reusable transfer check, passkeys
-- Date: 2026-11-19 (in progress)
-- Branch / commit: `phase3`; `c51691e` (transfer check), `68bad46` (CLI and
-  pins), `df21722` (passkey probe)
-- Done so far:
+- Date: 2026-11-19 (STOP: checkpoint, waiting for your review)
+- Branch / commit: `phase3`. `c51691e` transfer check · `68bad46` CLI and pins ·
+  `df21722` passkey probe · `add5428` browser proving · the final Step 2 commit
+  is in the git log.
+- Done:
   - **Stellar CLI 30.0.1** (`f2a7b741`), the official release binary via
     `cargo binstall stellar-cli@30.0.1`. It is byte-identical to the binary in
     the v30.0.1 release tarball (sha256 `d161f7ca…367c`). `cargo install`
     failed because `libdbus-1-dev` is missing and installing it needs sudo.
     The testnet protocol-30 warning is gone.
   - **Pinned exactly:** stellar-sdk 16.4.1, smart-account-kit 0.10.0,
-    stellar-wallets-kit 2.5.0, @playwright/test 1.65.0. Recorded in
-    docs/SETUP.md.
-  - **`authorize_transfer`** in `auth.rs` is now the one path that moves a
-    right; `transfer` calls it. D1's `split_address` uses tag 2^128 for C;
-    `issue` accepts C. `cargo test -p quietstay-rights`: 73/73 (62 Phase 2,
-    2 of them changed in meaning, plus 11 new, among them an unmocked
-    `__check_auth` wallet: signed, refused, missing, signed for another
-    transfer). `npm run zk:test`: 18/18.
-  - **On-chain checks (spec §12).** The WebAuthn verifier WASM is `e63a030d…`
-    on both networks (`CC7EKIH…` testnet, `CB7HENH…` mainnet). Account WASM
-    `c514d35e…` is installed on both. They declare protocols 26 and 28, both
-    ≤ mainnet's 29. The Step 2 rights WASM `0c6e4b2f…` declares v27.
-  - **Passkey probe** (`npm run passkey:probe`): a real WebAuthn credential
-    (Chromium 158 headless, CDP virtual authenticator) authorized a proven
-    rental from smart wallet `CDSI6FML…KOKWY` on testnet. Read back from chain:
-    the only auth entry is the wallet's, with an External signer on
-    `CC7EKIH…`. Min resource fee 355,526 stroops.
+    stellar-wallets-kit 2.5.0, @playwright/test 1.65.0, esbuild 0.28.2.
+    Recorded in docs/SETUP.md.
+  - **The reusable transfer check.** `auth.rs::authorize_transfer(right, from,
+    to, mode, h', proof, signals)` is the only path that moves a right, and
+    `transfer` (sale and rental) calls it. D1: `split_address` tags C with
+    2^128; `issue` accepts a C owner.
+  - **In-browser proving.**
+    - `prover-worker/` (GPL-3.0, LICENSE, README) builds
+      `public/zk/prover.worker.js`. It checks `transfer.wasm` and
+      `transfer.zkey` against SHA256SUMS (compiled in) before proving.
+    - The Apache app talks to it only by `postMessage` (D2). The license
+      notice is in the footer and on the screens that prove.
+    - The vault (IndexedDB) holds secrets, records and sealed-link keys.
+    - Sealed links (ECDH P-256, then HKDF, then AES-GCM) go through
+      `/receive`, which has its own root layout with no analytics (D3, D4).
+  - **The screens.**
+    - Issue: the owner's ask makes `s` in the browser.
+    - List: the buyer's ask makes `s'` in the browser.
+    - Transfer: proves in the browser against an open ask.
+    - No file and no command line on any of them. The CLI `h` stays under
+      "Advanced".
+  - **Passkeys, kit level.** The WebAuthn verifier WASM is `e63a030d…` on both
+    networks. Account WASM `c514d35e…` is installed on both. They declare
+    protocols 26 and 28, both ≤ 29. Rights WASM `0c6e4b2f…` declares v27.
+    - The passkey probe passed, and so did the hand-off to
+      `scripts/mainnet-sign-submit.sh`, rehearsed on testnet.
+    - Unsupported-browser detection is in `src/lib/passkey.ts`.
+    - **Passkey screens are not built:** see open issue "Passkey sign-in".
+  - `check-privacy`: Phase 1 and Phase 2 evidence txs are now older than RPC
+    retention. It reads them from Horizon, which serves no meta. So for those
+    txs the envelope and result are scanned, not the events, and the output
+    says so. Passes, with and without `--phase2`.
+  - Docs: `docs/PROOF_TIMES.md`; CIRCUIT.md §5 (tagged encoding); DESIGN.md
+    limitations 4 and 6; SETUP.md, the browser-test section.
+- Tests (all run 2026-11-19):
+  - `cd contracts && cargo test`: rights 73/73 (62 Phase 2, 2 of them
+    changed in meaning, plus 11 new), verifier 6/6, measure 1/1.
+  - `npm run zk:test`: 27/27 (18 Phase 2 and Step 1, plus 9 new
+    browser-prover parity tests).
+  - `npx playwright test e2e/prover.spec.ts`: 3/3. Genuine keys accepted;
+    tampered zkey refused; substituted wasm refused.
+  - `npx playwright test e2e/passkey.spec.ts`: 4/4. Passkey rental;
+    tampered signature refused on chain (`Error(Auth, InvalidAction)`);
+    cancelled prompt (`NotAllowedError`, nothing signed, nothing moved);
+    WebAuthn detection.
+  - `npx playwright test e2e/no-leak.spec.ts`: 2/2. A sale and a rental
+    proved in the browser. 409 requests from the owner's, buyer's and renter's
+    browsers, plus the issuer's while it sealed, including the worker's fetches
+    of the circuit and key. None contained s, s', the record (or its salt, id,
+    name, email or deed), d, d_hi, d_lo or a link fragment: 24 values, 0 leaks.
+    `/receive` made no analytics request and its HTML references none. A
+    browser without Workers sees the "cannot prove" message. Evidence:
+    `e2e/results/no-leak-2026-11-19.json`.
+  - `npm run zk:check-bundle`: passes (sections 1–4).
+  - `npm run check-privacy` and `-- --phase2`: pass (see above).
+  - Proof tests at contract level: valid, tampered, reused, wrong-account
+    and expired proofs are the Phase 2 tests, now through
+    `authorize_transfer`, plus C-address equivalents.
+- Measured (proof times, `npx tsx e2e/prover-bench.ts --runs 7`; same machine,
+  i7-10750H; see docs/PROOF_TIMES.md):
+  - Chromium 158 (headless): median **498 ms**, first proof 1,159 ms.
+  - Firefox 159 (headless): median **556 ms**, first proof 1,905 ms.
 - Tx hashes (testnet):
   - Step 2 staging contract `CCR2Z4IQNKXO2YCTQI2JBU5YLQTFXCXWVY6HV6H6TWNFWL5RAQ3IMAX5`
     deployed: `ab335e2bfc82d7e8c56c0d06eb73f1e0de6c6a3af0681d8fc1f7d385974aa667`
-  - Wallet deployed: `c5fabe85f29f732ef49c8381148a7ae851c093521dd9c2959674909f654217bd`
-  - Right #1 issued to the wallet: `26dde7846d1a5cc8de176bde7c51aa87c5e1cfb23db5b525cd214c27ae9549b0`
-  - Passkey-authorized transfer: `059a5ae5555e3522fb1b4869d580e5dd8954558d984ed7d3fc255baacadbbd95`
-  - (An earlier wallet, `CDK2LNXJ…CMV4` / `72b75b07…9a71`, was deployed in a
-    first run that stopped before connecting. Its virtual passkey is gone, so
-    the wallet is unusable and holds nothing.)
+  - Probe 1: wallet `CDSI6FMLEA5LRMCTFU2RBMVBMFHWH4TJN7PEMEWSK477S4KP2KAKOKWY`
+    - deployed: `c5fabe85f29f732ef49c8381148a7ae851c093521dd9c2959674909f654217bd`
+    - right #1 issued: `26dde7846d1a5cc8de176bde7c51aa87c5e1cfb23db5b525cd214c27ae9549b0`
+    - **passkey-authorized transfer** (wallet → qs-renter):
+      `059a5ae5555e3522fb1b4869d580e5dd8954558d984ed7d3fc255baacadbbd95`
+  - Mainnet-flow rehearsal: wallet `CCGONFSPIWO66M63VGDSG5YVL4WG2TFLYJHLHTNFQNWRYNSGJ5G6WQXA`
+    - deployed: `10a7d2f78de8a8cdfd7624b43b674cf80b86b4253f22e5885556e5cb21108a68`
+    - right #3, transfer sent by `mainnet-sign-submit.sh … --network testnet`:
+      `01719bc9082f72e1d7d7b85fee704c6da661770a79478f8b63803800774730a9`
+      (SUCCESS, ledger 5,815,136)
+  - The first hand-off attempt (wallet `CA2KXJQM…GZT`, right #2) was refused
+    by the script: fee below the re-simulated one, 3-minute time bound.
+    Nothing was sent. The builder now adds headroom and a one-hour bound.
+  - An unused wallet `CDK2LNXJ…CMV4` (`72b75b07…9a71`) is left from a first
+    probe run that stopped before connecting. It holds nothing.
+  - Throwaway contracts from the e2e runs: `CDASUH6V…CBZD`, `CBBDZEUI…ZCTT`,
+    `CACK7NC6…SJE3`, plus the passkey spec's own. Their issuers were random
+    keys, now discarded.
+  - No-leak run (contract `CDRWQ5OOFNC3AD6CCEYLTI3N25DNRCLSKHEPHZBD64VR6IWQZPIAJS5U`):
+    - sale proved in the owner's browser: `398b365e3a52aaff3ee4814c4f15f75084b26d733cb3a045e188d601913caa0f` (SUCCESS, ledger 5,815,911)
+    - rental proved in the buyer's browser with s': `9bd55f30fc6c644b74a112e2ca90ac7866934343e188e88ff4dc9bca098c7437` (SUCCESS, ledger 5,815,916)
+  - Passkey spec rental: `c513ea1c002d17abf35981eabb29a33f17467fe0f32a010ad66ebb6fe5788b1d`
 - New identity: `qs-fee-testnet` (`GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z`),
-  testnet fee payer only (D6).
-- Measured (proof times):
-- Open:
+  made by me for the probe. Spec §13 names `qs-testnet-fee`, made by you, for
+  the fee route. See open issues.
+- Supported browsers:
+  - Proving: Chromium 158 and Firefox 159, desktop Linux, headless (measured).
+    Any browser with Web Workers, WebCrypto and IndexedDB should work; others
+    get a clear message.
+  - Passkeys: Chromium with a platform authenticator (a CDP virtual
+    authenticator in the tests). Not yet tested on a physical device, in
+    Firefox or in Safari.
+- Open: see the table at the top (Passkey sign-in, fee route key, real-device
+  passkey).
 
 ### Step 3 — USDC sale, rental escrow and pilot arbiter
 - Date:

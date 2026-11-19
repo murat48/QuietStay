@@ -24,7 +24,8 @@ import { useWallet } from "@/components/WalletProvider";
 import type { JsonValue } from "@/lib/canonical";
 import { CONTRACT_ID } from "@/lib/config";
 import { describeError, formatDate, shortAddress } from "@/lib/format";
-import { prover, useProverSupported } from "@/lib/prover-client";
+import { prover } from "@/lib/prover-client";
+import { useProverSupported } from "@/lib/use-prover-supported";
 import {
   open,
   parseFragment,

@@ -10,8 +10,6 @@
  * Browser only.
  */
 
-import { useSyncExternalStore } from "react";
-
 import type { JsonValue } from "./canonical";
 import type { TransferContext } from "./zk-fields";
 
@@ -86,14 +84,3 @@ export const prover = {
     }),
 };
 
-/**
- * `proverSupported()` for render code: `null` until mounted, so the server's
- * HTML (where there is no Worker) and the browser's first render agree.
- */
-export function useProverSupported(): boolean | null {
-  return useSyncExternalStore(
-    () => () => {},
-    () => proverSupported(),
-    () => null,
-  );
-}

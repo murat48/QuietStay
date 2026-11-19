@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-19T15:47:01.461Z",
+  "command": "npx playwright test e2e/no-leak.spec.ts",
+  "contract": "CDRWQ5OOFNC3AD6CCEYLTI3N25DNRCLSKHEPHZBD64VR6IWQZPIAJS5U",
+  "sale_tx": "https://stellar.expert/explorer/testnet/tx/398b365e3a52aaff3ee4814c4f15f75084b26d733cb3a045e188d601913caa0f",
+  "rental_tx": "https://stellar.expert/explorer/testnet/tx/9bd55f30fc6c644b74a112e2ca90ac7866934343e188e88ff4dc9bca098c7437",
+  "requests_recorded": 409,
+  "requests_by_browser": {
+    "owner": 219,
+    "issuer (sealing)": 13,
+    "buyer": 150,
+    "renter": 27
+  },
+  "worker_requests": [
+    "owner: /zk/prover.worker.js",
+    "owner: /zk/prover.worker.js",
+    "buyer: /zk/prover.worker.js",
+    "owner: /zk/prover.worker.js",
+    "buyer: /zk/prover.worker.js",
+    "owner: /zk/prover.worker.js",
+    "owner: /zk/transfer.wasm",
+    "owner: /zk/transfer.zkey",
+    "buyer: /zk/prover.worker.js",
+    "buyer: /zk/transfer.wasm",
+    "buyer: /zk/transfer.zkey"
+  ],
+  "forbidden_values_checked": 24,
+  "secrets_found_in_vaults": 2,
+  "leaks": []
+}

@@ -26,6 +26,16 @@ export const RIGHTS_WASM_HASH = "0c6e4b2fdfd3424b9c044c2d8d741b0ed404b884b8f7086
 export async function fund(kp: Keypair): Promise<void> {
   const res = await fetch(`https://friendbot.stellar.org/?addr=${kp.publicKey()}`);
   if (!res.ok) throw new Error(`friendbot refused ${kp.publicKey()}: HTTP ${res.status}`);
+  // Friendbot answers once Horizon has the account; RPC can lag a ledger or two.
+  for (let i = 0; i < 30; i++) {
+    try {
+      await server.getAccount(kp.publicKey());
+      return;
+    } catch {
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  throw new Error(`RPC never saw ${kp.publicKey()} after funding`);
 }
 
 export async function submit(tx: ReturnType<TransactionBuilder["build"]>, signer: Keypair) {

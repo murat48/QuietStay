@@ -86,7 +86,7 @@ function record(who: string, context: BrowserContext) {
 
 async function signIn(page: Page, path: string) {
   await page.goto(path);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("button", { name: "Disconnect" })).toBeVisible();
   await expect(page.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0, { timeout: 60_000 });
 }
@@ -175,7 +175,7 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   const stopIssuer = record("issuer (sealing)", I.c);
   // A navigation across root layouts is a full page load, so sign in again there.
   await I.page.goto(ownerLink.replace(/^https?:\/\/[^/]+/, ""));
-  await I.page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await I.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
   await I.page.getByRole("button", { name: "Seal the record" }).click({ timeout: 60_000 });
   const issuerReply = await I.page.getByTestId("reply-link").inputValue();
   links.push(issuerReply);
@@ -196,7 +196,7 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   links.push(buyerLink);
 
   await O.page.goto(buyerLink.replace(/^https?:\/\/[^/]+/, ""));
-  await O.page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await O.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
   await O.page.getByRole("button", { name: "Seal the record" }).click({ timeout: 60_000 });
   const ownerReply = await O.page.getByTestId("reply-link").inputValue();
   links.push(ownerReply);

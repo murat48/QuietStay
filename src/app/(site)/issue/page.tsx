@@ -49,7 +49,7 @@ import { explorer } from "@/lib/config";
 import { describeError, formatDate } from "@/lib/format";
 import type { IssuanceRequest } from "@/lib/requests";
 import { issueScreenView } from "@/lib/roles";
-import { useProverSupported } from "@/lib/prover-client";
+import { useProverSupported } from "@/lib/use-prover-supported";
 import { issuanceRequestPrefill, parseSecretHash } from "@/lib/secret-hash";
 import { requestLink } from "@/lib/sealed";
 import { newSealKey, newSecret, putIssued, sealKey } from "@/lib/vault";
