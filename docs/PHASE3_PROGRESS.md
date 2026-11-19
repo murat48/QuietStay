@@ -9,7 +9,7 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: Step 1, revised after the first review. Waiting for approval of D4, D5 and D12
+- Current step: Step 1 approved (second review, 2026-11-19). Step 2 starts in a new session. D4a ordering to confirm before Step 3
 
 ## Open issues
 
@@ -17,8 +17,10 @@ actually run.
 | --- | --- | --- | --- |
 | High | D2: browser proving puts GPL-3.0 code in the browser | 1 | resolved: approved; LICENSE in `prover-worker/` + in-app notice (spec §2) |
 | High | D6: who pays fees for passkey txs | 1 | resolved: approved with conditions (spec §13) |
-| High | D12: the fee route may sign only QuietStay calls, but a standalone USDC `approve` calls USDC; proposal: offers set the allowance by sub-invocation | 1 (review) | open, needs approval |
-| Medium | Analytics could report full URLs including `#` fragments of sealed record links; `/receive` strips them and the no-leak test must cover it | 1 (review) | open, Step 2 |
+| High | D12: how the allowance is given | 1 (review) | resolved: approved, set by the offer calls; DESIGN.md documents the leftover allowance |
+| Medium | D4a: "record before offer" and "key hash in the offer, checked before encrypting" cannot both hold literally; proposed: on-chain `request_record` binds the key, the offer copies it (spec, Decisions) | 1 (review 2) | open; needed before Step 3, not Step 2 |
+| Medium | Upstash: used by the code (`src/lib/kv.ts`), and VERCEL.md says the free tier suffices. Whether the deployed project is connected, and its plan, cannot be checked from this machine (no Upstash vars locally; Vercel CLI not linked) | 1 (review 2) | open: check the Vercel dashboard → Storage |
+| Medium | Sealed-link page must load no analytics: separate root layout for `/receive`, no-leak test checks analytics endpoints | 1 (review 2) | open, Step 2 |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | open |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
 
@@ -27,19 +29,47 @@ Severity: Critical (blocks mainnet), High, Medium, Low.
 ## Approved decisions
 
 Decisions I approved at checkpoints. Do not reopen them unless something
-breaks.
+breaks. Full text: `docs/PHASE3_SPEC.md`, "Decisions".
 
-- 2026-11-19, D1: bind G or C addresses with a kind tag in `hi`
-  (G = 0, C = 1); no circuit change. Conditions: no range check confirmed;
-  C-holder end-to-end test added; contract-level test in Step 2. Stop if a
-  circuit change turns out to be needed.
-- 2026-11-19, D2: the GPL-3.0 prover lives only in a separate worker, with a
-  LICENSE file in the worker folder and an in-app license notice.
-- 2026-11-19, D6:
-  - Testnet fee route: signs only QuietStay calls or smart-wallet deployment,
-    is rate-limited, and its key has no other role.
-  - Mainnet: a CLI signing script, with an auth-entry expiry long enough to
-    sign and submit by hand.
+All of these were approved on 2026-11-19: D1, D2 and D6 at the first review
+of the spec, the rest at the second review of `def5eb6`.
+
+- **D1.** Bind G or C addresses with a kind tag in `hi` (G = 0, C = 1); no
+  circuit change. The circuit has no range check (confirmed), and the C-holder
+  proof was verified off-chain and on chain. The contract-level C-address test
+  is in Step 2. Stop if a circuit change turns out to be needed.
+- **D2.** The GPL-3.0 prover lives only in a separate worker, with a `LICENSE`
+  file in `prover-worker/` and an in-app license notice.
+- **D3.** The first record reaches the holder through the sealed link: no
+  file, no server storage, no backup export. A lost browser means a lost
+  ability to prove (known limitation).
+- **D4.** Offers carry `h'`. The buyer receives and checks the sealed record
+  against the current on-chain `C` **before** creating an offer. The buyer's
+  encryption-key hash is bound on chain, and the seller's browser checks the
+  link key against it before encrypting. No analytics at all on the receiving
+  page. The ordering detail is D4a, still to confirm.
+- **D5.** Three-step swap (offer, accept with the taker's proof stored,
+  complete verifies both). No lock between accept and complete, the taker can
+  withdraw, and complete re-checks everything.
+- **D6.** Testnet fee route: QuietStay calls or smart-wallet deployment only,
+  rate-limited, and its key has no other role. Mainnet: a CLI signing script
+  with an auth-entry expiry of about 720 ledgers.
+- **D7.** `max_payment` is a constructor argument, so the WASM hash is
+  identical on both networks: 1 USDC on mainnet, 100 USDC on testnet. A script
+  checks the 5 USDC total before each mainnet transaction.
+- **D8.** Versions as in spec §12.
+- **D9.** Offer lifetime ≤ 120,960 ledgers.
+- **D10.** Evidence hashes in the escrow entry, ≤ 4 per party, plus the
+  decision hash, plus events.
+- **D11.** Keep `transfer` and `burn`. `burn` is refused while the right is
+  rented out, has a Funded or Disputed escrow, or has a pending swap
+  acceptance, with a test for each.
+- **D12.** The offer calls set the allowance; it equals the sum of the
+  buyer's open offers. Leftover from offers that expired on their own cannot
+  be pulled (documented in DESIGN.md). The Step 3 allowance tests apply.
+- **Checklist.** The contracts are built and tested for mainnet protocol 29
+  with no protocol-30-only features, and re-checked if mainnet upgrades during
+  the sprint.
 
 ## Pilot limits
 
@@ -129,8 +159,19 @@ breaks.
   - D1 (with conditions: done above; contract-level C-address test in Step 2).
   - D2 (LICENSE file + in-app notice).
   - D6 (with conditions in spec §13).
-- Open: D4, D5, D12 waiting for approval. D3 and D7–D11 are shown in full in
-  the spec's decisions table.
+- Review 2 (2026-11-19), changes made:
+  - Spec: record-before-offer order, with the key hash bound by on-chain
+    `request_record` and copied into the offer.
+  - `/receive` in its own root layout with no analytics.
+  - `max_payment` as a constructor argument, so one WASM serves both
+    networks.
+  - `burn` guards and their tests.
+  - The D12 allowance model, with a per-buyer index of at most 10 offers.
+  - DESIGN.md: the leftover-allowance rule.
+- Approved decisions: all of D1–D12 (see "Approved decisions" above).
+- Open:
+  - D4a: confirm the ordering resolution before Step 3.
+  - Upstash: confirm the deployed project's connection and plan.
 
 ### Step 2 — Browser proofs, reusable transfer check, passkeys
 - Date:

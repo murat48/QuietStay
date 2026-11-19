@@ -385,3 +385,30 @@ of the owner's hands: making the record secret and proving a transfer in the bro
 security audit, a production trusted-setup ceremony, in-browser proving, selective
 disclosure, any new cryptographic primitive, swaps between owners, payment and
 escrow, real resorts, legal title transfer, and passkey login.
+
+### Phase 3 payment rule: the USDC allowance (approved design, not yet built)
+
+*Recorded at the Phase 3 Step 1 review, 2026-11-19 (decision D12 in
+[PHASE3_SPEC.md](./PHASE3_SPEC.md#4-sale-offer)). Step 7 folds this into the
+full Phase 3 payment rules.*
+
+A buyer or renter pays through a USDC allowance to the QuietStay contract,
+which the offer calls set themselves:
+
+- Every buyer-authorized offer call (create, cancel) recomputes the
+  allowance as the sum of the buyer's open, live offers.
+- Accepting an offer pulls exactly that offer's price and lowers the
+  allowance by the same amount.
+
+**Allowance left over from offers that expired on their own cannot be
+pulled.** No transaction runs when an offer expires, so its price stays in the
+allowance until the buyer's next offer call or until the allowance itself
+expires. The contract calls `transfer_from` in exactly two places,
+`accept_sale` and `accept_rental`, and only:
+- for an offer that is still live;
+- when the right's holder has accepted it with a valid ownership proof;
+- for that offer's own price.
+
+An expired offer is refused before any of that is reached, so the leftover
+has no path out of the buyer's account. The buyer can remove it at any time
+with their next offer call, or directly with the USDC contract.

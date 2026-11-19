@@ -1,7 +1,9 @@
 # QuietStay Phase 3 — specification
 
-Status: **revised after the first review (Step 1). No Phase 3 product code
-exists until this is approved.** D1 is approved; D4, D5 and D12 are waiting.
+Status: **approved after the second review (2026-11-19), with one ordering
+question open, D4a.** D1–D3, D5, D6 and D8–D10 are approved. D4, D7, D11 and
+D12 are approved with the changes recorded here. Step 2 starts in a new
+session.
 
 Written 2026-11-19 against `main` at `66cdf13`. Every measured number below
 names the command that produced it. Anything marked *estimate* is derived from
@@ -50,10 +52,11 @@ still the builder's development setup and is labeled non-production
 everywhere. This is a controlled pilot, not an audited launch.
 
 **Review status (2026-11-19).** The circuit does **not** need to change
-(item 1), and a smart-wallet proof has been made and verified to show it. D1,
-D2 and D6 are approved with conditions, which this version records. D4, D5
-and the new D12 are waiting for approval. See
-[Decisions for approval](#decisions-for-approval).
+(item 1), and a smart-wallet proof has been made and verified to show it.
+Every decision is approved, some with changes this version records. One
+question is open, D4a: two of the D4 changes cannot both hold literally, and
+a resolution is proposed. See
+[Decisions for approval](#decisions).
 
 ---
 
@@ -198,13 +201,13 @@ From then on, proving needs no file and no command line.
 
 **A buyer's new secret, after a sale or a swap.**
 
-1. When making an offer, the buyer's worker generates `s'` and stores it as
-   `pending` **before** the offer transaction is signed. The offer carries only
-   `h'`.
-2. Before offering, the buyer has already received the record from the seller,
-   through the sealed link below, and checked it against the current `C` with
-   the seller's `h`. That is the Phase 2 verification step, now in the
-   browser. The record is kept.
+1. The buyer has already received the record through the sealed link below,
+   and checked it against the current on-chain `C` with the seller's `h`,
+   **before creating an offer** (D4 change 1). That is the Phase 2
+   verification step, now in the browser. The record is kept.
+2. When making the offer, the buyer's worker generates `s'` and stores it as
+   `pending` **before** the offer transaction is signed. The offer carries `h'`
+   and the hash of the buyer's record key.
 3. When the chain shows the buyer holding title and
    `commitment == Poseidon(d, buyer, h')`, the `pending` entry becomes the
    buyer's `secret`.
@@ -212,49 +215,92 @@ From then on, proving needs no file and no command line.
 A swap works the same way for both sides.
 
 **How the buyer's browser receives the private record: a sealed link, with no
-files and no server storage (review of D4).** The buyer needs `d` to prove
-later, and wants the whole record to check what they are buying. Two
+files and no server storage (D4, approved with changes).** The buyer needs `d`
+to prove later, and wants the whole record to check what they are buying. Two
 browser-made links carry it. Each link carries its data only after `#`.
 Browsers never send the part after `#` in any HTTP request, so the server
 neither receives nor stores it.
 
-1. **Request link.** The buyer presses *Ask for the record*. Their browser
-   makes an ECDH P-256 key pair with WebCrypto. The private key is
-   non-extractable and kept in IndexedDB. The browser shows
-   `…/receive#req=<right id>.<buyer public key>`, which the buyer sends to the
+**The order prevents a seller from taking payment and then withholding the
+record.** The record is received and checked before the buyer makes any offer,
+so before any money can move. The key it is sealed to is bound on chain to the
+buyer's account first (D4 change 2; see D4a for why the binding sits in a
+*record request* that precedes the offer):
+
+1. **Record request, on chain.** The buyer presses *Ask for the record*. Their
+   browser makes an ECDH P-256 key pair with WebCrypto. The private key is
+   non-extractable and kept in IndexedDB. Then the buyer signs
+   `request_record(buyer, right_id, key_hash)`, where
+   `key_hash = SHA-256(buyer's raw public key)`. This stores a temporary
+   `RecordRequest` entry (≤ D9 lifetime). It moves nothing and costs only a
+   fee.
+2. **Request link.** The browser shows
+   `…/receive#req=<request id>.<buyer public key>`, which the buyer sends to the
    seller through any channel the two already use (a message, an email).
-2. **Reply link.** The seller opens it in their own QuietStay browser and
-   confirms. Their app encrypts `{record, h, right id, contract id}` to the
-   buyer's public key: ECDH, then HKDF-SHA-256, then AES-256-GCM, with an
-   ephemeral seller key. It shows `…/receive#rec=<ciphertext>`. The record is
-   about 900 bytes, so the link is about 1.5 KB.
-3. **Import.** The buyer opens the reply link. The app does the following
+3. **The seller's browser checks the key, then encrypts.** It reads
+   `RecordRequest(id)` from chain and **refuses unless
+   `SHA-256(link key) == key_hash`**, and unless the request is for a right
+   this seller holds. Then it shows the requesting account to the seller for
+   confirmation. Only then does it encrypt
+   `{record, h, right id, contract id, request id}` to that key (ECDH with an
+   ephemeral seller key, then HKDF-SHA-256, then AES-256-GCM), and show
+   `…/receive#rec=<ciphertext>`. The record is about 900 bytes, so the link is
+   about 1.5 KB.
+4. **Import.** The buyer opens the reply link. The app does the following
    before anything else:
    - reads the fragment and removes it from the address bar
      (`history.replaceState`);
    - decrypts it;
    - computes `d` and `C = Poseidon(d, seller, h)` in the worker;
-   - keeps the record only if `C` equals the commitment on chain.
+   - keeps the record only if `C` equals the commitment on chain now.
 
-   After the sale or swap, nothing more has to travel. The buyer's browser
-   already holds the record and checks the new commitment against `s'` as in
-   step 3 above.
+   Only after that does the app let the buyer create the offer.
+   `create_sale_offer` takes the request id. It requires the request to be the
+   buyer's own, for the same right, and copies its `key_hash` into the offer.
+   The offer therefore states which key the record was sealed to.
+5. **After the sale**, nothing more has to travel. The buyer's browser already
+   holds the record and checks the new commitment against `s'`.
+
+**Swaps use the same pattern on both sides.**
+
+- `offer_swap` carries the maker's `key_hash` for the taker's record, and the
+  taker's browser checks it before sealing that record.
+- The taker first signs `request_record` for `give_right`, receives and checks
+  the maker's record, and only then calls `accept_swap`. Accepting is the
+  taker's confirmation.
+- The maker completes only after their own browser has checked the taker's
+  record, so completing is the maker's confirmation.
+
+**The first owner (D3)** uses the same pattern. The owner's issuance ask
+already carries `h`, and now it also carries `key_hash`. The issuer's browser
+checks it before sealing the record. The ask lives in the existing off-chain
+request store and holds no record data.
 
 This design has these properties:
 
 - An intercepted link is useless without the buyer's browser, because only
   that browser holds the private key.
+- A swapped request link fails the key-hash check in step 3.
 - No QuietStay server sees the record, the link or `d`.
 - No file is picked or saved.
 - Renters need none of this, because they never prove.
-- One risk is that page analytics may report full URLs. The `/receive` page
-  removes the fragment before the analytics component loads, and the
-  analytics `beforeSend` hook drops any `#…` from reported URLs. The Step 2
-  no-leak test opens both kinds of link and fails if any part of a fragment
-  appears in any request.
 
-The same sealed link also replaces the D3 local-file import: the issuer's
-browser sends the record to the first owner the same way.
+**No analytics at all on the receiving page (D4 change 3).**
+
+- `/receive` lives in its own route group with its own root layout,
+  `src/app/(sealed)/layout.tsx`. That layout includes no `SiteAnalytics`, no
+  third-party script and no external font. Multiple root layouts mean the
+  top-level `src/app/layout.tsx` moves into a `(site)` group, unchanged, for
+  every other page.
+- Next.js turns navigation across different root layouts into a full page
+  load (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/route-groups.md`:
+  "it'll trigger a full page reload"). An analytics script loaded on another
+  page therefore never runs in the `/receive` document.
+- The Step 2 no-leak test covers both kinds of link. It fails if:
+  - `/receive` makes any request to an analytics endpoint
+    (`/_vercel/insights`, `/_vercel/speed-insights`, `va.vercel-scripts.com`);
+  - its HTML references one;
+  - any request from any page contains any part of a fragment.
 
 **If browser storage is lost** (cleared data, a new device, a private window),
 **the holder can no longer prove for that week.** The week stays theirs, and
@@ -366,6 +412,33 @@ arguments:
 | `complete_swap`, maker's half | maker `require_auth()` | `acceptance.taker` | Swap { want_right } | `acceptance.taker_next_secret_hash` |
 | `complete_swap`, taker's half | taker's `require_auth()` in `accept_swap`, covering this proof (see 7) | `offer.maker` | Swap { give_right } | `offer.maker_next_secret_hash` |
 
+**`burn` (D11, approved with the change).** `burn` still needs only the title
+holder's signature. It now also refuses, in this order:
+
+| Condition | How it is detected | Error |
+| --- | --- | --- |
+| the right is rented out (a live sub-grant above the title holder) | `store::prune_lapsed` leaves more than one holding (Phase 2 rule, kept) | `NotTitleHolder` |
+| the right has a Funded or Disputed escrow | `OpenEscrows(right_id) > 0` | `EscrowOpen` (new) |
+| the right has a pending swap acceptance, as either `give_right` or `want_right` | `SwapPending(right_id)` exists and its acceptance is live | `SwapPending` (new) |
+
+The escrow count stays positive after the rental itself has lapsed, as long as
+the money is still in escrow, for example in a dispute. Burning is possible
+again once the escrow is PaidOut or Refunded.
+
+Tests (Step 3 for the escrow cases, Step 4 for the swap cases): burn refused
+- while a rental is live;
+- while an escrow is Funded, both before and after the rental term lapses;
+- while an escrow is Disputed;
+- while a swap acceptance is pending, on the taker's right and on the maker's
+  right.
+
+Burn succeeds:
+- after PaidOut;
+- after Refunded, once the refunded renter's term has lapsed;
+- after the acceptance is withdrawn or has expired.
+
+The Phase 2 burn tests stay.
+
 The Phase 2 `ModeMismatch` and `NextSecretHashMismatch` errors cover the new
 modes. The Phase 2 unit tests move onto this function unchanged in substance.
 
@@ -400,30 +473,34 @@ buyer's next secret hash `h'`, not the next commitment `C'`.**
   `s'`.
 
 ```
-create_sale_offer(buyer, right_id, price: i128, next_secret_hash: U256, expires_ledger: u32) -> offer_id
+request_record(buyer, right_id, key_hash: BytesN<32>) -> request_id      // §2, D4
+create_sale_offer(buyer, request_id, price: i128, next_secret_hash: U256, expires_ledger: u32) -> offer_id
 cancel_offer(buyer, offer_id)
 accept_sale(seller, offer_id, price: i128, proof, public_signals)
 ```
 
 - **Create.** Requires `buyer.require_auth()`. Checks:
-  - the right exists and is active;
-  - `0 < price ≤ max_payment` (D7);
+  - `RecordRequest(request_id)` exists, is the buyer's own, and names a right
+    that exists and is active. The offer is for that right and copies
+    `key_hash` (D4);
+  - `0 < price ≤ max_payment`, where `max_payment` is a constructor argument
+    (D7);
   - `h'` is non-zero and canonical;
-  - `now < expires_ledger ≤ now + MAX_OFFER_LEDGERS` (D9).
+  - `now < expires_ledger ≤ now + MAX_OFFER_LEDGERS` (D9);
+  - the buyer has fewer than `MAX_OPEN_OFFERS_PER_BUYER = 10` live offers
+    (sale and rental together). This bounds the cost of the allowance
+    recalculation below.
 
-  The buyer also gives the contract a USDC allowance with
-  `expiration_ledger ≥ expires_ledger`; the USDC stays in the buyer's account.
-  How the allowance is set is **D12**:
-  - proposed: inside `create_sale_offer`, as a buyer-authorized
-    `usdc.approve` sub-invocation;
-  - your original default: a separate `approve` transaction.
+  Then it **sets the allowance (D12, approved)** and records the offer. The
+  USDC stays in the buyer's account.
 - **Accept.** Requires `seller.require_auth()`, covering `offer_id` and
   `price`. Then:
   - the offer must be live, and `price` must equal `offer.price`, so a seller
     accepts exactly the amount they saw (the "wrong amount" test);
   - `authorize_transfer(…, Sale, offer.h')`;
   - `usdc.transfer_from(spender = contract, from = buyer, to = seller, price)`;
-  - the offer is deleted and a `SaleSettled` event is emitted.
+  - the offer is deleted, it is removed from the buyer's index, and a
+    `SaleSettled` event is emitted.
 
   Soroban transactions are atomic. If the allowance or the balance is too low,
   `transfer_from` traps and **nothing moves**: not the right, not the
@@ -431,28 +508,44 @@ accept_sale(seller, offer_id, price: i128, proof, public_signals)
 - **Wrong token.** No function takes a token address. The USDC contract is
   fixed in the constructor (see the table below), so another token cannot be
   named at all.
-- **Cancel.** Only the buyer can cancel, and only while the offer is live. It
-  removes the offer. The contract cannot lower the buyer's allowance, so the
-  app offers a second step that calls `approve` with the new total.
+- **Cancel.** Requires the buyer's auth, and the offer must be live. It
+  removes the offer and sets the allowance again (D12).
 - **Expiry.** After `expires_ledger`, acceptance is refused (`OfferExpired`).
   The entry sits in temporary storage and disappears once its TTL ends.
-- **Several open offers on one allowance.** The token keeps **one** allowance
-  per (buyer, contract). It is not a reservation per offer.
-  - Each acceptance pulls exactly its own offer's price, and the allowance
-    falls by that amount. The app suggests an allowance equal to the sum of
-    the buyer's open offers.
-  - Whichever offer is accepted first is paid first. Any later acceptance that
-    finds the allowance or the balance too low fails completely.
-  - An offer that outlives its allowance (`expires_ledger` later than the
-    allowance's expiration) fails completely when accepted. The token does not
-    expose the allowance's expiration ledger, so the contract cannot check it
-    at offer time; the app sets it.
 
-  In every case, an offer either completes in full or moves nothing. The
-  Step 3 allowance tests check exactly this.
-- **Why the leftover allowance is safe.** The contract spends it only inside
-  `accept_sale` or `accept_rental`, only for an offer this buyer created, and
-  only when the holder accepts with a valid proof.
+**The allowance model (D12, approved).** The allowance always equals the sum
+of the buyer's open offers.
+
+- The contract keeps a per-buyer index of the buyer's offer ids,
+  `BuyerOffers(buyer)`, persistent and at most 10 entries.
+- **Every buyer-authorized offer call** (`create_sale_offer`,
+  `create_rental_offer`, `cancel_offer`) does three things:
+  1. drops expired, accepted or cancelled offers from the index;
+  2. computes `total` as the sum of the prices of the live open offers left;
+  3. calls `usdc.approve(buyer, this, total, now + MAX_OFFER_LEDGERS)` as a
+     sub-invocation the buyer authorizes in the same transaction.
+- Every live offer expires by `now + MAX_OFFER_LEDGERS`, so that one
+  expiration covers all of them.
+- **Accepting** an offer pulls exactly its price with `transfer_from`, which
+  lowers the allowance by that amount. The accepted offer leaves the index, so
+  the equality still holds.
+- **Offers that expire on their own.** No transaction runs at the moment an
+  offer expires. Its price stays in the allowance until the buyer's next offer
+  call recomputes the total, or until the allowance itself expires, whichever
+  comes first. That leftover **cannot be pulled**: the contract calls
+  `transfer_from` only inside `accept_sale` and `accept_rental`, only for an
+  accepted offer that is still live, and only for that offer's price. This is
+  documented in DESIGN.md.
+- **A buyer may still change the allowance directly** with the USDC contract.
+  If it is then too low or expired, the acceptance fails completely.
+- The model is checked by the Step 3 allowance tests:
+  - five offers on one allowance: one accepted, one cancelled, then the
+    buyer's balance drops;
+  - an allowance that expires before its offer;
+  - an offer that outlives its allowance.
+
+  In every case an offer completes in full or moves nothing, and after every
+  buyer call the allowance equals the sum of the live open offers.
 
 Constructor-fixed USDC addresses:
 
@@ -604,8 +697,10 @@ proof.
 - **The taker's right is not locked between accept and complete.**
   `accept_swap` writes only the acceptance entry (`Swap(id)` /
   `SwapAcceptance(id)`) and never writes `Right(want_right)`. The taker can
-  still rent out, sell or burn `want_right`, or accept a different offer for
-  it. If they do, `complete_swap` fails, as listed below, and nothing moves.
+  still rent out or sell `want_right`, or accept a different offer for it. If
+  they do, `complete_swap` fails, as listed below, and nothing moves. The one
+  exception is `burn`: per D11 it is refused while a swap acceptance is
+  pending on the right. The taker withdraws the acceptance first.
   The same holds for the maker's `give_right`. A Step 4 test sells the taker's
   right between accept and complete and checks that complete is refused and
   both rights are unchanged.
@@ -666,8 +761,24 @@ is comfortable: the Phase 2 rights WASM is 27,490 bytes, and both networks
 allow 131,072 bytes (`stellar network settings`, 2026-11-19).
 
 Constructor:
-`__constructor(issuer, arbiter, usdc, name, symbol, verification_key, max_payment)`.
+`__constructor(issuer, arbiter, usdc, name, symbol, verification_key, max_payment: i128)`.
 It has no setter for any of these, no `upgrade` and no admin.
+
+**One WASM for both networks (D7, approved with the change).** Everything that
+differs between testnet and mainnet is a constructor argument, stored in
+instance storage and never compiled in:
+
+- the issuer, the arbiter and the USDC address;
+- `max_payment`: 10,000,000 units (1 USDC) on mainnet and 1,000,000,000 units
+  (100 USDC) on testnet. `max_payment ≤ 0` is refused.
+
+Contract constants (`MAX_PROOF_WINDOW`, `MAX_OFFER_LEDGERS`,
+`MAX_OPEN_OFFERS_PER_BUYER`, the evidence limit, TTL values) are the same on
+both networks. One build is deployed twice, so the WASM hash is identical.
+
+- The pre-launch checklist compares the two on-chain hashes.
+- A view, `max_payment()`, lets anyone read the cap, and the checklist prints
+  it for both networks.
 
 ## 9. Storage and TTL
 
@@ -687,6 +798,9 @@ The limits below were read on 2026-11-19 with `stellar network settings`
 | Nullifiers | temporary | live-until > `expiry_ledger` (Phase 2 rule, unchanged) |
 | Sale and rental offers | temporary | live-until > `expires_ledger`. An expired offer is dead, so losing it is harmless |
 | Swap offers and acceptances | temporary | until `expires_ledger` / the stored proof's `expiry_ledger` |
+| Record requests (`RecordRequest(id)`, D4) | temporary | live-until > their `expires_ledger` (≤ D9 lifetime) |
+| Buyer offer index (`BuyerOffers(buyer)`, D12) | persistent | ≤ 10 ids, pruned on every buyer call; extended like rights |
+| Burn guards (`OpenEscrows(right_id)`, a count; `SwapPending(right_id)`, D11) | persistent / temporary | the count is changed only on funding (+1) and on PaidOut/Refunded (−1); `SwapPending` lives exactly as long as the acceptance it guards |
 | **Escrows** | **persistent** | see below |
 
 **Escrows** are extended at funding and on every call that touches them, to
@@ -714,8 +828,10 @@ state is rejected.
 | `issue` | issuer | always; fresh ids only |
 | `list`, `unlist` | effective holder | right active |
 | `transfer` (no payment) | effective holder + valid proof (+ buyer's signature on a sale) | right active |
-| `burn` | title holder, no live sub-grant | as Phase 2 |
-| `create_sale_offer`, `create_rental_offer` | anyone, as buyer or renter (own auth) | right active; limits in items 4–5 |
+| `burn` | title holder | no live rental, no Funded/Disputed escrow, no pending swap acceptance (D11) |
+| `request_record` | anyone, as prospective buyer or swap taker (own auth) | right exists; moves nothing |
+| `create_sale_offer` | the buyer named in a live `RecordRequest` for that right (own auth) | right active; limits in item 4 |
+| `create_rental_offer` | anyone, as renter (own auth) | right active; limits in item 5 |
 | `cancel_offer` | the offer's buyer or renter | offer live |
 | `accept_sale` | effective title holder + valid proof | offer live, price matches |
 | `accept_rental` | effective holder + valid proof | offer live, check-in rules |
@@ -904,6 +1020,11 @@ its first mainnet use in Step 6 is not its first run.
 These are added to `docs/PRELAUNCH_CHECKLIST.md` (Step 5), each with a command
 and its output.
 
+- **Same WASM, network values only in the constructor (D7).** The on-chain
+  WASM hash of the testnet and mainnet contracts is identical. `max_payment()`,
+  `usdc()`, `arbiter()` and `issuer()` are read back from each and printed side
+  by side.
+
 - **Built and tested for mainnet's current protocol.**
   - Mainnet runs protocol **29** and testnet **30** (RPC `getNetwork` /
     `getVersionInfo`, 2026-11-19).
@@ -931,27 +1052,71 @@ and its output.
     simulation and cost items are re-run, and the result is reported to you
     before anything else is sent.
 
-## Decisions for approval
+## Decisions
 
-| # | Decision | Status |
-| --- | --- | --- |
-| D1 | Account binding: kind tag in `hi`, no circuit change | **Approved** with conditions. Range check: none (§1). C-address prove and verify: done, off-chain and on chain (§1). Contract-level test: Step 2 |
-| D2 | GPL prover worker | **Approved**. `LICENSE` in the worker folder and an in-app notice added (§2) |
-| D4 | Offer stores `h'` | **Waiting for approval**. Salt confirmed and record delivery added (§2, §4) |
-| D5 | Three-step swap | **Waiting for approval**. Confirmations added (§7) |
-| D6 | Fees | **Approved** with conditions (§13). Its conditions raise **D12** below |
+Every decision approved so far, as recorded on 2026-11-19 (second review of
+`def5eb6`). They are also recorded in `docs/PHASE3_PROGRESS.md` and not
+reopened unless something breaks.
 
-**D3 and D7–D12 in full:**
+| # | Decision | Status | As approved |
+| --- | --- | --- | --- |
+| D1 | Account binding | **Approved** | Kind tag in `hi` (G = 0, C = 1); no circuit change. No range check confirmed; C-holder proof verified off-chain and on chain; contract-level test in Step 2. Stop if a circuit change turns out to be needed |
+| D2 | GPL prover | **Approved** | One separately built GPL-3.0 worker, a `LICENSE` file in `prover-worker/`, an in-app license notice; `zk:check-bundle` enforces the boundary |
+| D3 | First record delivery and backup | **Approved** | The sealed link (§2), no file, no server storage, no backup export; the loss is a known limitation |
+| D4 | Offers carry `h'` | **Approved with changes** | (1) the buyer receives and checks the sealed record against the current on-chain `C` **before** creating an offer; (2) the buyer's encryption-key hash is bound on chain and the seller's browser checks the link key against it before encrypting; (3) no analytics on the receiving page. See D4a for how (1) and (2) fit together |
+| D5 | Three-step swap | **Approved** | §7, with no lock between accept and complete, withdrawal, and a full re-check at complete |
+| D6 | Fees | **Approved with conditions** | §13. Testnet route: QuietStay calls and wallet deployment only, rate-limited, key with no other role. Mainnet: CLI script, auth-entry expiry ≈ 720 ledgers |
+| D7 | Payment cap | **Approved with the change** | `max_payment` is a **constructor argument**, not a compiled constant, so the WASM hash is identical on both networks (§8). Mainnet 1 USDC, testnet 100 USDC; the 5 USDC total is checked by a script |
+| D8 | Versions | **Approved** | §12 |
+| D9 | Offer lifetime | **Approved** | 120,960 ledgers (~7 days) |
+| D10 | Evidence on chain | **Approved** | In the escrow entry, ≤ 4 hashes per party, plus the decision hash, plus events |
+| D11 | `transfer` and `burn` | **Approved with the change** | Keep both. `burn` is refused while the right is rented out, has a Funded or Disputed escrow, or has a pending swap acceptance, with tests for each (§3) |
+| D12 | Allowance | **Approved** | Set by the offer calls themselves. The allowance equals the sum of the buyer's open offers. Leftover from offers that expired on their own cannot be pulled, documented in DESIGN.md. The Step 3 allowance tests apply to this model (§4) |
 
-| # | Question | Recommendation | Alternative(s) | What it affects | Reversible later? |
-| --- | --- | --- | --- | --- | --- |
-| **D3** | How the private record first reaches the holder's browser, and whether there is a backup | **The sealed link (§2):** request and reply links carrying data only after `#`, encrypted to a browser-held key, verified against `C` on import. No file, no server storage, **no backup export**. A lost browser means a lost ability to prove; this is stated as a known limitation | (a) A "save backup" button that writes `{record, s}` to a local file. It reduces loss, but it creates a plaintext secret file and adds scope. (b) The issuer's server stores records and serves them to the signed-in holder. This needs new server storage of personal data, so it is not recommended | Step 2 screens and the no-leak test; DESIGN.md limitations | Yes: a backup button can be added later without a contract change |
-| **D7** | Enforce the pilot payment cap in the contract? | **Yes:** `max_payment` is fixed in the constructor. Mainnet: 10,000,000 units = 1.0000000 USDC. Testnet: 1,000,000,000 units = 100 USDC, enough for demos. Offers above it are refused (`PriceAboveCap`). The 5 USDC total across accounts is an operating rule: `scripts/check-pilot-funds` sums the USDC of every pilot account and the contract, fails above 5 USDC, and runs before each mainnet transaction | Enforce the cap only in the app and the scripts. That is weaker: a direct contract call would bypass it | Constructor signature, the offer functions, Step 5 checklist | Raising the cap means a new deployment (no setter, by design) |
-| **D8** | Versions | soroban-sdk **27.0.6** (unchanged); Stellar CLI **27.0.0 → 30.0.1**; `@stellar/stellar-sdk` **16.2.0 → 16.4.1**; Smart Account Kit **0.10.0**; OZ stellar-accounts **v0.8.0**; circom **2.2.2**; snarkjs **0.7.5**; wallets-kit **2.5.0** (§12) | soroban-sdk 29.0.1 (latest stable). That is churn in a tested base for no feature we need, and it targets protocol 29+ | Lockfiles, `docs/SETUP.md` | Yes, before mainnet deployment |
-| **D9** | Maximum offer lifetime | **120,960 ledgers (~7 days)** for sale, rental and swap offers, checked at creation. Offers live in temporary storage until then | 17,280 (~1 day), which lowers stale-offer risk but is clumsy for the demo; 518,400 (~30 days) | Offer functions; with D12, the allowance expiration | Only by redeploying (it is a contract constant) |
-| **D10** | How dispute evidence is kept on chain | The renter's report hash, **up to 4 hashes per party**, and the arbiter's decision hash, stored in the escrow entry and also emitted as events. More than 4 from one party is refused (`EvidenceLimit`) | Events only. That is cheaper, but public RPCs keep events only for a short window, so reviewers could lose them | Escrow entry size (≤ 9 × 32 bytes) and the evidence tests | Only by redeploying |
-| **D11** | Phase 2 `transfer` and `burn` | **Keep both.** `transfer` (no payment) is routed through `authorize_transfer`. `burn` stays wallet-only: binding it to the proof (Phase 2 limitation 7) is not in the SOW, so it is not built unless you add it | Remove `transfer`, so every right movement is paid. That loses the free gift/transfer path and the Phase 2 evidence continuity. Bind `burn` to the proof: a small change, but it adds scope | Contract surface, the permissions table, DESIGN.md | Only by redeploying |
-| **D12** *(new, from D6's conditions)* | How the buyer or renter gives the USDC allowance | The fee route may sign only QuietStay calls, and a standalone USDC `approve` is a call to the USDC contract. **Proposal:** the offer functions set the allowance themselves, as a sub-invocation the buyer authorizes in the same transaction:<br>• `create_*_offer` calls `usdc.approve(buyer, this, allowance(buyer, this) + price, now + 120,960)`;<br>• `cancel_offer` lowers it by the price (floor 0).<br>Because every offer expires within 120,960 ledgers (D9), each new expiration covers every open offer. The allowance then always equals what the open offers can pull, and offers call only QuietStay. Item 4's allowance rules are otherwise unchanged; a buyer can still lower the allowance directly with USDC, which the "offer outlives its allowance" test covers | Keep the separate `approve` transaction (your original default), and allow the fee route to also sign exactly one USDC `approve` whose spender is the QuietStay contract | Item 4, the fee-route allowlist, the allowance tests | Only by redeploying |
+### D4a: open, an ordering point for you to confirm
 
-Nothing in Steps 2–4 starts until D4, D5 and D12 are approved. D1, D2 and D6
-are approved; their conditions are recorded above.
+D4 change 1 says the record comes **before the offer exists**. D4 change 2
+says the key hash is stored **in the offer**, and the seller checks it
+**before encrypting**. Taken literally, the two cannot both hold: the seller
+would have to check against an offer that does not exist yet.
+
+**Proposed resolution (written into §2 and §4):**
+
+- The key hash is bound on chain by the buyer's own signed
+  `request_record(buyer, right_id, key_hash)`, before anything is encrypted.
+- The seller's browser checks the link key against that entry.
+- The buyer receives and checks the record, then creates the offer.
+- `create_sale_offer` requires that request and copies the same `key_hash`
+  into the offer.
+
+Both intents hold: no payment is possible before the buyer has checked the
+record, and the record is sealed only to a key bound to the buyer's account.
+The cost is one extra, fee-only transaction for the buyer.
+
+**Alternative:**
+
+- The offer is created first, with the key hash, in an `AwaitingRecord` state.
+- After checking the record, the buyer signs `mark_record_received(offer_id)`.
+- Only then can `accept_sale` succeed.
+
+This also prevents taking payment before delivery, and it also costs one
+extra transaction. But the offer, and with it the allowance (D12), exists
+before the record has been seen.
+
+Step 2 does not depend on this choice; Step 3 does. Unless you say otherwise,
+Step 3 implements the proposed resolution.
+
+### Upstash store
+
+- **In use:** yes, in the code. `src/lib/kv.ts` (Upstash REST,
+  `UPSTASH_REDIS_REST_URL`/`_TOKEN` or `KV_REST_API_URL`/`_TOKEN`) backs the
+  request store (`src/lib/requests.ts`) and the attestation store. Phase 3
+  only adds the fee route's rate-limit counters to it.
+- **Free plan:** `docs/VERCEL.md` says the free tier is enough for this use.
+- **Not verifiable from here:** this machine's `.env.local` has no Upstash
+  variables (locally the app uses `QUIETSTAY_DATA_DIR`), and the Vercel CLI is
+  not linked to the project. So I cannot confirm that the deployed project is
+  connected to Upstash or which plan it is on.
+- **To check:** Vercel dashboard → Storage → the Redis (Upstash) database →
+  Plan, or `vercel link` followed by `vercel env ls`, which lists names only.
+  This is recorded as an open item.
