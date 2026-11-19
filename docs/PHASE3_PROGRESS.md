@@ -9,7 +9,7 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: Step 1 approved (third review, 2026-11-19). Step 2 starts in a new session
+- Current step: Step 2 in progress (2026-11-19)
 
 ## Open issues
 
@@ -21,7 +21,10 @@ actually run.
 | Medium | D4a: record-before-offer vs key hash in the offer | 1 (review 2) | resolved: option 1 approved with three additions (review 3) |
 | Medium | Upstash connection and plan | 1 (review 2) | resolved: you confirmed `upstash-kv-cobalt-pillow` (Upstash for Redis) is connected and on the Free plan (Vercel dashboard, 2026-11-19) |
 | Medium | Sealed-link page must load no analytics: separate root layout for `/receive`, no-leak test checks analytics endpoints | 1 (review 2) | open, Step 2 |
-| Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | open |
+| Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
+| Low | This machine lacks the system libraries Playwright's browsers need (`libnss3`, `libnspr4`, `libasound2t64`), and `sudo` needs your password. Workaround: the Ubuntu packages, unpacked without root into `~/.local/share/qs-playwright-deps`, plus `LD_LIBRARY_PATH`. Proper fix: `sudo npx playwright install-deps chromium firefox` | 2 | open |
+| Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
+| Low | `npm run lint`: 13 problems (12 errors, 1 warning) already on `96bbb5f`, none from Step 2 | 2 | open |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
 
 Severity: Critical (blocks mainnet), High, Medium, Low.
@@ -92,8 +95,10 @@ of the spec, the rest at the second review of `def5eb6`.
 | Other contracts (if any) | | | |
 | USDC contract | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` | `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75` | Circle issuers (developers.circle.com/stablecoins/usdc-contract-addresses) → `stellar contract id asset --asset USDC:<issuer>` |
 | Arbiter account | | | |
-| Smart wallet (passkey) | | | |
-| WebAuthn verifier (OZ, via kit) | `CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F` | `CB7HENHJ7NF34I5FFXQK7D5I3WWQRGB5O5XO77D3NXMT7LM7LOKRQ5YR` | smart-account-kit deployment manifests; to check on chain in Step 2 |
+| Smart wallet (passkey) | `CDSI6FMLEA5LRMCTFU2RBMVBMFHWH4TJN7PEMEWSK477S4KP2KAKOKWY` (Step 2 probe) | | `npm run passkey:probe` |
+| WebAuthn verifier (OZ, via kit) | `CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F` | `CB7HENHJ7NF34I5FFXQK7D5I3WWQRGB5O5XO77D3NXMT7LM7LOKRQ5YR` | smart-account-kit deployment manifests. Checked on chain in Step 2: both run WASM `e63a030d…6b72b76` (`stellar contract fetch --id …`, then `sha256sum`) |
+| Step 2 staging rights contract | `CCR2Z4IQNKXO2YCTQI2JBU5YLQTFXCXWVY6HV6H6TWNFWL5RAQ3IMAX5` | — | `stellar contract deploy` (Step 2). Step 3 redeploys with USDC/arbiter |
+| Testnet fee payer (D6) | `GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z` | — | `stellar keys generate qs-fee-testnet --fund` |
 | Measurement contract (Step 1 only) | `CCKL74S5L57GZ32K2AWIIRGKNED3CZNWFCM62BMVASLMSHJXOYK4ZLY4` | — | `stellar contract deploy … quietstay_measure.wasm` |
 | Wasm hash (must match) | | | |
 | App link | | | |
@@ -184,11 +189,45 @@ of the spec, the rest at the second review of `def5eb6`.
 - Open: none for Step 1. Step 2 starts in a new session.
 
 ### Step 2 — Browser proofs, reusable transfer check, passkeys
-- Date:
-- Branch / commit:
-- Done:
+- Date: 2026-11-19 (in progress)
+- Branch / commit: `phase3`; `c51691e` (transfer check), `68bad46` (CLI and
+  pins), `df21722` (passkey probe)
+- Done so far:
+  - **Stellar CLI 30.0.1** (`f2a7b741`), the official release binary via
+    `cargo binstall stellar-cli@30.0.1`. It is byte-identical to the binary in
+    the v30.0.1 release tarball (sha256 `d161f7ca…367c`). `cargo install`
+    failed because `libdbus-1-dev` is missing and installing it needs sudo.
+    The testnet protocol-30 warning is gone.
+  - **Pinned exactly:** stellar-sdk 16.4.1, smart-account-kit 0.10.0,
+    stellar-wallets-kit 2.5.0, @playwright/test 1.65.0. Recorded in
+    docs/SETUP.md.
+  - **`authorize_transfer`** in `auth.rs` is now the one path that moves a
+    right; `transfer` calls it. D1's `split_address` uses tag 2^128 for C;
+    `issue` accepts C. `cargo test -p quietstay-rights`: 73/73 (62 Phase 2,
+    2 of them changed in meaning, plus 11 new, among them an unmocked
+    `__check_auth` wallet: signed, refused, missing, signed for another
+    transfer). `npm run zk:test`: 18/18.
+  - **On-chain checks (spec §12).** The WebAuthn verifier WASM is `e63a030d…`
+    on both networks (`CC7EKIH…` testnet, `CB7HENH…` mainnet). Account WASM
+    `c514d35e…` is installed on both. They declare protocols 26 and 28, both
+    ≤ mainnet's 29. The Step 2 rights WASM `0c6e4b2f…` declares v27.
+  - **Passkey probe** (`npm run passkey:probe`): a real WebAuthn credential
+    (Chromium 158 headless, CDP virtual authenticator) authorized a proven
+    rental from smart wallet `CDSI6FML…KOKWY` on testnet. Read back from chain:
+    the only auth entry is the wallet's, with an External signer on
+    `CC7EKIH…`. Min resource fee 355,526 stroops.
+- Tx hashes (testnet):
+  - Step 2 staging contract `CCR2Z4IQNKXO2YCTQI2JBU5YLQTFXCXWVY6HV6H6TWNFWL5RAQ3IMAX5`
+    deployed: `ab335e2bfc82d7e8c56c0d06eb73f1e0de6c6a3af0681d8fc1f7d385974aa667`
+  - Wallet deployed: `c5fabe85f29f732ef49c8381148a7ae851c093521dd9c2959674909f654217bd`
+  - Right #1 issued to the wallet: `26dde7846d1a5cc8de176bde7c51aa87c5e1cfb23db5b525cd214c27ae9549b0`
+  - Passkey-authorized transfer: `059a5ae5555e3522fb1b4869d580e5dd8954558d984ed7d3fc255baacadbbd95`
+  - (An earlier wallet, `CDK2LNXJ…CMV4` / `72b75b07…9a71`, was deployed in a
+    first run that stopped before connecting. Its virtual passkey is gone, so
+    the wallet is unusable and holds nothing.)
+- New identity: `qs-fee-testnet` (`GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z`),
+  testnet fee payer only (D6).
 - Measured (proof times):
-- Tx hashes:
 - Open:
 
 ### Step 3 — USDC sale, rental escrow and pilot arbiter
