@@ -9,14 +9,16 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: Step 1 done — waiting for review of docs/PHASE3_SPEC.md (D1 blocks Steps 2–4)
+- Current step: Step 1, revised after the first review. Waiting for approval of D4, D5 and D12
 
 ## Open issues
 
 | Severity | Issue | Found in step | Status |
 | --- | --- | --- | --- |
-| High | D2: browser proving puts GPL-3.0 code (snarkjs, circuit, Poseidon) in the browser; Phase 2 kept it out. Needs your decision | 1 | open |
-| High | D6: a smart wallet cannot pay fees; who signs the envelope (testnet sponsor route vs CLI keystore on mainnet) | 1 | open |
+| High | D2: browser proving puts GPL-3.0 code in the browser | 1 | resolved: approved; LICENSE in `prover-worker/` + in-app notice (spec §2) |
+| High | D6: who pays fees for passkey txs | 1 | resolved: approved with conditions (spec §13) |
+| High | D12: the fee route may sign only QuietStay calls, but a standalone USDC `approve` calls USDC; proposal: offers set the allowance by sub-invocation | 1 (review) | open, needs approval |
+| Medium | Analytics could report full URLs including `#` fragments of sealed record links; `/receive` strips them and the no-leak test must cover it | 1 (review) | open, Step 2 |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | open |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
 
@@ -27,7 +29,17 @@ Severity: Critical (blocks mainnet), High, Medium, Low.
 Decisions I approved at checkpoints. Do not reopen them unless something
 breaks.
 
-- _(none yet)_
+- 2026-11-19, D1: bind G or C addresses with a kind tag in `hi`
+  (G = 0, C = 1); no circuit change. Conditions: no range check confirmed;
+  C-holder end-to-end test added; contract-level test in Step 2. Stop if a
+  circuit change turns out to be needed.
+- 2026-11-19, D2: the GPL-3.0 prover lives only in a separate worker, with a
+  LICENSE file in the worker folder and an in-app license notice.
+- 2026-11-19, D6:
+  - Testnet fee route: signs only QuietStay calls or smart-wallet deployment,
+    is rate-limited, and its key has no other role.
+  - Mainnet: a CLI signing script, with an auth-entry expiry long enough to
+    sign and submit by hand.
 
 ## Pilot limits
 
@@ -94,8 +106,31 @@ breaks.
     mainnet 2,073,600 / 17,280.
 - Tx hashes:
   - Measurement contract deployed: `5ffde55c074ad7a5e8c2daebbd9645b7dbdf86c43bfec1405fee8f6300b574aa` (testnet).
-- Approved decisions: _(waiting for review: D1–D11 in the spec)_
-- Open: D1 (blocking), D2, D6. See Open issues.
+- Review 1 (2026-11-19), changes made:
+  - D1: confirmed the circuit has no range check on the account halves.
+    Added `circuits/test/c-address.test.ts`, which proves and verifies with the
+    unchanged keys for a C holder (sale, rental) and a C recipient, and also
+    checks G/C separation and that the untagged encoding is refused.
+    `npm run zk:test`: 18/18 pass.
+  - C-holder proof checked on chain by simulating the Phase 2 verifier
+    `CDMUMM…K5BK`: `true`; a tampered signal gives `false`.
+  - D4: the salt is confirmed (32 random bytes in the record, so 256 bits in
+    `d`). Added the sealed-link delivery of the record (URL fragment, ECDH
+    P-256 + AES-GCM, no files, no server storage).
+  - D5: confirmed no lock between accept and complete; the taker can withdraw;
+    `complete_swap` re-runs every check.
+  - D6: specified the testnet fee-route allowlist, rate limits and key
+    isolation, and the mainnet CLI script with a ~720-ledger auth expiry
+    (spec §13).
+  - Checklist additions: mainnet protocol 29, no protocol-30-only features,
+    re-check on upgrade (spec §14). The Phase 2 and measurement WASMs declare
+    env-meta `Protocol: v27`.
+- Approved decisions:
+  - D1 (with conditions: done above; contract-level C-address test in Step 2).
+  - D2 (LICENSE file + in-app notice).
+  - D6 (with conditions in spec §13).
+- Open: D4, D5, D12 waiting for approval. D3 and D7–D11 are shown in full in
+  the spec's decisions table.
 
 ### Step 2 — Browser proofs, reusable transfer check, passkeys
 - Date:

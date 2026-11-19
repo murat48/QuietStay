@@ -1,7 +1,7 @@
 # QuietStay Phase 3 — specification
 
-Status: **draft for review (Step 1). No Phase 3 product code exists until this
-is approved.** Item 1 (account binding) blocks Steps 2–4.
+Status: **revised after the first review (Step 1). No Phase 3 product code
+exists until this is approved.** D1 is approved; D4, D5 and D12 are waiting.
 
 Written 2026-11-19 against `main` at `66cdf13`. Every measured number below
 names the command that produced it. Anything marked *estimate* is derived from
@@ -49,10 +49,11 @@ verification key, no admin key and no upgrade function. The trusted setup is
 still the builder's development setup and is labeled non-production
 everywhere. This is a controlled pilot, not an audited launch.
 
-**What you are asked to approve here.** The circuit does **not** need to
-change (item 1). There are eleven design decisions, listed in
-[Decisions for approval](#decisions-for-approval). One of them, D2, changes a
-Phase 2 rule: GPL-licensed proving code would run in the browser.
+**Review status (2026-11-19).** The circuit does **not** need to change
+(item 1), and a smart-wallet proof has been made and verified to show it. D1,
+D2 and D6 are approved with conditions, which this version records. D4, D5
+and the new D12 are waiting for approval. See
+[Decisions for approval](#decisions-for-approval).
 
 ---
 
@@ -129,6 +130,36 @@ Code changes, for after approval:
   recipient, a G-key/C-id collision (same 32 bytes, different kind) that must
   be rejected, and every Phase 2 test unchanged.
 
+**Review condition (D1), checked 2026-11-19.**
+
+- **No range check exists on the account halves.**
+  - `transfer.circom` instantiates only `Poseidon(1)`, `Poseidon(5)` and
+    `Poseidon(6)`.
+  - `poseidon.circom` builds those from the round-constant, S-box and mix
+    templates only.
+  - Neither file contains `Num2Bits`, a comparator or any other bit
+    decomposition (`grep -nE "Num2Bits|LessThan|GreaterThan|Bits"
+    circuits/gpl/*.circom`).
+  - `from_hi`, `from_lo`, `to_hi` and `to_lo` are used only as Poseidon inputs.
+- **Proved and verified end to end for a C-address holder** with the committed
+  `transfer.wasm`, `transfer.zkey` and `verification_key.json`, unchanged. The
+  test is `circuits/test/c-address.test.ts`, run with `npm run zk:test`; 18/18
+  pass, including the 11 Phase 2 tests. It covers:
+  - a sale from a C holder to a G account;
+  - a sale from a G account to a C recipient;
+  - a rental from a C holder;
+  - the same 32 bytes as G and as C give different encodings and commitments;
+  - a witness claiming the untagged encoding of a C holder's commitment fails
+    at the circuit's commitment constraint (`transfer.circom` line 50).
+- **The C-holder proof also verifies on chain.** The Phase 2 verifier
+  `CDMUMMOF3TM453RY4QZL6UWV2FT2QP3JUWW24SFIH5ICWSVGRB4IK5BK` returns `true`;
+  with one public signal changed it returns `false`. Commands:
+  - `QS_WRITE_PROOF_DIR=proofs/phase3-c-address npx tsx --test circuits/test/c-address.test.ts`
+  - `stellar contract invoke --id CDMUMM…K5BK --network testnet --send=no -- verify --proof "$(cat proofs/phase3-c-address/proof.json)" --public_signals "$(cat proofs/phase3-c-address/public.json)"`
+- **No circuit change is needed.** The contract-level test (a C-address holder
+  transferring through `authorize_transfer` with a real passkey-signed auth
+  entry) is part of Step 2, because it needs the `auth.rs` change.
+
 **Honest limit.** In the browser, the passkey and the record secret live on the
 same device. A stolen *unlocked device* gives both. Phase 2's "a stolen wallet
 key alone cannot transfer" still holds for a stolen *passkey* (a passkey cannot
@@ -157,11 +188,11 @@ new contract, so the sample weeks are issued again:
    Phase 2 `/issue?h=…` flow does.
 2. The issuer issues as in Phase 2. The server computes `C` from the record
    and `h`, and it never sees `s`.
-3. The owner adds the record once, from the file the issuer gave them, using
-   *Add ownership record*. The file is read locally with `FileReader` and is
-   never uploaded. The worker computes `d` and `C = Poseidon(d, owner, h)` and
-   refuses the record unless `C` equals the commitment on chain. (Decision D3:
-   local import, or another way.)
+3. The record reaches the owner's browser through the **sealed link**
+   described below. The owner's request link goes to the issuer, and the
+   issuer's browser sends back the encrypted record. The worker computes `d`
+   and `C = Poseidon(d, owner, h)` and refuses the record unless `C` equals
+   the commitment on chain. This is decision D3; no file is involved.
 
 From then on, proving needs no file and no command line.
 
@@ -170,14 +201,60 @@ From then on, proving needs no file and no command line.
 1. When making an offer, the buyer's worker generates `s'` and stores it as
    `pending` **before** the offer transaction is signed. The offer carries only
    `h'`.
-2. Before offering, the buyer has already received the record from the seller
-   and checked it against the current `C` with the seller's `h`. That is the
-   Phase 2 verification step, now in the browser. The record is kept.
+2. Before offering, the buyer has already received the record from the seller,
+   through the sealed link below, and checked it against the current `C` with
+   the seller's `h`. That is the Phase 2 verification step, now in the
+   browser. The record is kept.
 3. When the chain shows the buyer holding title and
    `commitment == Poseidon(d, buyer, h')`, the `pending` entry becomes the
    buyer's `secret`.
 
 A swap works the same way for both sides.
+
+**How the buyer's browser receives the private record: a sealed link, with no
+files and no server storage (review of D4).** The buyer needs `d` to prove
+later, and wants the whole record to check what they are buying. Two
+browser-made links carry it. Each link carries its data only after `#`.
+Browsers never send the part after `#` in any HTTP request, so the server
+neither receives nor stores it.
+
+1. **Request link.** The buyer presses *Ask for the record*. Their browser
+   makes an ECDH P-256 key pair with WebCrypto. The private key is
+   non-extractable and kept in IndexedDB. The browser shows
+   `…/receive#req=<right id>.<buyer public key>`, which the buyer sends to the
+   seller through any channel the two already use (a message, an email).
+2. **Reply link.** The seller opens it in their own QuietStay browser and
+   confirms. Their app encrypts `{record, h, right id, contract id}` to the
+   buyer's public key: ECDH, then HKDF-SHA-256, then AES-256-GCM, with an
+   ephemeral seller key. It shows `…/receive#rec=<ciphertext>`. The record is
+   about 900 bytes, so the link is about 1.5 KB.
+3. **Import.** The buyer opens the reply link. The app does the following
+   before anything else:
+   - reads the fragment and removes it from the address bar
+     (`history.replaceState`);
+   - decrypts it;
+   - computes `d` and `C = Poseidon(d, seller, h)` in the worker;
+   - keeps the record only if `C` equals the commitment on chain.
+
+   After the sale or swap, nothing more has to travel. The buyer's browser
+   already holds the record and checks the new commitment against `s'` as in
+   step 3 above.
+
+This design has these properties:
+
+- An intercepted link is useless without the buyer's browser, because only
+  that browser holds the private key.
+- No QuietStay server sees the record, the link or `d`.
+- No file is picked or saved.
+- Renters need none of this, because they never prove.
+- One risk is that page analytics may report full URLs. The `/receive` page
+  removes the fragment before the analytics component loads, and the
+  analytics `beforeSend` hook drops any `#…` from reported URLs. The Step 2
+  no-leak test opens both kinds of link and fails if any part of a fragment
+  appears in any request.
+
+The same sealed link also replaces the D3 local-file import: the issuer's
+browser sends the record to the first owner the same way.
 
 **If browser storage is lost** (cleared data, a new device, a private window),
 **the holder can no longer prove for that week.** The week stays theirs, and
@@ -208,6 +285,24 @@ the compiled circuit itself derives from circomlib's GPL Poseidon. Proposal:
 - The Apache-2.0 app talks to it only by `postMessage`.
 - Change `zk:check-bundle` so that GPL markers may appear **only** in that
   worker file and nowhere else.
+
+D2 was approved with two additions:
+
+- **A `LICENSE` file in the worker's folder.** The worker's source and build
+  live in `prover-worker/`, which holds:
+  - `prover-worker/LICENSE`: the GPL-3.0 text;
+  - `prover-worker/README.md`: what is GPL, what it derives from, and how to
+    rebuild it.
+
+  The build output is `public/zk/prover.worker.js`. Its first comment line
+  names the license and the source path, and a copy of the license is served
+  as `public/zk/LICENSE`.
+- **A license notice in the app.** It appears in the footer and on the screens
+  that prove. The text: "Proofs are made by an in-browser prover licensed
+  under the GPL-3.0 (source: `prover-worker/`, built from snarkjs and
+  circomlib). The rest of QuietStay is Apache-2.0." It links to the license
+  and the source. `zk:check-bundle` also checks that the notice and
+  `public/zk/LICENSE` exist.
 
 **No-leak test (Step 2).** A Playwright end-to-end test records every request
 the page and the worker make (URL, headers, body) while it proves and submits
@@ -287,6 +382,23 @@ buyer's next secret hash `h'`, not the next commitment `C'`.**
   from the buyer's signature. The difference is that the buyer signs once, at
   offer time, and need not be online when the seller accepts.
 
+**Why `C'` cannot be brute-forced now that `h'` is public (review of D4).**
+
+- `C' = Poseidon5(d_hi, d_lo, to_hi, to_lo, h')`. Of its inputs, `to` and `h'`
+  are public; `d` is not.
+- `d = SHA-256(canonical record)`, and every record carries a `salt` of 32
+  random bytes (docs/COMMITMENT.md, "The two fields that exist for the
+  commitment's sake").
+- Everything else in a record is low-entropy: dates, a resort, a name. The
+  salt alone puts 256 bits of entropy into `d`. Guessing `d` from public data
+  is therefore a 2^256 search, the same as for `C` today.
+- `h'` was already public in Phase 2, where it travels in the buyer's
+  authorization arguments, so D4 discloses nothing new.
+- `d` is the same in every commitment of a week's history, by design (Phase 2
+  §4). People who have held or been shown the record (past owners, buyers it
+  was disclosed to) can compute `C'`. That gives them nothing: a proof needs
+  `s'`.
+
 ```
 create_sale_offer(buyer, right_id, price: i128, next_secret_hash: U256, expires_ledger: u32) -> offer_id
 cancel_offer(buyer, offer_id)
@@ -299,9 +411,12 @@ accept_sale(seller, offer_id, price: i128, proof, public_signals)
   - `h'` is non-zero and canonical;
   - `now < expires_ledger ≤ now + MAX_OFFER_LEDGERS` (D9).
 
-  Separately, the app has the buyer call the USDC
-  `approve(buyer, contract, amount, expiration_ledger)` with
-  `expiration_ledger ≥ expires_ledger`. The USDC stays in the buyer's account.
+  The buyer also gives the contract a USDC allowance with
+  `expiration_ledger ≥ expires_ledger`; the USDC stays in the buyer's account.
+  How the allowance is set is **D12**:
+  - proposed: inside `create_sale_offer`, as a buyer-authorized
+    `usdc.approve` sub-invocation;
+  - your original default: a separate `approve` transaction.
 - **Accept.** Requires `seller.require_auth()`, covering `offer_id` and
   `price`. Then:
   - the offer must be live, and `price` must equal `offer.price`, so a seller
@@ -484,6 +599,44 @@ The maker can cancel the offer at any time, and the taker can withdraw an
 acceptance. An acceptance that is never completed simply expires with its
 proof.
 
+**Confirmations requested in review (D5):**
+
+- **The taker's right is not locked between accept and complete.**
+  `accept_swap` writes only the acceptance entry (`Swap(id)` /
+  `SwapAcceptance(id)`) and never writes `Right(want_right)`. The taker can
+  still rent out, sell or burn `want_right`, or accept a different offer for
+  it. If they do, `complete_swap` fails, as listed below, and nothing moves.
+  The same holds for the maker's `give_right`. A Step 4 test sells the taker's
+  right between accept and complete and checks that complete is refused and
+  both rights are unchanged.
+- **The taker can withdraw.** `withdraw_swap_acceptance(taker, swap_id)`
+  requires the taker's auth and deletes the acceptance, so the stored proof
+  can no longer be used. The proof's nullifier was never spent, because
+  `accept_swap` only checks and stores. The offer stays open for a new
+  acceptance. A second `accept_swap` is refused while a live acceptance
+  exists, and allowed once that acceptance is withdrawn or expired.
+- **`complete_swap` re-checks every refusal condition. Nothing checked in
+  `accept_swap` is trusted.**
+  - The offer must exist, be live (`now ≤ expires_ledger`) and not be
+    cancelled. The acceptance must exist and not be withdrawn.
+  - Both proofs run the full `authorize_transfer` against the current state:
+    - commitment equal to the one stored now (refuses a right already sold,
+      including by its other owner);
+    - `from` is the current effective title holder with no live rental (refuses
+      a right rented out, held by someone else, or never theirs);
+    - right inside its validity window (refuses an expired right);
+    - `right_id`, recipient and `Swap { counter_right_id }` match;
+    - `expiry_ledger` within `[now, now + 720]` (refuses an expired proof);
+    - `next_secret_hash` equal to the other side's stored `h'`;
+    - nullifier unused (refuses a reused proof);
+    - the pairing check.
+  - `give_right ≠ want_right` and `maker ≠ taker` (`SelfTransfer`), checked
+    again.
+
+  Each refusal reverts the whole transaction: neither right, neither
+  nullifier and neither entry changes. Step 4's tests cover each case on both
+  sides.
+
 The alternative is one transaction carrying both parties' auth entries and both
 proofs. It saves a step but needs the two browsers to exchange signed
 authorization entries off chain. The three-step flow keeps that exchange on
@@ -659,21 +812,146 @@ says so and points to the regular wallet.
 
 ---
 
+## 13. Fees for passkey transactions (D6, approved with conditions)
+
+A smart wallet cannot be a transaction's source, so a `G…` account pays every
+fee.
+
+### Testnet: the fee route
+
+`POST /api/tx/sponsor` takes a transaction or `{func, auth}` built and
+passkey-signed in the browser. It signs the envelope with
+`QUIETSTAY_TESTNET_FEE_SECRET` and submits. The route enforces the following.
+
+**It refuses every transaction except:**
+
+- exactly one `InvokeHostFunction` operation that either:
+  - **calls a QuietStay contract** (the configured rights contract id; the
+    function name is not restricted, since the contract does its own auth);
+    or
+  - **deploys a smart wallet**: `CreateContractV2` whose executable is the
+    pinned OpenZeppelin account WASM `c514d35e…`, via the kit's deployer;
+- every sub-invocation in the auth entries stays inside the QuietStay
+  contract, the fixed USDC contract (only the `approve` / `transfer` the
+  rights contract itself calls, see D12) and the smart wallet's own
+  `__check_auth`;
+- the fee account appears nowhere except as source and fee payer: not in any
+  argument, not as an auth address, not as a holder;
+- fee ≤ 10,000,000 stroops (1 XLM) per transaction, and source = the fee
+  account.
+
+**Rate limits**, kept in the deployment's existing Upstash store
+(`src/lib/kv.ts`, so no new infrastructure):
+
+- 10 sponsored transactions per IP per hour;
+- 20 per smart-wallet address per day;
+- 300 per day in total.
+
+When the store is unreachable, the route refuses rather than signing
+unlimited. The account is funded with a small testnet balance (Friendbot), so
+the balance is a hard bound as well.
+
+**The key has no other role.**
+
+- It is a new identity, `qs-testnet-fee`, that you create.
+- At startup the route refuses to run if the fee address equals the issuer,
+  the arbiter, the SEP-10 key, or any holder named in the inventory.
+- `scripts/check-fee-account` checks on chain that it holds no rights and no
+  USDC.
+- The route is compiled out of the mainnet deployment: it refuses whenever
+  the network passphrase is not testnet's. On testnet only, it is the one
+  server-side signing key Phase 3 adds.
+
+### Mainnet: the CLI signing flow (no server key)
+
+1. **Build and sign the auth entry in the browser.**
+   - The app builds the transaction with the source set to the address of the
+     mainnet fee identity, which you type in once; the app keeps the public
+     key only.
+   - It simulates the transaction, and the passkey signs the smart wallet's
+     auth entry with
+     `signatureExpirationLedger = min(proof.expiry_ledger, latest + 720)`.
+     That is up to 720 ledgers, about an hour at mainnet's roughly 5–6 s
+     ledgers, which is long enough to sign and submit by hand.
+   - It re-simulates with the real signature, because a WebAuthn signature is
+     larger than the placeholder.
+   - The transaction's time bound is the same one hour.
+   - The app shows the unsigned envelope XDR, with a copy button.
+2. **Sign and submit with `scripts/mainnet-sign-submit.sh <xdr-file> <identity>`.**
+   The script:
+   1. refuses unless `--network mainnet` and the identity are given explicitly;
+   2. decodes and prints, in plain words, the operation, the contract, the
+      function, the arguments, every auth address and the USDC amount
+      (`stellar tx decode`);
+   3. re-simulates and prints the fee and resources, then refuses if any
+      payment exceeds the D7 cap or the auth entry expires within the next 60
+      ledgers;
+   4. asks you to type `SEND`;
+   5. runs `stellar tx sign --sign-with-key <identity> --network mainnet` and
+      `stellar tx send --network mainnet`;
+   6. prints the hash and the Stellar Expert link.
+
+   The script never reads the secret key itself; the CLI keystore signs.
+3. **If the source's sequence number moved** (any other transaction from the
+   same identity in between), sending fails. The script says so, and you
+   rebuild in the browser.
+
+The same script is exercised on testnet in Step 2, with a testnet identity, so
+its first mainnet use in Step 6 is not its first run.
+
+## 14. Pre-launch checklist additions from the review
+
+These are added to `docs/PRELAUNCH_CHECKLIST.md` (Step 5), each with a command
+and its output.
+
+- **Built and tested for mainnet's current protocol.**
+  - Mainnet runs protocol **29** and testnet **30** (RPC `getNetwork` /
+    `getVersionInfo`, 2026-11-19).
+  - The contracts are built with soroban-sdk 27.0.6. The WASM's environment
+    metadata declares **protocol v27**
+    (`stellar contract info env-meta --wasm …quietstay_rights.wasm` →
+    `Protocol: v27`, checked today for the Phase 2 and measurement WASMs),
+    which mainnet's protocol 29 accepts.
+  - The checklist records that output for the final WASM.
+  - It also records a mainnet `--send=no` simulation of the deploy and of
+    each flow, run before GO.
+- **No protocol-30-only features.**
+  - The SDK pinned at 27.0.6 cannot emit host functions newer than protocol 27.
+  - The checklist also lists every host function and SDK feature the
+    contracts use, from `stellar contract info interface` and the source, and
+    confirms each exists on protocol 29.
+  - The OpenZeppelin account and verifiers are already deployed on mainnet by
+    their maintainers; the checklist records their on-chain WASM hashes.
+- **Re-checked if mainnet upgrades during the sprint.**
+  - A pinned check, `scripts/check-protocol`, prints both networks' protocol
+    versions and fails if mainnet is not 29.
+  - It runs at Step 5 and again immediately before every mainnet transaction
+    in Steps 6–7.
+  - If mainnet has moved, mainnet work stops. The checklist's protocol,
+    simulation and cost items are re-run, and the result is reported to you
+    before anything else is sent.
+
 ## Decisions for approval
 
-| # | Decision | Recommendation |
+| # | Decision | Status |
 | --- | --- | --- |
-| **D1** | Account binding (item 1) | Kind tag in `hi` (`G` = 0, `C` = 1). **No circuit change**; same keys |
-| **D2** | GPL code in the browser | Allow it only inside one separately built GPL-3.0 prover worker. The Apache-2.0 app talks to it by `postMessage`. `zk:check-bundle` enforces the boundary |
-| **D3** | First-time record and backup | Local import of the issuer's record file, never uploaded, checked against `C`. No backup export (it would be scope creep). Alternative: one "save backup" button that writes `{record, s}` to a local file |
-| **D4** | Offer stores `h'`, not `C'` | Yes (item 4) |
-| **D5** | Swap in three on-chain steps; both proofs verified in `complete_swap` | Yes (item 7) |
-| **D6** | **Who pays fees for passkey transactions** | A smart wallet cannot be a transaction source. **Testnet:** a small app route signs the envelope with a testnet-only fee account (key in server env). It only accepts invocations of the QuietStay contract and smart-wallet deployment. **Mainnet:** no server key. The browser exports the passkey-signed transaction and you sign the envelope with a Stellar CLI keystore identity (`stellar tx sign` / `stellar tx send`), which keeps the "mainnet keys only in the CLI keystore" rule. Your call: this is the one place where Phase 3 adds a server-side key, on testnet |
-| **D7** | Pilot payment cap | Enforce `max_payment` in the constructor: 10,000,000 units = 1 USDC on mainnet, a larger value on testnet. Raising it means redeploying. The 5 USDC total across accounts is an operating rule, checked by a script, because no contract can see it |
-| **D8** | Versions | As in item 12. Keep soroban-sdk 27.0.6; upgrade the CLI to 30.0.1 and stellar-sdk to 16.4.1 |
-| **D9** | Maximum offer lifetime | 120,960 ledgers (about 7 days) |
-| **D10** | Evidence on chain | Hashes kept in the escrow entry, up to 4 per party, plus events |
-| **D11** | Phase 2 `transfer` and `burn` | Keep both unchanged, with `transfer` routed through `authorize_transfer`. Binding `burn` to the proof (Phase 2 limitation 7) is not in the SOW, so it is not done unless you add it |
+| D1 | Account binding: kind tag in `hi`, no circuit change | **Approved** with conditions. Range check: none (§1). C-address prove and verify: done, off-chain and on chain (§1). Contract-level test: Step 2 |
+| D2 | GPL prover worker | **Approved**. `LICENSE` in the worker folder and an in-app notice added (§2) |
+| D4 | Offer stores `h'` | **Waiting for approval**. Salt confirmed and record delivery added (§2, §4) |
+| D5 | Three-step swap | **Waiting for approval**. Confirmations added (§7) |
+| D6 | Fees | **Approved** with conditions (§13). Its conditions raise **D12** below |
 
-Nothing in Steps 2–4 starts until D1 is approved. If D2 or D6 is answered
-differently, items 2 and 12 change accordingly.
+**D3 and D7–D12 in full:**
+
+| # | Question | Recommendation | Alternative(s) | What it affects | Reversible later? |
+| --- | --- | --- | --- | --- | --- |
+| **D3** | How the private record first reaches the holder's browser, and whether there is a backup | **The sealed link (§2):** request and reply links carrying data only after `#`, encrypted to a browser-held key, verified against `C` on import. No file, no server storage, **no backup export**. A lost browser means a lost ability to prove; this is stated as a known limitation | (a) A "save backup" button that writes `{record, s}` to a local file. It reduces loss, but it creates a plaintext secret file and adds scope. (b) The issuer's server stores records and serves them to the signed-in holder. This needs new server storage of personal data, so it is not recommended | Step 2 screens and the no-leak test; DESIGN.md limitations | Yes: a backup button can be added later without a contract change |
+| **D7** | Enforce the pilot payment cap in the contract? | **Yes:** `max_payment` is fixed in the constructor. Mainnet: 10,000,000 units = 1.0000000 USDC. Testnet: 1,000,000,000 units = 100 USDC, enough for demos. Offers above it are refused (`PriceAboveCap`). The 5 USDC total across accounts is an operating rule: `scripts/check-pilot-funds` sums the USDC of every pilot account and the contract, fails above 5 USDC, and runs before each mainnet transaction | Enforce the cap only in the app and the scripts. That is weaker: a direct contract call would bypass it | Constructor signature, the offer functions, Step 5 checklist | Raising the cap means a new deployment (no setter, by design) |
+| **D8** | Versions | soroban-sdk **27.0.6** (unchanged); Stellar CLI **27.0.0 → 30.0.1**; `@stellar/stellar-sdk` **16.2.0 → 16.4.1**; Smart Account Kit **0.10.0**; OZ stellar-accounts **v0.8.0**; circom **2.2.2**; snarkjs **0.7.5**; wallets-kit **2.5.0** (§12) | soroban-sdk 29.0.1 (latest stable). That is churn in a tested base for no feature we need, and it targets protocol 29+ | Lockfiles, `docs/SETUP.md` | Yes, before mainnet deployment |
+| **D9** | Maximum offer lifetime | **120,960 ledgers (~7 days)** for sale, rental and swap offers, checked at creation. Offers live in temporary storage until then | 17,280 (~1 day), which lowers stale-offer risk but is clumsy for the demo; 518,400 (~30 days) | Offer functions; with D12, the allowance expiration | Only by redeploying (it is a contract constant) |
+| **D10** | How dispute evidence is kept on chain | The renter's report hash, **up to 4 hashes per party**, and the arbiter's decision hash, stored in the escrow entry and also emitted as events. More than 4 from one party is refused (`EvidenceLimit`) | Events only. That is cheaper, but public RPCs keep events only for a short window, so reviewers could lose them | Escrow entry size (≤ 9 × 32 bytes) and the evidence tests | Only by redeploying |
+| **D11** | Phase 2 `transfer` and `burn` | **Keep both.** `transfer` (no payment) is routed through `authorize_transfer`. `burn` stays wallet-only: binding it to the proof (Phase 2 limitation 7) is not in the SOW, so it is not built unless you add it | Remove `transfer`, so every right movement is paid. That loses the free gift/transfer path and the Phase 2 evidence continuity. Bind `burn` to the proof: a small change, but it adds scope | Contract surface, the permissions table, DESIGN.md | Only by redeploying |
+| **D12** *(new, from D6's conditions)* | How the buyer or renter gives the USDC allowance | The fee route may sign only QuietStay calls, and a standalone USDC `approve` is a call to the USDC contract. **Proposal:** the offer functions set the allowance themselves, as a sub-invocation the buyer authorizes in the same transaction:<br>• `create_*_offer` calls `usdc.approve(buyer, this, allowance(buyer, this) + price, now + 120,960)`;<br>• `cancel_offer` lowers it by the price (floor 0).<br>Because every offer expires within 120,960 ledgers (D9), each new expiration covers every open offer. The allowance then always equals what the open offers can pull, and offers call only QuietStay. Item 4's allowance rules are otherwise unchanged; a buyer can still lower the allowance directly with USDC, which the "offer outlives its allowance" test covers | Keep the separate `approve` transaction (your original default), and allow the fee route to also sign exactly one USDC `approve` whose spender is the QuietStay contract | Item 4, the fee-route allowlist, the allowance tests | Only by redeploying |
+
+Nothing in Steps 2–4 starts until D4, D5 and D12 are approved. D1, D2 and D6
+are approved; their conditions are recorded above.
