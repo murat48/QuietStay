@@ -1248,6 +1248,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "quietstay-measure"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "soroban-sdk",
+]
+
+[[package]]
 name = "quietstay-rights"
 version = "0.1.0"
 dependencies = [
