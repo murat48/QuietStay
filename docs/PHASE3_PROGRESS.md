@@ -9,7 +9,7 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: Step 1 approved (second review, 2026-11-19). Step 2 starts in a new session. D4a ordering to confirm before Step 3
+- Current step: Step 1 approved (third review, 2026-11-19). Step 2 starts in a new session
 
 ## Open issues
 
@@ -18,8 +18,8 @@ actually run.
 | High | D2: browser proving puts GPL-3.0 code in the browser | 1 | resolved: approved; LICENSE in `prover-worker/` + in-app notice (spec §2) |
 | High | D6: who pays fees for passkey txs | 1 | resolved: approved with conditions (spec §13) |
 | High | D12: how the allowance is given | 1 (review) | resolved: approved, set by the offer calls; DESIGN.md documents the leftover allowance |
-| Medium | D4a: "record before offer" and "key hash in the offer, checked before encrypting" cannot both hold literally; proposed: on-chain `request_record` binds the key, the offer copies it (spec, Decisions) | 1 (review 2) | open; needed before Step 3, not Step 2 |
-| Medium | Upstash: used by the code (`src/lib/kv.ts`), and VERCEL.md says the free tier suffices. Whether the deployed project is connected, and its plan, cannot be checked from this machine (no Upstash vars locally; Vercel CLI not linked) | 1 (review 2) | open: check the Vercel dashboard → Storage |
+| Medium | D4a: record-before-offer vs key hash in the offer | 1 (review 2) | resolved: option 1 approved with three additions (review 3) |
+| Medium | Upstash connection and plan | 1 (review 2) | resolved: you confirmed `upstash-kv-cobalt-pillow` (Upstash for Redis) is connected and on the Free plan (Vercel dashboard, 2026-11-19) |
 | Medium | Sealed-link page must load no analytics: separate root layout for `/receive`, no-leak test checks analytics endpoints | 1 (review 2) | open, Step 2 |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | open |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
@@ -67,6 +67,14 @@ of the spec, the rest at the second review of `def5eb6`.
 - **D12.** The offer calls set the allowance; it equals the sum of the
   buyer's open offers. Leftover from offers that expired on their own cannot
   be pulled (documented in DESIGN.md). The Step 3 allowance tests apply.
+- **D4a** (third review). On-chain `request_record` comes before the offer;
+  the offer copies the key hash and consumes the request.
+  1. Swaps use the same request and sealed-record flow in both directions,
+     and complete only after both sides have checked the other's record.
+     Rentals don't use requests.
+  2. Requests expire within the D9 limit and are capped at 10 live per
+     requester.
+  3. A request creates no obligation for the seller.
 - **Checklist.** The contracts are built and tested for mainnet protocol 29
   with no protocol-30-only features, and re-checked if mainnet upgrades during
   the sprint.
@@ -169,9 +177,11 @@ of the spec, the rest at the second review of `def5eb6`.
   - The D12 allowance model, with a per-buyer index of at most 10 offers.
   - DESIGN.md: the leftover-allowance rule.
 - Approved decisions: all of D1–D12 (see "Approved decisions" above).
-- Open:
-  - D4a: confirm the ordering resolution before Step 3.
-  - Upstash: confirm the deployed project's connection and plan.
+- Review 3 (2026-11-19):
+  - D4a approved (option 1 plus three additions), recorded in the spec
+    (§2, §4, §7, §9, §10, Decisions).
+  - Upstash confirmed connected and on the Free plan.
+- Open: none for Step 1. Step 2 starts in a new session.
 
 ### Step 2 — Browser proofs, reusable transfer check, passkeys
 - Date:

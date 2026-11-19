@@ -1,8 +1,7 @@
 # QuietStay Phase 3 — specification
 
-Status: **approved after the second review (2026-11-19), with one ordering
-question open, D4a.** D1–D3, D5, D6 and D8–D10 are approved. D4, D7, D11 and
-D12 are approved with the changes recorded here. Step 2 starts in a new
+Status: **approved (2026-11-19, third review).** D1–D12 and D4a are all
+approved, some with the changes recorded here. Step 2 starts in a new
 session.
 
 Written 2026-11-19 against `main` at `66cdf13`. Every measured number below
@@ -53,9 +52,8 @@ everywhere. This is a controlled pilot, not an audited launch.
 
 **Review status (2026-11-19).** The circuit does **not** need to change
 (item 1), and a smart-wallet proof has been made and verified to show it.
-Every decision is approved, some with changes this version records. One
-question is open, D4a: two of the D4 changes cannot both hold literally, and
-a resolution is proposed. See
+Every decision is approved, some with changes this version records. That
+includes D4a, the order of record delivery and offers. See
 [Decisions for approval](#decisions).
 
 ---
@@ -224,7 +222,7 @@ neither receives nor stores it.
 **The order prevents a seller from taking payment and then withholding the
 record.** The record is received and checked before the buyer makes any offer,
 so before any money can move. The key it is sealed to is bound on chain to the
-buyer's account first (D4 change 2; see D4a for why the binding sits in a
+buyer's account first (D4 change 2; D4a, approved: the binding sits in a
 *record request* that precedes the offer):
 
 1. **Record request, on chain.** The buyer presses *Ask for the record*. Their
@@ -263,13 +261,25 @@ buyer's account first (D4 change 2; see D4a for why the binding sits in a
 
 **Swaps use the same pattern on both sides.**
 
-- `offer_swap` carries the maker's `key_hash` for the taker's record, and the
-  taker's browser checks it before sealing that record.
-- The taker first signs `request_record` for `give_right`, receives and checks
-  the maker's record, and only then calls `accept_swap`. Accepting is the
-  taker's confirmation.
-- The maker completes only after their own browser has checked the taker's
-  record, so completing is the maker's confirmation.
+This holds in both directions (D4a addition 1):
+
+- Each side signs `request_record` for the other's right. The maker requests
+  `want_right` and the taker requests `give_right`.
+- Each side's browser checks the requester's link key against the on-chain
+  `key_hash` before sealing its own record.
+- **A swap can be completed only after both sides have checked the other's
+  record:**
+  - `offer_swap` requires the maker's live request for `want_right`;
+  - `accept_swap` requires the taker's live request for `give_right`;
+  - `complete_swap` requires the acceptance, so both requests existed.
+  - The app signs `accept_swap` only after the taker's browser has checked the
+    maker's record against the current commitment. It signs `complete_swap`
+    only after the maker's browser has checked the taker's record. Each side's
+    own signature is therefore its confirmation.
+- The contract enforces that both key bindings exist. It cannot see a browser
+  check. What it guarantees is that neither right can move unless both sides
+  bound a key on chain and then signed the step that follows.
+- **Rentals do not use requests.** A renter never proves, so needs no record.
 
 **The first owner (D3)** uses the same pattern. The owner's issuance ask
 already carries `h`, and now it also carries `key_hash`. The issuer's browser
@@ -473,16 +483,33 @@ buyer's next secret hash `h'`, not the next commitment `C'`.**
   `s'`.
 
 ```
-request_record(buyer, right_id, key_hash: BytesN<32>) -> request_id      // §2, D4
+request_record(buyer, right_id, key_hash: BytesN<32>, expires_ledger: u32) -> request_id   // §2, D4/D4a
+cancel_record_request(buyer, request_id)
 create_sale_offer(buyer, request_id, price: i128, next_secret_hash: U256, expires_ledger: u32) -> offer_id
 cancel_offer(buyer, offer_id)
 accept_sale(seller, offer_id, price: i128, proof, public_signals)
 ```
 
+- **Record requests (D4a, approved option 1).**
+  - `request_record` requires the requester's auth. The right must exist,
+    `key_hash` must be non-zero, and
+    `now < expires_ledger ≤ now + MAX_OFFER_LEDGERS`, so requests expire
+    within the D9 limit, like offers.
+  - Each requester has **at most `MAX_OPEN_REQUESTS_PER_BUYER = 10` live
+    requests**, tracked like offers in `BuyerRequests(addr)`, which is pruned
+    of expired and consumed ids on every request call.
+  - A request is consumed when the offer or swap step that uses it succeeds.
+    The requester can also cancel it.
+  - **A request creates no obligation for the seller.** It is a temporary
+    entry and nothing else. No function requires the holder to answer it; it
+    has no deadline for the holder and no penalty. It does not block anything
+    the holder may do: the holder can still sell to someone else, rent out,
+    list, swap or burn the right. If the holder never sends the record, the
+    request simply expires. It also moves no money and sets no allowance.
 - **Create.** Requires `buyer.require_auth()`. Checks:
-  - `RecordRequest(request_id)` exists, is the buyer's own, and names a right
-    that exists and is active. The offer is for that right and copies
-    `key_hash` (D4);
+  - `RecordRequest(request_id)` is live, is the buyer's own, and names a right
+    that exists and is active. The offer is for that right, copies `key_hash`
+    (D4) and consumes the request;
   - `0 < price ≤ max_payment`, where `max_payment` is a constructor argument
     (D7);
   - `h'` is non-zero and canonical;
@@ -668,11 +695,20 @@ free public field element, constrained only by the nullifier.
 **Flow: three on-chain steps (decision D5).** Every step is signed by its own
 party, and no off-chain coordination channel is needed:
 
-1. **`offer_swap(maker, give_right, want_right, maker_next_secret_hash, expires_ledger) -> swap_id`.**
+0. **Each side requests the other's record first (D4a).**
+   - The maker signs `request_record(maker, want_right, key_hash_m)`.
+   - The prospective taker signs `request_record(taker, give_right, key_hash_t)`.
+   - Each receives the other's sealed record and checks it against the current
+     on-chain commitment, as in §2.
+1. **`offer_swap(maker, give_right, want_right, maker_next_secret_hash, maker_request_id, expires_ledger) -> swap_id`.**
    Requires the maker's auth. The maker must be the effective title holder of
-   `give_right` at this point (this is checked again later).
-2. **`accept_swap(taker, swap_id, taker_next_secret_hash, proof_t, signals_t)`.**
-   Requires the taker's auth, covering this exact proof. The cheap signal
+   `give_right` at this point (this is checked again later). The maker's
+   request must be live, the maker's own, and for `want_right`. Its
+   `key_hash_m` is copied into the swap and the request is consumed.
+2. **`accept_swap(taker, swap_id, taker_next_secret_hash, taker_request_id, proof_t, signals_t)`.**
+   Requires the taker's auth, covering this exact proof. The taker's request
+   must be live, the taker's own, and for `give_right`. Its `key_hash_t` is
+   copied into the acceptance and the request is consumed. The cheap signal
    checks run now, with `want_right` moving to the maker under
    `Swap { give_right }` and `h' = maker_next_secret_hash`. The proof and the
    taker's `h'` are stored in a temporary entry that lives until the proof's
@@ -798,7 +834,8 @@ The limits below were read on 2026-11-19 with `stellar network settings`
 | Nullifiers | temporary | live-until > `expiry_ledger` (Phase 2 rule, unchanged) |
 | Sale and rental offers | temporary | live-until > `expires_ledger`. An expired offer is dead, so losing it is harmless |
 | Swap offers and acceptances | temporary | until `expires_ledger` / the stored proof's `expiry_ledger` |
-| Record requests (`RecordRequest(id)`, D4) | temporary | live-until > their `expires_ledger` (≤ D9 lifetime) |
+| Record requests (`RecordRequest(id)`, D4/D4a) | temporary | live-until > their `expires_ledger` (≤ D9 lifetime); deleted when consumed or cancelled |
+| Requester index (`BuyerRequests(addr)`, D4a) | persistent | ≤ 10 ids, pruned on every request call; extended like rights |
 | Buyer offer index (`BuyerOffers(buyer)`, D12) | persistent | ≤ 10 ids, pruned on every buyer call; extended like rights |
 | Burn guards (`OpenEscrows(right_id)`, a count; `SwapPending(right_id)`, D11) | persistent / temporary | the count is changed only on funding (+1) and on PaidOut/Refunded (−1); `SwapPending` lives exactly as long as the acceptance it guards |
 | **Escrows** | **persistent** | see below |
@@ -829,7 +866,8 @@ state is rejected.
 | `list`, `unlist` | effective holder | right active |
 | `transfer` (no payment) | effective holder + valid proof (+ buyer's signature on a sale) | right active |
 | `burn` | title holder | no live rental, no Funded/Disputed escrow, no pending swap acceptance (D11) |
-| `request_record` | anyone, as prospective buyer or swap taker (own auth) | right exists; moves nothing |
+| `request_record` | anyone, as prospective buyer or either side of a swap (own auth) | right exists; ≤ 10 live per requester; ≤ D9 lifetime; moves nothing and obliges no one |
+| `cancel_record_request` | the requester | request live |
 | `create_sale_offer` | the buyer named in a live `RecordRequest` for that right (own auth) | right active; limits in item 4 |
 | `create_rental_offer` | anyone, as renter (own auth) | right active; limits in item 5 |
 | `cancel_offer` | the offer's buyer or renter | offer live |
@@ -1073,50 +1111,46 @@ reopened unless something breaks.
 | D11 | `transfer` and `burn` | **Approved with the change** | Keep both. `burn` is refused while the right is rented out, has a Funded or Disputed escrow, or has a pending swap acceptance, with tests for each (§3) |
 | D12 | Allowance | **Approved** | Set by the offer calls themselves. The allowance equals the sum of the buyer's open offers. Leftover from offers that expired on their own cannot be pulled, documented in DESIGN.md. The Step 3 allowance tests apply to this model (§4) |
 
-### D4a: open, an ordering point for you to confirm
+### D4a: approved (option 1), with three additions
 
-D4 change 1 says the record comes **before the offer exists**. D4 change 2
-says the key hash is stored **in the offer**, and the seller checks it
-**before encrypting**. Taken literally, the two cannot both hold: the seller
-would have to check against an offer that does not exist yet.
+The order of record delivery and offers: the on-chain
+`request_record(buyer, right_id, key_hash, expires_ledger)` comes before the
+offer.
 
-**Proposed resolution (written into §2 and §4):**
+- The seller's browser checks the link key against that entry before
+  encrypting.
+- The buyer checks the record against the current commitment, then creates
+  the offer.
+- The offer copies the key hash and consumes the request.
 
-- The key hash is bound on chain by the buyer's own signed
-  `request_record(buyer, right_id, key_hash)`, before anything is encrypted.
-- The seller's browser checks the link key against that entry.
-- The buyer receives and checks the record, then creates the offer.
-- `create_sale_offer` requires that request and copies the same `key_hash`
-  into the offer.
+This keeps both intents: no payment is possible before the record is checked,
+and the record is sealed only to a key bound to the buyer's account. The
+additions, now in §2, §4, §7, §9 and §10:
 
-Both intents hold: no payment is possible before the buyer has checked the
-record, and the record is sealed only to a key bound to the buyer's account.
-The cost is one extra, fee-only transaction for the buyer.
+1. **Swaps use the same request and sealed-record flow in both directions.**
+   A swap can be completed only after both sides have checked the other's
+   record. `offer_swap` requires the maker's request for `want_right`, and
+   `accept_swap` requires the taker's request for `give_right`. Each side's
+   app signs its next step only after its own check. Rentals do not use
+   requests.
+2. **Requests expire within the D9 limit** (≤ 120,960 ledgers) and are
+   **capped at 10 live per requester**, tracked and pruned like offers.
+3. **A request creates no obligation for the seller.** Nothing requires an
+   answer, nothing has a deadline or a penalty, the right stays free for every
+   other action, and an unanswered request simply expires.
 
-**Alternative:**
-
-- The offer is created first, with the key hash, in an `AwaitingRecord` state.
-- After checking the record, the buyer signs `mark_record_received(offer_id)`.
-- Only then can `accept_sale` succeed.
-
-This also prevents taking payment before delivery, and it also costs one
-extra transaction. But the offer, and with it the allowance (D12), exists
-before the record has been seen.
-
-Step 2 does not depend on this choice; Step 3 does. Unless you say otherwise,
-Step 3 implements the proposed resolution.
+The rejected alternative was an offer first, made acceptable only by a later
+`mark_record_received`.
 
 ### Upstash store
 
-- **In use:** yes, in the code. `src/lib/kv.ts` (Upstash REST,
-  `UPSTASH_REDIS_REST_URL`/`_TOKEN` or `KV_REST_API_URL`/`_TOKEN`) backs the
-  request store (`src/lib/requests.ts`) and the attestation store. Phase 3
-  only adds the fee route's rate-limit counters to it.
-- **Free plan:** `docs/VERCEL.md` says the free tier is enough for this use.
-- **Not verifiable from here:** this machine's `.env.local` has no Upstash
-  variables (locally the app uses `QUIETSTAY_DATA_DIR`), and the Vercel CLI is
-  not linked to the project. So I cannot confirm that the deployed project is
-  connected to Upstash or which plan it is on.
-- **To check:** Vercel dashboard → Storage → the Redis (Upstash) database →
-  Plan, or `vercel link` followed by `vercel env ls`, which lists names only.
-  This is recorded as an open item.
+**Confirmed by you on 2026-11-19 in the Vercel dashboard:** the store
+`upstash-kv-cobalt-pillow` (Upstash for Redis) is connected to the project and
+on the **Free** plan.
+
+- The code uses it through `src/lib/kv.ts`, for the request store and the
+  attestation store.
+- Phase 3 adds only the fee route's rate-limit counters. They are small
+  counters with short expiries, well inside the free tier; VERCEL.md already
+  says the free tier is far more than this app uses.
+- This needs no new infrastructure.
