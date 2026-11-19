@@ -26,10 +26,15 @@ look for. Nothing to install.
 | Node.js | 24.17 | Everything. 20.6+ works; `process.loadEnvFile` is required. |
 | Rust | 1.96.0 | The contracts. Not needed to run the web app or to prove. |
 | `wasm32v1-none` target | — | `rustup target add wasm32v1-none` |
-| Stellar CLI | 27.0.0 | `cargo install --locked stellar-cli` |
+| Stellar CLI | 30.0.1 (`f2a7b741`) | Deploying and invoking. `cargo binstall stellar-cli@30.0.1` installs the official release binary; `cargo install --locked stellar-cli@30.0.1` builds it but needs `libdbus-1-dev` and `pkg-config` on Linux. 27.0.0 warns on testnet's protocol 30 |
 | circom | 2.2.2 (`e410b0d5`) | Compiling the circuit. `cargo install --locked --git https://github.com/iden3/circom.git --tag v2.2.2 circom` |
 | snarkjs | 0.7.5 | Setup and proving — installed by `npm install` (pinned, exact). |
 | circomlib / ffjavascript | 2.0.5 / 0.2.63 | The Poseidon template and field arithmetic — installed by `npm install`. |
+| soroban-sdk | 27.0.6 | The contracts (`contracts/Cargo.toml`, locked in `contracts/Cargo.lock`). The WASM declares protocol 27, so it runs on mainnet's protocol 29 and testnet's 30 |
+| `@stellar/stellar-sdk` | 16.4.1 | The app and scripts (pinned, exact) |
+| `smart-account-kit` | 0.10.0 | Passkey smart wallets (pinned, exact). Used with no indexer and no relayer; see docs/PHASE3_SPEC.md §12 |
+| `@creit.tech/stellar-wallets-kit` | 2.5.0 | The regular-wallet fallback (pinned, exact) |
+| `@playwright/test` | 1.65.0 | The end-to-end and no-leak tests (pinned, exact). `npx playwright install chromium firefox` |
 | Docker + SageMath 10.4 | `sagemath/sagemath@sha256:8d657a42…` | **Only** to regenerate the Poseidon constants from scratch. Checking them needs nothing. |
 | Python 3 | 3.12 | Only with the line above, for the round-number script. |
 | A Stellar wallet | — | **Freighter, xBull, Albedo, Rabet** or **Hana**, on testnet. Asking to *buy* needs Freighter or Hana. |
