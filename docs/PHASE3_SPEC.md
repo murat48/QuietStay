@@ -886,6 +886,20 @@ state is rejected.
 | `withdraw_swap_acceptance` | the taker | acceptance live |
 | `complete_swap` | the swap's maker + valid proof (taker's proof stored) | acceptance live, both proofs within their window |
 
+**The SEP-45 web-auth contract** (added at the Step 2 review). This is a
+separate contract, used only to sign in smart wallets:
+`contracts/vendor/anchor-web-auth/`, from stellar/java-stellar-anchor-sdk @
+`dc5817fb`, unmodified. Testnet: `CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM`.
+Mainnet: deployed by us later. It holds no rights, no money and no QuietStay
+state. The rights contract never calls it, and it never calls the rights
+contract.
+
+| Function | Who can call | When / effect |
+| --- | --- | --- |
+| `__constructor(admin)` | the deployer, once | stores `admin`. QuietStay passes `CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2`, the contract id SHA-256("QuietStay SEP-45 web-auth: no admin"). No contract exists there or can be created there |
+| `web_auth_verify(args)` | anyone | requires the authorization of `args.account` and `args.web_auth_domain_account`, and of `args.client_domain_account` if present. Writes nothing but those addresses' auth nonces. The server only simulates it, and never submits it |
+| `upgrade(new_wasm_hash)` | `admin` only | **unreachable**: the admin address can never authorize, so the code cannot change. This is how the "no upgrade, no admin key" rule holds for a contract we reuse unmodified |
+
 **Outside accounts.** No allowlist is needed. Money moves only in
 `accept_sale`, `accept_rental`, `collect`, `confirm`, `refund` and `resolve`.
 Rights move only through `authorize_transfer`.
@@ -1093,6 +1107,26 @@ and its output.
   - If mainnet has moved, mainnet work stops. The checklist's protocol,
     simulation and cost items are re-run, and the result is reported to you
     before anything else is sent.
+- **The SEP-45 web-auth contract** (Step 2 review), each item with command
+  and output, for testnet and mainnet side by side:
+  - The WASM hash equals the build from the pinned source:
+    `708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1`, from
+    `cd contracts/vendor/anchor-web-auth && stellar contract build`, then
+    `sha256sum`. It must be identical on both networks, and the source must
+    be byte-identical to stellar/java-stellar-anchor-sdk @ `dc5817fb`.
+  - The stored `Admin` is `CDA2IFOT…33G2`, and that address has no contract
+    instance (`getLedgerEntries` on both keys).
+  - The declared protocol (v26 today) is at most mainnet's.
+  - `SIGNING_KEY` (the SEP-10/SEP-45 server account) exists on the network,
+    because `web_auth_verify` asks for its authorization. On mainnet that
+    means a small XLM balance, from an account you fund.
+  - `/.well-known/stellar.toml` names the endpoint, the contract id and the
+    signing key, and they match the deployment.
+  - The SEP-45 tests (`e2e/passkey.spec.ts`: sign-in; unsigned, replayed and
+    tampered challenges refused) pass against that deployment.
+- **Privacy evidence** (Step 2 review): every evidence transaction has its
+  `check-privacy` output in `evidence/privacy/`, made right after the
+  transaction, with its events.
 
 ## Decisions
 

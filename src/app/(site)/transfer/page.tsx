@@ -96,7 +96,7 @@ export default function TransferScreen() {
 }
 
 function TransferForm() {
-  const { address, standing, sign, authFetch, refreshStanding } = useWallet();
+  const { address, kind, standing, sign, submitSigned, authFetch, refreshStanding } = useWallet();
   const supported = useProverSupported();
   const options = useMemo(() => transferableRights(standing), [standing]);
   const owned = useMemo(() => options.filter((o) => o.maySell), [options]);
@@ -185,18 +185,11 @@ function TransferForm() {
         const builtBody = (await built.json()) as { xdr?: string; error?: string; request_id?: string };
         if (!built.ok || !builtBody.xdr) throw new Error(builtBody.error ?? "could not build the transfer");
 
-        setStep("waiting for your wallet…");
+        setStep(kind === "passkey" ? "waiting for your passkey…" : "waiting for your wallet…");
         const signed = await sign(builtBody.xdr);
-        setStep("submitting…");
-        const sent = await authFetch("/api/tx/submit", { method: "POST", body: JSON.stringify({ xdr: signed }) });
-        const result = (await sent.json()) as {
-          hash?: string;
-          successful?: boolean;
-          failure?: string;
-          explorer?: string;
-          error?: string;
-        };
-        if (!sent.ok) throw new Error(result.error ?? "submission failed");
+        setStep(kind === "passkey" ? "submitting (fee paid by the testnet fee account)…" : "submitting…");
+        const result = await submitSigned(signed);
+        if (!result.ok) throw new Error(result.error ?? "submission failed");
 
         if (result.successful && builtBody.request_id) {
           await authFetch(`/api/requests/${builtBody.request_id}`, {
@@ -232,7 +225,7 @@ function TransferForm() {
         setStep(null);
       }
     },
-    [address, holdings, authFetch, sign, refreshStanding, loadAsks],
+    [address, kind, holdings, authFetch, sign, submitSigned, refreshStanding, loadAsks],
   );
 
   return (

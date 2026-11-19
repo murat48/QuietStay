@@ -174,7 +174,7 @@ interface Inventory {
 }
 
 export default function ListScreen() {
-  const { address: walletAddress, authenticated, readOnly, canRequest, sign, signAuth, authFetch, connect, busy } =
+  const { address: walletAddress, authenticated, readOnly, canRequest, sign, submitSigned, signConsent, authFetch, connect, busy } =
     useWallet();
   // Anyone may browse; only a proved account acts. A wallet connected but not
   // signed in is treated as a visitor, so no owner's control is offered to an
@@ -375,17 +375,10 @@ export default function ListScreen() {
 
         const signed = await sign(builtBody.xdr);
 
-        const sent = await authFetch("/api/tx/submit", {
-          method: "POST",
-          body: JSON.stringify({ xdr: signed }),
-        });
-        const result = (await sent.json()) as {
-          hash?: string;
-          successful?: boolean;
-          failure?: string;
-          error?: string;
-        };
-        if (!sent.ok) throw new Error(result.error ?? "submission failed");
+        // A regular wallet's transaction goes to /api/tx/submit; a passkey's, with
+        // its fee paid by the testnet fee account, to /api/tx/sponsor.
+        const result = await submitSigned(signed);
+        if (!result.ok) throw new Error(result.error ?? "submission failed");
         if (!result.successful) throw new Error(result.failure ?? "the contract rejected it");
 
         setMessage(
@@ -398,7 +391,7 @@ export default function ListScreen() {
         setBusyRight(null);
       }
     },
-    [address, authFetch, sign, load],
+    [address, authFetch, sign, submitSigned, load],
   );
 
   /**
@@ -442,12 +435,17 @@ export default function ListScreen() {
             error?: string;
           };
           if (!prep.ok || !toSign.preimage) throw new Error(toSign.error ?? "could not prepare the consent");
-          const signature = await signAuth(toSign.preimage);
+          // A regular wallet signs the preimage; a passkey signs the entry itself.
+          const signedConsent = await signConsent({
+            entry: toSign.entry!,
+            preimage: toSign.preimage,
+            valid_until_ledger: toSign.valid_until_ledger!,
+          });
           consent = {
             next_secret_hash: h,
             entry: toSign.entry,
-            signature,
             valid_until_ledger: toSign.valid_until_ledger,
+            ...signedConsent,
           };
         }
         const response = await authFetch("/api/requests", {
@@ -464,7 +462,7 @@ export default function ListScreen() {
         setBusyRight(null);
       }
     },
-    [authFetch, loadRequests, signAuth, consentHash],
+    [authFetch, loadRequests, signConsent, consentHash],
   );
 
   /** Decline an ask, or take your own back. Neither touches the chain. */

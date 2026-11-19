@@ -9,7 +9,7 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: Step 2 checkpoint (2026-11-19), waiting for your review
+- Current step: Step 2 checkpoint after the review (2026-11-19), waiting for your review and your device approval
 
 ## Open issues
 
@@ -21,13 +21,16 @@ actually run.
 | Medium | D4a: record-before-offer vs key hash in the offer | 1 (review 2) | resolved: option 1 approved with three additions (review 3) |
 | Medium | Upstash connection and plan | 1 (review 2) | resolved: you confirmed `upstash-kv-cobalt-pillow` (Upstash for Redis) is connected and on the Free plan (Vercel dashboard, 2026-11-19) |
 | Medium | Sealed-link page must load no analytics: separate root layout for `/receive`, no-leak test checks analytics endpoints | 1 (review 2) | resolved 2026-11-19: `(sealed)` root layout; checked by e2e/no-leak.spec.ts |
-| High | **Passkey sign-in.** The app's server routes (asks, issuance asks, building proven transfers) need a SEP-10 session, and SEP-10 works only for `G…` accounts. The spec does not say how a `C…` smart wallet signs in, so the passkey screens are not built. Needs your decision | 2 | open |
-| Medium | Fee route key: spec §13 names `qs-testnet-fee`, made by you, with its secret in `QUIETSTAY_TESTNET_FEE_SECRET`. I made `qs-fee-testnet` for the probe only. `/api/tx/sponsor` is not built yet (it waits on passkey sign-in) | 2 | open |
-| Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device is still to do | 2 | open |
+| High | **Passkey sign-in.** The app's server routes (asks, issuance asks, building proven transfers) need a SEP-10 session, and SEP-10 works only for `G…` accounts. The spec did not say how a `C…` smart wallet signs in | 2 | resolved 2026-11-19 (review): SEP-45 with Anchor Platform's web-auth contract @ `dc5817fb`, working within the time box; no ping fallback needed |
+| Medium | The reused web-auth contract has `upgrade` gated by an admin, which conflicts with "no upgrade, no admin key". Deployed with an admin nobody can authorize (`CDA2IFOT…33G2`); checked on chain. Your review of this choice is asked for at this checkpoint | 2 (review) | open: for your review |
+| Medium | Fee route key: spec §13 named `qs-testnet-fee`; I had made `qs-fee-testnet` | 2 | resolved 2026-11-19 (review): `qs-fee-testnet` is the fee key, spec updated. You set `QUIETSTAY_TESTNET_FEE_SECRET` in Vercel and `.env.local`; its public key matches `GCGDZWCL…L77Z`. New identities: you create them |
+| Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device is still to do | 2 | open: ready for you, docs/PASSKEY_DEVICE_TEST.md |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
-| Low | This machine lacks the system libraries Playwright's browsers need (`libnss3`, `libnspr4`, `libasound2t64`), and `sudo` needs your password. Workaround: the Ubuntu packages, unpacked without root into `~/.local/share/qs-playwright-deps`, plus `LD_LIBRARY_PATH`. Proper fix: `sudo npx playwright install-deps chromium firefox` | 2 | open |
+| Low | This machine lacked the system libraries Playwright's browsers need | 2 | resolved 2026-11-19: you ran the install with sudo; the unpacked workaround is removed, and both browsers start on the system libraries |
+| Low | An e2e run once got a 500 from `/api/issue`, and another a 502 from `/api/me`. Neither recurred on a rerun with the same code; the response bodies were not kept. Probably testnet RPC flakiness, not confirmed | 2 (review) | open: watch |
+| Medium | SEP-45 and the fee route need the deployment's store (Upstash) on Vercel, for single-use nonces and rate limits. Without it they refuse, by design. The SIGNING_KEY account must exist on each network | 2 (review) | open: Step 5 checklist item (spec §14) |
 | Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
-| Low | `npm run lint`: 13 problems (12 errors, 1 warning) already on `96bbb5f`, none from Step 2 | 2 | open |
+| Low | `npm run lint`: 7 findings remain, all in code from before Step 2 (it was 13 on `96bbb5f`) | 2 | open |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
 
 Severity: Critical (blocks mainnet), High, Medium, Low.
@@ -101,7 +104,11 @@ of the spec, the rest at the second review of `def5eb6`.
 | Smart wallet (passkey) | `CDSI6FMLEA5LRMCTFU2RBMVBMFHWH4TJN7PEMEWSK477S4KP2KAKOKWY` (Step 2 probe) | | `npm run passkey:probe` |
 | WebAuthn verifier (OZ, via kit) | `CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F` | `CB7HENHJ7NF34I5FFXQK7D5I3WWQRGB5O5XO77D3NXMT7LM7LOKRQ5YR` | smart-account-kit deployment manifests. Checked on chain in Step 2: both run WASM `e63a030d…6b72b76` (`stellar contract fetch --id …`, then `sha256sum`) |
 | Step 2 staging rights contract | `CCR2Z4IQNKXO2YCTQI2JBU5YLQTFXCXWVY6HV6H6TWNFWL5RAQ3IMAX5` | — | `stellar contract deploy` (Step 2). Step 3 redeploys with USDC/arbiter |
-| Testnet fee payer (D6) | `GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z` | — | `stellar keys generate qs-fee-testnet --fund` |
+| Testnet fee payer (D6) | `GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z` (`qs-fee-testnet`) | — (no server key on mainnet) | approved as the fee key at the Step 2 review |
+| SEP-45 web-auth contract | `CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM` | later, deployed by us | `npx tsx scripts/deploy-web-auth.ts --network testnet --source qs-issuer` (tx `31f480413f355f51a545a2817ccdb1a8e163eab5a49d6f59a92debda5b825ff1`) |
+| Web-auth WASM (must match) | `708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1` | | built from java-stellar-anchor-sdk @ `dc5817fb` |
+| Web-auth admin (unusable) | `CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2` | same | SHA-256("QuietStay SEP-45 web-auth: no admin"); no contract at it |
+| SEP-10 / SEP-45 signing key | `GDC2YUKYIPDETC6M7QVOL4222SJF6MVYCW5ZOOVFQEZQQPYIENPLRRGQ` (exists) | must be funded | `qs-sep10-server` |
 | Measurement contract (Step 1 only) | `CCKL74S5L57GZ32K2AWIIRGKNED3CZNWFCM62BMVASLMSHJXOYK4ZLY4` | — | `stellar contract deploy … quietstay_measure.wasm` |
 | Wasm hash (must match) | | | |
 | App link | | | |
@@ -302,6 +309,76 @@ of the spec, the rest at the second review of `def5eb6`.
     Firefox or in Safari.
 - Open: see the table at the top (Passkey sign-in, fee route key, real-device
   passkey).
+- **Review (2026-11-19), done:**
+  - **SEP-45 for smart wallets**, working within the one-day time box.
+    - The web-auth contract is vendored unmodified from
+      stellar/java-stellar-anchor-sdk @ `dc5817fb`
+      (`contracts/vendor/anchor-web-auth/`, PINNED.md). Its WASM is
+      `708cacdc…`, protocol 26.
+    - Testnet deployment `CBCDSOZP…5KGM` (tx `31f48041…`), with admin
+      `CDA2IFOT…33G2`, which nobody can authorize. The stored Admin and the
+      absence of any contract at that address were read back from chain.
+    - `src/lib/sep45.ts` and `/api/auth/contract` implement SEP-45 v0.1.1
+      §Challenge and §Token. The session is the same as SEP-10's. SEP-10
+      stays for G accounts. `/.well-known/stellar.toml` advertises both.
+    - Added to the spec's permissions table (§10) and checklist (§14).
+  - **Fee key:** `qs-fee-testnet`, spec §13 updated; your secret matches its
+    public key.
+  - **Playwright:** the workaround is removed and the system libraries are
+    used.
+  - **check-privacy:** a `--tx label=hash` mode, with `--record`, `--secret`
+    and `--next-secret`, writes its full output (events included) to
+    `evidence/privacy/`, which has a README. The specs that make evidence
+    transactions run it right after them. The Step 2 evidence transactions
+    are in `evidence/privacy/2026-11-19-step2-testnet.txt`.
+  - **Passkey screens.**
+    - Header: "Use a passkey" (create a wallet, or sign in). An unsupported
+      browser is told to use a regular wallet instead.
+    - The wallet is created through `/api/tx/sponsor` and signs in with
+      SEP-45.
+    - Asks, issuance asks, offers, a buyer's consent and in-browser proven
+      transfers all work for a C account. `sign`, `submitSigned` and
+      `signConsent` route each one.
+    - For C callers, the builders use the fee account as source.
+  - **`/api/tx/sponsor`** follows spec §13: testnet only; rights-contract
+    calls or pinned-WASM wallet creation only; the fee account nowhere but
+    the source; fee ≤ 1 XLM; 10/IP/hour, 20/wallet/day, 300/day; refuses
+    without a store; refuses if the fee key is the issuer, the sign-in key
+    or a holder. It rebuilds every transaction itself.
+  - **Device step for you:** docs/PASSKEY_DEVICE_TEST.md.
+- **Review tests (all 2026-11-19):**
+  - `cargo test`: 80/80, unchanged.
+  - `npm run zk:test`: 27/27.
+  - `npm run test:app`: 12/12 (the sponsor policy, rule by rule).
+  - `npx playwright test`: 15/15, of which:
+    - prover 3/3;
+    - passkey 8/8, 4 of them SEP-45: sign-in; unsigned, replayed and
+      tampered challenges refused;
+    - passkey app 2/2;
+    - no-leak 2/2.
+    
+    The full-suite run had one failure: no-leak, at the 500 from
+    `/api/issue` above. It passed on the rerun.
+  - The no-leak rerun recorded 409 requests and found 0 leaks among 25
+    forbidden values. Its on-chain check
+    (`evidence/privacy/2026-11-19-no-leak-aa174f21.txt`) passes.
+  - An earlier run of that check flagged the buyer's `h'` on the sale. That
+    was a false positive: `h'` is public by design. `--next-secret` was
+    added and the transcript dropped.
+  - `zk:check-bundle` passes. `next build --webpack` passes.
+  - Lint: the same 7 findings as before Step 2.
+- **Review tx hashes (testnet):**
+  - Web-auth contract deployed: `31f480413f355f51a545a2817ccdb1a8e163eab5a49d6f59a92debda5b825ff1`
+  - **Passkey screens, approved with the passkey** (wallet
+    `CCNDU6CKCMBO4BF747VO77HYERV745NFB44NY6GDX4GYFAHWET5HH35B`): rental
+    `e590f8b026d60019bc7bd43bd5e393aea095ccd0ba2ee0f312efb55c33d3e2fc`
+  - Second passkey-app run (wallet `CDE7YVIL…LMFN`): rental `b409db2f029f23a6d412e2a46b72b3a09fb96da2bac06d2188d8a5866afb2232`
+  - Passkey spec rental: `b263df24a8f977986e5d8167661394106fbe7afa5831421d2a492d7cd15567d6`
+  - No-leak (rerun): sale `aa174f215da846076c4701ae6e017bdf2a3c9f9ca0ee711dd78d09bc7799589b`,
+    rental `19335b24d115aeab54454e6e144af2f20bc9fc1f1a69d2f29116602fc0dd1d9c`
+  - Each has its check in `evidence/privacy/`. The no-leak pair from the
+    run with the false positive (`f7834cce…`, `d8bcae93…`) has none,
+    because its throwaway secrets were gone.
 
 ### Step 3 — USDC sale, rental escrow and pilot arbiter
 - Date:

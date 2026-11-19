@@ -46,6 +46,7 @@ import { Keypair } from "@stellar/stellar-sdk";
 import canonicalize from "canonicalize";
 import { startApp, type App } from "./lib/app";
 import { deployRights, fund } from "./lib/testnet";
+import { checkPrivacy, hashOf } from "./lib/privacy";
 import { attachWallet } from "./lib/wallet";
 
 const PORT = 4321;
@@ -297,6 +298,17 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
     ) + "\n",
   );
   expect(leaks, leaks.join("\n")).toEqual([]);
+
+  // The on-chain side, right after the transactions (Step 2 review): the
+  // ledger holds none of the same values, events included.
+  checkPrivacy({
+    txs: { "no-leak-sale": hashOf(saleTx), "no-leak-rental": hashOf(rentalTx) },
+    records: [theRecord],
+    // The owner's s, from the owner's browser; the buyer's s', from the buyer's.
+    secrets: vaults[0]!.secrets,
+    nextSecrets: vaults[1]!.secrets,
+    out: `evidence/privacy/${new Date().toISOString().slice(0, 10)}-no-leak-${hashOf(saleTx).slice(0, 8)}.txt`,
+  });
 
   // Controls: the recorder sees the worker's traffic, and the analytics check can see analytics.
   expect(log.some((e) => e.url.endsWith("/zk/transfer.wasm"))).toBe(true);

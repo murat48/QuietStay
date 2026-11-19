@@ -378,6 +378,27 @@ Deliberate, and stated so nobody discovers them as surprises:
     their `h`.
 13. **Sub-grant depth is capped at 4** — a resource bound; under Phase 2 no renter can
     sub-grant anyway.
+14. **Phase 3: a passkey wallet lives in the browser that created it.** The
+    app uses no indexer (no hosted service), so a passkey alone cannot find
+    its wallet on another device. The wallet itself is on chain, and its
+    passkey still authorizes it, but this pilot offers no way to reconnect
+    elsewhere. Account recovery beyond the basic passkey setup is out of
+    scope.
+15. **Phase 3: passkey sign-in is SEP-45, through a reused contract.** The
+    web-auth contract is Anchor Platform's, unmodified (pinned at
+    `dc5817fb`). Its `upgrade` is gated by an admin, and QuietStay deploys it
+    with an admin address nobody can authorize (contracts/vendor/
+    anchor-web-auth/PINNED.md). It holds no rights and no money. A flaw in
+    it could at worst let someone sign in to the app as a wallet they do not
+    control. That would let them make or withdraw asks in that wallet's
+    name, but never move a right or money: those need the wallet's own
+    passkey on the transaction, and the holder's proof.
+16. **Phase 3: passkey transactions are paid by a builder key on testnet.**
+    `/api/tx/sponsor` signs with `qs-fee-testnet`, only for calls to the
+    rights contract and for smart-wallet creation, with rate limits
+    (docs/PHASE3_SPEC.md §13). It refuses to run on any other network. On
+    mainnet there is no server key: the CLI signing flow
+    (`scripts/mainnet-sign-submit.sh`) is used instead.
 
 ## What Phase 3 is for
 

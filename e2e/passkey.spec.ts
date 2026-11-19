@@ -32,6 +32,7 @@ import { fr } from "../scripts/lib/zk-encode";
 import { proveTransfer } from "../scripts/lib/zk-prove";
 import { buildCall, issueArgs, transferArgs } from "../scripts/lib/zk-tx";
 import { startApp, type App } from "./lib/app";
+import { checkPrivacy } from "./lib/privacy";
 import { deployRights, fund, server, submit } from "./lib/testnet";
 
 const PORT = 4320;
@@ -184,6 +185,12 @@ test("a passkey-signed, proven rental from the smart wallet goes through", async
   const { hash } = await submit(call, fee);
   console.log(`passkey rental ${hash}`);
   expect(await holder(week.rightId)).toBe(renter.publicKey());
+  checkPrivacy({
+    txs: { "passkey-spec-rental": hash },
+    records: [week.record],
+    secrets: [week.secret.toString()],
+    out: `evidence/privacy/${new Date().toISOString().slice(0, 10)}-passkey-spec-${hash.slice(0, 8)}.txt`,
+  });
 });
 
 test("a signature that does not verify is refused on chain, and nothing moves", async () => {

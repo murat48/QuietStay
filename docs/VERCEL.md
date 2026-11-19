@@ -107,6 +107,20 @@ The full deployment adds:
 | `UPSTASH_REDIS_REST_TOKEN` | set by the Upstash integration |
 | `QUIETSTAY_ISSUER_SECRET` | the issuer's `S...` seed — **un-rotatable, read the warning above** |
 
+Phase 3 adds, for passkey smart wallets on testnet:
+
+| Variable | Value |
+| --- | --- |
+| `QUIETSTAY_TESTNET_FEE_SECRET` | `qs-fee-testnet`'s seed (you set it). Only `/api/tx/sponsor` reads it, and it refuses on any network but testnet. Without it, passkey wallets cannot be created or approve transactions; everything else works |
+| `NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT` | optional; defaults to `qs-fee-testnet`'s public address `GCGDZWCL…L77Z` |
+| `NEXT_PUBLIC_QUIETSTAY_WEB_AUTH_CONTRACT_ID` | optional; defaults to the testnet SEP-45 web-auth contract `CBCDSOZP…5KGM` |
+
+The fee route's rate limits are kept in the Upstash store. Without a store
+they are kept in a file, which does not survive on Vercel. So on Vercel the
+route needs Upstash, and it refuses to sponsor anything when the store cannot
+be reached. The SEP-45 sign-in also needs the SEP-10 signing account
+(`QUIETSTAY_SEP10_SERVER_SECRET`'s public key) to exist on the network.
+
 Never the `DEMO_*` keys — those are read only by the scripts, which do not run on
 Vercel.
 

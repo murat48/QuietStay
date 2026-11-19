@@ -31,7 +31,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { assembleConsent, parseSecretHash } from "@/lib/consent";
+import { acceptSignedConsent, assembleConsent, parseSecretHash } from "@/lib/consent";
 import { ContractCallError, readInventory } from "@/lib/contract";
 import { formatDate, weekIsOver } from "@/lib/format";
 import {
@@ -58,7 +58,14 @@ export async function POST(request: Request): Promise<Response> {
   let body: {
     right_id?: unknown;
     /** Required to ask to buy: from /api/requests/consent, plus the wallet's signature. */
-    consent?: { next_secret_hash?: unknown; entry?: unknown; signature?: unknown; valid_until_ledger?: unknown };
+    consent?: {
+      next_secret_hash?: unknown;
+      entry?: unknown;
+      signature?: unknown;
+      valid_until_ledger?: unknown;
+      /** Phase 3: a smart-wallet buyer's passkey-signed entry, in place of entry + signature. */
+      signed_entry?: unknown;
+    };
     /** Phase 3: the buyer's sealed-link key hash (spec §2). */
     key_hash?: unknown;
   };
@@ -149,20 +156,34 @@ export async function POST(request: Request): Promise<Response> {
       } catch (error) {
         return Response.json({ error: (error as Error).message }, { status: 400 });
       }
-      const validUntil = Number(c.valid_until_ledger);
-      if (typeof c.entry !== "string" || typeof c.signature !== "string" || !Number.isInteger(validUntil)) {
-        return Response.json({ error: "consent needs entry, signature and valid_until_ledger" }, { status: 400 });
+      let validUntil = Number(c.valid_until_ledger);
+      const smartWallet = caller.startsWith("C");
+      if (
+        smartWallet
+          ? typeof c.signed_entry !== "string"
+          : typeof c.entry !== "string" || typeof c.signature !== "string" || !Number.isInteger(validUntil)
+      ) {
+        return Response.json(
+          { error: smartWallet ? "a smart wallet's consent needs signed_entry" : "consent needs entry, signature and valid_until_ledger" },
+          { status: 400 },
+        );
       }
       let authEntry: string;
       try {
-        authEntry = await assembleConsent({
-          buyer: caller,
-          rightId,
-          nextSecretHash: h,
-          entry: c.entry,
-          signature: c.signature,
-          validUntilLedger: validUntil,
-        });
+        if (smartWallet) {
+          const accepted = acceptSignedConsent({ buyer: caller, rightId, nextSecretHash: h, signedEntry: c.signed_entry as string });
+          authEntry = accepted.entry;
+          validUntil = accepted.validUntilLedger;
+        } else {
+          authEntry = await assembleConsent({
+            buyer: caller,
+            rightId,
+            nextSecretHash: h,
+            entry: c.entry as string,
+            signature: c.signature as string,
+            validUntilLedger: validUntil,
+          });
+        }
       } catch (error) {
         return Response.json(
           { error: `the consent did not check out: ${error instanceof Error ? error.message : String(error)}` },

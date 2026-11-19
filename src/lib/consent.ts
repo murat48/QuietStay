@@ -131,6 +131,34 @@ export async function assembleConsent(params: {
   return signed.toXDR("base64");
 }
 
+/**
+ * Step 3 for a smart-wallet buyer (`C…`, Phase 3): the passkey signs the whole
+ * entry, not a bare preimage, so the entry comes back signed. Refused unless it
+ * is for `buyer`, for exactly `transfer(right_id, h')` on this contract, and
+ * carries a signature. Whether that signature verifies is the wallet's own
+ * `__check_auth`, which runs on chain: the holder's build simulates the sale
+ * with this entry in place, and a consent that does not verify is refused
+ * there, with the contract's reason.
+ */
+export function acceptSignedConsent(params: {
+  buyer: string;
+  rightId: number;
+  nextSecretHash: bigint;
+  signedEntry: string;
+}): { entry: string; validUntilLedger: number } {
+  const entry = xdr.SorobanAuthorizationEntry.fromXDR(params.signedEntry, "base64");
+  if (entry.credentials().switch().name !== "sorobanCredentialsAddress") throw new Error("the consent carries no address credentials");
+  const creds = entry.credentials().address();
+  if (Address.fromScAddress(creds.address()).toString() !== params.buyer) {
+    throw new Error("this consent was signed for a different account");
+  }
+  if (entry.rootInvocation().toXDR("base64") !== invocation(params.rightId, params.nextSecretHash).toXDR("base64")) {
+    throw new Error("this consent is not for this week and this secret hash");
+  }
+  if (creds.signature().switch().name === "scvVoid") throw new Error("the consent is not signed");
+  return { entry: entry.toXDR("base64"), validUntilLedger: creds.signatureExpirationLedger() };
+}
+
 /** For scripts and tests: sign a consent with a local key, as a wallet would. */
 export async function signConsentLocally(
   buyer: Keypair,

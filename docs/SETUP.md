@@ -257,7 +257,9 @@ npm run zk:build-worker
 
 npx playwright test e2e/prover.spec.ts    # the worker refuses a tampered key or circuit   (~3 s)
 npx playwright test e2e/passkey.spec.ts   # passkey rental; tampered signature; cancelled prompt;
-                                          # WebAuthn detection                               (~1 min)
+                                          # WebAuthn detection; SEP-45 sign-in and refusals  (~1 min)
+npx playwright test e2e/passkey-app.spec.ts # the passkey screens: create, SEP-45, ask, offer, rent
+                                          # out with the passkey via /api/tx/sponsor        (~3 min)
 npx playwright test e2e/no-leak.spec.ts   # a sale and a rental proved in the browser, every
                                           # request checked for secrets, records and d      (~10 min)
 npx tsx e2e/prover-bench.ts --runs 7      # proof times → docs/PROOF_TIMES.md
@@ -265,7 +267,12 @@ npm run passkey:probe -- --contract <C…>  # one passkey-authorized transfer, f
                                           # CLI identity qs-fee-testnet
 ```
 
-`npm run e2e:browser` builds the worker and runs all three specs. The app's
+`npm run e2e:browser` builds the worker and runs all four specs.
+`npm run test:app` runs the app's unit tests, among them the fee-route policy.
+The specs that make evidence transactions run `check-privacy` on them right
+away and write its output to `evidence/privacy/` (see its README).
+One passkey approval on a physical device is a manual step:
+[docs/PASSKEY_DEVICE_TEST.md](PASSKEY_DEVICE_TEST.md). The app's
 test wallet (`NEXT_PUBLIC_QS_E2E_WALLET=1`, set only by `e2e/lib/app.ts`)
 forwards signing to the test process. A build without that variable does not
 contain it.

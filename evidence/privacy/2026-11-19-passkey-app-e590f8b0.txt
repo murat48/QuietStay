@@ -1,0 +1,26 @@
+  run 2026-11-19T18:42:11.620Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-19-passkey-app-e590f8b0.txt --tx passkey-app-rental=e590f8b026d60019bc7bd43bd5e393aea095ccd0ba2ee0f312efb55c33d3e2fc --record /tmp/qs-privacy-6g3Cpm/record-0.json --secret /tmp/qs-privacy-6g3Cpm/secret-0.json
+
+Checking on-chain exposure
+  1 transactions, 55 forbidden values
+  contract the contracts these testnet transactions call
+
+passkey-app-rental — e590f8b026d60019bc7bd43bd5e393aea095ccd0ba2ee0f312efb55c33d3e2fc
+  ✓ no record contents in 3 layers (12356 bytes: envelope, result, meta)
+  call        transfer(
+                "CCNDU6CKCMBO4BF747VO77HYERV745NFB44NY6GDX4GYFAHWET5HH35B",
+                "GBRNQBUTIFJBN2J5WUXQQMHT2LAULWIM3PBVRCNTEYRLPY2E2HQIGQOJ",
+                "1",
+                "1797033600",
+                {"a":"0x0f1b3e6744eced1d…f85cdb97 (96 bytes)","b":"0x05cb8f2525b44997…0f330e22 (192 bytes)","c":"0x1204bf78c5a834be…878f6e85 (96 bytes)"},
+                ["42181352255805353420342806474600190744187508542439523076650435255385470128152","10260685031654893163712915146480424589170828849452816282430101092616607369665","1","545287071247530749198110483426288608363","338234757465421941314860460705497545331","131386013069578555569412182334336389825","92843720927800699925900504229425045635","1797033600","5818375","0","42529833909937631163565407467373385363738788008376691121709581431282725843252"],
+              )
+  event topics ["transfer","CCNDU6CKCMBO4BF747VO77HYERV745NFB44NY6GDX4GYFAHWET5HH35B","GBRNQBUTIFJBN2J5WUXQQMHT2LAULWIM3PBVRCNTEYRLPY2E2HQIGQOJ"]
+  event data   {"commitment":"0x5d41cca050c1f4cbe367cf483f9f2b03f3879b605503361bbfab8dc1ebedd018","expires_at":"1797033600","right_id":"1"}
+
+Result
+  ✓ No inventory record value appears in any of these 1 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 secret(s) given.
+  Records and secrets searched for (by file, never printed):
+    • /tmp/qs-privacy-6g3Cpm/record-0.json
+    • /tmp/qs-privacy-6g3Cpm/secret-0.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

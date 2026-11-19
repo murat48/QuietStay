@@ -39,14 +39,30 @@
  * takes), each owner's record secret `s`, and each owner's secret hash `h`.
  * What is public by design in Phase 2 — the proof, its eleven signals, and on a
  * sale the buyer's next secret hash `h'` — is printed, not forbidden.
+ *
+ *   npm run check-privacy -- --tx <label>=<hash> [--tx …] [--record <file>]… [--secret <file>]…
+ *                            [--network testnet|mainnet] --out evidence/privacy/<name>.txt
+ *
+ * Phase 3 (Step 2 review): run right after every evidence transaction, on
+ * testnet and on mainnet, and commit the output. Stellar RPC keeps a
+ * transaction's meta, and so its events, for about a week, and Horizon no
+ * longer serves meta at all. So the committed output is the lasting record
+ * that the events were checked. Each `--record` (an ownership record) and
+ * `--secret` (`{ "secret": … }`, a holder's) adds that record's digest `d`, `d_hi`,
+ * `d_lo` and that secret's `s` and `h` to the forbidden values. Each
+ * `--next-secret` (a buyer's `s'`) adds `s'` only, because a sale publishes
+ * `h'` by design. All of this comes on top of every
+ * inventory record. They are searched for and never printed. `--out` gets the
+ * full output in plain text, with the decoded call and every event.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { parseArgs } from "node:util";
 
-import { scValToNative, xdr } from "@stellar/stellar-sdk";
+import { rpc, scValToNative, xdr } from "@stellar/stellar-sdk";
 
-import { toHex } from "../src/lib/canonical";
+import { commit, toHex, type JsonValue } from "../src/lib/canonical";
 import { HORIZON_URL } from "../src/lib/config";
 import { server } from "../src/lib/contract";
 import type { OwnershipRecord } from "../src/lib/record";
@@ -56,6 +72,76 @@ import { secretHash } from "./lib/zk";
 loadEnv();
 
 const PHASE2 = process.argv.includes("--phase2");
+
+/** `--tx label=hash` mode (Phase 3): the named transactions only. */
+const cli = parseArgs({
+  args: process.argv.slice(2),
+  options: {
+    phase2: { type: "boolean" },
+    tx: { type: "string", multiple: true },
+    record: { type: "string", multiple: true },
+    secret: { type: "string", multiple: true },
+    "next-secret": { type: "string", multiple: true },
+    network: { type: "string" },
+    out: { type: "string" },
+  },
+  strict: true,
+}).values;
+const NETWORK = cli.network ?? "testnet";
+if (NETWORK !== "testnet" && NETWORK !== "mainnet") throw new Error("--network must be testnet or mainnet");
+const RPC = NETWORK === "mainnet" ? new rpc.Server(process.env.STELLAR_MAINNET_RPC_URL ?? "https://mainnet.sorobanrpc.com") : server;
+const HORIZON = NETWORK === "mainnet" ? "https://horizon.stellar.org" : HORIZON_URL;
+const EXPERT = NETWORK === "mainnet" ? "https://stellar.expert/explorer/public/tx" : "https://stellar.expert/explorer/testnet/tx";
+
+/** Everything printed, without colour codes, for --out. */
+const transcript: string[] = [];
+{
+  const original = console.log.bind(console);
+  console.log = (...args: unknown[]) => {
+    transcript.push(args.map(String).join(" ").replace(/\x1b\[[0-9;]*m/g, ""));
+    original(...args);
+  };
+}
+
+/** d, d_hi, d_lo for each --record, and s, h for each --secret. */
+async function givenForbiddenValues(): Promise<{ label: string; value: string }[]> {
+  const out: { label: string; value: string }[] = [];
+  for (const file of cli.record ?? []) {
+    const name = file.split("/").pop();
+    const rec = readJson<OwnershipRecord>(file);
+    const d = await commit(rec as unknown as JsonValue);
+    out.push({ label: `${name} record digest d (hex)`, value: d });
+    out.push({ label: `${name} record digest d (raw bytes)`, value: raw(d) });
+    out.push({ label: `${name} d_hi (raw 16 bytes)`, value: raw(d.slice(0, 32)) });
+    out.push({ label: `${name} d_lo (raw 16 bytes)`, value: raw(d.slice(32)) });
+    for (const [what, v] of [
+      ["owner name", rec.owner?.name],
+      ["owner email", rec.owner?.email],
+      ["salt", rec.salt],
+      ["record id", rec.record_id],
+      ["deed reference", rec.title?.deed_reference],
+    ] as const) {
+      if (typeof v === "string" && v.length >= 4) out.push({ label: `${name} ${what}`, value: v });
+    }
+  }
+  for (const file of cli.secret ?? []) {
+    const name = file.split("/").pop();
+    const secret = BigInt((readJson<{ secret: string }>(file)).secret);
+    out.push({ label: `${name} secret s (raw bytes)`, value: raw(be32(secret)) });
+    out.push({ label: `${name} secret s (decimal)`, value: secret.toString() });
+    out.push({ label: `${name} secret hash h (raw bytes)`, value: raw(be32(await secretHash(secret))) });
+  }
+  // A buyer's next secret s': its hash h' is public by design on the sale
+  // (the next_secret_hash signal, and the consent the buyer signs), so only
+  // s' itself is forbidden.
+  for (const file of cli["next-secret"] ?? []) {
+    const name = file.split("/").pop();
+    const secret = BigInt((readJson<{ secret: string }>(file)).secret);
+    out.push({ label: `${name} next secret s' (raw bytes)`, value: raw(be32(secret)) });
+    out.push({ label: `${name} next secret s' (decimal)`, value: secret.toString() });
+  }
+  return out;
+}
 
 interface Evidence {
   contract: string;
@@ -206,11 +292,11 @@ function eventsFromMeta(meta: xdr.TransactionMeta): unknown {
  * the same envelope, result and meta XDR, so the scan below is the same.
  */
 async function fetchTx(hash: string): Promise<FetchedTx | null> {
-  const tx = await server.getTransaction(hash);
+  const tx = await RPC.getTransaction(hash);
   if (tx.status !== "NOT_FOUND") {
     return { source: "rpc", envelopeXdr: tx.envelopeXdr, resultXdr: tx.resultXdr, resultMetaXdr: tx.resultMetaXdr, events: tx.events };
   }
-  const res = await fetch(`${HORIZON_URL}/transactions/${hash}`);
+  const res = await fetch(`${HORIZON}/transactions/${hash}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Horizon answered HTTP ${res.status} for ${hash}`);
   const body = (await res.json()) as { envelope_xdr: string; result_xdr: string; result_meta_xdr?: string };
@@ -228,8 +314,24 @@ async function fetchTx(hash: string): Promise<FetchedTx | null> {
 }
 
 async function main(): Promise<void> {
-  const evidence: Evidence = PHASE2 ? phase2Evidence() : readJson("docs/evidence.json");
-  const forbidden = PHASE2 ? [...forbiddenValues(), ...(await phase2ForbiddenValues())] : forbiddenValues();
+  const named = (cli.tx ?? []).map((t) => {
+    const [id, hash] = t.split("=");
+    if (!id || !hash || !/^[0-9a-f]{64}$/.test(hash)) throw new Error(`--tx expects <label>=<64-hex hash>, got ${t}`);
+    return { id, title: id, hash, explorer: `${EXPERT}/${hash}` };
+  });
+  const evidence: Evidence = named.length
+    ? { contract: `the contracts these ${NETWORK} transactions call`, transactions: named }
+    : PHASE2
+      ? phase2Evidence()
+      : readJson("docs/evidence.json");
+  const forbidden = named.length
+    ? [...forbiddenValues(), ...(await givenForbiddenValues())]
+    : PHASE2
+      ? [...forbiddenValues(), ...(await phase2ForbiddenValues())]
+      : forbiddenValues();
+  if (named.length) {
+    log.info(`run ${new Date().toISOString()} · network ${NETWORK} · command: npm run check-privacy -- ${process.argv.slice(2).join(" ")}`);
+  }
 
   log.step("Checking on-chain exposure");
   log.info(`${evidence.transactions.length} transactions, ${forbidden.length} forbidden values`);
@@ -273,7 +375,11 @@ async function main(): Promise<void> {
           `(${combined.length} bytes: ${layers.map((l) => l.name).join(", ")})`,
       );
     } else {
-      for (const hit of hits) log.fail(`LEAK — ${hit.label}: "${hit.value}"`);
+      // Record fields are shown; secrets and digests are named but never printed.
+      for (const hit of hits) {
+        const hidden = /secret|digest|d_hi|d_lo/.test(hit.label);
+        log.fail(`LEAK — ${hit.label}${hidden ? " (value not printed)" : `: "${hit.value}"`}`);
+      }
       problems += hits.length;
     }
 
@@ -299,7 +405,20 @@ async function main(): Promise<void> {
         "Horizon serves no meta: for those, only the envelope and the result were scanned, not the events.",
     );
   }
-  if (problems === 0 && PHASE2) {
+  if (problems === 0 && named.length) {
+    log.ok(`No inventory record value appears in any of these ${named.length} ${NETWORK} transactions, at any layer scanned.`);
+    const given = (cli.record ?? []).length + (cli.secret ?? []).length + (cli["next-secret"] ?? []).length;
+    if (given > 0) {
+      log.ok(
+        `Nor does the digest d (hex, bytes, d_hi, d_lo) of ${(cli.record ?? []).length} record(s) given, ` +
+          `or s and h of ${(cli.secret ?? []).length} holder secret(s) given, or s' of ` +
+          `${(cli["next-secret"] ?? []).length} buyer next secret(s) given (whose h' a sale publishes by design).`,
+      );
+    }
+    log.info("Records and secrets searched for (by file, never printed):");
+    for (const f of [...(cli.record ?? []), ...(cli.secret ?? []), ...(cli["next-secret"] ?? [])]) log.info(`  • ${f}`);
+    log.info("A transaction whose record or secret is not listed above was checked against the inventory values only.");
+  } else if (problems === 0 && PHASE2) {
     log.ok("No record contents, no record digest d, no owner secret s and no owner");
     log.ok("secret hash h appears in any Phase 2 evidence or issuance transaction,");
     log.ok(`at any layer ${withoutMeta > 0 ? "scanned (see the note above)" : ""} — accepted or rejected.`.replace("  ", " "));
@@ -355,4 +474,15 @@ function phase2Evidence(): Evidence {
   };
 }
 
-main().catch(fatal);
+main()
+  .then(() => writeTranscript())
+  .catch((e) => {
+    writeTranscript();
+    fatal(e);
+  });
+
+function writeTranscript(): void {
+  if (!cli.out) return;
+  mkdirSync(dirname(cli.out), { recursive: true });
+  writeFileSync(cli.out, transcript.join("\n") + "\n");
+}

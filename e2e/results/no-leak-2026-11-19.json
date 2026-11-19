@@ -1,9 +1,9 @@
 {
-  "date": "2026-11-19T15:47:01.461Z",
+  "date": "2026-11-19T19:07:47.421Z",
   "command": "npx playwright test e2e/no-leak.spec.ts",
-  "contract": "CDRWQ5OOFNC3AD6CCEYLTI3N25DNRCLSKHEPHZBD64VR6IWQZPIAJS5U",
-  "sale_tx": "https://stellar.expert/explorer/testnet/tx/398b365e3a52aaff3ee4814c4f15f75084b26d733cb3a045e188d601913caa0f",
-  "rental_tx": "https://stellar.expert/explorer/testnet/tx/9bd55f30fc6c644b74a112e2ca90ac7866934343e188e88ff4dc9bca098c7437",
+  "contract": "CAUV4KXYW7OOCFP5JDIWJTRC4WCO54D24XOKOEVHRWEYEU3KXPTMLEWL",
+  "sale_tx": "https://stellar.expert/explorer/testnet/tx/aa174f215da846076c4701ae6e017bdf2a3c9f9ca0ee711dd78d09bc7799589b",
+  "rental_tx": "https://stellar.expert/explorer/testnet/tx/19335b24d115aeab54454e6e144af2f20bc9fc1f1a69d2f29116602fc0dd1d9c",
   "requests_recorded": 409,
   "requests_by_browser": {
     "owner": 219,
@@ -24,7 +24,7 @@
     "buyer: /zk/transfer.wasm",
     "buyer: /zk/transfer.zkey"
   ],
-  "forbidden_values_checked": 24,
+  "forbidden_values_checked": 25,
   "secrets_found_in_vaults": 2,
   "leaks": []
 }

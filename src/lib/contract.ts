@@ -33,7 +33,7 @@ import {
 } from "@stellar/stellar-sdk";
 
 import { toHex } from "./canonical";
-import { CONTRACT_ID, NETWORK_PASSPHRASE, RPC_URL } from "./config";
+import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, RPC_URL } from "./config";
 import { describeContractFailure, isRightNotFound } from "./errors";
 
 export const server = new rpc.Server(RPC_URL);
@@ -325,14 +325,21 @@ function transferArgs(t: ProvenTransfer): xdr.ScVal[] {
   ];
 }
 
-/** An unsimulated invocation with `source` as the transaction source account. */
+/**
+ * An unsimulated invocation with `source` as the transaction source account.
+ *
+ * A smart wallet (`C…`) cannot be a source. For one, the testnet fee account
+ * is the source, and the wallet's authorization becomes an address-credential
+ * entry that its passkey signs in the browser. /api/tx/sponsor then pays for
+ * the transaction and submits it (spec §13).
+ */
 async function buildInvocation(
   source: string,
   method: string,
   args: xdr.ScVal[],
   contractId: string = CONTRACT_ID,
 ): Promise<Transaction> {
-  const account = await server.getAccount(source);
+  const account = await server.getAccount(source.startsWith("C") ? FEE_ACCOUNT : source);
   return new TransactionBuilder(account, {
     fee: "1000000",
     networkPassphrase: NETWORK_PASSPHRASE,
@@ -448,9 +455,15 @@ export async function buildProvenTransferTx(
   const tx = await buildInvocation(t.from, "transfer", transferArgs(t), contractId);
   const first = await simulateOrThrow(tx);
 
+  let walletSigns = false;
   const auth = simulationAuthEntries(first).map((entry) => {
     const who = entryAddress(entry);
     if (who === null) return entry; // the holder, covered by the envelope signature
+    if (who === t.from) {
+      // A smart-wallet holder: its passkey signs this entry in the browser.
+      walletSigns = true;
+      return entry;
+    }
     if (who === t.to && t.expiresAt === null) {
       if (!buyerConsent) {
         throw new ContractCallError(
@@ -464,6 +477,9 @@ export async function buildProvenTransferTx(
   });
 
   const withAuth = rebuildWithAuth(tx, auth);
+  // With an entry still to be signed, the call cannot be checked in full yet:
+  // /api/tx/sponsor simulates it once the passkey has signed.
+  if (walletSigns) return withAuth;
   const second = await simulateOrThrow(withAuth);
   return rpc.assembleTransaction(withAuth, second).build();
 }
