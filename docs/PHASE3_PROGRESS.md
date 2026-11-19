@@ -9,7 +9,7 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: Step 2 checkpoint after the review (2026-11-19), waiting for your review and your device approval
+- Current step: **Step 2 closed (2026-11-19).** Step 3 starts in a new session
 
 ## Open issues
 
@@ -22,12 +22,12 @@ actually run.
 | Medium | Upstash connection and plan | 1 (review 2) | resolved: you confirmed `upstash-kv-cobalt-pillow` (Upstash for Redis) is connected and on the Free plan (Vercel dashboard, 2026-11-19) |
 | Medium | Sealed-link page must load no analytics: separate root layout for `/receive`, no-leak test checks analytics endpoints | 1 (review 2) | resolved 2026-11-19: `(sealed)` root layout; checked by e2e/no-leak.spec.ts |
 | High | **Passkey sign-in.** The app's server routes (asks, issuance asks, building proven transfers) need a SEP-10 session, and SEP-10 works only for `G…` accounts. The spec did not say how a `C…` smart wallet signs in | 2 | resolved 2026-11-19 (review): SEP-45 with Anchor Platform's web-auth contract @ `dc5817fb`, working within the time box; no ping fallback needed |
-| Medium | The reused web-auth contract has `upgrade` gated by an admin, which conflicts with "no upgrade, no admin key". Deployed with an admin nobody can authorize (`CDA2IFOT…33G2`); checked on chain. Your review of this choice is asked for at this checkpoint | 2 (review) | open: for your review |
+| Medium | The reused web-auth contract has `upgrade` gated by an admin, which conflicts with "no upgrade, no admin key" | 2 (review) | resolved 2026-11-19: approved as deployed (unmodified, unauthorizable admin). The claim is scoped to the rights contract in EVIDENCE.md and DESIGN.md, which add a web-auth entry. `scripts/check-web-auth.ts` passes on testnet; the checklist repeats it on mainnet |
 | Medium | Fee route key: spec §13 named `qs-testnet-fee`; I had made `qs-fee-testnet` | 2 | resolved 2026-11-19 (review): `qs-fee-testnet` is the fee key, spec updated. You set `QUIETSTAY_TESTNET_FEE_SECRET` in Vercel and `.env.local`; its public key matches `GCGDZWCL…L77Z`. New identities: you create them |
-| Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device was still to do | 2 | resolved 2026-11-19: your device's passkey authorized `list` from wallet `CAMTPQ3B…44YLT`, tx `059bc1b3…`. Device, OS, browser and passkey type are not recorded yet |
+| Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device was still to do | 2 | resolved 2026-11-19: Windows Hello (PIN) on a MONSTER ABRA A7 V11.3, Windows 10 Enterprise 10.0.19045, Chrome 157.0.8103.79, authorized `list` from wallet `CAMTPQ3B…44YLT`, tx `059bc1b3…` |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
 | Low | This machine lacked the system libraries Playwright's browsers need | 2 | resolved 2026-11-19: you ran the install with sudo; the unpacked workaround is removed, and both browsers start on the system libraries |
-| Low | An e2e run once got a 500 from `/api/issue`, and another a 502 from `/api/me`. Neither recurred on a rerun with the same code; the response bodies were not kept. Probably testnet RPC flakiness, not confirmed | 2 (review) | open: watch |
+| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
 | Medium | SEP-45 and the fee route need the deployment's store (Upstash) on Vercel, for single-use nonces and rate limits. Without it they refuse, by design. The SIGNING_KEY account must exist on each network | 2 (review) | open: Step 5 checklist item (spec §14) |
 | Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
 | Low | `npm run lint`: 7 findings remain, all in code from before Step 2 (it was 13 on `96bbb5f`) | 2 | open |
@@ -84,6 +84,20 @@ of the spec, the rest at the second review of `def5eb6`.
   2. Requests expire within the D9 limit and are capped at 10 live per
      requester.
   3. A request creates no obligation for the seller.
+- **Step 2 review decisions (2026-11-19):**
+  - **Passkey sign-in** is SEP-45, with Anchor Platform's web-auth contract
+    pinned at `dc5817fb`, deployed by us on testnet now and on mainnet later.
+    SEP-10 stays for G accounts. The fallback would have been a ping
+    function in a separate contract, never in the rights contract; it was
+    not needed.
+  - **The web-auth contract is approved as deployed:** unmodified, with an
+    unauthorizable admin. "No upgrade" is claimed for the rights contract
+    only. The checklist repeats the check on mainnet.
+  - **The fee key** is `qs-fee-testnet`. You create any new identity.
+  - **The sign-in signing key** is the single mainnet server key: no contract
+    role, minimum balance, funded by you, listed as the checklist exception.
+  - **check-privacy** runs right after every evidence transaction, on both
+    networks, and its output is committed under `evidence/privacy/`.
 - **Checklist.** The contracts are built and tested for mainnet protocol 29
   with no protocol-30-only features, and re-checked if mainnet upgrades during
   the sprint.
@@ -199,7 +213,7 @@ of the spec, the rest at the second review of `def5eb6`.
 - Open: none for Step 1. Step 2 starts in a new session.
 
 ### Step 2 — Browser proofs, reusable transfer check, passkeys
-- Date: 2026-11-19 (STOP: checkpoint, waiting for your review)
+- Date: 2026-11-19. **Closed 2026-11-19** after two reviews.
 - Branch / commit: `phase3`. `c51691e` transfer check · `68bad46` CLI and pins ·
   `df21722` passkey probe · `add5428` browser proving · the final Step 2 commit
   is in the git log.
@@ -385,6 +399,46 @@ of the spec, the rest at the second review of `def5eb6`.
     `evidence/privacy/2026-11-19-device-wallet-issue-69d3705f.txt` and
     `…-device-passkey-list-059bc1b3.txt`. Both pass, meta and events
     included.
+- **Second review (2026-11-19), done:**
+  - Device recorded, read with `powershell.exe` from WSL:
+    - `Microsoft Windows 10 Enterprise 10.0.19045`
+    - `MONSTER ABRA A7 V11.3`
+    - Chrome `157.0.8103.79`, on Windows (not in WSL), at
+      `http://localhost:3000`
+    - Windows Hello PIN (from you)
+  - Web-auth contract approved as deployed.
+    - EVIDENCE.md and DESIGN.md now say "no `upgrade` in the rights
+      contract", and have a web-auth entry: the stored admin, and no
+      contract at that address.
+    - `npx tsx scripts/check-web-auth.ts --network testnet`: 3/3 checks.
+    - The checklist (spec §14) repeats it on mainnet.
+  - DESIGN.md: only the SEP-45 web-auth contract is reused from Anchor
+    Platform. No Anchor Platform service, anchor integration, fiat or
+    on/off ramp is used.
+  - The sign-in signing key is approved as the single mainnet server key: no
+    contract role, minimum balance, funded by you. It is listed as the
+    exception in the checklist and DESIGN.md. Its mainnet public key goes to
+    you before Step 6.
+  - The sale pair redone with a privacy record: sale
+    `5b75d907aaee63faac4f4f327244f51cd1f2cc852e6138ef907ff160e4fe7766`, rental
+    `92154017748440ee48ff25cdc95079277f9d13d836b1b45f40f2e84c8666a11d`
+    (no-leak 2/2, 409 requests, 0 leaks). The check passes:
+    `evidence/privacy/2026-11-19-no-leak-5b75d907.txt`. It supersedes the
+    pair `f7834cce…`/`d8bcae93…`, which has none.
+  - Failed-request capture added (see the High issue). `passkey-app` was rerun
+    with it: 2/2, 0 failed responses, rental
+    `8de8acb5fa551f5b7534cdefe243c0566a003ce65ef6e4c2d4031fd1d7e9eab6`
+    (`evidence/privacy/2026-11-19-passkey-app-8de8acb5.txt`).
+- **Supported browsers (Step 2 result):**
+
+  | Use | Browser and device | Tested how | Result |
+  | --- | --- | --- | --- |
+  | In-browser proving | Chromium 158, Linux (WSL2), i7-10750H | Playwright, headless | median 498 ms |
+  | In-browser proving | Firefox 159, same machine | Playwright, headless | median 556 ms |
+  | Passkey wallet, SEP-45, approvals | Chromium 158 with a virtual platform authenticator | Playwright (CDP WebAuthn) | all passkey specs pass |
+  | Passkey wallet, SEP-45, approval | **Chrome 157.0.8103.79 on Windows 10 Enterprise 10.0.19045, MONSTER ABRA A7 V11.3, Windows Hello PIN** | by you, by hand | `list` tx `059bc1b3…` |
+  | Anything else | Firefox, Safari, phones | not tested | a browser without WebAuthn, Workers, WebCrypto or IndexedDB is told so and pointed to a regular wallet |
+
 - **Review tx hashes (testnet):**
   - Web-auth contract deployed: `31f480413f355f51a545a2817ccdb1a8e163eab5a49d6f59a92debda5b825ff1`
   - **Passkey screens, approved with the passkey** (wallet

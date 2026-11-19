@@ -46,6 +46,7 @@ import { Keypair } from "@stellar/stellar-sdk";
 import canonicalize from "canonicalize";
 import { startApp, type App } from "./lib/app";
 import { deployRights, fund } from "./lib/testnet";
+import { captureFailures, reportFailures, type FailedResponse } from "./lib/failures";
 import { checkPrivacy, hashOf } from "./lib/privacy";
 import { attachWallet } from "./lib/wallet";
 
@@ -62,6 +63,7 @@ interface Logged {
 }
 
 const log: Logged[] = [];
+const failures: FailedResponse[] = [];
 const links: string[] = [];
 
 function record(who: string, context: BrowserContext) {
@@ -134,6 +136,8 @@ test.beforeAll(async () => {
   app = await startApp({ contract, issuer, sep10, port: PORT });
 });
 
+test.afterEach(async ({}, info) => reportFailures("no-leak", failures, info));
+
 test.afterAll(async () => {
   await app?.stop();
 });
@@ -143,6 +147,7 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
     const c = await browser.newContext({ baseURL: app.url });
     await attachWallet(c, kp);
     if (recorded) record(who, c);
+    captureFailures(who, c, failures);
     return { c, page: await c.newPage() };
   };
   const O = await ctx("owner", owner);

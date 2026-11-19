@@ -106,12 +106,64 @@ move a week without the holder's own wallet signature, because `transfer` checks
 `from.require_auth()` first, independently. So the development setup weakens the
 second factor, not the first. A production multi-party ceremony is Phase 3.
 
-### No `upgrade`: a bug fix means a fresh deployment
+### No `upgrade` in the rights contract: a bug fix means a fresh deployment
 
 Phase 1 had an `upgrade` function, and with it every "the issuer cannot" was a
 property of the code running now rather than a guarantee: the issuer could deploy
 a version that could. Phase 2 removes it. The code deployed is the code that runs,
 and nobody can change it.
+
+This holds for the **rights contract**, the only contract that holds rights
+(and, from Step 3, escrowed USDC). The one other contract QuietStay deploys is
+reused rather than written, and has an `upgrade` that can never be called. It
+is described in the next section.
+
+### The SEP-45 web-auth contract: an `upgrade` nobody can call
+
+Passkey smart wallets sign in with SEP-45. That needs a contract with a
+`web_auth_verify` function, which the server only simulates. QuietStay reuses
+Anchor Platform's, unmodified (stellar/java-stellar-anchor-sdk @ `dc5817fb`,
+`contracts/vendor/anchor-web-auth/`). The reused code has
+`upgrade(new_wasm_hash)`, gated by an `admin` set in its constructor.
+
+QuietStay deploys it with an admin address nobody can authorize:
+`CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2`, the contract id
+SHA-256("QuietStay SEP-45 web-auth: no admin"). No contract exists at that
+address. Creating one there would need a SHA-256 preimage, so `require_auth`
+on it always fails and `upgrade` can never run.
+
+`npx tsx scripts/check-web-auth.ts --network <net>` reads three things from
+the chain: the WASM hash (the pinned build, `708cacdc…`), the stored admin,
+and the absence of any contract at the admin address
+([EVIDENCE.md](./EVIDENCE.md#phase-3-the-sep-45-web-auth-contract-passkey-sign-in)).
+The pre-launch checklist repeats the check on mainnet. You approved this at
+the Step 2 review (2026-11-19).
+
+The contract holds no rights, no money and no QuietStay state. The rights
+contract never calls it. If it were flawed, the worst outcome would be a
+sign-in to the app as a wallet one does not control (limitation 15), never a
+moved right or payment.
+
+### Reused from Anchor Platform: the web-auth contract, and nothing else
+
+From the Anchor Platform repository (stellar/java-stellar-anchor-sdk),
+QuietStay reuses **only the SEP-45 web-auth contract**, and only for passkey
+sign-in. **No Anchor Platform service runs.** There is no anchor integration,
+no fiat, no bank transfer and no on- or off-ramp; those are on the SOW's
+out-of-scope list. The sign-in endpoints are QuietStay's own
+(`/api/auth/contract`, `src/lib/sep45.ts`).
+
+### The sign-in signing key: the one server-side key on mainnet
+
+SEP-10 and SEP-45 sign their challenges with one server account, the
+`SIGNING_KEY` in `/.well-known/stellar.toml`. On mainnet it is **the single
+server-side key** (approved at the Step 2 review). It has no role in any
+contract: it is not the issuer, the arbiter, a holder or a fee payer. It
+signs only sign-in challenges, which are never submitted. It holds only the
+minimum balance, because `web_auth_verify` asks for its authorization and
+the account must therefore exist. You fund it. The pre-launch checklist lists
+it as the one exception to "no server key on mainnet" and checks each of
+these points.
 
 The cost is real and accepted: a defect in the contract cannot be patched in place.
 Fixing one means deploying a new contract, issuing the inventory again on it, and
@@ -255,7 +307,7 @@ before a signature. Each screen differs by role inside the same four screens:
 **Unprivileged reads:** `issuer`, `name`, `symbol`, `decimals`, `balance`, `next_id`,
 `get_right`, `commitment`, `holder`, `holding`, `holdings`, `is_active`, `get_listing`.
 
-That is the whole interface — 19 functions with the constructor. There is no
+That is the rights contract's whole interface — 19 functions with the constructor. There is no
 `upgrade`, migrate, pause, freeze, seize, force-transfer, clawback or fee switch, and
 no function that accepts a verification key. Check it against the deployed contract:
 `stellar contract info interface --id CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD --network testnet`.
@@ -340,7 +392,8 @@ the type level rather than silently doing the wrong thing.
 Deliberate, and stated so nobody discovers them as surprises:
 
 1. **Development trusted setup, non-production** — [above](#the-development-trusted-setup--non-production).
-2. **No upgrade: a bug fix is a fresh deployment** — [above](#no-upgrade-a-bug-fix-means-a-fresh-deployment).
+2. **No upgrade in the rights contract: a bug fix is a fresh deployment** — [above](#no-upgrade-in-the-rights-contract-a-bug-fix-means-a-fresh-deployment).
+   The SEP-45 web-auth contract has an `upgrade` nobody can call ([above](#the-sep-45-web-auth-contract-an-upgrade-nobody-can-call)).
 3. **The issuer can attest falsely** — [above](#what-remains-attesting-falsely).
 4. **A lost record secret strands the week.** The holder can still use it, but can
    never rent it out or sell it again: nobody else can prove for it, the issuer

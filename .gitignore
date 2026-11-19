@@ -71,3 +71,5 @@ proofs/
 /test-results/
 /playwright-report/
 /contracts/vendor/*/target/
+/e2e/results/next-dev-*.log
+/e2e/results/failed-requests-*.json

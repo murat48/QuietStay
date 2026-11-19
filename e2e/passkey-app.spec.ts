@@ -23,6 +23,7 @@ import { expect, test, type BrowserContext, type CDPSession, type Page } from "@
 import { Keypair } from "@stellar/stellar-sdk";
 
 import { startApp, type App } from "./lib/app";
+import { captureFailures, reportFailures, type FailedResponse } from "./lib/failures";
 import { checkPrivacy, hashOf } from "./lib/privacy";
 import { deployRights, fund } from "./lib/testnet";
 import { attachWallet } from "./lib/wallet";
@@ -34,6 +35,7 @@ const sep10 = Keypair.random();
 const fee = Keypair.random();
 const renter = Keypair.random();
 const renter2 = Keypair.random();
+const failures: FailedResponse[] = [];
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(15 * 60_000);
@@ -45,6 +47,8 @@ test.beforeAll(async () => {
   console.log(`e2e contract ${contract}`);
   app = await startApp({ contract, issuer, sep10, fee, port: 4323 });
 });
+
+test.afterEach(async ({}, info) => reportFailures("passkey-app", failures, info));
 
 test.afterAll(async () => {
   await app?.stop();
@@ -74,14 +78,17 @@ async function passkeyContext(c: BrowserContext, page: Page): Promise<{ cdp: CDP
 test("a passkey owner gets a week, offers it, and rents it out, approving with the passkey", async ({ browser }) => {
   const oc = await browser.newContext({ baseURL: app.url });
   await oc.addInitScript({ content: "globalThis.__name = (f) => f;" });
+  captureFailures("owner (passkey)", oc, failures);
   const O = await oc.newPage();
   const { cdp, authenticatorId } = await passkeyContext(oc, O);
 
   const ic = await browser.newContext({ baseURL: app.url });
   await attachWallet(ic, issuer);
+  captureFailures("issuer", ic, failures);
   const I = await ic.newPage();
   const rc = await browser.newContext({ baseURL: app.url });
   await attachWallet(rc, renter);
+  captureFailures("renter", rc, failures);
   const R = await rc.newPage();
 
   // 1. create the passkey wallet; SEP-45 signs it in

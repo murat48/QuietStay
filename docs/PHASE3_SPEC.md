@@ -46,7 +46,9 @@ not money.
    starts only after a written checklist and your GO.
 
 **What does not change.** One proof circuit, the same cryptography, the same
-verification key, no admin key and no upgrade function. The trusted setup is
+verification key, and in the rights contract no admin key and no upgrade
+function. (The reused SEP-45 web-auth contract, for passkey sign-in, has an
+`upgrade` that nobody can ever authorize; see §10.) The trusted setup is
 still the builder's development setup and is labeled non-production
 everywhere. This is a controlled pilot, not an audited launch.
 
@@ -1115,11 +1117,21 @@ and its output.
     `sha256sum`. It must be identical on both networks, and the source must
     be byte-identical to stellar/java-stellar-anchor-sdk @ `dc5817fb`.
   - The stored `Admin` is `CDA2IFOT…33G2`, and that address has no contract
-    instance (`getLedgerEntries` on both keys).
+    instance. Command: `npx tsx scripts/check-web-auth.ts --network testnet`
+    and `--network mainnet --id <mainnet web-auth id>`. Both must pass. The
+    deployment was approved as is at the Step 2 review: unmodified, with an
+    unauthorizable admin.
   - The declared protocol (v26 today) is at most mainnet's.
   - `SIGNING_KEY` (the SEP-10/SEP-45 server account) exists on the network,
-    because `web_auth_verify` asks for its authorization. On mainnet that
-    means a small XLM balance, from an account you fund.
+    because `web_auth_verify` asks for its authorization.
+- **The sign-in signing key on mainnet: the one listed exception to "no
+  server key on mainnet"** (approved at the Step 2 review). Each point is
+  checked on chain:
+  - It is not the issuer, the arbiter, a holder of any right, or the fee
+    payer of any transaction; it appears in no contract's state.
+  - It holds only the minimum balance. You fund it yourself. The builder
+    gives you its public key before mainnet.
+  - It signs only sign-in challenges, which are never submitted.
   - `/.well-known/stellar.toml` names the endpoint, the contract id and the
     signing key, and they match the deployment.
   - The SEP-45 tests (`e2e/passkey.spec.ts`: sign-in; unsigned, replayed and

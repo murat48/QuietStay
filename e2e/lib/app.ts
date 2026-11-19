@@ -10,7 +10,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -78,6 +78,13 @@ export async function startApp(opts: {
   return {
     url,
     stop: async () => {
+      // Kept for diagnosis: the routes log the errors they catch (Step 2 review).
+      try {
+        mkdirSync("e2e/results", { recursive: true });
+        writeFileSync(`e2e/results/next-dev-${opts.port}.log`, log);
+      } catch {
+        // not fatal
+      }
       if (!child.pid) return;
       const group = -child.pid;
       try {

@@ -75,6 +75,8 @@ export async function GET(request: Request): Promise<Response> {
       },
     });
   } catch (error) {
+    // Logged with its stack: an intermittent 502 here is under investigation (Step 2 review).
+    console.error("[/api/me] could not read the registry:", error);
     return Response.json(
       { error: error instanceof Error ? error.message : "could not read the registry" },
       { status: 502 },

@@ -256,6 +256,8 @@ export async function POST(request: Request): Promise<Response> {
     if (error instanceof ContractCallError) {
       return Response.json({ error: error.message }, { status: 400 });
     }
+    // Logged with its stack: an intermittent 500 here is under investigation (Step 2 review).
+    console.error("[/api/issue] unexpected failure:", error);
     return Response.json(
       { error: error instanceof Error ? error.message : "issuance failed" },
       { status: 500 },
