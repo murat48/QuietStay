@@ -344,18 +344,23 @@ Deliberate, and stated so nobody discovers them as surprises:
 3. **The issuer can attest falsely** — [above](#what-remains-attesting-falsely).
 4. **A lost record secret strands the week.** The holder can still use it, but can
    never rent it out or sell it again: nobody else can prove for it, the issuer
-   included, by design.
+   included, by design. **Phase 3: the secret lives in the browser.** The app
+   keeps the secret and the record in that browser's IndexedDB, and nowhere
+   else (docs/PHASE3_SPEC.md §2, decision D3). If that storage is lost, the
+   ability to prove for the week is lost for good. That happens with cleared
+   site data, a new device, another browser, or a private window. The week
+   stays the holder's. There is no backup export. A buyer who loses `s'`
+   before the sale lands should withdraw the ask.
 5. **A sale needs a buyer whose wallet can sign an authorization entry** in the web
    app — Freighter or Hana. Others can sign from the command line.
-6. **Who still uses the command line: the owner, not the issuer.** Issuance runs in
-   the app end to end. The owner signs in on the Issue screen and asks for a week
-   with their `h` — `npm run zk:secret` prints a link, `/issue?h=…`, that fills it
-   in (the issuer's form never reads it); the issuer, on the same screen, picks the ask — which fills in the
-   first holder and `h` and locks both — enters the record, and issues. The server
-   computes `C`; `s` never reaches it. The owner still makes the secret and its `h`
-   (`npm run zk:secret`) and the transfer proof (`npm run zk:prove`) on the command
-   line, because both need Poseidon and the browser does not run it. Moving those two
-   steps into the browser is Phase 3; in-browser proving is out of scope for Phase 2.
+6. **Phase 3: nobody needs the command line.** The owner's browser makes the
+   secret and sends `h` with the issuance ask. The issuer issues, then seals the
+   record back to the owner's browser through a sealed link (/receive). The
+   holder's browser proves a rental or a sale in the prover worker
+   (`prover-worker/`, GPL-3.0, decision D2). Only the proof and its public
+   signals leave the browser, which `e2e/no-leak.spec.ts` checks for every
+   request. The command-line tools (`npm run zk:secret`, `npm run zk:prove`)
+   still work, and the app accepts an `h` made with them ("Advanced").
 7. **`burn` needs the holder's wallet, not the holder's proof.** Someone who steals a
    holder's wallet key cannot transfer the week — that needs the secret too — but can
    burn it, destroying it for everyone. The issuer can do neither. Binding `burn` to

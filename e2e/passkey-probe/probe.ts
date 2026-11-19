@@ -31,13 +31,13 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { build } from "esbuild";
 import { chromium } from "@playwright/test";
-import { Operation, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
+import { Operation, rpc, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
 
 import type { JsonValue } from "../../src/lib/canonical";
 import { NETWORK_PASSPHRASE, RPC_URL } from "../../src/lib/config";
 import { proveTransfer } from "../../scripts/lib/zk-prove";
 import { buildCall, transferArgs } from "../../scripts/lib/zk-tx";
-import { feeAccount, payAndSubmit, server } from "../../scripts/lib/fee-payer";
+import { assembleWithMargin, feeAccount, payAndSubmit, server } from "../../scripts/lib/fee-payer";
 
 const ACCOUNT_WASM = "c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1";
 const WEBAUTHN_VERIFIER = "CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F";
@@ -50,7 +50,7 @@ const here = resolve("e2e/passkey-probe");
 const say = (s: string) => console.log(s);
 
 async function main() {
-  const { values: a } = parseArgs({ options: { contract: { type: "string" } } });
+  const { values: a } = parseArgs({ options: { contract: { type: "string" }, handoff: { type: "string" } } });
   const contract = a.contract;
   if (!contract) throw new Error("--contract <C…> is required");
   const fee = feeAccount(FEE);
@@ -187,6 +187,30 @@ async function main() {
       proof: file.proof,
       signals: file.public_signals_hex.map((h) => "0x" + h),
     }), [signedEntry]);
+    if (a.handoff) {
+      // The mainnet flow's hand-off (spec §13), rehearsed on testnet: the
+      // envelope, valid for an hour, re-simulated with the passkey's signature
+      // in place and assembled with headroom, but not signed by the fee
+      // identity. That is scripts/mainnet-sign-submit.sh's job.
+      const longer = await buildCall(fee, contract, "transfer", transferArgs({
+        from: created.contractId,
+        to: renter,
+        rightId: BigInt(issued.right_id),
+        expiresAt: until,
+        proof: file.proof,
+        signals: file.public_signals_hex.map((h) => "0x" + h),
+      }), [signedEntry], 3600);
+      const sim2 = await server.simulateTransaction(longer);
+      if (rpc.Api.isSimulationError(sim2)) throw new Error(`re-simulation failed: ${sim2.error}`);
+      const assembled = assembleWithMargin(longer, sim2 as rpc.Api.SimulateTransactionSuccessResponse);
+      writeFileSync(a.handoff, assembled.toXDR() + "\n");
+      say(`unsigned envelope written to ${a.handoff}; sign and send it with scripts/mainnet-sign-submit.sh`);
+      out.handoff = a.handoff;
+      out.wallet_secret_dir = dir;
+      mkdirSync(join(here, "results"), { recursive: true });
+      writeFileSync(join(here, "results", `handoff-${out.date!.toString().slice(0, 10)}.json`), JSON.stringify(out, null, 2) + "\n");
+      return;
+    }
     const sent = await payAndSubmit(withAuth, FEE);
     say(`passkey-authorized transfer: ${sent.hash} (ledger ${sent.ledger})`);
     out.transfer_tx = sent.hash;
@@ -214,7 +238,11 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// snarkjs keeps worker threads alive after proving, so exit explicitly.
+main().then(
+  () => process.exit(0),
+  (e) => {
+    console.error(e);
+    process.exit(1);
+  },
+);

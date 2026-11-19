@@ -12,6 +12,7 @@
  */
 
 import { IndexedDBStorage, SmartAccountKit } from "smart-account-kit";
+import { PASSKEY_FALLBACK, passkeySupport } from "../../src/lib/passkey";
 
 declare global {
   interface Window {
@@ -20,6 +21,7 @@ declare global {
       recordDeployment(credentialId: string, hash: string, ledger: number): Promise<void>;
       connect(contractId: string, credentialId: string): Promise<string | null>;
       sign(entry: string, expiration: number): Promise<string>;
+      support(): Promise<{ supported: boolean; reason?: string; fallback: string }>;
     };
     probeConfig: { rpcUrl: string; networkPassphrase: string; accountWasmHash: string; webauthnVerifierAddress: string };
   }
@@ -58,6 +60,9 @@ window.probe = {
   async connect(contractId, credentialId) {
     const r = await kit.connectWallet({ contractId, credentialId });
     return r?.contractId ?? null;
+  },
+  async support() {
+    return { ...(await passkeySupport()), fallback: PASSKEY_FALLBACK };
   },
   // Rule 0 is the wallet's default rule, whose only signer is this passkey.
   sign(entry, expiration) {

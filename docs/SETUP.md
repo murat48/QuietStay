@@ -242,6 +242,39 @@ does not, point `E2E_EVIDENCE_BASE_URL` at one that does — the live app, or
 `npm run dev -- -p 3108` with the default `.env.local` (Next 16's dev server builds
 into `.next/dev`, so it runs beside `npm run start`).
 
+### Browser tests (Phase 3)
+
+These drive real browsers with Playwright 1.65.0 against testnet. They make
+their own throwaway accounts (`Keypair.random()`, funded by Friendbot), deploy
+their own contract instance whose issuer is one of those accounts, and start
+their own `next dev` with a fresh data directory. They never use a key from
+`.env.local` or the CLI keystore, and never touch the evidence deployment.
+
+```bash
+npx playwright install chromium firefox
+sudo npx playwright install-deps chromium firefox   # Linux: the browsers' system libraries
+npm run zk:build-worker
+
+npx playwright test e2e/prover.spec.ts    # the worker refuses a tampered key or circuit   (~3 s)
+npx playwright test e2e/passkey.spec.ts   # passkey rental; tampered signature; cancelled prompt;
+                                          # WebAuthn detection                               (~1 min)
+npx playwright test e2e/no-leak.spec.ts   # a sale and a rental proved in the browser, every
+                                          # request checked for secrets, records and d      (~10 min)
+npx tsx e2e/prover-bench.ts --runs 7      # proof times → docs/PROOF_TIMES.md
+npm run passkey:probe -- --contract <C…>  # one passkey-authorized transfer, fees paid by the
+                                          # CLI identity qs-fee-testnet
+```
+
+`npm run e2e:browser` builds the worker and runs all three specs. The app's
+test wallet (`NEXT_PUBLIC_QS_E2E_WALLET=1`, set only by `e2e/lib/app.ts`)
+forwards signing to the test process. A build without that variable does not
+contain it.
+
+`scripts/mainnet-sign-submit.sh <xdr-file> <identity> --network testnet` is
+the mainnet signing flow (docs/PHASE3_SPEC.md §13), rehearsed on testnet.
+`npm run passkey:probe -- --contract <C…> --handoff <file>` writes an envelope
+for it.
+
 **Rehearsing on a throwaway contract.** `npm run zk:reissue -- <throwaway> --out
 <file outside the repo>` issues the sample weeks there without touching
 `inventory/phase2/issued.json` — it refuses to overwrite that file with another

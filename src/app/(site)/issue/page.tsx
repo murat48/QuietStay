@@ -49,7 +49,7 @@ import { explorer } from "@/lib/config";
 import { describeError, formatDate } from "@/lib/format";
 import type { IssuanceRequest } from "@/lib/requests";
 import { issueScreenView } from "@/lib/roles";
-import { proverSupported } from "@/lib/prover-client";
+import { useProverSupported } from "@/lib/prover-client";
 import { issuanceRequestPrefill, parseSecretHash } from "@/lib/secret-hash";
 import { requestLink } from "@/lib/sealed";
 import { newSealKey, newSecret, putIssued, sealKey } from "@/lib/vault";
@@ -1032,6 +1032,7 @@ function IssuanceAsk() {
     }
   }, [hashText]);
   const [mine, setMine] = useState<IssuanceRequest[]>([]);
+  const supported = useProverSupported();
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -1147,11 +1148,11 @@ function IssuanceAsk() {
           secret, this browser can rent the week out or sell it, and nobody else can — the issuer
           included. If this browser&apos;s storage is cleared, that ability is lost for good.
         </p>
-        <button className="primary" onClick={() => void ask()} disabled={sending || !proverSupported()}>
+        <button className="primary" onClick={() => void ask()} disabled={sending || supported !== true}>
           {sending ? "making your secret…" : "Request issuance"}
         </button>
-        {!proverSupported() ? (
-          <div className="note bad">This browser cannot keep a secret for you: it lacks Web Workers, WebCrypto or IndexedDB.</div>
+        {supported === false ? (
+          <div className="note bad" data-testid="prover-unsupported">This browser cannot keep a secret for you: it lacks Web Workers, WebCrypto or IndexedDB.</div>
         ) : null}
         <details style={{ marginTop: "1rem" }}>
           <summary>Advanced: I made my secret with the command line</summary>

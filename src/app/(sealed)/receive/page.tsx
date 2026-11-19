@@ -24,7 +24,7 @@ import { useWallet } from "@/components/WalletProvider";
 import type { JsonValue } from "@/lib/canonical";
 import { CONTRACT_ID } from "@/lib/config";
 import { describeError, formatDate, shortAddress } from "@/lib/format";
-import { prover, proverSupported } from "@/lib/prover-client";
+import { prover, useProverSupported } from "@/lib/prover-client";
 import {
   open,
   parseFragment,
@@ -50,14 +50,23 @@ async function chainRight(rightId: number): Promise<ChainRight> {
   return body;
 }
 
+/**
+ * The fragment as first read. Kept at module scope so that a re-mount (React
+ * may discard a tree and render it again) still has it after the address bar
+ * was cleared.
+ */
+let takenHash: string | null = null;
+
 export default function ReceivePage() {
   const [fragment, setFragment] = useState<Fragment | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
+  const supported = useProverSupported();
 
   // First thing: take the fragment and clear it from the address bar. The
   // state is set after that, outside the effect's synchronous body.
   useEffect(() => {
-    const hash = window.location.hash;
+    if (takenHash === null || window.location.hash !== "") takenHash = window.location.hash;
+    const hash = takenHash;
     history.replaceState(null, "", window.location.pathname);
     void Promise.resolve().then(() => {
       try {
@@ -77,7 +86,7 @@ export default function ReceivePage() {
         The record behind a week never touches a server. It travels sealed to one browser&apos;s
         key, inside the part of a link that browsers never send.
       </p>
-      {!proverSupported() ? (
+      {supported === false ? (
         <div className="note bad">
           This browser cannot run the in-browser prover (it needs Web Workers, WebCrypto and
           IndexedDB). Use a current desktop Chrome or Firefox.

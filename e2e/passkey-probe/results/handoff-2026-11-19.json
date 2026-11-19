@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-19T14:41:33.144Z",
+  "contract": "CCR2Z4IQNKXO2YCTQI2JBU5YLQTFXCXWVY6HV6H6TWNFWL5RAQ3IMAX5",
+  "fee_account": "GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z",
+  "renter": "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+  "browser": "Chromium 158.0.8127.18 (headless, CDP virtual authenticator ctap2/internal)",
+  "wallet": "CCGONFSPIWO66M63VGDSG5YVL4WG2TFLYJHLHTNFQNWRYNSGJ5G6WQXA",
+  "wallet_deploy_tx": "10a7d2f78de8a8cdfd7624b43b674cf80b86b4253f22e5885556e5cb21108a68",
+  "right_id": 3,
+  "handoff": "/tmp/claude-1000/-home-murat-QuietStay-QuietStay/455bc8df-302d-48e9-b13f-938ecd9b8d93/scratchpad/handoff2.xdr",
+  "wallet_secret_dir": "/home/murat/QuietStay/QuietStay/.secrets/probe-CCGONFSP"
+}

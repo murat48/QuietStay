@@ -190,13 +190,39 @@ a_lo = int.from_bytes(k[16..32], "big")
 Split point: byte 16. Byte order: big-endian within each half. The same split is
 used for the recipient `(b_hi, b_lo)`.
 
-A contract address (`C…`) has no Ed25519 key: for one, `to_payload()` returns
-`AddressPayload::ContractIdHash` rather than a key, and the contract refuses the
-transfer with `NotAnAccount` before any signal is compared with its state, whether
-the contract address is the sender or the recipient. `issue` refuses one as
-owner the same way, so no right is ever created that no proof could transfer
-(tests `only_accounts_can_send_or_receive` and
-`a_right_cannot_be_issued_to_a_contract_address`).
+**Phase 3 (decision D1): contract addresses, with a kind tag.** A smart wallet
+is a contract address (`C…`). For one, `to_payload()` returns
+`AddressPayload::ContractIdHash(BytesN<32>)`, its 32-byte contract id. Phase 3
+binds either kind, with the kind tagged into the high half:
+
+```
+G… account:  k = Ed25519 key,  t = 0
+C… contract: k = contract id,  t = 1
+
+a_hi = t · 2^128 + int.from_bytes(k[0..16], "big")
+a_lo =             int.from_bytes(k[16..32], "big")
+```
+
+For a `G…` account this is exactly the Phase 2 encoding, so every Phase 2
+commitment and proof is unchanged. The circuit puts no range check on the
+halves, so the tagged value (up to 2^129) is a valid input, and the circuit,
+the proving key and the verification key are unchanged. The tag keeps the two
+kinds apart even when their 32 bytes are equal. Any other address kind is
+refused with `NotAnAccount`.
+
+The same encoding is implemented in four places, which tests compare with
+each other:
+- `auth.rs::split_address` (the contract);
+- `scripts/lib/zk.ts::splitAddress` (the CLI);
+- `src/lib/zk-fields.ts::splitAddress` (the browser prover);
+- `circuits/test/c-address.test.ts`.
+
+The checks are `circuits/test/prover-core.test.ts` and the contract tests
+`a_smart_wallet_holder_can_prove_and_sell`,
+`a_contract_with_an_accounts_key_bytes_cannot_use_that_accounts_proof` and
+`a_right_can_be_issued_to_a_contract_address`.
+
+Under Phase 2, a contract address was refused as sender, recipient and owner.
 
 ### 6. The nullifier
 

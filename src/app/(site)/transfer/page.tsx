@@ -30,7 +30,7 @@ import { RoleGate } from "@/components/RoleGate";
 import { useWallet } from "@/components/WalletProvider";
 import { RPC_URL, explorer } from "@/lib/config";
 import { describeError, formatDate, formatDays, shortAddress } from "@/lib/format";
-import { prover, proverSupported } from "@/lib/prover-client";
+import { prover, proverSupported, useProverSupported } from "@/lib/prover-client";
 import { transferableRights, type RightSummary } from "@/lib/roles";
 import { resolveHolding, secretFor, type Holding } from "@/lib/vault";
 import { PUBLIC_SIGNALS } from "@/lib/zk-fields";
@@ -67,6 +67,7 @@ async function latestLedger(): Promise<number> {
 }
 
 export default function TransferScreen() {
+  const supported = useProverSupported();
   return (
     <>
       <p className="eyebrow">YOUR NEXT CHAPTER</p>
@@ -80,7 +81,7 @@ export default function TransferScreen() {
         <span className="tag ok">Phase 3</span> Your browser makes the proof, with one click. Your
         record and secret stay in this browser; only the proof is sent.
       </div>
-      {!proverSupported() ? (
+      {supported === false ? (
         <div className="note bad" data-testid="prover-unsupported">
           This browser cannot run the in-browser prover: it needs Web Workers, WebCrypto and
           IndexedDB. Use a current desktop Chrome or Firefox.
@@ -95,6 +96,7 @@ export default function TransferScreen() {
 
 function TransferForm() {
   const { address, standing, sign, authFetch, refreshStanding } = useWallet();
+  const supported = useProverSupported();
   const options = useMemo(() => transferableRights(standing), [standing]);
   const owned = useMemo(() => options.filter((o) => o.maySell), [options]);
   const rented = useMemo(() => options.filter((o) => !o.maySell), [options]);
@@ -285,7 +287,7 @@ function TransferForm() {
                     </span>
                     <button
                       className="primary"
-                      disabled={busy !== null || !proverSupported()}
+                      disabled={busy !== null || supported !== true}
                       onClick={() => void accept(o.right, o.maxTermEnds, ask)}
                       data-testid={`accept-${ask.id}`}
                     >

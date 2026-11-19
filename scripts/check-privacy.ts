@@ -44,9 +44,10 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { scValToNative, type xdr } from "@stellar/stellar-sdk";
+import { scValToNative, xdr } from "@stellar/stellar-sdk";
 
 import { toHex } from "../src/lib/canonical";
+import { HORIZON_URL } from "../src/lib/config";
 import { server } from "../src/lib/contract";
 import type { OwnershipRecord } from "../src/lib/record";
 import { fatal, loadEnv, log, readJson } from "./lib/cli";
@@ -180,6 +181,52 @@ function decodeContractEvents(events: unknown): { topics: string; data: string }
     });
 }
 
+interface FetchedTx {
+  source: "rpc" | "horizon";
+  envelopeXdr?: xdr.TransactionEnvelope;
+  resultXdr?: { toXDR(format: "base64"): string };
+  resultMetaXdr?: xdr.TransactionMeta;
+  events?: unknown;
+}
+
+/** The contract events inside a transaction's meta, in the shape RPC gives them. */
+function eventsFromMeta(meta: xdr.TransactionMeta): unknown {
+  try {
+    if (meta.switch() === 3) return { contractEventsXdr: [meta.v3().sorobanMeta()?.events() ?? []] };
+    if (meta.switch() === 4) return { contractEventsXdr: meta.v4().operations().map((op) => op.events()) };
+  } catch {
+    // an unexpected meta shape: the raw scan above still covers every byte
+  }
+  return undefined;
+}
+
+/**
+ * A transaction from Stellar RPC, or, once it is older than RPC's retention
+ * window (about a week on testnet), from Horizon's full history. Both return
+ * the same envelope, result and meta XDR, so the scan below is the same.
+ */
+async function fetchTx(hash: string): Promise<FetchedTx | null> {
+  const tx = await server.getTransaction(hash);
+  if (tx.status !== "NOT_FOUND") {
+    return { source: "rpc", envelopeXdr: tx.envelopeXdr, resultXdr: tx.resultXdr, resultMetaXdr: tx.resultMetaXdr, events: tx.events };
+  }
+  const res = await fetch(`${HORIZON_URL}/transactions/${hash}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Horizon answered HTTP ${res.status} for ${hash}`);
+  const body = (await res.json()) as { envelope_xdr: string; result_xdr: string; result_meta_xdr?: string };
+  // Current Horizon no longer serves the meta, which is where Soroban events
+  // live. Without it, the envelope (every argument the call carried) and the
+  // result are still scanned; the caller says the meta was not.
+  const meta = body.result_meta_xdr ? xdr.TransactionMeta.fromXDR(body.result_meta_xdr, "base64") : undefined;
+  return {
+    source: "horizon",
+    envelopeXdr: xdr.TransactionEnvelope.fromXDR(body.envelope_xdr, "base64"),
+    resultXdr: { toXDR: () => body.result_xdr },
+    resultMetaXdr: meta,
+    events: meta ? eventsFromMeta(meta) : undefined,
+  };
+}
+
 async function main(): Promise<void> {
   const evidence: Evidence = PHASE2 ? phase2Evidence() : readJson("docs/evidence.json");
   const forbidden = PHASE2 ? [...forbiddenValues(), ...(await phase2ForbiddenValues())] : forbiddenValues();
@@ -189,15 +236,23 @@ async function main(): Promise<void> {
   log.info(`contract ${evidence.contract}`);
 
   let problems = 0;
+  let withoutMeta = 0;
 
   for (const item of evidence.transactions) {
-    const tx = await server.getTransaction(item.hash);
+    const tx = await fetchTx(item.hash);
     log.step(`${item.id} — ${item.hash}`);
 
-    if (tx.status === "NOT_FOUND") {
+    if (!tx) {
       log.fail("not on the ledger — this hash would not open in an explorer");
       problems += 1;
       continue;
+    }
+    if (tx.source === "horizon") {
+      log.info("older than RPC's retention window: read from Horizon's full history");
+      if (!tx.resultMetaXdr) {
+        withoutMeta += 1;
+        log.warn("Horizon serves no meta for it, so its events were not scanned here; the envelope and result were");
+      }
     }
 
     // --- 1. the raw scan, over every layer -------------------------------
@@ -238,10 +293,16 @@ async function main(): Promise<void> {
   }
 
   log.step("Result");
+  if (withoutMeta > 0) {
+    log.warn(
+      `${withoutMeta} of ${evidence.transactions.length} transactions are older than RPC's retention window, and ` +
+        "Horizon serves no meta: for those, only the envelope and the result were scanned, not the events.",
+    );
+  }
   if (problems === 0 && PHASE2) {
     log.ok("No record contents, no record digest d, no owner secret s and no owner");
     log.ok("secret hash h appears in any Phase 2 evidence or issuance transaction,");
-    log.ok("at any layer — accepted or rejected.");
+    log.ok(`at any layer ${withoutMeta > 0 ? "scanned (see the note above)" : ""} — accepted or rejected.`.replace("  ", " "));
     console.log("");
     log.info("Public, and visible above:");
     log.info("  • account addresses, and the contract address");
@@ -256,7 +317,7 @@ async function main(): Promise<void> {
     log.info("Also public, in contract state: the week's date range, as in Phase 1.");
   } else if (problems === 0) {
     log.ok("No name, email, resort, country, unit, deed reference, registry, salt,");
-    log.ok("or fee figure appears in any evidence transaction, at any layer.");
+    log.ok(`or fee figure appears in any evidence transaction, at any layer${withoutMeta > 0 ? " scanned (see the note above)" : ""}.`);
     console.log("");
     log.info("Public, and visible above:");
     log.info("  • account addresses, and the contract address");

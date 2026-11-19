@@ -87,12 +87,13 @@ export async function buildCall(
   fn: string,
   args: xdr.ScVal[],
   auth: xdr.SorobanAuthorizationEntry[] = [],
+  timeoutSecs = 180,
 ): Promise<Transaction> {
   const account = await server.getAccount(source);
   const func = new Contract(contractId).call(fn, ...args).body().invokeHostFunctionOp().hostFunction();
   return new TransactionBuilder(account, { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
     .addOperation(Operation.invokeHostFunction({ func, auth }))
-    .setTimeout(180)
+    .setTimeout(timeoutSecs)
     .build();
 }
 

@@ -53,6 +53,13 @@ interface Kit {
 
 let kitPromise: Promise<Kit> | null = null;
 
+/** What an end-to-end test exposes to the page (see `walletKit`). */
+interface TestWalletBridge {
+  address(): Promise<string>;
+  signTransaction(xdr: string): Promise<string>;
+  signAuthEntry(preimageXdr: string): Promise<string>;
+}
+
 /**
  * Initialise the kit once and hand back the same instance thereafter.
  *
@@ -63,6 +70,25 @@ let kitPromise: Promise<Kit> | null = null;
 export function walletKit(): Promise<Kit> {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("the wallet kit is only available in the browser"));
+  }
+
+  // End-to-end tests only (e2e/, Phase 3 Step 2): a wallet whose signing runs
+  // in the Playwright test process, which holds throwaway testnet keys. The
+  // page never sees a key. A build without NEXT_PUBLIC_QS_E2E_WALLET=1 drops
+  // this branch entirely, since Next.js inlines the variable at build time.
+  if (process.env.NEXT_PUBLIC_QS_E2E_WALLET === "1") {
+    const bridge = (window as unknown as { __qsTestWallet?: TestWalletBridge }).__qsTestWallet;
+    if (bridge) {
+      kitPromise ??= Promise.resolve<Kit>({
+        authModal: async () => ({ address: await bridge.address() }),
+        getAddress: async () => ({ address: await bridge.address() }),
+        signTransaction: async (xdr) => ({ signedTxXdr: await bridge.signTransaction(xdr) }),
+        signAuthEntry: async (preimage) => ({ signedAuthEntry: await bridge.signAuthEntry(preimage) }),
+        getNetwork: async () => ({ network: "TESTNET", networkPassphrase: NETWORK_PASSPHRASE }),
+        disconnect: async () => {},
+      });
+      return kitPromise;
+    }
   }
 
   kitPromise ??= (async () => {

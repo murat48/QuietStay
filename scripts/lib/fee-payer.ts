@@ -10,7 +10,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { rpc, Transaction, TransactionBuilder } from "@stellar/stellar-sdk";
+import { rpc, SorobanDataBuilder, Transaction, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
 import { NETWORK_PASSPHRASE, RPC_URL } from "../../src/lib/config";
 
 export const server = new rpc.Server(RPC_URL);
@@ -59,4 +59,20 @@ export async function payAndSubmit(tx: Transaction, alias: string): Promise<Subm
     minResourceFee: (sim as rpc.Api.SimulateTransactionSuccessResponse).minResourceFee,
     returnValue: done.returnValue,
   };
+}
+
+/**
+ * Assemble `tx` from a simulation with headroom: resource estimates move a
+ * little between simulations (rent and write fees, instruction counts), and
+ * an envelope that will be signed later by hand must still cover them then.
+ * Adds 15% to the instructions and 25% to the resource fee.
+ */
+export function assembleWithMargin(tx: Transaction, sim: rpc.Api.SimulateTransactionSuccessResponse): Transaction {
+  const data = sim.transactionData.build();
+  const res = data.resources();
+  res.instructions(Math.ceil(res.instructions() * 1.15));
+  const resourceFee = (BigInt(sim.minResourceFee) * 125n) / 100n;
+  data.resourceFee(xdr.Int64.fromString(resourceFee.toString()));
+  const padded = { ...sim, minResourceFee: resourceFee.toString(), transactionData: new SorobanDataBuilder(data) };
+  return rpc.assembleTransaction(tx, padded).build();
 }
