@@ -1,0 +1,41 @@
+  run 2026-11-20T22:41:58.823Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-20-step3-CA4B3MIZ-unaccepted-offer.txt --tx unaccepted-offer-record-request=de2c9d883e3789cfba07e055ec35a5a2a8aa79303f5620f45f7aaec2f35d0e30 --tx unaccepted-offer-sale-offer=b8d98645606a3c57f745ef51773d9f0d025aa13692723527c4b9ec62c99adfbb --record /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-owner-secret.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/buyer-next-secret-right-4-49d9215d.json
+
+Checking on-chain exposure
+  2 transactions, 57 forbidden values
+  contract the contracts these testnet transactions call
+
+unaccepted-offer-record-request — de2c9d883e3789cfba07e055ec35a5a2a8aa79303f5620f45f7aaec2f35d0e30
+  ✓ no record contents in 3 layers (10008 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "4",
+                "0x44fdd5775a71ac5233522e659f036b54e89539c80a1b709f839cce067ba49359",
+                5959086,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5959086,"key_hash":"0x44fdd5775a71ac5233522e659f036b54e89539c80a1b709f839cce067ba49359","request_id":"4","right_id":"4"}
+
+unaccepted-offer-sale-offer — b8d98645606a3c57f745ef51773d9f0d025aa13692723527c4b9ec62c99adfbb
+  ✓ no record contents in 3 layers (13776 bytes: envelope, result, meta)
+  call        create_sale_offer(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "4",
+                "10000000",
+                "45340140056504198256607306743011287304108619052241519376243560718795206133333",
+                5838157,
+              )
+  event topics ["approve","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["10000000",5838157]
+  event topics ["allow","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"amount":"10000000","expiration_ledger":5838157}
+  event topics ["sale_off","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5838157,"key_hash":"0x44fdd5775a71ac5233522e659f036b54e89539c80a1b709f839cce067ba49359","next_secret_hash":"45340140056504198256607306743011287304108619052241519376243560718795206133333","offer_id":"8","price":"10000000","right_id":"4"}
+
+Result
+  ✓ No inventory record value appears in any of these 2 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 holder secret(s) given, or s' of 1 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-owner-secret.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/buyer-next-secret-right-4-49d9215d.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

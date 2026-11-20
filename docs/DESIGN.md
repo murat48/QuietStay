@@ -513,6 +513,21 @@ Deliberate, and stated so nobody discovers them as surprises:
     stays there" below). Pilot funds therefore move only through offers and
     escrows; the pre-launch checklist has an item that they are never sent to
     the contract address directly.
+18. **Phase 3: an offer call can fail if another of the buyer's offers
+    expires while it is in flight.** Severity Low; kept as it is, with no
+    interface change (Step 3, 2026-11-20). Every offer call (create, cancel)
+    sets the buyer's USDC allowance to the sum of the buyer's offers that are
+    still live, inside the same transaction, and the buyer signs that amount
+    when the transaction is simulated. If one of the buyer's other offers
+    reaches its last ledger between simulation and inclusion, the contract
+    computes a smaller sum than the one signed, and the network refuses the
+    call with `Error(Auth, InvalidAction)`, as in testnet transaction
+    `32ee3532…5f42`. **Nothing moves**: no offer is created or cancelled, and
+    no USDC or right changes hands; the buyer pays only the fee and sends the
+    call again. It needs a buyer with two or more open offers, one of which
+    ends within the few ledgers the call is in flight. Removing it would mean
+    changing the interface, for example by having the buyer pass the total
+    themselves, so it stays as a stated limitation.
 
 ## What Phase 3 is for
 
@@ -541,7 +556,7 @@ which the offer calls set themselves:
 - Accepting an offer pulls exactly that offer's price and lowers the
   allowance by the same amount.
 
-**Proposed at the Step 3 deployment, awaiting approval:** the allowance
+**Approved and deployed at the Step 3 deployment (2026-11-20):** the allowance
 expires at the latest last ledger of the buyer's live offers, not at "now +
 120,960". The buyer signs the `approve` arguments at simulation, so a value
 taken from the ledger sequence fails the signature once the transaction lands

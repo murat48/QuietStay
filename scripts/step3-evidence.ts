@@ -14,6 +14,7 @@
  *   sale-rejections    week 4: wrong amount, low allowance, low balance, expired offer
  *   escrow-rejections  week 1's Funded escrow: collect too early, the arbiter on an undisputed escrow,
  *                      an outside account; and the arbiter trying to move a right
+ *   unaccepted-offer   week 4: a sale offer nobody accepts, which expires; USDC read before, during, after
  *
  * **Testnet only.** Every envelope is signed by a Stellar CLI identity
  * (`stellar tx sign --sign-with-key <identity>`); this script never reads a
@@ -387,7 +388,7 @@ async function waitRental() {
  * file whose hash matches, and the offer's earlier transactions from the log
  * for the privacy record.
  */
-async function resumeSaleOffer(offer: number) {
+async function resumeSaleOffer(offer: number, step = "sale") {
   const o = (await read("get_offer", [u64(offer)])) as { buyer: string; terms: [string, { next_secret_hash: bigint }] } | undefined;
   if (!o || o.terms[0] !== "Sale") throw new Error(`offer #${offer} is not a live sale offer`);
   const h = BigInt(o.terms[1].next_secret_hash);
@@ -396,7 +397,7 @@ async function resumeSaleOffer(offer: number) {
     if ((await secretHash(BigInt(JSON.parse(readFileSync(f, "utf8")).secret))) === h) sFile = f;
   }
   if (!sFile) throw new Error(`no kept s' matches offer #${offer}'s h'`);
-  for (const e of evidence.entries) if (e.step === "sale") stepHashes[e.label] = e.hash;
+  for (const e of evidence.entries) if (e.step === step) stepHashes[e.label] = e.hash;
   log.info(`resuming offer #${offer}; s' found`);
   return { offer, h, sFile };
 }
@@ -580,7 +581,98 @@ async function allowanceOf(owner: string): Promise<bigint> {
   return BigInt(scValToNative(sim.result!.retval) as bigint);
 }
 
+interface Reading {
+  step: string;
+  label: string;
+  ledger: number;
+  buyer: string;
+  owner: string;
+  contract: string;
+  allowance: string;
+}
+
+/** The USDC that could move on an offer, read in one RPC round at one ledger each. */
+async function readMoney(label: string): Promise<Reading> {
+  const at = async (fn: string, args: xdr.ScVal[]) => {
+    const { sim } = await simulated("issuer", fn, args, USDC_CONTRACT_ID);
+    if (!rpc.Api.isSimulationSuccess(sim) || !sim.result) throw new Error(`${fn} could not be read`);
+    return { value: BigInt(scValToNative(sim.result.retval) as bigint), ledger: sim.latestLedger };
+  };
+  const [buyer, owner, contract, allowance] = await Promise.all([
+    at("balance", [addr(ADDR.buyer)]),
+    at("balance", [addr(ADDR.owner)]),
+    at("balance", [addr(C)]),
+    at("allowance", [addr(ADDR.buyer), addr(C)]),
+  ]);
+  const r: Reading = {
+    step: STEP!,
+    label,
+    ledger: Math.min(buyer.ledger, owner.ledger, contract.ledger, allowance.ledger),
+    buyer: buyer.value.toString(),
+    owner: owner.value.toString(),
+    contract: contract.value.toString(),
+    allowance: allowance.value.toString(),
+  };
+  const e = evidence as typeof evidence & { readings?: Reading[] };
+  (e.readings ??= []).push(r);
+  writeFileSync(LOG, JSON.stringify(evidence, null, 2) + "\n");
+  log.info(`${label} (ledger ${r.ledger}): buyer ${r.buyer}, owner ${r.owner}, contract ${r.contract}, buyer's allowance ${r.allowance}`);
+  return r;
+}
+
+/**
+ * The SOW's "an unaccepted offer moves no money" (Deliverable 2): the buyer
+ * makes a 1 USDC sale offer for week 4 (still the owner's) that lives 30
+ * ledgers, nobody accepts it, and it expires. The buyer's, the owner's and
+ * the contract's USDC are read before the offer, while it is open, and after
+ * it has expired. Nothing but the request and the offer is sent.
+ */
+async function unacceptedOffer() {
+  const w = week(4);
+  const resume = a["resume-offer"];
+  let before: Reading, open: Reading, after: Reading, offer: number, sFile: string;
+  if (resume) {
+    // The offer and the three readings are already in the log; finish the checks.
+    offer = Number(resume);
+    const rs = ((evidence as { readings?: Reading[] }).readings ?? []).filter((r) => r.step === STEP);
+    const find = (p: RegExp) => {
+      const r = rs.find((x) => p.test(x.label));
+      if (!r) throw new Error(`no reading matching ${p} in the log`);
+      return r;
+    };
+    before = find(/^before the offer$/);
+    open = find(new RegExp(`^offer #${offer} open`));
+    after = find(new RegExp(`^offer #${offer} expired`));
+    for (const e of evidence.entries) if (e.step === STEP) stepHashes[e.label] = e.hash;
+    ({ sFile } = await resumeSaleOffer(offer, STEP!));
+    log.info(`resuming offer #${offer} from the log`);
+  } else {
+    before = await readMoney("before the offer");
+    ({ offer, sFile } = await saleOffer("unaccepted offer:", w, USDC, 30));
+    const o = (await read("get_offer", [u64(offer)])) as { expires_ledger: number } | undefined;
+    if (!o) throw new Error(`offer #${offer} is not on chain`);
+    open = await readMoney(`offer #${offer} open, until ledger ${o.expires_ledger}`);
+    log.info(`offer #${offer}: nobody accepts it; waiting past ledger ${o.expires_ledger}…`);
+    await waitForLedger(o.expires_ledger + 2);
+    after = await readMoney(`offer #${offer} expired, never accepted`);
+  }
+  const left = (await read("get_offer", [u64(offer)])) as { expires_ledger: number } | null | undefined;
+  const { sequence } = await latestLedger();
+  log.info(
+    left == null
+      ? `get_offer(${offer}) at ledger ${sequence}: none (the temporary entry has lapsed)`
+      : `get_offer(${offer}) at ledger ${sequence}: still stored, expired since ledger ${left.expires_ledger} (it cannot be accepted: OfferExpired, #34)`,
+  );
+  for (const k of ["buyer", "owner", "contract"] as const) {
+    if (before[k] !== open[k] || before[k] !== after[k]) throw new Error(`${k}'s USDC changed: ${before[k]} → ${open[k]} → ${after[k]}`);
+  }
+  if (open.allowance !== USDC.toString()) throw new Error(`expected an allowance of ${USDC} while open, read ${open.allowance}`);
+  log.ok(`unaccepted offer #${offer} moved no USDC: buyer ${before.buyer}, owner ${before.owner}, contract ${before.contract} at all three readings`);
+  checkPrivacy("unaccepted-offer", { weeks: [w], nextSecrets: [sFile] });
+}
+
 const STEPS: Record<string, () => Promise<void>> = {
+  "unaccepted-offer": unacceptedOffer,
   "cancel-last": cancelLast,
   issue,
   "wait-rental": waitRental,

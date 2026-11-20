@@ -27,12 +27,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProverNotice } from "@/components/ProverNotice";
 import { useWallet } from "@/components/WalletProvider";
 import type { Escrow, Offer, RecordRequest } from "@/lib/contract";
-import { OFFER_LEDGERS, RPC_URL, explorer } from "@/lib/config";
+import { OFFER_LEDGERS, RPC_URL, USDC_ISSUER, explorer } from "@/lib/config";
 import { escrowStatus } from "@/lib/escrow-status";
 import { describeError, formatDate, formatDateTime, shortAddress } from "@/lib/format";
 import { prover } from "@/lib/prover-client";
 import { requestLink } from "@/lib/sealed";
-import { formatUsdc, parseUsdc } from "@/lib/usdc";
+import { formatUsdc, needsUsdcTrustline, parseUsdc } from "@/lib/usdc";
 import { readOnly } from "@/lib/rpc-retry";
 import { useProverSupported } from "@/lib/use-prover-supported";
 import { getRecord, newSealKey, newSecret, resolveHolding, sealKey, secretFor } from "@/lib/vault";
@@ -327,6 +327,9 @@ function Stays() {
   const myOffers = (data?.offers ?? []).filter(mine);
   const forMe = (data?.offers ?? []).filter((o) => !mine(o) && !o.expired && holdable.has(o.rightId));
   const myEscrows = (data?.escrows ?? []).filter((e) => e.owner === address || e.renter === address);
+  // A seller is paid on acceptance and an owner on collect; a G… account
+  // without a USDC trustline can receive neither, so it is told before accepting.
+  const noTrustline = needsUsdcTrustline(address, data?.account?.usdc);
 
   return (
     <>
@@ -370,9 +373,18 @@ function Stays() {
                 : "On acceptance the week moves to the buyer and the price moves to you, together."}{" "}
               Open until ledger {o.expiresLedger.toLocaleString()}.
             </p>
+            {noTrustline ? (
+              <div className="note bad" data-testid={`no-trustline-${o.id}`}>
+                <strong>Add a USDC trustline before you accept.</strong>{" "}
+                {o.terms.kind === "sale"
+                  ? "This account has no USDC trustline, so it cannot receive the payment: the sale would be refused and nothing would move."
+                  : "This account has no USDC trustline, so you could not collect the payment from escrow; it would wait there until you add one."}{" "}
+                In your wallet, add the asset USDC issued by <code>{shortAddress(USDC_ISSUER)}</code> ({USDC_ISSUER}), then reload this page.
+              </div>
+            ) : null}
             <button
               className="primary"
-              disabled={busy !== null || supported !== true}
+              disabled={busy !== null || supported !== true || noTrustline}
               onClick={() => void accept(o)}
               data-testid={`accept-offer-${o.id}`}
             >

@@ -482,6 +482,53 @@
         "Error(Contract, #4)",
         "Error(Contract, #4)"
       ]
+    },
+    {
+      "step": "unaccepted-offer",
+      "label": "unaccepted offer: record request",
+      "hash": "de2c9d883e3789cfba07e055ec35a5a2a8aa79303f5620f45f7aaec2f35d0e30",
+      "ledger": 5838127,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "unaccepted-offer",
+      "label": "unaccepted offer: sale offer",
+      "hash": "b8d98645606a3c57f745ef51773d9f0d025aa13692723527c4b9ec62c99adfbb",
+      "ledger": 5838128,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    }
+  ],
+  "readings": [
+    {
+      "step": "unaccepted-offer",
+      "label": "before the offer",
+      "ledger": 5838126,
+      "buyer": "190000000",
+      "owner": "20000000",
+      "contract": "10000000",
+      "allowance": "0"
+    },
+    {
+      "step": "unaccepted-offer",
+      "label": "offer #8 open, until ledger 5838157",
+      "ledger": 5838128,
+      "buyer": "190000000",
+      "owner": "20000000",
+      "contract": "10000000",
+      "allowance": "10000000"
+    },
+    {
+      "step": "unaccepted-offer",
+      "label": "offer #8 expired, never accepted",
+      "ledger": 5838159,
+      "buyer": "190000000",
+      "owner": "20000000",
+      "contract": "10000000",
+      "allowance": "0"
     }
   ]
 }

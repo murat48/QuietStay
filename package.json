@@ -38,7 +38,7 @@
     "zk:build-worker": "tsx prover-worker/build.ts",
     "zk:bench": "tsx e2e/prover-bench.ts",
     "e2e:browser": "tsx prover-worker/build.ts && playwright test",
-    "test:app": "tsx --test src/lib/*.test.ts"
+    "test:app": "tsx --test src/lib/*.test.ts scripts/lib/*.test.ts"
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "2.5.0",

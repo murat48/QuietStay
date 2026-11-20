@@ -222,6 +222,9 @@ export function testnetFeeSecret(): string {
  */
 export const USDC_CONTRACT_ID = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
 
+/** The same issuer, as a wallet asks for it when adding a USDC trustline. Same source. */
+export const USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+
 /** USDC has 7 decimals on Stellar: amounts are i128 counts of 10^-7 USDC. */
 export const USDC_DECIMALS = 7;
 

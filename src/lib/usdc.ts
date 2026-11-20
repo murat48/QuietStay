@@ -36,3 +36,14 @@ export function formatUsdc(units: bigint): string {
   const frac = (abs % SCALE).toString().padStart(USDC_DECIMALS, "0").replace(/0+$/, "");
   return `${negative ? "-" : ""}${whole}${frac ? `.${frac}` : ""}`;
 }
+
+/**
+ * Whether `account` cannot receive USDC yet. A G… account needs a USDC
+ * trustline before the token will credit it; a C… contract account (a passkey
+ * wallet) holds the token's balance without one. `usdc` is the balance as
+ * `/api/payments` reads it: `null` means the G… account has no trustline.
+ * While the balance is still loading (`undefined`), nothing is claimed.
+ */
+export function needsUsdcTrustline(account: string, usdc: string | null | undefined): boolean {
+  return account.startsWith("G") && usdc === null;
+}

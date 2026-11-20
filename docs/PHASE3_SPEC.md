@@ -1159,6 +1159,26 @@ and its output.
     events);
   - `scripts/mainnet-sign-submit.sh` refuses an envelope whose operation is
     a USDC `transfer` to the contract address (added before Step 6).
+- **Every G account that will receive USDC in the mainnet pilot has a USDC
+  trustline first** (Step 3, 2026-11-20). The token refuses to credit a G
+  account without one. On testnet the first sale acceptance was refused in
+  simulation for exactly this (token error #13, `qs-owner`). C accounts hold
+  the token's balance without a trustline and are not on the list. The
+  checklist lists each G account with its role and why it receives USDC:
+  - a seller, paid by `accept_sale`;
+  - an owner, paid by `collect`, by the renter's `confirm` and by the
+    arbiter's `resolve(PayOwner)`;
+  - a renter, paid back by `refund` and `resolve(RefundRenter)`;
+  - any pilot account that USDC is moved to between pilot accounts.
+
+  For each one, the evidence is Horizon `accounts/<G…>` showing a balance
+  line for `USDC:<Circle's mainnet issuer>`, or the USDC contract's
+  `balance(<G…>)` returning a number rather than "trustline entry is
+  missing", read before GO. A trustline is not removed while that account is
+  the owner or renter of a Funded or Disputed escrow, and the check is
+  repeated before each mainnet acceptance. The app also tells a seller or
+  owner without one before they accept, and refuses to start the acceptance
+  (`/stays`, `needsUsdcTrustline` in `src/lib/usdc.ts`).
 - **Privacy evidence** (Step 2 review): every evidence transaction has its
   `check-privacy` output in `evidence/privacy/`, made right after the
   transaction, with its events.

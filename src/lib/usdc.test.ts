@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { formatUsdc, parseUsdc } from "./usdc";
+import { formatUsdc, needsUsdcTrustline, parseUsdc } from "./usdc";
 
 describe("parseUsdc", () => {
   it("reads whole and fractional amounts exactly", () => {
@@ -40,5 +40,24 @@ describe("formatUsdc", () => {
     for (const text of ["1", "0.5", "100", "0.0000001", "99.9999999"]) {
       assert.equal(formatUsdc(parseUsdc(text)), text);
     }
+  });
+});
+
+describe("needsUsdcTrustline", () => {
+  const G = "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR";
+  const C = "CDSI6FMLEA5LRMCTFU2RBMVBMFHWH4TJN7PEMEWSK477S4KP2KAKOKWY";
+  it("flags a G account whose balance read found no trustline", () => {
+    assert.equal(needsUsdcTrustline(G, null), true);
+  });
+  it("does not flag a G account with a trustline, even at a zero balance", () => {
+    assert.equal(needsUsdcTrustline(G, "0"), false);
+    assert.equal(needsUsdcTrustline(G, "10000000"), false);
+  });
+  it("never flags a C account, which needs no trustline", () => {
+    assert.equal(needsUsdcTrustline(C, null), false);
+    assert.equal(needsUsdcTrustline(C, "0"), false);
+  });
+  it("claims nothing while the balance is still loading", () => {
+    assert.equal(needsUsdcTrustline(G, undefined), false);
   });
 });

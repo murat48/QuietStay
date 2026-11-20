@@ -9,11 +9,14 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: **Step 3 on testnet, 2026-11-20.** The fix (spec note 10) is
-  approved and deployed as `CA4B3MIZ…PV73`, and every run is done but one: the
-  wait rental's collect. **Collect is possible from ledger time
-  2026-11-21T20:28:30Z** (escrow #1). Next session: collect, and the
-  problem-report-after-the-window rejection
+- Current step: **Step 4, started 2026-11-20 while Step 3 waits.** Step 3's
+  remaining items (wrong token, unaccepted offer, trustlines, the expiry race,
+  the EVIDENCE.md generator) are done; Step 3 waits only for the collect on
+  escrow #1 of `CA4B3MIZ…PPV73`, **possible from ledger time
+  2026-11-21T20:28:30Z**. When you say the wait is over: pause Step 4 at a
+  clean point, collect as `qs-owner`, send the rejected problem report after
+  the window (#49), each with its privacy record, show check-in and collect
+  side by side, close Step 3, then continue Step 4
 
 ## Open issues
 
@@ -31,14 +34,15 @@ actually run.
 | Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device was still to do | 2 | resolved 2026-11-19: Windows Hello (PIN) on a MONSTER ABRA A7 V11.3, Windows 10 Enterprise 10.0.19045, Chrome 157.0.8103.79, authorized `list` from wallet `CAMTPQ3B…44YLT`, tx `059bc1b3…` |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
 | Low | This machine lacked the system libraries Playwright's browsers need | 2 | resolved 2026-11-19: you ran the install with sudo; the unpacked workaround is removed, and both browsers start on the system libraries |
-| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 review (2026-11-20):** read-only RPC calls now retry a dropped connection, up to 3 attempts, and log the network code; `sendTransaction` is never retried. In the first run after that, the server logged `[rpc-retry] simulate next_id: attempt 1 of 3 failed (fetch failed)`, the retry succeeded, and no failed `/api` response was saved. The code was not readable: the SDK's HTTP layer (`feaxios`) drops the error's cause. The retry log now also reads undici's diagnostics channels, which carry the code. The next run had no drop, so the code is still to be confirmed at the next one. **Earlier Step 3 evidence:** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
+| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 review (2026-11-20):** read-only RPC calls now retry a dropped connection, up to 3 attempts, and log the network code; `sendTransaction` is never retried. In the first run after that, the server logged `[rpc-retry] simulate next_id: attempt 1 of 3 failed (fetch failed)`, the retry succeeded, and no failed `/api` response was saved. The code was not readable: the SDK's HTTP layer (`feaxios`) drops the error's cause. The retry log now also reads undici's diagnostics channels, which carry the code. The next run had no drop, so the code is still to be confirmed at the next one. **2026-11-20, later:** a one-off `Account not found` for `qs-issuer` (`GBNBWXSC…YUBE`) from the testnet RPC's `getAccount`, while Horizon returned 200 for that account and the same read had worked two minutes earlier. The immediate rerun passed. So the RPC can also answer wrongly, not only drop the connection; `getAccount` is a read and could join the retry, but a "not found" can also be true, so it is recorded here rather than retried blindly. **Earlier Step 3 evidence:** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
 | Medium | SEP-45 and the fee route need the deployment's store (Upstash) on Vercel, for single-use nonces and rate limits. Without it they refuse, by design. The SIGNING_KEY account must exist on each network | 2 (review) | open: Step 5 checklist item (spec §14) |
 | Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
 | Low | `npm run lint`: 7 findings remain, all in code from before Step 2 (it was 13 on `96bbb5f`) | 2 | open |
 | ~~High~~ | **Resolved 2026-11-20:** fix approved (spec note 10) and deployed as `CA4B3MIZ…PV73`; every signed call on it succeeded. Was: **every offer call on `CDC6XD3W…KMZO` fails on chain.** The allowance expiration was `now + 120,960`, a value inside the arguments the buyer signs at simulation, so it no longer matches once the transaction lands. The unit tests mocked every signature and could not see it. The fix (expire with the buyer's latest live offer) is built and tested, but not deployed. It needs your approval, then a fresh deployment. Then the runs start again, the wait rental first | 3 (deployment) | open: spec note 10 |
 | Medium | Still to run (needs the 24 h wait): collect on escrow #1, from 2026-11-21T20:28:30Z, and the rejected problem report after the window on that escrow | 3 | open: next session |
-| Low | `approve`'s *amount* is the sum of the buyer's live offers, so if another of their offers expires between simulation and inclusion, the call fails like `32ee3532` (nothing moves; resend). It cannot be removed without an interface change (the buyer passing the total). Reported at the audit | 3 | open (accepted risk unless you decide otherwise) |
-| Low | `docs/EVIDENCE.md` is generated by `npm run evidence-doc`, which rewrites the whole file. The Phase 3 sections (Step 2's web-auth entry, Step 3's testnet bug) were added by hand and would be lost on a rerun until Step 7 updates the generator | 3 | open: Step 7 |
+| Low | `approve`'s *amount* is the sum of the buyer's live offers, so if another of their offers expires between simulation and inclusion, the call fails like `32ee3532` (nothing moves; resend). It cannot be removed without an interface change (the buyer passing the total). Reported at the audit | 3 | accepted 2026-11-20 (your decision): stays Low, no interface change; DESIGN.md known limitation 18 |
+| ~~Low~~ | `docs/EVIDENCE.md` is generated by `npm run evidence-doc`, which rewrote the whole file and would have dropped the hand-added Phase 3 sections | 3 | resolved 2026-11-20: Phase 3 entries live in `docs/evidence-phase3.md`, which the generator copies in; it refuses to write if any current heading would be lost (tested) |
+| Medium | **Pre-launch checklist item:** every G account that will receive USDC in the mainnet pilot has a USDC trustline first (sellers, owners, renters for refunds, and any account USDC is moved to). The app tells a seller or owner without one before they accept, and blocks the acceptance | 3 | open: Step 5 checklist item, spec §14 |
 | Low | The first deployment `CDC6XD3W…KMZO` stays on testnet as is, with weeks #1–#5 issued to `qs-owner`. Nothing moved on it. It will not be used once the fix is deployed | 3 | open (record only) |
 | Medium | **Pre-launch checklist item (Step 3 review):** pilot funds are never sent to the contract address directly. USDC sent there with the token is stuck forever (DESIGN.md known limitation 17). Checked on chain on both networks | 3 | open: Step 5 checklist item, spec §14 |
 | Medium | **Pre-launch checklist item:** the mainnet sign-in key `mainnet-test` (`GCEF3BTQ…TDAR`) currently holds XLM. It is a separate account from `GALA3K…HE3M`. You reduce it to the minimum balance before its secret goes to the server (Step 6); the checklist records the balance read back from mainnet. Kept as it is (Step 3 review) | 3 | open: Step 5 checklist item, spec §14 |
@@ -858,6 +862,64 @@ of the spec, the rest at the second review of `def5eb6`.
 - **Next session:** after 2026-11-21T20:28:30Z, run `collect` on escrow #1
   as `qs-owner`, with its privacy record, then the rejected `report_problem`
   after the window on the same escrow (#49).
+
+#### Step 3 remaining items (2026-11-20, ledger time; collect still pending)
+
+1. **Wrong token: no function takes a token argument**, so there is no
+   transaction to produce. Evidence (EVIDENCE.md, "no function accepts a
+   token"):
+   - The deployed interface has 42 functions (`stellar contract info
+     interface --id CA4B3MIZ…PPV73 --network testnet --output json`). Its
+     only token address is `__constructor(usdc)`. Every other `address`
+     argument names a party.
+   - `usdc()` reads back `CBIELTK6…DAMA`.
+   - The source builds its one `TokenClient` in `payment.rs` from the stored
+     config.
+   - Unit test `only_the_constructors_usdc_can_be_moved`.
+2. **Unaccepted offer** (week #4, sale offer #8, 1 USDC, 30-ledger life):
+   - record request `de2c9d883e3789cfba07e055ec35a5a2a8aa79303f5620f45f7aaec2f35d0e30`;
+   - offer `b8d98645606a3c57f745ef51773d9f0d025aa13692723527c4b9ec62c99adfbb`,
+     open until ledger 5,838,157, never accepted.
+   - USDC (units) read from the token, buyer / owner / contract / buyer's
+     allowance:
+     - ledger 5,838,126, before: 190,000,000 / 20,000,000 / 10,000,000 / 0;
+     - 5,838,128, open: the same balances, allowance 10,000,000;
+     - 5,838,159, expired: the same balances, allowance 0.
+   - The offer's events are `approve`, `allow`, `sale_off`; no `transfer`.
+     Horizon shows no balance change on the buyer's operations.
+   - The first run took all three readings, then crashed on a log line
+     (BigInt in `JSON.stringify`) before its checks. `--resume-offer 8`
+     finished them from the log on the same transactions; no second offer
+     was made. Its first try hit the RPC's false `Account not found` (see the
+     High issue).
+   - Privacy record: `evidence/privacy/2026-11-20-step3-CA4B3MIZ-unaccepted-offer.txt` (passes).
+3. **Trustlines:**
+   - Spec §14 has the checklist item, with the list of G payees by role.
+   - The app: `/stays` shows a "no USDC trustline" notice on each incoming
+     offer and disables "Prove and sell" / "Prove and rent out".
+     `needsUsdcTrustline` is in `src/lib/usdc.ts`; C accounts are never
+     flagged. `USDC_ISSUER` was added to config, same Circle source.
+   - Checked by 4 unit tests, typecheck, lint and `next build --webpack`;
+     not yet in a browser run (see the Low issue on the payment screens).
+4. **Expiry race:** kept Low, no interface change. It is DESIGN.md known
+   limitation 18. The stale "proposed, awaiting approval" note on spec note
+   10 in DESIGN.md now says approved and deployed.
+5. **EVIDENCE.md generator:**
+   - The Phase 3 entries moved verbatim to `docs/evidence-phase3.md`. The
+     generator copies them in at the top, with a contents list.
+   - It refuses to write if any heading in the current EVIDENCE.md would be
+     lost (`scripts/lib/evidence-guard.ts`, 4 tests). Tried by hand: a
+     hand-added section makes it refuse and leaves the file unchanged.
+   - Two more silent losses on a rerun are fixed:
+     - the Phase 2 test count and WASM size came from the working tree
+       (73 tests, 58,774 bytes, Phase 3's). They are pinned to 62 and 27,490
+       as at `66cdf13`;
+     - the hand-edited "no `upgrade` in the rights contract" bullet is now in
+       the generator.
+   - A rerun is idempotent.
+- Tests: `npm run test:app` 35/35 (27 before, plus 4 trustline and 4 guard).
+  `tsc` clean, eslint clean on the changed files, `next build --webpack`
+  passes.
 
 ### Step 4 — Swap and two-proof cost measurement
 - Date:
