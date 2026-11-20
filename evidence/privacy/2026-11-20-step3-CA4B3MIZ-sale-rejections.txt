@@ -1,0 +1,152 @@
+  run 2026-11-20T20:37:18.926Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-20-step3-CA4B3MIZ-sale-rejections.txt --tx sale-rejections-offer-A-record-request=2157ec6ce33ed1ef90fbaa3529dc932f62a9ddaf3b90d00ca567a97e60f48bd5 --tx sale-rejections-offer-A-sale-offer=3a4b865c125dc7f786b48a0100c4ab2b6519fcf7010460a79dccc6931d5233da --tx rejected-wrong-amount=ad15c3ceb2b7ecc0e982457a767d9556108aabc8a171a7e2d01eeea224f2efa6 --tx sale-rejections-the-buyer-lowers-the-allowance-directly=f1cd865d9d610ddd80dc123ce85c409973ddeb05345695b98b69d042b7a3a234 --tx rejected-low-allowance=aaa762edadb571929eb6e4e79854af87428cce8eef3875b7d2240be8ebe90fc5 --tx sale-rejections-offer-B-record-request=266a0394e2be63bd2409e86302406aeb94fe4c3460c0e48de119a86d2f4a2ad9 --tx sale-rejections-offer-B-expires-in-12-ledgers-=2f4cffe7c617214f7de4f00e36f129960eb3a5126d6158b8e615ef00b1a70842 --tx sale-rejections-the-buyer-moves-USDC-away=8674e4947370d3268f359bd4b3dcec8840ec7d0f3795c104a9843303f5bce9d2 --tx rejected-low-balance=84f19a301e0056a5e870a74b97f27821ec25071c3f0b7afb7538d3525af6fede --tx sale-rejections-the-USDC-comes-back=ba20cebbf5ab5b6ed6b75b21f02f8cbc760851da88ae618c125115e82ab4fb7e --tx rejected-expired-offer=326aa7dbb967253fc500038e3e28b40be80769e89b35e51b34dc2a3a8e896176 --tx sale-rejections-the-buyer-cancels-offer-A=41c0897e17c316e368980c7d33442f292a84d2ab8df3e9b54508235e6b40b756 --record /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-owner-secret.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/buyer-next-secret-right-4-c6f78ca9.json
+
+Checking on-chain exposure
+  12 transactions, 57 forbidden values
+  contract the contracts these testnet transactions call
+
+sale-rejections-offer-A-record-request — 2157ec6ce33ed1ef90fbaa3529dc932f62a9ddaf3b90d00ca567a97e60f48bd5
+  ✓ no record contents in 3 layers (10008 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "4",
+                "0x88335671872b7b42b4897231c5873febc9436a63b360d923b1715f71d9a3038f",
+                5957617,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5957617,"key_hash":"0x88335671872b7b42b4897231c5873febc9436a63b360d923b1715f71d9a3038f","request_id":"2","right_id":"4"}
+
+sale-rejections-offer-A-sale-offer — 3a4b865c125dc7f786b48a0100c4ab2b6519fcf7010460a79dccc6931d5233da
+  ✓ no record contents in 3 layers (13880 bytes: envelope, result, meta)
+  call        create_sale_offer(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "2",
+                "10000000",
+                "30026875736506272415941698977056139296326898935434647210523147375102319174717",
+                5957618,
+              )
+  event topics ["approve","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["10000000",5957618]
+  event topics ["allow","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"amount":"10000000","expiration_ledger":5957618}
+  event topics ["sale_off","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5957618,"key_hash":"0x88335671872b7b42b4897231c5873febc9436a63b360d923b1715f71d9a3038f","next_secret_hash":"30026875736506272415941698977056139296326898935434647210523147375102319174717","offer_id":"6","price":"10000000","right_id":"4"}
+
+rejected-wrong-amount — ad15c3ceb2b7ecc0e982457a767d9556108aabc8a171a7e2d01eeea224f2efa6
+  ✓ no record contents in 3 layers (6860 bytes: envelope, result, meta)
+  call        accept_sale(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "6",
+                "5000000",
+                {"a":"0x077d5eb90c88a197…96b4e9d8 (96 bytes)","b":"0x1783e0b90585290c…37feb99f (192 bytes)","c":"0x1662f8e29894d52d…13205526 (96 bytes)"},
+                ["19556718384247277123498976399803988445761009631097549083053608939646242476817","42731449229375493167257311876096045424968328004650019863680214734427536464010","4","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","0","5837019","30026875736506272415941698977056139296326898935434647210523147375102319174717","16656109925639289420402550543967344702651616718859907794309879803380909040906"],
+              )
+
+sale-rejections-the-buyer-lowers-the-allowance-directly — f1cd865d9d610ddd80dc123ce85c409973ddeb05345695b98b69d042b7a3a234
+  ✓ no record contents in 3 layers (4456 bytes: envelope, result, meta)
+  call        approve(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73",
+                "5000000",
+                5838661,
+              )
+  event topics ["approve","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["5000000",5838661]
+
+rejected-low-allowance — aaa762edadb571929eb6e4e79854af87428cce8eef3875b7d2240be8ebe90fc5
+  ✓ no record contents in 3 layers (7204 bytes: envelope, result, meta)
+  call        accept_sale(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "6",
+                "10000000",
+                {"a":"0x077d5eb90c88a197…96b4e9d8 (96 bytes)","b":"0x1783e0b90585290c…37feb99f (192 bytes)","c":"0x1662f8e29894d52d…13205526 (96 bytes)"},
+                ["19556718384247277123498976399803988445761009631097549083053608939646242476817","42731449229375493167257311876096045424968328004650019863680214734427536464010","4","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","0","5837019","30026875736506272415941698977056139296326898935434647210523147375102319174717","16656109925639289420402550543967344702651616718859907794309879803380909040906"],
+              )
+
+sale-rejections-offer-B-record-request — 266a0394e2be63bd2409e86302406aeb94fe4c3460c0e48de119a86d2f4a2ad9
+  ✓ no record contents in 3 layers (10008 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "4",
+                "0xb57041aedd5636fd451d32c68d5742e5603a3ffff2b604a4f144a564652beb30",
+                5957623,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5957623,"key_hash":"0xb57041aedd5636fd451d32c68d5742e5603a3ffff2b604a4f144a564652beb30","request_id":"3","right_id":"4"}
+
+sale-rejections-offer-B-expires-in-12-ledgers- — 2f4cffe7c617214f7de4f00e36f129960eb3a5126d6158b8e615ef00b1a70842
+  ✓ no record contents in 3 layers (13980 bytes: envelope, result, meta)
+  call        create_sale_offer(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "3",
+                "10000000",
+                "30026875736506272415941698977056139296326898935434647210523147375102319174717",
+                5836676,
+              )
+  event topics ["approve","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["20000000",5957618]
+  event topics ["allow","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"amount":"20000000","expiration_ledger":5957618}
+  event topics ["sale_off","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5836676,"key_hash":"0xb57041aedd5636fd451d32c68d5742e5603a3ffff2b604a4f144a564652beb30","next_secret_hash":"30026875736506272415941698977056139296326898935434647210523147375102319174717","offer_id":"7","price":"10000000","right_id":"4"}
+
+sale-rejections-the-buyer-moves-USDC-away — 8674e4947370d3268f359bd4b3dcec8840ec7d0f3795c104a9843303f5bce9d2
+  ✓ no record contents in 3 layers (4260 bytes: envelope, result, meta)
+  call        transfer(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "185000000",
+              )
+  event topics ["transfer","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   "185000000"
+
+rejected-low-balance — 84f19a301e0056a5e870a74b97f27821ec25071c3f0b7afb7538d3525af6fede
+  ✓ no record contents in 3 layers (7488 bytes: envelope, result, meta)
+  call        accept_sale(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "6",
+                "10000000",
+                {"a":"0x077d5eb90c88a197…96b4e9d8 (96 bytes)","b":"0x1783e0b90585290c…37feb99f (192 bytes)","c":"0x1662f8e29894d52d…13205526 (96 bytes)"},
+                ["19556718384247277123498976399803988445761009631097549083053608939646242476817","42731449229375493167257311876096045424968328004650019863680214734427536464010","4","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","0","5837019","30026875736506272415941698977056139296326898935434647210523147375102319174717","16656109925639289420402550543967344702651616718859907794309879803380909040906"],
+              )
+
+sale-rejections-the-USDC-comes-back — ba20cebbf5ab5b6ed6b75b21f02f8cbc760851da88ae618c125115e82ab4fb7e
+  ✓ no record contents in 3 layers (4260 bytes: envelope, result, meta)
+  call        transfer(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "185000000",
+              )
+  event topics ["transfer","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   "185000000"
+
+rejected-expired-offer — 326aa7dbb967253fc500038e3e28b40be80769e89b35e51b34dc2a3a8e896176
+  ✓ no record contents in 3 layers (6860 bytes: envelope, result, meta)
+  call        accept_sale(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "7",
+                "10000000",
+                {"a":"0x077d5eb90c88a197…96b4e9d8 (96 bytes)","b":"0x1783e0b90585290c…37feb99f (192 bytes)","c":"0x1662f8e29894d52d…13205526 (96 bytes)"},
+                ["19556718384247277123498976399803988445761009631097549083053608939646242476817","42731449229375493167257311876096045424968328004650019863680214734427536464010","4","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","0","5837019","30026875736506272415941698977056139296326898935434647210523147375102319174717","16656109925639289420402550543967344702651616718859907794309879803380909040906"],
+              )
+
+sale-rejections-the-buyer-cancels-offer-A — 41c0897e17c316e368980c7d33442f292a84d2ab8df3e9b54508235e6b40b756
+  ✓ no record contents in 3 layers (6928 bytes: envelope, result, meta)
+  call        cancel_offer(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "6",
+              )
+  event topics ["approve","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["0",5957618]
+  event topics ["allow","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"amount":"0","expiration_ledger":5957618}
+  event topics ["off_cncl","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"offer_id":"6"}
+
+Result
+  ✓ No inventory record value appears in any of these 12 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 holder secret(s) given, or s' of 1 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-owner-secret.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/buyer-next-secret-right-4-c6f78ca9.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

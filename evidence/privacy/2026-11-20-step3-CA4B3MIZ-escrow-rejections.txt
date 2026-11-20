@@ -1,0 +1,59 @@
+  run 2026-11-20T20:37:58.355Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-20-step3-CA4B3MIZ-escrow-rejections.txt --tx rejected-collect-before-check-in-24-h=a4a28c10497b9c61c54cb05cc4d103bbc24ff31bbe61d09dd0814788f6c605a2 --tx rejected-the-arbiter-on-an-undisputed-escrow=b82a236612aedd083e3e4f6df48be7bffc006e18b9a69eda32cb35461d6c9724 --tx rejected-an-outside-account-collects=5ae571975f01206a7af1a4bf99764a22f7bfdd004caffcefbf2596d2e0581e98 --tx rejected-an-outside-account-confirms=eaed5595a75c4bf792a75438e4974bf35905df717222d116fd9ba5a007bc987a --tx rejected-the-arbiter-tries-to-burn-a-right-naming-its-owner-=f325cdfcc9d93c68d74cacda1e672ab95a57fb966f4ade6ce383c46169fe9c48 --tx rejected-the-arbiter-tries-to-burn-a-right-as-itself-=90077ca3f1aa01bde4f3655d9605847dca4d8996d92000f3c94851e155d72a8d --record /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-1-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-1-owner-secret.json --record /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-owner-secret.json
+
+Checking on-chain exposure
+  6 transactions, 67 forbidden values
+  contract the contracts these testnet transactions call
+
+rejected-collect-before-check-in-24-h — a4a28c10497b9c61c54cb05cc4d103bbc24ff31bbe61d09dd0814788f6c605a2
+  ✓ no record contents in 3 layers (3144 bytes: envelope, result, meta)
+  call        collect(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "1",
+              )
+
+rejected-the-arbiter-on-an-undisputed-escrow — b82a236612aedd083e3e4f6df48be7bffc006e18b9a69eda32cb35461d6c9724
+  ✓ no record contents in 3 layers (3348 bytes: envelope, result, meta)
+  call        resolve(
+                "GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC",
+                "1",
+                ["PayOwner"],
+                "0xd55f0ef56e81b07f3ee919cfe7371738303b3f594933cdb14d7586a8583a4009",
+              )
+
+rejected-an-outside-account-collects — 5ae571975f01206a7af1a4bf99764a22f7bfdd004caffcefbf2596d2e0581e98
+  ✓ no record contents in 3 layers (3092 bytes: envelope, result, meta)
+  call        collect(
+                "GBC7CWQI6PLVQA6V7X2VFHIL22R4GLHXOAOCBBBANTYHOJQMDCOB7G34",
+                "1",
+              )
+
+rejected-an-outside-account-confirms — eaed5595a75c4bf792a75438e4974bf35905df717222d116fd9ba5a007bc987a
+  ✓ no record contents in 3 layers (3144 bytes: envelope, result, meta)
+  call        confirm(
+                "GBC7CWQI6PLVQA6V7X2VFHIL22R4GLHXOAOCBBBANTYHOJQMDCOB7G34",
+                "1",
+              )
+
+rejected-the-arbiter-tries-to-burn-a-right-naming-its-owner- — f325cdfcc9d93c68d74cacda1e672ab95a57fb966f4ade6ce383c46169fe9c48
+  ✓ no record contents in 3 layers (3480 bytes: envelope, result, meta)
+  call        burn(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "4",
+              )
+
+rejected-the-arbiter-tries-to-burn-a-right-as-itself- — 90077ca3f1aa01bde4f3655d9605847dca4d8996d92000f3c94851e155d72a8d
+  ✓ no record contents in 3 layers (3132 bytes: envelope, result, meta)
+  call        burn(
+                "GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC",
+                "4",
+              )
+
+Result
+  ✓ No inventory record value appears in any of these 6 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 2 record(s) given, or s and h of 2 holder secret(s) given, or s' of 0 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-1-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-1-owner-secret.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-4-owner-secret.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

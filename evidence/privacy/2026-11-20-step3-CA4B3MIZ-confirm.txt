@@ -1,0 +1,80 @@
+  run 2026-11-20T20:33:25.410Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-20-step3-CA4B3MIZ-confirm.txt --tx confirm-rental-offer=bcc15131a3ebcf7ac5f925ac79b0e1fdbe0930f85d6c7baa54bd6ec115a1d96e --tx confirm-accept-rental-right-escrow-=e7245716d595ec182faa8c38fccda6fcaa2b56172e426572ea244bdc727dd5c6 --tx confirm-the-renter-releases-early=77faef4d6ac6dcb45433942db5c6303260472c76a820551625453c24de4a2947 --tx rejected-double-payout=f32980e8ecc362f27a260441fbbff00b536582c6ef4a1abbec3be2c2d7b79613 --tx rejected-refund-after-payout=896f93fbbceae4106fb84c21e2a066abcc2005dabe5fd902ca9aff9557c45975 --tx rejected-problem-report-after-payout=c1947dd3cb080e3d4c39aeeb521e5116a9aaf45ecea7449d0406244355c794a5 --record /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-5-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-5-owner-secret.json --evidence pilot/evidence/problem-report.txt
+
+Checking on-chain exposure
+  6 transactions, 57 forbidden values
+  contract the contracts these testnet transactions call
+
+confirm-rental-offer — bcc15131a3ebcf7ac5f925ac79b0e1fdbe0930f85d6c7baa54bd6ec115a1d96e
+  ✓ no record contents in 3 layers (12592 bytes: envelope, result, meta)
+  call        create_rental_offer(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "5",
+                "10000000",
+                "1795737600",
+                "1795206940",
+                5957584,
+              )
+  event topics ["approve","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN","CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["10000000",5957584]
+  event topics ["allow","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"amount":"10000000","expiration_ledger":5957584}
+  event topics ["rent_off","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"check_in":"1795206940","expires_at":"1795737600","expires_ledger":5957584,"offer_id":"5","price":"10000000","right_id":"5"}
+
+confirm-accept-rental-right-escrow- — e7245716d595ec182faa8c38fccda6fcaa2b56172e426572ea244bdc727dd5c6
+  ✓ no record contents in 3 layers (19460 bytes: envelope, result, meta)
+  call        accept_rental(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "5",
+                "10000000",
+                {"a":"0x12f6095c685b1af2…e1cd73f0 (96 bytes)","b":"0x010cd98894e00ab2…e3d7b7ba (192 bytes)","c":"0x01e3f5c437eb7bb7…398a32eb (96 bytes)"},
+                ["39402102894019933294286281449360564695024436245363026551077093124075693047746","37539341995109865959632437657897818498711170723554569004429198793955888843727","5","90770094754120608982862790096888743153","178413295460492758105019939507572692766","119936345663412135197073293566390678772","121829635756908778636933183208725995740","1795737600","5836986","0","40817765612540545101963711411676621439174093647694280628149600541173905378113"],
+              )
+  event topics ["transfer","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN","CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   "10000000"
+  event topics ["transfer","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"commitment":"0x571cccc80b908319314fc7522c334512dd607cd3c14cc77e55ed447c912c7fc2","expires_at":"1795737600","right_id":"5"}
+  event topics ["funded","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"amount":"10000000","check_in":"1795206940","escrow_id":"3","expires_at":"1795737600","offer_id":"5","right_id":"5"}
+
+confirm-the-renter-releases-early — 77faef4d6ac6dcb45433942db5c6303260472c76a820551625453c24de4a2947
+  ✓ no record contents in 3 layers (6892 bytes: envelope, result, meta)
+  call        confirm(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "3",
+              )
+  event topics ["transfer","CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   "10000000"
+  event topics ["paid_out","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"amount":"10000000","escrow_id":"3","via":"confirm"}
+
+rejected-double-payout — f32980e8ecc362f27a260441fbbff00b536582c6ef4a1abbec3be2c2d7b79613
+  ✓ no record contents in 3 layers (3144 bytes: envelope, result, meta)
+  call        confirm(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "3",
+              )
+
+rejected-refund-after-payout — 896f93fbbceae4106fb84c21e2a066abcc2005dabe5fd902ca9aff9557c45975
+  ✓ no record contents in 3 layers (3144 bytes: envelope, result, meta)
+  call        refund(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "3",
+              )
+
+rejected-problem-report-after-payout — c1947dd3cb080e3d4c39aeeb521e5116a9aaf45ecea7449d0406244355c794a5
+  ✓ no record contents in 3 layers (3288 bytes: envelope, result, meta)
+  public by design: SHA-256 of pilot/evidence/problem-report.txt (22f5dc8c9dbb01f15ca8d851e2c63db3740c4bc870b2aa70a3adc915d4b206c7) is on chain here, as it should be
+  call        report_problem(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "3",
+                "0x22f5dc8c9dbb01f15ca8d851e2c63db3740c4bc870b2aa70a3adc915d4b206c7",
+              )
+
+Result
+  ✓ No inventory record value appears in any of these 6 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 holder secret(s) given, or s' of 0 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-5-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-5-owner-secret.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

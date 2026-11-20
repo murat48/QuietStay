@@ -1,0 +1,56 @@
+  run 2026-11-20T20:32:42.706Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-20-step3-CA4B3MIZ-dispute-close.txt --tx dispute-arbiter-resolves-refund-renter-=822ab5e76b14ce3978222ca940506c7cb9c9a1f13d840b9ebfb5d63dfaf4364e --tx rejected-double-refund=6243a558754f4bd2d3fba89698f904992f6cdf1ec6507c14c3e4ce1141cce139 --tx rejected-the-arbiter-resolves-again=671328698ea36b31f27c9e9a543c647756f5a003be7fd7b8113a3798d9bff41e --tx rejected-payout-after-refund=8e4230929c675d88032781a0b193530e83ada8217bf1228582c6d5b7f317d180 --record /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-3-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-3-owner-secret.json --evidence pilot/evidence/problem-report.txt --evidence pilot/evidence/renter-evidence-1.txt --evidence pilot/evidence/owner-evidence-1.txt --evidence pilot/evidence/arbiter-decision.txt
+
+Checking on-chain exposure
+  4 transactions, 63 forbidden values
+  contract the contracts these testnet transactions call
+
+dispute-arbiter-resolves-refund-renter- — 822ab5e76b14ce3978222ca940506c7cb9c9a1f13d840b9ebfb5d63dfaf4364e
+  ✓ no record contents in 3 layers (7848 bytes: envelope, result, meta)
+  public by design: SHA-256 of pilot/evidence/problem-report.txt (22f5dc8c9dbb01f15ca8d851e2c63db3740c4bc870b2aa70a3adc915d4b206c7) is on chain here, as it should be
+  public by design: SHA-256 of pilot/evidence/renter-evidence-1.txt (c2085d8c9dd554a2421ee724800c3ab943745e2264427054d528b0f2eaa6f980) is on chain here, as it should be
+  public by design: SHA-256 of pilot/evidence/owner-evidence-1.txt (f41e4437b42d0bb7682e72f344356a530690c8e7716c5c539094e9f62accad95) is on chain here, as it should be
+  public by design: SHA-256 of pilot/evidence/arbiter-decision.txt (d55f0ef56e81b07f3ee919cfe7371738303b3f594933cdb14d7586a8583a4009) is on chain here, as it should be
+  call        resolve(
+                "GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC",
+                "2",
+                ["RefundRenter"],
+                "0xd55f0ef56e81b07f3ee919cfe7371738303b3f594933cdb14d7586a8583a4009",
+              )
+  event topics ["transfer","CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   "10000000"
+  event topics ["refunded","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"amount":"10000000","escrow_id":"2","via":"resolve"}
+  event topics ["resolve","GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC"]
+  event data   {"decision_hash":"0xd55f0ef56e81b07f3ee919cfe7371738303b3f594933cdb14d7586a8583a4009","escrow_id":"2","outcome":["RefundRenter"]}
+
+rejected-double-refund — 6243a558754f4bd2d3fba89698f904992f6cdf1ec6507c14c3e4ce1141cce139
+  ✓ no record contents in 3 layers (3144 bytes: envelope, result, meta)
+  call        refund(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "2",
+              )
+
+rejected-the-arbiter-resolves-again — 671328698ea36b31f27c9e9a543c647756f5a003be7fd7b8113a3798d9bff41e
+  ✓ no record contents in 3 layers (3348 bytes: envelope, result, meta)
+  public by design: SHA-256 of pilot/evidence/arbiter-decision.txt (d55f0ef56e81b07f3ee919cfe7371738303b3f594933cdb14d7586a8583a4009) is on chain here, as it should be
+  call        resolve(
+                "GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC",
+                "2",
+                ["PayOwner"],
+                "0xd55f0ef56e81b07f3ee919cfe7371738303b3f594933cdb14d7586a8583a4009",
+              )
+
+rejected-payout-after-refund — 8e4230929c675d88032781a0b193530e83ada8217bf1228582c6d5b7f317d180
+  ✓ no record contents in 3 layers (3144 bytes: envelope, result, meta)
+  call        confirm(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "2",
+              )
+
+Result
+  ✓ No inventory record value appears in any of these 4 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 holder secret(s) given, or s' of 0 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-3-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CA4B3MIZ/step3/week-3-owner-secret.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

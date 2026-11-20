@@ -526,3 +526,39 @@ upgrade() can never be authorized.
 ```
 
 The pre-launch checklist repeats it with `--network mainnet`.
+
+### Phase 3: a signing bug caught on testnet, before mainnet
+
+**Claim:** testnet did its job. The first Step 3 deployment had a bug that
+made every offer call fail on chain. It was found by the first real
+transaction, fixed, covered by tests with real signatures, and the contract
+was redeployed. It never reached mainnet.
+
+| | |
+| --- | --- |
+| Failed transaction | [`32ee3532…5f42`](https://stellar.expert/explorer/testnet/tx/32ee35321401a80e5b1e6752f275febcbcb029fa2317f7eadd74711214dc5f42): `create_rental_offer`, refused with `Error(Auth, InvalidAction)`. Nothing moved; only the fee was charged |
+| Superseded contract | [`CDC6XD3WK4GZSJWNBJELDBHAHNPHLS7WL6RZG2KEACC2RGJWCRTGKMZO`](https://stellar.expert/explorer/testnet/contract/CDC6XD3WK4GZSJWNBJELDBHAHNPHLS7WL6RZG2KEACC2RGJWCRTGKMZO), WASM `db92ae3e…b38f`. Left on testnet unchanged; not used |
+| Fixed contract | [`CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73`](https://stellar.expert/explorer/testnet/contract/CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73), WASM `c7473e8e…6b6b` |
+
+**The cause.** An offer call sets the buyer's USDC allowance with a call to
+`approve` inside the same transaction, and the buyer's signature covers that
+call's arguments. One argument was the allowance's expiration, computed as
+"the current ledger + 120,960". The buyer signs when the transaction is
+simulated; it lands a few ledgers later, when that sum is a different number,
+so the signed arguments no longer matched and the network refused it. The unit
+tests mocked every signature, and a mock cannot notice a changed argument.
+
+**The fix.** The expiration is now the latest last ledger among the buyer's
+live offers, a value fixed by what the buyer signed and by stored state, so it
+is the same at simulation and at inclusion (PHASE3_SPEC.md, Step 3
+implementation note 10). The tests that would have caught it now exist: they
+sign with real ed25519 keys at one ledger and land the call ledgers later
+(`real_signature_*` in `contracts/quietstay-rights/src/test_payments.rs`). On
+the old rule they fail with the same `Error(Auth, InvalidAction)`.
+
+**What to look for:** on the failed transaction's page, the operation's
+authorization holds `approve` with an expiration of 5,957,168, the ledger at
+simulation (5,836,208) plus 120,960, and the result is `Error(Auth,
+InvalidAction)`. On the fixed contract, the same kind of offer,
+[`8d42b704…a529`](https://stellar.expert/explorer/testnet/tx/8d42b704495844beec607290d7f497d4be7b24679372290dbfa26ded2bc9a529),
+succeeds; its `approve` expires at the offer's own last ledger.

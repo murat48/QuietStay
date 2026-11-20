@@ -18,3 +18,7 @@ soroban-sdk = { workspace = true, features = ["hazmat-address"] }
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
 serde_json = "1"
+# Real signatures in the Step 3 auth tests (test_payments.rs): the same
+# versions soroban-env-host already uses, so nothing new is downloaded.
+ed25519-dalek = "2.2.0"
+sha2 = "0.10.9"

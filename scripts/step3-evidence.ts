@@ -26,7 +26,7 @@
  * the expected error, or the run stops and records nothing for it.
  *
  * Records and secrets go to .secrets/<contract 8>/step3/ (gitignored, 0700).
- * Every transaction is appended to evidence/step3-testnet.json, and each step
+ * Every transaction is appended to evidence/step3-testnet-<contract 8>.json, and each step
  * ends with `check-privacy` over its transactions, output in evidence/privacy/.
  */
 
@@ -59,14 +59,15 @@ if (NETWORK_PASSPHRASE !== "Test SDF Network ; September 2015") throw new Error(
 
 const { positionals, values: a } = parseArgs({
   allowPositionals: true,
-  options: { contract: { type: "string" }, "resolve-tx": { type: "string" } },
+  options: { contract: { type: "string" }, "resolve-tx": { type: "string" }, "resume-offer": { type: "string" } },
 });
 const STEP = positionals[0];
 const C = a.contract ?? "";
 if (!/^C[A-Z2-7]{55}$/.test(C)) throw new Error("--contract <C…> is required");
 const DIR = resolve(".secrets", C.slice(0, 8), "step3");
 mkdirSync(DIR, { recursive: true, mode: 0o700 });
-const LOG = resolve("evidence/step3-testnet.json");
+// One log per contract, so a superseded deployment's runs stay apart.
+const LOG = resolve(`evidence/step3-testnet-${C.slice(0, 8)}.json`);
 
 // --- identities (public keys only) -------------------------------------------
 
@@ -195,7 +196,19 @@ async function rejected(
   sibling: rpc.Api.SimulateTransactionSuccessResponse,
   expected: string,
 ): Promise<Outcome> {
-  const tx = await buildCall(sourceOf(by), C, fn, args);
+  // The caller's own authorization of this exact call, as the source account:
+  // what simulation would record. Without it even the caller's require_auth
+  // fails, and the refusal would be the host's, not the contract's check.
+  const own = new xdr.SorobanAuthorizationEntry({
+    credentials: xdr.SorobanCredentials.sorobanCredentialsSourceAccount(),
+    rootInvocation: new xdr.SorobanAuthorizedInvocation({
+      function: xdr.SorobanAuthorizedFunction.sorobanAuthorizedFunctionTypeContractFn(
+        new xdr.InvokeContractArgs({ contractAddress: new Address(C).toScAddress(), functionName: fn, args }),
+      ),
+      subInvocations: [],
+    }),
+  });
+  const tx = await buildCall(sourceOf(by), C, fn, args, [own]);
   const out = await sendAndWait(signWith(withSiblingResources(tx, sibling), by));
   if (out.successful) throw new Error(`${label}: expected ${expected}, but it was accepted (${out.hash})`);
   if (out.opResult !== "invokeHostFunctionTrapped" || !out.errors.includes(expected)) {
@@ -295,7 +308,7 @@ async function saleOffer(prefix: string, w: Week, price: bigint, expiresIn = OFF
 }
 
 function checkPrivacy(group: string, opts: { weeks: Week[]; nextSecrets?: string[]; evidence?: string[] }) {
-  const out = `evidence/privacy/${TODAY}-step3-${group}.txt`;
+  const out = `evidence/privacy/${TODAY}-step3-${C.slice(0, 8)}-${group}.txt`;
   const args = ["tsx", "scripts/check-privacy.ts", "--network", "testnet", "--out", out];
   for (const [label, hash] of Object.entries(stepHashes)) args.push("--tx", `${label.replace(/[^a-z0-9-]+/gi, "-")}=${hash}`);
   for (const w of opts.weeks) args.push("--record", w.record_file, "--secret", w.secret_file);
@@ -368,9 +381,30 @@ async function waitRental() {
   checkPrivacy("wait-rental", { weeks: [w] });
 }
 
+/**
+ * Pick up a sale offer already on chain (its acceptance was refused in
+ * simulation, nothing sent): its h' from the chain, the buyer's s' from the
+ * file whose hash matches, and the offer's earlier transactions from the log
+ * for the privacy record.
+ */
+async function resumeSaleOffer(offer: number) {
+  const o = (await read("get_offer", [u64(offer)])) as { buyer: string; terms: [string, { next_secret_hash: bigint }] } | undefined;
+  if (!o || o.terms[0] !== "Sale") throw new Error(`offer #${offer} is not a live sale offer`);
+  const h = BigInt(o.terms[1].next_secret_hash);
+  let sFile: string | undefined;
+  for (const f of state.buyer_next_secret_files) {
+    if ((await secretHash(BigInt(JSON.parse(readFileSync(f, "utf8")).secret))) === h) sFile = f;
+  }
+  if (!sFile) throw new Error(`no kept s' matches offer #${offer}'s h'`);
+  for (const e of evidence.entries) if (e.step === "sale") stepHashes[e.label] = e.hash;
+  log.info(`resuming offer #${offer}; s' found`);
+  return { offer, h, sFile };
+}
+
 async function sale() {
   const w = week(2);
-  const { offer, h, sFile } = await saleOffer("sale:", w, USDC);
+  const resume = a["resume-offer"];
+  const { offer, h, sFile } = resume ? await resumeSaleOffer(Number(resume)) : await saleOffer("sale:", w, USDC);
   const { proof, signals } = await prove(w, ADDR.buyer, { nextSecretHash: h });
   await ok("sale: accept (right and USDC together)", "owner", "accept_sale", [addr(ADDR.owner), u64(offer), i128(USDC), proof, signals]);
   checkPrivacy("sale", { weeks: [w], nextSecrets: [sFile] });
@@ -393,6 +427,12 @@ async function outsider(): Promise<Keypair> {
 
 async function disputeOpen() {
   const w = week(3);
+  if (state.escrows.dispute) {
+    // Resuming: the rental, the report and the evidence already landed.
+    for (const e of evidence.entries) if (e.step === "dispute-open") stepHashes[e.label] = e.hash;
+    log.info(`resuming at the rejections; escrow #${state.escrows.dispute} is already Disputed`);
+    return disputeRejections(w, state.escrows.dispute);
+  }
   const { offer, expiresAt } = await rentalOffer("dispute: rental offer", w, "renter", USDC);
   const { proof, signals } = await prove(w, ADDR.renter, { rentalUntil: expiresAt });
   await ok("dispute: accept (rental right + escrow)", "owner", "accept_rental", [addr(ADDR.owner), u64(offer), i128(USDC), proof, signals]);
@@ -402,7 +442,10 @@ async function disputeOpen() {
   await ok("dispute: problem report (renter)", "renter", "report_problem", [addr(ADDR.renter), u64(e), bytes32(sha256File(EVIDENCE.report))]);
   await ok("dispute: evidence (renter)", "renter", "submit_evidence", [addr(ADDR.renter), u64(e), bytes32(sha256File(EVIDENCE.renter))]);
   await ok("dispute: evidence (owner)", "owner", "submit_evidence", [addr(ADDR.owner), u64(e), bytes32(sha256File(EVIDENCE.owner))]);
+  return disputeRejections(w, e);
+}
 
+async function disputeRejections(w: Week, e: number) {
   const sib = await view("get_escrow", [u64(e)]);
   await rejected("rejected: collect during a dispute", "owner", "collect", [addr(ADDR.owner), u64(e)], sib, "Error(Contract, #46)");
   const out = await outsider();
@@ -511,7 +554,34 @@ async function escrowRejections() {
   checkPrivacy("escrow-rejections", { weeks: [week(1), w] });
 }
 
+/**
+ * The buyer's only live offer, cancelled: the contract sets the allowance to
+ * zero, expiring at that offer's own last ledger (spec note 10). The USDC
+ * contract must accept it, and the allowance must read back as 0.
+ */
+async function cancelLast() {
+  const w = week(5);
+  const { sequence, closedAt } = await latestLedger();
+  await ok("cancel-last: the buyer's only offer", "buyer", "create_rental_offer", [
+    addr(ADDR.buyer), u64(w.right_id), i128(USDC), u64(w.period.end), u64(closedAt + 3600), u32(sequence + 2000),
+  ]);
+  const offer = await offerId();
+  const before = await allowanceOf(ADDR.buyer);
+  await ok("cancel-last: cancel it (allowance to zero)", "buyer", "cancel_offer", [addr(ADDR.buyer), u64(offer)]);
+  const after = await allowanceOf(ADDR.buyer);
+  log.info(`allowance before ${before}, after ${after}`);
+  if (before !== USDC || after !== 0n) throw new Error(`expected the allowance ${USDC} then 0, read ${before} then ${after}`);
+  log.ok("the USDC contract accepted the zero allowance, and it reads back as 0");
+  checkPrivacy("cancel-last", { weeks: [] });
+}
+
+async function allowanceOf(owner: string): Promise<bigint> {
+  const { sim } = await simulated("issuer", "allowance", [addr(owner), addr(C)], USDC_CONTRACT_ID);
+  return BigInt(scValToNative(sim.result!.retval) as bigint);
+}
+
 const STEPS: Record<string, () => Promise<void>> = {
+  "cancel-last": cancelLast,
   issue,
   "wait-rental": waitRental,
   sale,
