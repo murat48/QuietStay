@@ -21,6 +21,16 @@ pub fn bump_instance(env: &Env) {
         .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
 }
 
+/// Extend a persistent entry by the same rule as rights.
+pub fn extend_persistent(env: &Env, key: &DataKey) {
+    env.storage()
+        .persistent()
+        .extend_ttl(key, TTL_THRESHOLD, TTL_EXTEND_TO);
+}
+
+/// The 30-day extension, for modules that set their own TTLs.
+pub const PERSISTENT_EXTEND_TO: u32 = TTL_EXTEND_TO;
+
 pub fn config(env: &Env) -> Config {
     env.storage()
         .instance()
@@ -63,7 +73,9 @@ pub fn put_right(env: &Env, right: &Right) {
 
 pub fn remove_right(env: &Env, right_id: u64) {
     env.storage().persistent().remove(&DataKey::Right(right_id));
-    env.storage().persistent().remove(&DataKey::Listing(right_id));
+    env.storage()
+        .persistent()
+        .remove(&DataKey::Listing(right_id));
 }
 
 pub fn get_listing(env: &Env, right_id: u64) -> Option<Listing> {
@@ -86,7 +98,9 @@ pub fn put_listing(env: &Env, listing: &Listing) {
 }
 
 pub fn remove_listing(env: &Env, right_id: u64) {
-    env.storage().persistent().remove(&DataKey::Listing(right_id));
+    env.storage()
+        .persistent()
+        .remove(&DataKey::Listing(right_id));
 }
 
 pub fn balance(env: &Env, owner: &Address) -> i128 {

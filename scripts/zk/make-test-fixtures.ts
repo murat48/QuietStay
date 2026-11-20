@@ -10,6 +10,8 @@
  * substance (the proofs themselves are randomized, so their bytes differ run to
  * run); they are test values and protect nothing.
  *
+ *   npm run zk:test-fixtures -- --only rental_r2,rental_r3   (write only these)
+ *
  * Writes contracts/quietstay-rights/tests/fixtures/: one JSON file per scenario,
  * common.json with the accounts and commitments, and a copy of the encoded
  * verification key.
@@ -129,9 +131,33 @@ async function main() {
       secret: s.owner,
       ctx: { rightId: 1n, from: who.owner, to: wallets.renter, expiresAt: WEEK_END, expiryLedger: exp, nextSecretHash: 0n },
     },
+    // Phase 3 Step 3: rentals of rights 2 and 3, so one contract can hold
+    // several escrows at once. The tests issue rights 1–3 to the owner with the
+    // same commitment (C does not include the right id; the proof's right_id
+    // signal does).
+    rental_r2: {
+      note: "Phase 3: owner rents right 2 to renter until WEEK_END",
+      secret: s.owner,
+      ctx: { rightId: 2n, from: who.owner, to: who.renter, expiresAt: WEEK_END, expiryLedger: exp, nextSecretHash: 0n },
+    },
+    rental_r3: {
+      note: "Phase 3: owner rents right 3 to buyer until WEEK_END",
+      secret: s.owner,
+      ctx: { rightId: 3n, from: who.owner, to: who.buyer, expiresAt: WEEK_END, expiryLedger: exp, nextSecretHash: 0n },
+    },
+    sale_r2: {
+      note: "Phase 3: owner sells right 2 to buyer, with the buyer's h'",
+      secret: s.owner,
+      ctx: { rightId: 2n, from: who.owner, to: who.buyer, expiresAt: null, expiryLedger: exp, nextSecretHash: h.buyer },
+    },
   };
 
+  const onlyArg = process.argv.indexOf("--only");
+  const only = onlyArg >= 0 ? new Set(process.argv[onlyArg + 1].split(",")) : null;
+  for (const name of only ?? []) if (!(name in scenarios)) throw new Error(`no scenario ${name}`);
+
   for (const [name, { secret: sec, ctx, note }] of Object.entries(scenarios)) {
+    if (only && !only.has(name)) continue;
     const { input, publicSignals } = await circuitInput(d, sec, ctx);
     const { proof, publicSignals: emitted } = await groth16.fullProve(
       input,

@@ -27,18 +27,18 @@ use crate::verifier::{Proof, VerificationKey};
 use crate::{QuietStayRights, QuietStayRightsClient};
 
 // 2026-01-01T00:00:00Z — the start of the use year.
-const YEAR_START: u64 = 1_767_225_600;
+pub(crate) const YEAR_START: u64 = 1_767_225_600;
 // 2027-01-01T00:00:00Z — the end of it.
-const YEAR_END: u64 = 1_798_761_600;
+pub(crate) const YEAR_END: u64 = 1_798_761_600;
 // 2026-07-04T00:00:00Z → 2026-07-11T00:00:00Z — the week itself.
-const WEEK_START: u64 = 1_783_123_200;
-const WEEK_END: u64 = 1_783_728_000;
+pub(crate) const WEEK_START: u64 = 1_783_123_200;
+pub(crate) const WEEK_END: u64 = 1_783_728_000;
 
-const DAY: u64 = 86_400;
+pub(crate) const DAY: u64 = 86_400;
 
 /// The ledger every test starts at. Fixture proofs are valid through
 /// `BASE_LEDGER + 360` (and `rental_edge` through `BASE_LEDGER + 720`).
-const BASE_LEDGER: u32 = 1000;
+pub(crate) const BASE_LEDGER: u32 = 1000;
 
 const COMMON: &str = include_str!("../tests/fixtures/common.json");
 const VK: &str = include_str!("../tests/fixtures/verification_key.soroban.json");
@@ -57,6 +57,9 @@ fn fixture_json(name: &str) -> &'static str {
         "wallet_rental" => include_str!("../tests/fixtures/wallet_rental.json"),
         "sale_to_wallet" => include_str!("../tests/fixtures/sale_to_wallet.json"),
         "rental_to_wallet" => include_str!("../tests/fixtures/rental_to_wallet.json"),
+        "rental_r2" => include_str!("../tests/fixtures/rental_r2.json"),
+        "rental_r3" => include_str!("../tests/fixtures/rental_r3.json"),
+        "sale_r2" => include_str!("../tests/fixtures/sale_r2.json"),
         _ => panic!("no fixture {name}"),
     }
 }
@@ -86,16 +89,16 @@ fn g2(env: &Env, v: &serde_json::Value) -> Bls12381G2Affine {
     Bls12381G2Affine::from_array(env, &unhex::<192>(v.as_str().unwrap()))
 }
 
-fn u256(env: &Env, hex: &str) -> U256 {
+pub(crate) fn u256(env: &Env, hex: &str) -> U256 {
     U256::from_be_bytes(env, &Bytes::from_array(env, &unhex::<32>(hex)))
 }
 
-fn account(env: &Env, name: &str) -> Address {
+pub(crate) fn account(env: &Env, name: &str) -> Address {
     let common = json(COMMON);
     Address::from_str(env, common["accounts"][name].as_str().unwrap())
 }
 
-fn vk(env: &Env) -> VerificationKey {
+pub(crate) fn vk(env: &Env) -> VerificationKey {
     let j = json(VK);
     let mut ic = Vec::new(env);
     for p in j["ic"].as_array().unwrap() {
@@ -111,46 +114,55 @@ fn vk(env: &Env) -> VerificationKey {
 }
 
 /// A fixed `C…` address standing in for a smart wallet (common.json `wallets`).
-fn wallet(env: &Env, name: &str) -> Address {
+pub(crate) fn wallet(env: &Env, name: &str) -> Address {
     let common = json(COMMON);
     Address::from_str(env, common["wallets"][name].as_str().unwrap())
 }
 
 /// `C` for the smart wallet holder: `Poseidon(d, wallet, h_wallet)`, with the
 /// wallet's address under the contract tag.
-fn wallet_commitment(env: &Env) -> BytesN<32> {
-    BytesN::from_array(env, &unhex::<32>(json(COMMON)["wallet_commitment"].as_str().unwrap()))
+pub(crate) fn wallet_commitment(env: &Env) -> BytesN<32> {
+    BytesN::from_array(
+        env,
+        &unhex::<32>(json(COMMON)["wallet_commitment"].as_str().unwrap()),
+    )
 }
 
 /// `C` for the owner, as issued: `Poseidon(d, owner, h_owner)`.
-fn owner_commitment(env: &Env) -> BytesN<32> {
-    BytesN::from_array(env, &unhex::<32>(json(COMMON)["owner_commitment"].as_str().unwrap()))
+pub(crate) fn owner_commitment(env: &Env) -> BytesN<32> {
+    BytesN::from_array(
+        env,
+        &unhex::<32>(json(COMMON)["owner_commitment"].as_str().unwrap()),
+    )
 }
 
 /// `C'` for the buyer, as a sale with the buyer's `h'` leaves it.
-fn buyer_commitment(env: &Env) -> BytesN<32> {
-    BytesN::from_array(env, &unhex::<32>(json(COMMON)["buyer_commitment"].as_str().unwrap()))
+pub(crate) fn buyer_commitment(env: &Env) -> BytesN<32> {
+    BytesN::from_array(
+        env,
+        &unhex::<32>(json(COMMON)["buyer_commitment"].as_str().unwrap()),
+    )
 }
 
 /// A canonical stand-in commitment for tests that never transfer.
-fn commitment(env: &Env, byte: u8) -> BytesN<32> {
+pub(crate) fn commitment(env: &Env, byte: u8) -> BytesN<32> {
     assert!(byte < 0x73, "keep stand-in commitments below r");
     BytesN::from_array(env, &[byte; 32])
 }
 
 /// One transfer, exactly as a fixture proved it.
 #[derive(Clone)]
-struct Tx {
-    from: Address,
-    to: Address,
-    right_id: u64,
-    expires_at: Option<u64>,
-    next_secret_hash: U256,
-    proof: Proof,
-    signals: Vec<U256>,
+pub(crate) struct Tx {
+    pub from: Address,
+    pub to: Address,
+    pub right_id: u64,
+    pub expires_at: Option<u64>,
+    pub next_secret_hash: U256,
+    pub proof: Proof,
+    pub signals: Vec<U256>,
 }
 
-fn tx(env: &Env, name: &str) -> Tx {
+pub(crate) fn tx(env: &Env, name: &str) -> Tx {
     let j = json(fixture_json(name));
     let mut signals = Vec::new(env);
     for s in j["signals"].as_array().unwrap() {
@@ -171,15 +183,20 @@ fn tx(env: &Env, name: &str) -> Tx {
     }
 }
 
-struct Fixture<'a> {
-    env: Env,
-    contract_id: Address,
-    client: QuietStayRightsClient<'a>,
-    issuer: Address,
-    owner: Address,
-    renter: Address,
-    buyer: Address,
-    stranger: Address,
+pub(crate) struct Fixture<'a> {
+    pub env: Env,
+    pub contract_id: Address,
+    pub client: QuietStayRightsClient<'a>,
+    pub issuer: Address,
+    /// Phase 3: the pilot arbiter, a generated address like the issuer.
+    pub arbiter: Address,
+    /// Phase 3: a Stellar Asset Contract standing in for USDC.
+    pub usdc: Address,
+    pub usdc_asset: soroban_sdk::xdr::Asset,
+    pub owner: Address,
+    pub renter: Address,
+    pub buyer: Address,
+    pub stranger: Address,
 }
 
 impl Fixture<'_> {
@@ -201,12 +218,12 @@ impl Fixture<'_> {
         }
     }
 
-    fn at_ledger(&self, sequence: u32) {
+    pub fn at_ledger(&self, sequence: u32) {
         self.env.ledger().set_sequence_number(sequence);
     }
 }
 
-fn setup() -> Fixture<'static> {
+pub(crate) fn setup() -> Fixture<'static> {
     let env = Env::default();
     env.cost_estimate().budget().reset_unlimited();
     env.ledger().set_timestamp(YEAR_START + DAY);
@@ -216,18 +233,19 @@ fn setup() -> Fixture<'static> {
     // lets the tests mock its signature alone, which the host cannot do for a G…
     // account.
     let issuer = Address::generate(&env);
+    let arbiter = Address::generate(&env);
+    let sac = env.register_stellar_asset_contract_v2(Address::generate(&env));
+    let (usdc, usdc_asset) = (sac.address(), sac.asset());
     let contract_id = env.register(
         QuietStayRights,
-        (
-            issuer.clone(),
-            String::from_str(&env, "QuietStay Usage Right"),
-            String::from_str(&env, "QSTAY"),
-            vk(&env),
-        ),
+        constructor_args(&env, &issuer, &arbiter, &usdc, vk(&env), TEST_MAX_PAYMENT),
     );
     let client = QuietStayRightsClient::new(&env, &contract_id);
 
     Fixture {
+        arbiter,
+        usdc,
+        usdc_asset,
         owner: account(&env, "owner"),
         renter: account(&env, "renter"),
         buyer: account(&env, "buyer"),
@@ -239,7 +257,38 @@ fn setup() -> Fixture<'static> {
     }
 }
 
-fn week() -> (Period, Validity) {
+/// The testnet cap: 100 USDC in 7-decimal units (D7).
+pub(crate) const TEST_MAX_PAYMENT: i128 = 1_000_000_000;
+
+/// The constructor's arguments, in order.
+pub(crate) fn constructor_args(
+    env: &Env,
+    issuer: &Address,
+    arbiter: &Address,
+    usdc: &Address,
+    key: VerificationKey,
+    max_payment: i128,
+) -> (
+    Address,
+    Address,
+    Address,
+    String,
+    String,
+    VerificationKey,
+    i128,
+) {
+    (
+        issuer.clone(),
+        arbiter.clone(),
+        usdc.clone(),
+        String::from_str(env, "QuietStay Usage Right"),
+        String::from_str(env, "QSTAY"),
+        key,
+        max_payment,
+    )
+}
+
+pub(crate) fn week() -> (Period, Validity) {
     (
         Period {
             start: WEEK_START,
@@ -254,7 +303,7 @@ fn week() -> (Period, Validity) {
 
 /// Issue right #1 to the owner, committed to the owner's secret as the fixtures
 /// were proved against.
-fn issue_week(f: &Fixture) -> u64 {
+pub(crate) fn issue_week(f: &Fixture) -> u64 {
     f.env.mock_all_auths();
     let (period, validity) = week();
     f.client
@@ -299,7 +348,10 @@ fn grant(
 fn constructor_records_issuer_and_sep41_metadata() {
     let f = setup();
     assert_eq!(f.client.issuer(), f.issuer);
-    assert_eq!(f.client.name(), String::from_str(&f.env, "QuietStay Usage Right"));
+    assert_eq!(
+        f.client.name(),
+        String::from_str(&f.env, "QuietStay Usage Right")
+    );
     assert_eq!(f.client.symbol(), String::from_str(&f.env, "QSTAY"));
     // Rights are indivisible: a week is not a quantity.
     assert_eq!(f.client.decimals(), 0);
@@ -312,14 +364,11 @@ fn a_verification_key_with_the_wrong_number_of_points_cannot_be_deployed() {
     let env = Env::default();
     let mut key = vk(&env);
     key.ic.pop_back();
+    let (issuer, arbiter) = (account(&env, "issuer"), account(&env, "stranger"));
+    let usdc = Address::generate(&env);
     env.register(
         QuietStayRights,
-        (
-            account(&env, "issuer"),
-            String::from_str(&env, "QuietStay Usage Right"),
-            String::from_str(&env, "QSTAY"),
-            key,
-        ),
+        constructor_args(&env, &issuer, &arbiter, &usdc, key, TEST_MAX_PAYMENT),
     );
 }
 
@@ -728,7 +777,10 @@ fn a_proof_valid_for_longer_than_the_window_is_rejected() {
     issue_week(&f);
     // Seen from 721 ledgers before its deadline, the proof claims too long a life.
     f.at_ledger(BASE_LEDGER + 360 - 721);
-    assert_eq!(f.send(&tx(&f.env, "rental")), Err(Error::ExpiryBeyondWindow));
+    assert_eq!(
+        f.send(&tx(&f.env, "rental")),
+        Err(Error::ExpiryBeyondWindow)
+    );
     // From exactly 720 before, it is fine.
     f.at_ledger(BASE_LEDGER + 360 - 720);
     assert_eq!(f.send(&tx(&f.env, "rental")), Ok(()));
@@ -742,7 +794,10 @@ fn a_commitment_mismatch_is_rejected() {
     let (period, validity) = week();
     f.client
         .issue(&f.owner, &period, &validity, &commitment(&f.env, 0x11));
-    assert_eq!(f.send(&tx(&f.env, "rental")), Err(Error::CommitmentMismatch));
+    assert_eq!(
+        f.send(&tx(&f.env, "rental")),
+        Err(Error::CommitmentMismatch)
+    );
 }
 
 #[test]
@@ -934,8 +989,14 @@ fn the_issuer_cannot_seize_a_right_that_is_out_on_rental() {
         },
     }]);
     assert!(matches!(
-        f.client
-            .try_transfer(&grab.from, &grab.to, &right_id, &None, &grab.proof, &grab.signals),
+        f.client.try_transfer(
+            &grab.from,
+            &grab.to,
+            &right_id,
+            &None,
+            &grab.proof,
+            &grab.signals
+        ),
         Err(Err(_))
     ));
     assert_eq!(f.client.holder(&right_id), f.renter);
@@ -954,7 +1015,10 @@ fn the_issuer_cannot_burn_a_holders_right() {
             sub_invokes: &[],
         },
     }]);
-    assert!(matches!(f.client.try_burn(&f.owner, &right_id), Err(Err(_))));
+    assert!(matches!(
+        f.client.try_burn(&f.owner, &right_id),
+        Err(Err(_))
+    ));
     assert_eq!(f.client.holder(&right_id), f.owner);
 }
 
@@ -1184,8 +1248,14 @@ fn a_term_may_not_end_in_the_past_or_outlast_the_right() {
     let now = f.env.ledger().timestamp();
     let title = [(o.clone(), None)];
 
-    assert_eq!(grant(&f, &title, &o, &r, Some(now)), Err(Error::ExpiryInThePast));
-    assert_eq!(grant(&f, &title, &o, &r, Some(now - 1)), Err(Error::ExpiryInThePast));
+    assert_eq!(
+        grant(&f, &title, &o, &r, Some(now)),
+        Err(Error::ExpiryInThePast)
+    );
+    assert_eq!(
+        grant(&f, &title, &o, &r, Some(now - 1)),
+        Err(Error::ExpiryInThePast)
+    );
     assert_eq!(
         grant(&f, &title, &o, &r, Some(YEAR_END + 1)),
         Err(Error::ExpiryBeyondValidity)
@@ -1200,7 +1270,10 @@ fn a_renter_cannot_grant_what_they_only_rent() {
     let (o, r, b) = (f.owner.clone(), f.renter.clone(), f.buyer.clone());
     let chain = [(o, None), (r.clone(), Some(WEEK_END))];
     // An open-ended grant would outlast the renter's own term.
-    assert_eq!(grant(&f, &chain, &r, &b, None), Err(Error::ExpiryBeyondSenderTerm));
+    assert_eq!(
+        grant(&f, &chain, &r, &b, None),
+        Err(Error::ExpiryBeyondSenderTerm)
+    );
 }
 
 #[test]
@@ -1221,7 +1294,10 @@ fn a_lapsed_renter_is_not_the_holder() {
     let (o, r, s) = (f.owner.clone(), f.renter.clone(), f.stranger.clone());
     let chain = [(o, None), (r.clone(), Some(WEEK_END))];
     f.env.ledger().set_timestamp(WEEK_END + 1);
-    assert_eq!(grant(&f, &chain, &r, &s, Some(YEAR_END - 1)), Err(Error::NotHolder));
+    assert_eq!(
+        grant(&f, &chain, &r, &s, Some(YEAR_END - 1)),
+        Err(Error::NotHolder)
+    );
     assert_eq!(grant(&f, &chain, &r, &s, None), Err(Error::NotHolder));
 }
 
@@ -1234,7 +1310,13 @@ fn the_holding_chain_is_bounded() {
     }
     let last = chain.last().unwrap().0.clone();
     assert_eq!(
-        grant(&f, &chain, &last, &Address::generate(&f.env), Some(WEEK_END)),
+        grant(
+            &f,
+            &chain,
+            &last,
+            &Address::generate(&f.env),
+            Some(WEEK_END)
+        ),
         Err(Error::HoldingDepthExceeded)
     );
 }
@@ -1263,7 +1345,10 @@ fn a_holder_can_list_and_unlist() {
 
     f.client.unlist(&f.owner, &right_id);
     assert_eq!(f.client.get_listing(&right_id), None);
-    assert_eq!(f.client.try_unlist(&f.owner, &right_id), Err(Ok(Error::NotListed)));
+    assert_eq!(
+        f.client.try_unlist(&f.owner, &right_id),
+        Err(Ok(Error::NotListed))
+    );
 }
 
 #[test]
@@ -1331,7 +1416,10 @@ fn a_title_holder_can_burn_their_own_right() {
     f.client.burn(&f.owner, &right_id);
 
     assert_eq!(f.client.balance(&f.owner), 0);
-    assert_eq!(f.client.try_get_right(&right_id), Err(Ok(Error::RightNotFound)));
+    assert_eq!(
+        f.client.try_get_right(&right_id),
+        Err(Ok(Error::RightNotFound))
+    );
 }
 
 #[test]
@@ -1410,8 +1498,14 @@ fn cost_of_one_proven_sale() {
     let t = tx(&f.env, "sale");
     f.env.mock_all_auths();
     f.env.cost_estimate().budget().reset_unlimited();
-    f.client
-        .transfer(&t.from, &t.to, &t.right_id, &t.expires_at, &t.proof, &t.signals);
+    f.client.transfer(
+        &t.from,
+        &t.to,
+        &t.right_id,
+        &t.expires_at,
+        &t.proof,
+        &t.signals,
+    );
     let budget = f.env.cost_estimate().budget();
     std::println!(
         "local budget, one proven sale: cpu {} instructions, mem {} bytes",
@@ -1483,7 +1577,12 @@ fn issue_week_to_wallet(f: &Fixture) -> Address {
 /// An authorization entry signed (or refused) by `signer`, for `transfer` with
 /// `t`'s arguments, exactly as a transaction would carry it. Nothing is mocked:
 /// the host runs `signer`'s `__check_auth` on it.
-fn signed_entry(f: &Fixture, signer: &Address, t: &Tx, signed: bool) -> soroban_sdk::xdr::SorobanAuthorizationEntry {
+fn signed_entry(
+    f: &Fixture,
+    signer: &Address,
+    t: &Tx,
+    signed: bool,
+) -> soroban_sdk::xdr::SorobanAuthorizationEntry {
     use soroban_sdk::xdr::{
         InvokeContractArgs, ScAddress, ScSymbol, ScVal, SorobanAddressCredentials,
         SorobanAuthorizationEntry, SorobanAuthorizedFunction, SorobanAuthorizedInvocation,
@@ -1513,12 +1612,20 @@ fn signed_entry(f: &Fixture, signer: &Address, t: &Tx, signed: bool) -> soroban_
 }
 
 /// Submit with exactly the authorization entries given, and nothing mocked.
-fn send_signed(f: &Fixture, t: &Tx, entries: &[soroban_sdk::xdr::SorobanAuthorizationEntry]) -> Result<(), ()> {
+fn send_signed(
+    f: &Fixture,
+    t: &Tx,
+    entries: &[soroban_sdk::xdr::SorobanAuthorizationEntry],
+) -> Result<(), ()> {
     f.env.set_auths(entries);
-    match f
-        .client
-        .try_transfer(&t.from, &t.to, &t.right_id, &t.expires_at, &t.proof, &t.signals)
-    {
+    match f.client.try_transfer(
+        &t.from,
+        &t.to,
+        &t.right_id,
+        &t.expires_at,
+        &t.proof,
+        &t.signals,
+    ) {
         Ok(Ok(())) => Ok(()),
         _ => Err(()),
     }
@@ -1535,7 +1642,10 @@ fn a_smart_wallet_holder_can_prove_and_sell() {
     let buyer_args: Vec<Val> = (t.right_id, t.next_secret_hash.clone()).into_val(&f.env);
     assert_eq!(
         required_signatures(&f),
-        std::vec![(w.clone(), transfer_args(&f.env, &t)), (f.buyer.clone(), buyer_args)]
+        std::vec![
+            (w.clone(), transfer_args(&f.env, &t)),
+            (f.buyer.clone(), buyer_args)
+        ]
     );
 
     assert_eq!(f.client.holder(&1), f.buyer);
@@ -1647,7 +1757,10 @@ fn a_smart_wallet_transfer_runs_the_wallets_own_signature_check() {
 
     // The wallet refuses to sign (a failed or cancelled passkey prompt): the
     // transfer fails and nothing moves, though the proof is valid.
-    assert_eq!(send_signed(&f, &t, &[signed_entry(&f, &w, &t, false)]), Err(()));
+    assert_eq!(
+        send_signed(&f, &t, &[signed_entry(&f, &w, &t, false)]),
+        Err(())
+    );
     assert_eq!(f.client.holder(&1), w);
 
     // No authorization entry at all: refused as well.
@@ -1655,7 +1768,10 @@ fn a_smart_wallet_transfer_runs_the_wallets_own_signature_check() {
     assert_eq!(f.client.holder(&1), w);
 
     // The wallet signs: the same proof now goes through.
-    assert_eq!(send_signed(&f, &t, &[signed_entry(&f, &w, &t, true)]), Ok(()));
+    assert_eq!(
+        send_signed(&f, &t, &[signed_entry(&f, &w, &t, true)]),
+        Ok(())
+    );
     assert_eq!(f.client.holder(&1), f.renter);
 }
 
@@ -1692,7 +1808,14 @@ fn the_smart_wallet_secret_alone_is_not_enough() {
     }]);
     assert!(f
         .client
-        .try_transfer(&t.from, &t.to, &t.right_id, &t.expires_at, &t.proof, &t.signals)
+        .try_transfer(
+            &t.from,
+            &t.to,
+            &t.right_id,
+            &t.expires_at,
+            &t.proof,
+            &t.signals
+        )
         .is_err());
     assert_eq!(f.client.holder(&1), w);
 }

@@ -1,5 +1,5 @@
 #![no_std]
-//! # QuietStay usage rights — Phase 2
+//! # QuietStay usage rights — Phase 3
 //!
 //! A registry of tokenized vacation usage rights on Stellar. Personal and
 //! ownership records stay off-chain; the ledger holds a Poseidon commitment to
@@ -39,6 +39,19 @@
 //! chain. That attestation is shown to buyers and is never a condition of a
 //! transfer, so withholding it cannot freeze a right.
 //!
+//! ## Payments (Phase 3)
+//!
+//! A buyer or renter makes an on-chain offer, and the contract holds an
+//! allowance equal to the sum of their live offers; the USDC stays in their
+//! account. A **sale** settles in one transaction: the seller's proof moves the
+//! right, and the price goes straight from buyer to seller. A **rental** also
+//! settles in one transaction, but the price goes into an escrow that the owner
+//! can collect only from check-in + 24 hours ([`escrow`]). A fixed arbiter can
+//! act only on Disputed escrows, and only by paying the escrow's owner or
+//! refunding its renter. It cannot reach any right. The USDC contract, the
+//! arbiter and the payment cap are fixed in the constructor; nothing sets them
+//! later and no function takes a token address.
+//!
 //! ## Relationship to SEP-41
 //!
 //! The token interface follows SEP-41 with one systematic substitution: usage
@@ -53,24 +66,31 @@ use soroban_sdk::{
 
 pub mod auth;
 pub mod error;
+pub mod escrow;
 pub mod events;
+pub mod offers;
+pub mod payment;
 pub mod store;
 pub mod types;
 pub mod verifier;
 
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod test_payments;
 
 use auth::TransferMode;
 use error::Error;
 use events::{Burned, Issued, Listed, Transferred, Unlisted};
-use types::{Config, Holding, Listing, Period, Right, Validity};
+use types::{
+    Config, Escrow, Holding, Listing, Offer, Outcome, Period, RecordRequest, Right, Validity,
+};
 use verifier::{Proof, VerificationKey};
 
-contractmeta!(key = "binver", val = "0.3.0");
+contractmeta!(key = "binver", val = "0.4.0");
 contractmeta!(
     key = "desc",
-    val = "QuietStay Phase 2 tokenized vacation usage rights, proof-gated transfers (testnet)"
+    val = "QuietStay Phase 3 vacation usage rights: proof-gated transfers, USDC sale and rental escrow (pilot)"
 );
 
 #[contract]
@@ -78,26 +98,40 @@ pub struct QuietStayRights;
 
 #[contractimpl]
 impl QuietStayRights {
-    /// Bind the contract to its issuer and its verification key, once, at
-    /// deployment.
+    /// Bind the contract to its issuer, arbiter, USDC contract, verification
+    /// key and payment cap, once, at deployment.
     ///
-    /// There is deliberately no setter for either. Rotating the issuer key or
-    /// replacing the verification key means deploying a new contract; a setter
-    /// would be a privileged entry point the deliverable does not need.
+    /// There is deliberately no setter for any of them. Changing one means
+    /// deploying a new contract; a setter would be a privileged entry point the
+    /// deliverable does not need. Everything that differs between testnet and
+    /// mainnet is an argument here, so one WASM serves both (D7).
+    ///
+    /// `max_payment ≤ 0` is refused, and so is an arbiter that is the issuer:
+    /// the arbiter must be a separate address.
+    #[allow(clippy::too_many_arguments)]
     pub fn __constructor(
         env: Env,
         issuer: Address,
+        arbiter: Address,
+        usdc: Address,
         name: String,
         symbol: String,
         verification_key: VerificationKey,
+        max_payment: i128,
     ) -> Result<(), Error> {
+        if max_payment <= 0 || arbiter == issuer {
+            return Err(Error::InvalidConfig);
+        }
         auth::set_verification_key(&env, &verification_key)?;
         store::put_config(
             &env,
             &Config {
                 issuer,
+                arbiter,
+                usdc,
                 name,
                 symbol,
+                max_payment,
             },
         );
         store::set_next_id(&env, 1);
@@ -355,6 +389,9 @@ impl QuietStayRights {
     /// Destroy a right. Holder-initiated only, and only by the title holder with
     /// no live sub-grant above them, so nobody can burn a week out from under a
     /// renter. The issuer has no part in this and no equivalent function.
+    ///
+    /// Also refused while the right has a Funded or Disputed escrow, even after
+    /// the rental term has lapsed (D11). Step 4 adds the pending-swap guard.
     pub fn burn(env: Env, from: Address, right_id: u64) -> Result<(), Error> {
         from.require_auth();
 
@@ -367,6 +404,9 @@ impl QuietStayRights {
         }
         if current.expires_at.is_some() {
             return Err(Error::NotTitleHolder);
+        }
+        if escrow::open_count(&env, right_id) > 0 {
+            return Err(Error::EscrowOpen);
         }
 
         store::remove_right(&env, right_id);
@@ -382,7 +422,238 @@ impl QuietStayRights {
         Ok(())
     }
 
+    // --- record requests (D4/D4a) -----------------------------------------
+
+    /// Ask for a right's private record, binding `key_hash` (SHA-256 of the
+    /// requester's raw P-256 public key) to the requester's account first. The
+    /// holder's browser seals the record only to a key that matches.
+    ///
+    /// Requires the requester's authorization. The right must exist, the key
+    /// hash must be non-zero, `now < expires_ledger ≤ now + 120,960`, and the
+    /// requester may have at most 10 live requests. It moves nothing, sets no
+    /// allowance and obliges the holder to nothing: an unanswered request
+    /// simply expires.
+    pub fn request_record(
+        env: Env,
+        requester: Address,
+        right_id: u64,
+        key_hash: BytesN<32>,
+        expires_ledger: u32,
+    ) -> Result<u64, Error> {
+        offers::request_record(&env, requester, right_id, key_hash, expires_ledger)
+    }
+
+    /// Withdraw a live record request. Only its requester can.
+    pub fn cancel_record_request(
+        env: Env,
+        requester: Address,
+        request_id: u64,
+    ) -> Result<(), Error> {
+        offers::cancel_record_request(&env, requester, request_id)
+    }
+
+    // --- offers -------------------------------------------------------------
+
+    /// Offer to buy the right named in `request_id`, the buyer's own live
+    /// record request, which this consumes. The offer copies the request's key
+    /// hash and stores the buyer's `next_secret_hash` (h'); the seller's proof
+    /// must carry exactly that value.
+    ///
+    /// Requires the buyer's authorization, which also covers the USDC
+    /// `approve` this call makes: the contract's allowance from the buyer is
+    /// set to the sum of the buyer's live offers, this one included, expiring
+    /// 120,960 ledgers from now (D12). The USDC stays in the buyer's account.
+    ///
+    /// `0 < price ≤ max_payment()`; `h'` non-zero and canonical;
+    /// `now < expires_ledger ≤ now + 120,960`; at most 10 live offers per buyer.
+    pub fn create_sale_offer(
+        env: Env,
+        buyer: Address,
+        request_id: u64,
+        price: i128,
+        next_secret_hash: U256,
+        expires_ledger: u32,
+    ) -> Result<u64, Error> {
+        offers::create_sale_offer(
+            &env,
+            buyer,
+            request_id,
+            price,
+            next_secret_hash,
+            expires_ledger,
+        )
+    }
+
+    /// Offer to rent `right_id` until `expires_at`, checking in at `check_in`
+    /// (ledger seconds). Rentals need no record request.
+    ///
+    /// Check-in must be now or later, inside the week
+    /// (`period.start ≤ check_in < period.end`), and at least 24 hours before
+    /// `expires_at`, which must be inside the right's validity. Price, expiry
+    /// and allowance rules are those of [`Self::create_sale_offer`].
+    pub fn create_rental_offer(
+        env: Env,
+        renter: Address,
+        right_id: u64,
+        price: i128,
+        expires_at: u64,
+        check_in: u64,
+        expires_ledger: u32,
+    ) -> Result<u64, Error> {
+        offers::create_rental_offer(
+            &env,
+            renter,
+            right_id,
+            price,
+            expires_at,
+            check_in,
+            expires_ledger,
+        )
+    }
+
+    /// Cancel a live offer and set the allowance again to the sum of the
+    /// buyer's remaining live offers. Only the offer's buyer or renter can.
+    pub fn cancel_offer(env: Env, buyer: Address, offer_id: u64) -> Result<(), Error> {
+        offers::cancel_offer(&env, buyer, offer_id)
+    }
+
+    /// Accept a sale offer. In this one transaction, the seller's proof moves
+    /// the right to the buyer through `authorize_transfer`, with the offer's
+    /// h', and the price moves from the buyer to the seller with
+    /// `transfer_from`. If the allowance or the balance is too low, nothing
+    /// moves. `price` must equal the offer's, so the seller accepts exactly the
+    /// amount they saw.
+    pub fn accept_sale(
+        env: Env,
+        seller: Address,
+        offer_id: u64,
+        price: i128,
+        proof: Proof,
+        public_signals: Vec<U256>,
+    ) -> Result<(), Error> {
+        offers::accept_sale(&env, seller, offer_id, price, proof, public_signals)
+    }
+
+    /// Accept a rental offer. In this one transaction, the holder's proof
+    /// grants the rental right through `authorize_transfer`, and the price
+    /// moves from the renter into this contract's escrow. Returns the escrow
+    /// id. Check-in must not have passed.
+    pub fn accept_rental(
+        env: Env,
+        owner: Address,
+        offer_id: u64,
+        price: i128,
+        proof: Proof,
+        public_signals: Vec<U256>,
+    ) -> Result<u64, Error> {
+        offers::accept_rental(&env, owner, offer_id, price, proof, public_signals)
+    }
+
+    // --- rental escrow (§5) ---------------------------------------------------
+
+    /// The owner collects a Funded escrow, from check-in + 24 hours.
+    pub fn collect(env: Env, owner: Address, escrow_id: u64) -> Result<(), Error> {
+        escrow::collect(&env, owner, escrow_id)
+    }
+
+    /// The renter releases the escrow to the owner, at any time while Funded
+    /// or Disputed.
+    pub fn confirm(env: Env, renter: Address, escrow_id: u64) -> Result<(), Error> {
+        escrow::confirm(&env, renter, escrow_id)
+    }
+
+    /// The renter reports a problem while Funded, until check-in + 24 hours.
+    /// `evidence_hash` is the SHA-256 of the report; the file stays off chain.
+    pub fn report_problem(
+        env: Env,
+        renter: Address,
+        escrow_id: u64,
+        evidence_hash: BytesN<32>,
+    ) -> Result<(), Error> {
+        escrow::report_problem(&env, renter, escrow_id, evidence_hash)
+    }
+
+    /// The owner refunds a Disputed escrow to the renter.
+    pub fn refund(env: Env, owner: Address, escrow_id: u64) -> Result<(), Error> {
+        escrow::refund(&env, owner, escrow_id)
+    }
+
+    /// The owner or the renter adds a SHA-256 evidence hash to a Disputed
+    /// escrow, at most four each.
+    pub fn submit_evidence(
+        env: Env,
+        by: Address,
+        escrow_id: u64,
+        evidence_hash: BytesN<32>,
+    ) -> Result<(), Error> {
+        escrow::submit_evidence(&env, by, escrow_id, evidence_hash)
+    }
+
+    /// The arbiter resolves a Disputed escrow: pay its owner or refund its
+    /// renter, recording the SHA-256 of the written decision. Only the
+    /// constructor's arbiter can call it, only on a Disputed escrow, and it
+    /// touches nothing but that escrow and its own amount.
+    pub fn resolve(
+        env: Env,
+        arbiter: Address,
+        escrow_id: u64,
+        outcome: Outcome,
+        decision_hash: BytesN<32>,
+    ) -> Result<(), Error> {
+        escrow::resolve(&env, arbiter, escrow_id, outcome, decision_hash)
+    }
+
+    /// Extend an escrow's TTL. Anyone can call it; it changes nothing else
+    /// (§9).
+    pub fn extend_escrow(env: Env, escrow_id: u64) -> Result<(), Error> {
+        escrow::get(&env, escrow_id).map(|_| ())
+    }
+
     // --- views -----------------------------------------------------------
+
+    /// The pilot arbiter, fixed in the constructor.
+    pub fn arbiter(env: Env) -> Address {
+        store::config(&env).arbiter
+    }
+
+    /// The USDC contract, fixed in the constructor. The only token moved.
+    pub fn usdc(env: Env) -> Address {
+        store::config(&env).usdc
+    }
+
+    /// The largest price an offer may carry, in USDC's smallest unit.
+    pub fn max_payment(env: Env) -> i128 {
+        store::config(&env).max_payment
+    }
+
+    pub fn get_record_request(env: Env, request_id: u64) -> Option<RecordRequest> {
+        offers::get_request(&env, request_id)
+    }
+
+    /// An open offer, or `None` once it is accepted, cancelled, or its entry
+    /// has expired. An offer past its `expires_ledger` may still be returned
+    /// until its entry lapses, but it cannot be accepted.
+    pub fn get_offer(env: Env, offer_id: u64) -> Option<Offer> {
+        offers::get_offer(&env, offer_id)
+    }
+
+    pub fn get_escrow(env: Env, escrow_id: u64) -> Result<Escrow, Error> {
+        escrow::get(&env, escrow_id)
+    }
+
+    /// The ids the next request, offer and escrow will take, so a client can
+    /// enumerate them like rights.
+    pub fn next_request_id(env: Env) -> u64 {
+        offers::next_request_id(&env)
+    }
+
+    pub fn next_offer_id(env: Env) -> u64 {
+        offers::next_offer_id(&env)
+    }
+
+    pub fn next_escrow_id(env: Env) -> u64 {
+        escrow::next_escrow_id(&env)
+    }
 
     /// The address that issues rights and attests fee status off chain. It has
     /// no part in transfers.

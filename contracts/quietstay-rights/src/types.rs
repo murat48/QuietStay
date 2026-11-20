@@ -1,8 +1,29 @@
-use soroban_sdk::{contracttype, Address, BytesN, String, Vec};
+use soroban_sdk::{contracttype, Address, BytesN, String, Vec, U256};
 
 /// Maximum length of a right's holding chain: the title holder plus three levels
 /// of sub-grant. Bounded so that reads and writes have a fixed worst-case cost.
 pub const MAX_HOLDING_DEPTH: u32 = 4;
+
+/// The longest an offer or a record request may stay open, in ledgers: about
+/// seven days at five-second ledgers (decision D9). Also the expiration the
+/// contract gives a buyer's USDC allowance, so one expiration covers every
+/// live offer (D12).
+pub const MAX_OFFER_LEDGERS: u32 = 120_960;
+
+/// Live offers (sale and rental together) one buyer may have open at once
+/// (docs/PHASE3_SPEC.md §4). Bounds the allowance recalculation.
+pub const MAX_OPEN_OFFERS_PER_BUYER: u32 = 10;
+
+/// Live record requests one requester may have open at once (D4a).
+pub const MAX_OPEN_REQUESTS_PER_BUYER: u32 = 10;
+
+/// Evidence hashes each escrow party may add while Disputed, besides the
+/// renter's problem report (D10).
+pub const MAX_EVIDENCE_PER_PARTY: u32 = 4;
+
+/// The wait after check-in before an owner may collect, and the end of the
+/// renter's problem-report window: 24 hours, in ledger seconds (§5).
+pub const FIRST_NIGHT_SECS: u64 = 86_400;
 
 /// The occupancy window of the underlying week: check-in and check-out as Unix
 /// seconds. This is the *stay*, not the token's lifetime.
@@ -60,9 +81,8 @@ pub struct Right {
     pub holdings: Vec<Holding>,
 }
 
-/// A published offer. Phase 1 records availability and term only: price, payment,
-/// escrow, and settlement of consideration are out of scope for this phase, so no
-/// price field exists on the ledger.
+/// A published availability notice (Phase 1). It records availability and term
+/// only and moves nothing. Paid sales and rentals go through [`Offer`].
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Listing {
@@ -76,13 +96,125 @@ pub struct Listing {
 }
 
 /// Contract-wide configuration, written once by the constructor and never
-/// mutated. There is no setter: rotating the issuer key means deploying again.
+/// mutated. There is no setter: rotating any of these means deploying again.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config {
     pub issuer: Address,
+    /// The pilot arbiter. It can act only on Disputed escrows, and only by
+    /// paying the escrow's owner or refunding its renter (§5).
+    pub arbiter: Address,
+    /// The USDC Stellar Asset Contract. The only token the contract moves.
+    pub usdc: Address,
     pub name: String,
     pub symbol: String,
+    /// The largest price an offer may carry, in USDC's smallest unit (D7):
+    /// 10,000,000 (1 USDC) on mainnet, 1,000,000,000 (100 USDC) on testnet.
+    pub max_payment: i128,
+}
+
+/// An on-chain request for a right's private record (D4/D4a). It binds the
+/// requester's record-encryption key to their account before any offer. It
+/// moves nothing, sets no allowance and obliges the holder to nothing.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RecordRequest {
+    pub id: u64,
+    pub requester: Address,
+    pub right_id: u64,
+    /// SHA-256 of the requester's raw P-256 public key.
+    pub key_hash: BytesN<32>,
+    /// The last ledger at which the request can be used.
+    pub expires_ledger: u32,
+}
+
+/// What a sale offer fixes besides the price.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SaleTerms {
+    /// The buyer's `h'`. The seller's proof must carry exactly this value, so
+    /// the seller cannot plant a commitment (D4).
+    pub next_secret_hash: U256,
+    /// Copied from the consumed record request: the key the record was sealed
+    /// to.
+    pub key_hash: BytesN<32>,
+}
+
+/// What a rental offer fixes besides the price.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RentalTerms {
+    /// When the rental right lapses.
+    pub expires_at: u64,
+    /// Check-in, in ledger seconds. The owner may collect from
+    /// `check_in + 24 h`.
+    pub check_in: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum OfferTerms {
+    Sale(SaleTerms),
+    Rental(RentalTerms),
+}
+
+/// A buyer's or renter's open offer. The USDC stays in their account; the
+/// contract holds an allowance equal to the sum of their live offers (D12).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Offer {
+    pub id: u64,
+    pub right_id: u64,
+    /// The buyer of a sale offer, or the renter of a rental offer.
+    pub buyer: Address,
+    /// In USDC's smallest unit (7 decimals).
+    pub price: i128,
+    /// The last ledger at which the offer can be accepted.
+    pub expires_ledger: u32,
+    pub terms: OfferTerms,
+}
+
+/// The rental escrow state machine (§5). PaidOut and Refunded are final.
+#[contracttype]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum EscrowState {
+    Funded,
+    Disputed,
+    PaidOut,
+    Refunded,
+}
+
+/// The arbiter's only choice.
+#[contracttype]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Outcome {
+    PayOwner,
+    RefundRenter,
+}
+
+/// A rental payment held by the contract until the first night has passed.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Escrow {
+    pub id: u64,
+    pub right_id: u64,
+    /// The holder who accepted the rental, paid on PaidOut.
+    pub owner: Address,
+    /// The renter who paid, refunded on Refunded.
+    pub renter: Address,
+    pub amount: i128,
+    pub check_in: u64,
+    /// When the rental right lapses.
+    pub expires_at: u64,
+    pub funded_at: u64,
+    pub state: EscrowState,
+    /// SHA-256 of the renter's problem report, set on Disputed.
+    pub report_hash: Option<BytesN<32>>,
+    /// Up to four SHA-256 hashes from each party while Disputed (D10).
+    pub owner_evidence: Vec<BytesN<32>>,
+    pub renter_evidence: Vec<BytesN<32>>,
+    /// SHA-256 of the arbiter's written decision, set by `resolve`.
+    pub decision_hash: Option<BytesN<32>>,
 }
 
 #[contracttype]
@@ -103,4 +235,20 @@ pub enum DataKey {
     /// Temporary: a spent proof's nullifier, holding its `expiry_ledger`. Lives
     /// past that ledger, after which the proof is refused as expired anyway.
     Nullifier(BytesN<32>),
+    /// Instance: `u64` counters for record requests, offers and escrows.
+    NextRequestId,
+    NextOfferId,
+    NextEscrowId,
+    /// Temporary: `RecordRequest`, live past its `expires_ledger`.
+    Request(u64),
+    /// Temporary: `Offer`, live past its `expires_ledger`.
+    Offer(u64),
+    /// Persistent: `Vec<u64>`, a requester's request ids (≤ 10, pruned).
+    BuyerRequests(Address),
+    /// Persistent: `Vec<u64>`, a buyer's offer ids (≤ 10, pruned) (D12).
+    BuyerOffers(Address),
+    /// Persistent: `Escrow`, keyed by escrow id. Never deleted.
+    Escrow(u64),
+    /// Persistent: `u32`, the Funded or Disputed escrows on a right (D11).
+    OpenEscrows(u64),
 }

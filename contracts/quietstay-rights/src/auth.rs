@@ -157,6 +157,12 @@ pub fn is_canonical(env: &Env, value: &BytesN<32>) -> bool {
     to_u256(env, value) < verifier::modulus(env)
 }
 
+/// Whether a value is a canonical field element. Used for a sale offer's `h'`,
+/// so an offer is never made that no proof could match.
+pub fn is_canonical_u256(env: &Env, value: &U256) -> bool {
+    *value < verifier::modulus(env)
+}
+
 /// **The one way a right moves.** Checks that `proof` authorizes exactly this
 /// transfer, then applies it to `right`.
 ///

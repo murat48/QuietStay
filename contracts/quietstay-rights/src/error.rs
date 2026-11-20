@@ -83,4 +83,63 @@ pub enum Error {
     /// The verification key given at deployment does not have one point per
     /// public signal plus one.
     MalformedVerifyingKey = 29,
+
+    // --- Phase 3: configuration, offers and record requests ---
+    /// A constructor argument is unusable: `max_payment ≤ 0`, or the arbiter
+    /// is the issuer.
+    InvalidConfig = 30,
+    /// A price must be above zero and at most the constructor's `max_payment`.
+    InvalidPrice = 31,
+    /// The price given at acceptance is not the offer's price.
+    PriceMismatch = 32,
+    /// No offer with this id exists (never made, accepted, or cancelled).
+    OfferNotFound = 33,
+    /// The offer's last ledger has passed.
+    OfferExpired = 34,
+    /// An offer's or request's last ledger must be after now and within
+    /// `MAX_OFFER_LEDGERS`.
+    InvalidOfferExpiry = 35,
+    /// The buyer already has `MAX_OPEN_OFFERS_PER_BUYER` live offers.
+    TooManyOffers = 36,
+    /// No record request with this id exists (never made, used, or cancelled).
+    RequestNotFound = 37,
+    /// The record request's last ledger has passed.
+    RequestExpired = 38,
+    /// The record request, or the offer, belongs to another account.
+    NotRequester = 39,
+    /// The requester already has `MAX_OPEN_REQUESTS_PER_BUYER` live requests.
+    TooManyRequests = 40,
+    /// A record request's key hash must not be zero.
+    InvalidKeyHash = 41,
+    /// A sale offer's `h'` must be non-zero and canonical.
+    InvalidNextSecretHash = 42,
+    /// A sale offer was given to a rental function, or the other way round.
+    WrongOfferKind = 43,
+    /// Check-in must be now or later, inside the week, and at least 24 hours
+    /// before the rental ends.
+    InvalidCheckIn = 44,
+
+    // --- Phase 3: rental escrow ---
+    /// No escrow with this id exists.
+    EscrowNotFound = 45,
+    /// The escrow is not in a state that allows this call.
+    EscrowNotInState = 46,
+    /// The caller is not this escrow's owner or renter as the call requires.
+    NotEscrowParty = 47,
+    /// The owner can collect only from check-in + 24 hours.
+    TooEarlyToCollect = 48,
+    /// A problem can be reported only until check-in + 24 hours.
+    ReportWindowClosed = 49,
+    /// This party has already submitted `MAX_EVIDENCE_PER_PARTY` hashes.
+    EvidenceLimit = 50,
+    /// Only the constructor's arbiter can resolve a dispute.
+    NotArbiter = 51,
+    /// The right has a Funded or Disputed escrow, so it cannot be burned (D11).
+    EscrowOpen = 52,
+    /// The buyer's allowance to this contract is below the price, or has
+    /// expired. Checked before `transfer_from`, which would refuse anyway, so
+    /// the failure carries this contract's code rather than the token's.
+    AllowanceTooLow = 53,
+    /// The buyer's USDC balance is below the price. Checked likewise.
+    BalanceTooLow = 54,
 }
