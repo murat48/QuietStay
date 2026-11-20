@@ -9,8 +9,9 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: **Step 3 at its checkpoint (2026-11-20):** built and unit-tested;
-  waiting for your approval before the testnet deployment
+- Current step: **Step 3 at its checkpoint (2026-11-20).** The first review
+  was answered the same day (see "Step 3 review" in the step log). Not
+  approved for deployment yet
 
 ## Open issues
 
@@ -28,13 +29,14 @@ actually run.
 | Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device was still to do | 2 | resolved 2026-11-19: Windows Hello (PIN) on a MONSTER ABRA A7 V11.3, Windows 10 Enterprise 10.0.19045, Chrome 157.0.8103.79, authorized `list` from wallet `CAMTPQ3B…44YLT`, tx `059bc1b3…` |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
 | Low | This machine lacked the system libraries Playwright's browsers need | 2 | resolved 2026-11-19: you ran the install with sudo; the unpacked workaround is removed, and both browsers start on the system libraries |
-| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 evidence (2026-11-20):** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
+| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 review (2026-11-20):** read-only RPC calls now retry a dropped connection, up to 3 attempts, and log the network code; `sendTransaction` is never retried. In the first run after that, the server logged `[rpc-retry] simulate next_id: attempt 1 of 3 failed (fetch failed)`, the retry succeeded, and no failed `/api` response was saved. The code was not readable: the SDK's HTTP layer (`feaxios`) drops the error's cause. The retry log now also reads undici's diagnostics channels, which carry the code. The next run had no drop, so the code is still to be confirmed at the next one. **Earlier Step 3 evidence:** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
 | Medium | SEP-45 and the fee route need the deployment's store (Upstash) on Vercel, for single-use nonces and rate limits. Without it they refuse, by design. The SIGNING_KEY account must exist on each network | 2 (review) | open: Step 5 checklist item (spec §14) |
 | Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
 | Low | `npm run lint`: 7 findings remain, all in code from before Step 2 (it was 13 on `96bbb5f`) | 2 | open |
 | Medium | Step 3 testnet deployment and on-chain runs (one-step sale, rental paid out after the wait, disputed rental resolved by the arbiter, the rejected transactions) wait for your approval of the checkpoint | 3 | open |
-| Medium | Two things only you can do before that deployment: create the testnet arbiter identity `qs-arbiter` (a separate address, never the issuer), and get testnet USDC (Circle's faucet) into the accounts that buy and rent, after adding their USDC trustlines | 3 | open: asked at the checkpoint |
-| Medium | **Pre-launch checklist item:** the mainnet sign-in key `mainnet-test` (`GCEF3BTQ…TDAR`) currently holds XLM. You reduce it to the minimum balance before its secret goes to the server (Step 6); the checklist records the balance read back from mainnet | 3 | open: Step 5 checklist item, spec §14 |
+| Medium | Before the deployment: you create `qs-arbiter` (testnet, a separate address, never the issuer). Once you approve, I add USDC trustlines to `qs-buyer` and `qs-renter` on testnet and give you their addresses for Circle's faucet | 3 | open: agreed at the Step 3 review |
+| Medium | **Pre-launch checklist item (Step 3 review):** pilot funds are never sent to the contract address directly. USDC sent there with the token is stuck forever (DESIGN.md known limitation 17). Checked on chain on both networks | 3 | open: Step 5 checklist item, spec §14 |
+| Medium | **Pre-launch checklist item:** the mainnet sign-in key `mainnet-test` (`GCEF3BTQ…TDAR`) currently holds XLM. It is a separate account from `GALA3K…HE3M`. You reduce it to the minimum balance before its secret goes to the server (Step 6); the checklist records the balance read back from mainnet. Kept as it is (Step 3 review) | 3 | open: Step 5 checklist item, spec §14 |
 | Low | The payment screens are checked by typecheck, `next build --webpack`, lint and unit tests only. Their end-to-end run needs the Step 3 WASM on testnet and USDC in throwaway accounts, so it comes after the deployment | 3 | open |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
 
@@ -574,7 +576,8 @@ of the spec, the rest at the second review of `def5eb6`.
       (`1ad5c0e2ad5141719a4544740d3c64afecbbf156dcf07bb9482f0889f3f3f856`): the
       `check-privacy` step got `fetch failed` partway. That rental has no
       privacy check, because its throwaway secrets were gone. The incomplete
-      output was not committed. The third run passed 2/2 (rental
+      output was not committed. **`1ad5c0e2…` is not used as evidence**
+      (Step 3 review). The third run passed 2/2 (rental
       `8bc42bdf59f97d9b21169d8e76e3b341b578c1dea12f9c7b392cbbebba4d67bf`,
       check in `evidence/privacy/2026-11-20-passkey-app-8bc42bdf.txt`).
     - So every spec passed: no-leak 2/2 (409 requests, 24 forbidden values,
@@ -584,6 +587,82 @@ of the spec, the rest at the second review of `def5eb6`.
   deployment and its runs follow your approval.
 - Open: see the table at the top (deployment, `qs-arbiter` and testnet
   USDC, the `mainnet-test` balance item, the payment screens' e2e run).
+
+#### Step 3 review (2026-11-20): answers and changes; deployment not approved yet
+
+1. **Contract size.**
+   - The limit is **131,072 bytes on both networks**:
+     `contract_max_size_bytes 131072` from `stellar network settings`, testnet
+     and mainnet, 2026-11-20. 64 KB was the stale comment in `deploy.sh`,
+     fixed in Step 3.
+   - The build is already optimised: 58,704 bytes, from 65,783 unoptimised
+     (`stellar contract build`).
+   - **Swap estimate: about 70–73 KB, 53–56% of the limit.** Derivation: the
+     Step 2 WASM (`85b8ee5`, built in a scratch worktree) is 27,615 bytes, so
+     Step 3 added 31,089 bytes for 14 write functions, 9 views, 13 events and
+     25 errors. The swap adds 5 write functions (`offer_swap`, `cancel_swap`,
+     `accept_swap`, `withdraw_swap_acceptance`, `complete_swap`), one view,
+     about 5 events and a burn guard, and it reuses `authorize_transfer` and
+     the request code: about 11–14 KB. Step 4 measures the real size.
+   - **If it did not fit:** optimisation is already on; next would be
+     trimming, measured function by function.
+   - **A separate swap contract is not a fallback.** It could move rights
+     only through a privileged call into the rights contract (spec §8), which
+     the constraints forbid. I would stop and bring you the numbers.
+2. **Allowance.** The USDC `approve` is a sub-invocation inside
+   `create_sale_offer`, `create_rental_offer` and `cancel_offer`
+   (`offers.rs` → `payment::set_allowance`), in the same transaction under
+   the buyer's one authorization. There is no separate call to the USDC
+   contract.
+   - New test
+     `the_allowance_is_set_inside_the_offer_call_not_by_a_separate_usdc_call`
+     reads the recorded authorization tree: one tree, the buyer's, with the
+     offer function at the root and `approve(buyer, contract, sum)` as its
+     only sub-invocation.
+   - Rights tests: 126/126.
+3. **USDC sent directly.** DESIGN.md known limitation 17: it is stuck
+   forever. Checklist item (spec §14): pilot funds are never sent to the
+   contract address directly, checked on chain on both networks.
+4. **Network errors.**
+   - `src/lib/rpc-retry.ts` (bounded retry, 3 attempts, after 300 ms and
+     900 ms, connection failures and HTTP 429/502/503/504 only, each attempt
+     logged with its code).
+   - `src/lib/rpc-server.ts` (`RetryingServer`): its read methods retry,
+     and `sendTransaction` is inherited unchanged.
+   - It is used by the app's routes, SEP-45, the fee route, `check-privacy`
+     (and its Horizon reads), the e2e helpers and the scripts.
+   - The browser's ledger reads retry too.
+   - 5 new app tests: 27/27.
+5. **Privacy records.**
+   - Each spec registers its check (`evidenceLanded`) the moment a
+     transaction lands. `test.afterEach` runs every registered check, whether
+     the test passed or failed.
+   - A check that fails on the network is retried. Its records and secrets
+     are kept (0700, outside the repo) until a check completes, or kept with
+     a printed rerun command if it never does.
+   - `1ad5c0e2…` is marked not used as evidence.
+6. **`mainnet-test`** holds XLM and is separate from `GALA3K…HE3M`. The
+   checklist item is kept as it is.
+
+- Runs after the changes (2026-11-20), `npx playwright test`:
+  - **Run 1: 13/14 passed.** One SEP-45 test failed on the test process's
+    own `getLatestLedger` (`AxiosError: fetch failed`), which had no retry
+    then. The e2e helpers now use `RetryingServer`.
+  - Run 1 transactions: no-leak sale `1c91490670aa3cd7e84ab9a5879eabdb80c55e0a167df9d1e6e121da546ea18e`,
+    no-leak rental `163c6d9b35b480f3257e463756b525cee28ae9b4b1a6efc23717edd8c39fda3b`,
+    passkey-app rental `4fbf58ded97b148e4219d87a04a428525c1b014ddba25986800e0878d1e9465d`,
+    passkey-spec rental `d7976971e3a7c07de5d2dbca112dbdef1c3ad2b53541c9bbcdcdd6931e98dc4b`.
+  - **Run 2: 15/15**, no network drop, no failed `/api` response.
+  - Run 2 transactions: no-leak sale `b61611bcce4cfee13a92f00cef1866e16f73b06b10b1299fc1e7949ac29a1243`,
+    rental `94980af7773c7097962d6d20f47bfd30082092829ab6f173d02aed58c910bbae`,
+    passkey-app rental `724a7b94ee1aac3f81fb2444ca226cff95114afffc0b8e4b0ab497e004883982`,
+    passkey-spec rental `c82d0fe29cb183b297ff6aa65e77931ed4d2edd72bde691e57e700fb0e89fc66`.
+  - Every one of them has a completed check in `evidence/privacy/`.
+  - `tsc`, `next build --webpack`, `zk:check-bundle` and `check-privacy`
+    pass. `cargo clippy`: 0 warnings.
+- For the deployment, once you approve: you create `qs-arbiter`; I add USDC
+  trustlines to `qs-buyer` and `qs-renter` on testnet and give you their
+  addresses for Circle's faucet.
 
 ### Step 4 — Swap and two-proof cost measurement
 - Date:

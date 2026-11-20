@@ -35,8 +35,15 @@ import {
 import { toHex } from "./canonical";
 import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, RPC_URL, USDC_CONTRACT_ID } from "./config";
 import { describeContractFailure, isRightNotFound } from "./errors";
+import { RetryingServer } from "./rpc-server";
 
-export const server = new rpc.Server(RPC_URL);
+export const server = new RetryingServer(RPC_URL);
+
+/**
+ * The latest ledger. `server` retries every read-only call on a dropped
+ * connection and never retries `sendTransaction` (src/lib/rpc-server.ts).
+ */
+export const latestLedger = () => server.getLatestLedger();
 
 /**
  * Source account used only for read simulations. Simulation never submits and
@@ -427,6 +434,7 @@ export function simulationAuthEntries(
 async function simulateOrThrow(
   tx: Transaction,
 ): Promise<rpc.Api.SimulateTransactionSuccessResponse> {
+  // Simulation is read-only: it never submits, so `server` retries a dropped connection.
   const sim = await server.simulateTransaction(tx);
   if (rpc.Api.isSimulationError(sim)) {
     throw new ContractCallError(describeContractFailure(sim.error), sim.error);
@@ -505,7 +513,7 @@ export interface TransferEvent {
  * an empty answer means "none recently", not "never".
  */
 export async function readTransferEvents(rightId: number, contractId: string = CONTRACT_ID): Promise<TransferEvent[]> {
-  const latest = await server.getLatestLedger();
+  const latest = await latestLedger();
   const topic = xdr.ScVal.scvSymbol("transfer").toXDR("base64");
   const filters = [{ type: "contract" as const, contractIds: [contractId], topics: [[topic, "*", "*"]] }];
 
@@ -895,6 +903,7 @@ export interface SubmitResult {
  * is a transfer the contract refused, and it needs a hash a reviewer can open.
  */
 export async function submit(tx: Transaction): Promise<SubmitResult> {
+  // Never retried: a submission that may have reached the network is not sent twice.
   const sent = await server.sendTransaction(tx);
   const hash = sent.hash;
   const explorerLink = `https://stellar.expert/explorer/testnet/tx/${hash}`;
@@ -915,6 +924,7 @@ export async function submit(tx: Transaction): Promise<SubmitResult> {
 
   for (let attempt = 0; attempt < 30; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 1500));
+    // A status poll is read-only, so `server` retries a dropped connection.
     const result = await server.getTransaction(hash);
     if (result.status === rpc.Api.GetTransactionStatus.NOT_FOUND) continue;
     if (result.status === rpc.Api.GetTransactionStatus.SUCCESS) {

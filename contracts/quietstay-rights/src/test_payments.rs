@@ -1795,3 +1795,62 @@ fn an_escrow_is_kept_live_past_its_collect_window_and_anyone_can_extend_it() {
         Err(Error::EscrowNotFound)
     );
 }
+
+// -------------------------------------------------------------------------
+// D12: the allowance is set inside the offer call
+// -------------------------------------------------------------------------
+
+/// The buyer authorizes one tree: the offer call at the root, the USDC
+/// `approve` (spender = this contract, amount = the live offers' sum) as its
+/// sub-invocation. No separate transaction to the USDC contract.
+fn assert_offer_tree_holds_the_approve(p: &P, buyer: &Address, root_fn: &str, amount: i128) {
+    use soroban_sdk::testutils::{AuthorizedFunction, AuthorizedInvocation};
+    use soroban_sdk::Symbol;
+    let f = &p.f;
+    let auths = f.env.auths();
+    assert_eq!(auths.len(), 1, "one authorization tree, the buyer's");
+    let (who, root): &(Address, AuthorizedInvocation) = &auths[0];
+    assert_eq!(who, buyer);
+    let AuthorizedFunction::Contract((contract, name, _)) = &root.function else {
+        panic!("root is a contract call");
+    };
+    assert_eq!((contract, name), (&f.contract_id, &Symbol::new(&f.env, root_fn)));
+    assert_eq!(root.sub_invocations.len(), 1, "exactly one sub-invocation");
+    let AuthorizedFunction::Contract((token, sub, args)) = &root.sub_invocations[0].function else {
+        panic!("the sub-invocation is a contract call");
+    };
+    assert_eq!((token, sub), (&f.usdc, &Symbol::new(&f.env, "approve")));
+    let from: Address = args.get_unchecked(0).into_val(&f.env);
+    let spender: Address = args.get_unchecked(1).into_val(&f.env);
+    let value: i128 = args.get_unchecked(2).into_val(&f.env);
+    assert_eq!((from, spender, value), (buyer.clone(), f.contract_id.clone(), amount));
+}
+
+#[test]
+fn the_allowance_is_set_inside_the_offer_call_not_by_a_separate_usdc_call() {
+    let p = pay_setup();
+    let f = &p.f;
+    let request = p.request(&f.buyer, 1);
+    f.client.create_sale_offer(
+        &f.buyer,
+        &request,
+        &(2 * USDC),
+        &p.buyer_h(),
+        &(p.now() + OPEN_FOR),
+    );
+    assert_offer_tree_holds_the_approve(&p, &f.buyer, "create_sale_offer", 2 * USDC);
+
+    f.client.create_rental_offer(
+        &f.buyer,
+        &2,
+        &(3 * USDC),
+        &WEEK_END,
+        &CHECK_IN,
+        &(p.now() + OPEN_FOR),
+    );
+    assert_offer_tree_holds_the_approve(&p, &f.buyer, "create_rental_offer", 5 * USDC);
+
+    let offer = f.client.next_offer_id() - 1;
+    f.client.cancel_offer(&f.buyer, &offer);
+    assert_offer_tree_holds_the_approve(&p, &f.buyer, "cancel_offer", 2 * USDC);
+}

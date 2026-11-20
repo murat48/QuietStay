@@ -47,7 +47,7 @@ import canonicalize from "canonicalize";
 import { startApp, type App } from "./lib/app";
 import { deployRights, fund } from "./lib/testnet";
 import { captureFailures, reportFailures, type FailedResponse } from "./lib/failures";
-import { checkPrivacy, hashOf } from "./lib/privacy";
+import { checkPendingPrivacy, evidenceLanded, hashOf } from "./lib/privacy";
 import { attachWallet } from "./lib/wallet";
 
 const PORT = 4321;
@@ -136,7 +136,15 @@ test.beforeAll(async () => {
   app = await startApp({ contract, issuer, sep10, port: PORT });
 });
 
-test.afterEach(async ({}, info) => reportFailures("no-leak", failures, info));
+// The privacy check runs here too, so it runs even when the test fails after
+// a transaction landed, before the run's throwaway secrets are gone.
+test.afterEach(async ({}, info) => {
+  try {
+    await reportFailures("no-leak", failures, info);
+  } finally {
+    checkPendingPrivacy();
+  }
+});
 
 test.afterAll(async () => {
   await app?.stop();
@@ -215,6 +223,17 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   await O.page.getByRole("button", { name: "Prove and sell" }).click({ timeout: 60_000 });
   await expect(O.page.getByTestId("transfer-outcome")).toContainText("Sold", { timeout: 180_000 });
   const saleTx = await O.page.getByTestId("transfer-outcome").locator("a").getAttribute("href");
+  // Registered the moment it lands: the owner's s, and the buyer's s' (whose
+  // h' a sale publishes by design). The rental joins this same check below.
+  const [ownerVault, buyerVault] = await Promise.all([O.page, B.page].map(vaultContents));
+  const onChainCheck = {
+    txs: { "no-leak-sale": hashOf(saleTx) } as Record<string, string>,
+    records: [theRecord],
+    secrets: ownerVault!.secrets,
+    nextSecrets: buyerVault!.secrets,
+    out: `evidence/privacy/${new Date().toISOString().slice(0, 10)}-no-leak-${hashOf(saleTx).slice(0, 8)}.txt`,
+  };
+  evidenceLanded(onChainCheck);
 
   // --- 5. the buyer rents it out, proving with s' ------------------------------
   await signIn(B.page, "/list");
@@ -229,6 +248,7 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   await B.page.getByRole("button", { name: "Prove and rent out" }).click({ timeout: 60_000 });
   await expect(B.page.getByTestId("transfer-outcome")).toContainText("Rented out", { timeout: 180_000 });
   const rentalTx = await B.page.getByTestId("transfer-outcome").locator("a").getAttribute("href");
+  onChainCheck.txs["no-leak-rental"] = hashOf(rentalTx);
   console.log(`sale ${saleTx}\nrental ${rentalTx}`);
 
   // --- the leak check ----------------------------------------------------------
@@ -306,14 +326,8 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
 
   // The on-chain side, right after the transactions (Step 2 review): the
   // ledger holds none of the same values, events included.
-  checkPrivacy({
-    txs: { "no-leak-sale": hashOf(saleTx), "no-leak-rental": hashOf(rentalTx) },
-    records: [theRecord],
-    // The owner's s, from the owner's browser; the buyer's s', from the buyer's.
-    secrets: vaults[0]!.secrets,
-    nextSecrets: vaults[1]!.secrets,
-    out: `evidence/privacy/${new Date().toISOString().slice(0, 10)}-no-leak-${hashOf(saleTx).slice(0, 8)}.txt`,
-  });
+  // Registered when the sale landed, the rental added when it landed.
+  checkPendingPrivacy();
 
   // Controls: the recorder sees the worker's traffic, and the analytics check can see analytics.
   expect(log.some((e) => e.url.endsWith("/zk/transfer.wasm"))).toBe(true);

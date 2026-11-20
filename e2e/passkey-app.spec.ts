@@ -24,7 +24,7 @@ import { Keypair } from "@stellar/stellar-sdk";
 
 import { startApp, type App } from "./lib/app";
 import { captureFailures, reportFailures, type FailedResponse } from "./lib/failures";
-import { checkPrivacy, hashOf } from "./lib/privacy";
+import { checkPendingPrivacy, evidenceLanded, hashOf } from "./lib/privacy";
 import { deployRights, fund } from "./lib/testnet";
 import { attachWallet } from "./lib/wallet";
 
@@ -48,7 +48,15 @@ test.beforeAll(async () => {
   app = await startApp({ contract, issuer, sep10, fee, port: 4323 });
 });
 
-test.afterEach(async ({}, info) => reportFailures("passkey-app", failures, info));
+// The privacy check runs here too, so it runs even when the test fails after
+// the rental landed, before the run's throwaway secrets are gone.
+test.afterEach(async ({}, info) => {
+  try {
+    await reportFailures("passkey-app", failures, info);
+  } finally {
+    checkPendingPrivacy();
+  }
+});
 
 test.afterAll(async () => {
   await app?.stop();
@@ -154,13 +162,10 @@ test("a passkey owner gets a week, offers it, and rents it out, approving with t
   await O.getByRole("button", { name: "Prove and rent out" }).click();
   await expect(O.getByTestId("transfer-outcome")).toContainText("Rented out", { timeout: 180_000 });
   const rentalTx = await O.getByTestId("transfer-outcome").locator("a").getAttribute("href");
-  const after = await (await fetch(`${app.url}/api/right/1`)).json();
-  expect(after.effective_holder).toBe(renter.publicKey());
-  expect(after.title_holder).toBe(wallet);
-  console.log(`passkey wallet ${wallet}\npasskey-approved rental ${rentalTx}`);
 
-  // Right after the transaction: the ledger holds neither the record nor the
-  // owner's secret, which is read back from the owner's browser vault.
+  // Registered the moment it lands, before anything below can fail: the
+  // ledger must hold neither the record nor the owner's secret, which is read
+  // back from the owner's browser vault.
   const secrets = await O.evaluate(
     () =>
       new Promise<string[]>((ok) => {
@@ -171,13 +176,20 @@ test("a passkey owner gets a week, offers it, and rents it out, approving with t
         };
       }),
   );
-  expect(secrets.length).toBeGreaterThan(0);
-  checkPrivacy({
+  evidenceLanded({
     txs: { "passkey-app-rental": hashOf(rentalTx) },
     records: [theRecord],
     secrets,
     out: `evidence/privacy/${new Date().toISOString().slice(0, 10)}-passkey-app-${hashOf(rentalTx).slice(0, 8)}.txt`,
   });
+
+  const after = await (await fetch(`${app.url}/api/right/1`)).json();
+  expect(after.effective_holder).toBe(renter.publicKey());
+  expect(after.title_holder).toBe(wallet);
+  console.log(`passkey wallet ${wallet}\npasskey-approved rental ${rentalTx}`);
+
+  expect(secrets.length).toBeGreaterThan(0);
+  checkPendingPrivacy();
 
   mkdirSync("e2e/results", { recursive: true });
   writeFileSync(

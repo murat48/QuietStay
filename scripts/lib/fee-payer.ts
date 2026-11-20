@@ -12,8 +12,10 @@
 import { execFileSync } from "node:child_process";
 import { rpc, SorobanDataBuilder, Transaction, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
 import { NETWORK_PASSPHRASE, RPC_URL } from "../../src/lib/config";
+import { RetryingServer } from "../../src/lib/rpc-server";
 
-export const server = new rpc.Server(RPC_URL);
+// Read-only calls are retried on a dropped connection; sendTransaction never is.
+export const server = new RetryingServer(RPC_URL);
 
 /** The fee account's public address, from the CLI keystore. */
 export function feeAccount(alias: string): string {

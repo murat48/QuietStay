@@ -503,6 +503,16 @@ Deliberate, and stated so nobody discovers them as surprises:
     (docs/PHASE3_SPEC.md §13). It refuses to run on any other network. On
     mainnet there is no server key: the CLI signing flow
     (`scripts/mainnet-sign-submit.sh`) is used instead.
+17. **Phase 3: USDC sent to the contract's address directly is stuck
+    forever.** A plain USDC transfer to the rights contract, made with the
+    token outside every QuietStay function, cannot be recovered by anyone,
+    the builder included. The contract pays out only an escrow's own amount,
+    to that escrow's own owner or renter, and there is no admin, no sweep and
+    no upgrade to add one. Such a transfer only raises the contract's balance
+    above the sum of open escrows (see "USDC sent to the contract directly
+    stays there" below). Pilot funds therefore move only through offers and
+    escrows; the pre-launch checklist has an item that they are never sent to
+    the contract address directly.
 
 ## What Phase 3 is for
 
@@ -549,7 +559,8 @@ The contract checks the allowance and the buyer's balance itself before
 53, `BalanceTooLow` 54) rather than the token's, whose numbers overlap the
 contract's. `transfer_from` enforces both again.
 
-**USDC sent to the contract directly stays there.** Anyone can send USDC to
+**USDC sent to the contract directly stays there** ([known limitation
+17](#known-limitations)). Anyone can send USDC to
 the contract's address with the token itself, outside every QuietStay
 function. No function pays out anything but an escrow's own amount to that
 escrow's owner or renter, so such a transfer cannot be pulled out by anyone,

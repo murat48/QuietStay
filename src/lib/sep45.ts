@@ -30,6 +30,7 @@
  */
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { RetryingServer } from "./rpc-server";
 import {
   Account,
   Address,
@@ -54,7 +55,8 @@ const SERVER_SIGNATURE_LEDGERS = 60;
 const MAX_CLIENT_SIGNATURE_LEDGERS = 120;
 const NONCE_LIFETIME_SECS = 300;
 
-const server = () => new rpc.Server(RPC_URL);
+// Read-only calls retried on a dropped connection (src/lib/rpc-server.ts).
+const server = () => new RetryingServer(RPC_URL);
 
 // --- SorobanAuthorizationEntries: an XDR variable-length array -----------------
 

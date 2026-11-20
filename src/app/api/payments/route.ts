@@ -12,7 +12,7 @@
  * nothing private is read.
  */
 
-import { readAllowance, readEscrows, readOffers, readRecordRequests, readUsdcBalance, server } from "@/lib/contract";
+import { readAllowance, readEscrows, readOffers, readRecordRequests, readUsdcBalance, latestLedger } from "@/lib/contract";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export async function GET(request: Request): Promise<Response> {
   }
   try {
     const [latest, requests, offers, escrows] = await Promise.all([
-      server.getLatestLedger(),
+      latestLedger(),
       readRecordRequests(),
       readOffers(),
       readEscrows(),

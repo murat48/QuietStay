@@ -33,6 +33,7 @@ import { describeError, formatDate, formatDateTime, shortAddress } from "@/lib/f
 import { prover } from "@/lib/prover-client";
 import { requestLink } from "@/lib/sealed";
 import { formatUsdc, parseUsdc } from "@/lib/usdc";
+import { readOnly } from "@/lib/rpc-retry";
 import { useProverSupported } from "@/lib/use-prover-supported";
 import { getRecord, newSealKey, newSecret, resolveHolding, sealKey, secretFor } from "@/lib/vault";
 
@@ -69,6 +70,10 @@ interface Outcome {
 }
 
 async function latestLedger(): Promise<number> {
+  return readOnly("getLatestLedger", readLatestLedger);
+}
+
+async function readLatestLedger(): Promise<number> {
   const res = await fetch(RPC_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },

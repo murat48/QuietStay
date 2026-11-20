@@ -31,6 +31,7 @@ import { useWallet } from "@/components/WalletProvider";
 import { RPC_URL, explorer } from "@/lib/config";
 import { describeError, formatDate, formatDays, shortAddress } from "@/lib/format";
 import { prover, proverSupported } from "@/lib/prover-client";
+import { readOnly } from "@/lib/rpc-retry";
 import { useProverSupported } from "@/lib/use-prover-supported";
 import { transferableRights, type RightSummary } from "@/lib/roles";
 import { resolveHolding, secretFor, type Holding } from "@/lib/vault";
@@ -57,6 +58,10 @@ interface Ask {
 const PROOF_WINDOW = 360;
 
 async function latestLedger(): Promise<number> {
+  return readOnly("getLatestLedger", readLatestLedger);
+}
+
+async function readLatestLedger(): Promise<number> {
   const res = await fetch(RPC_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },

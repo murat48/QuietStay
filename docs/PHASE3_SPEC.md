@@ -1147,6 +1147,18 @@ and its output.
     signing key, and they match the deployment.
   - The SEP-45 tests (`e2e/passkey.spec.ts`: sign-in; unsigned, replayed and
     tampered challenges refused) pass against that deployment.
+- **Pilot funds are never sent to the contract address directly** (Step 3
+  review). USDC sent to the rights contract with the token itself, outside
+  an offer or escrow, is stuck forever (DESIGN.md known limitation 17).
+  Checked on chain on both networks:
+  - the contract's USDC balance equals the sum of Funded and Disputed
+    escrows (`usdc.balance(contract)` against `get_escrow` for
+    `1..next_escrow_id()`), before GO and after each pilot transaction;
+  - no pilot account's USDC history shows a plain transfer to the contract
+    address (Horizon `accounts/<G…>/payments` and the token's `transfer`
+    events);
+  - `scripts/mainnet-sign-submit.sh` refuses an envelope whose operation is
+    a USDC `transfer` to the contract address (added before Step 6).
 - **Privacy evidence** (Step 2 review): every evidence transaction has its
   `check-privacy` output in `evidence/privacy/`, made right after the
   transaction, with its events.

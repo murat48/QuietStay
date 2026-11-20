@@ -71,11 +71,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 
-import { rpc, scValToNative, xdr } from "@stellar/stellar-sdk";
+import { scValToNative, xdr } from "@stellar/stellar-sdk";
 
 import { commit, toHex, type JsonValue } from "../src/lib/canonical";
 import { HORIZON_URL } from "../src/lib/config";
 import { server } from "../src/lib/contract";
+import { readOnly } from "../src/lib/rpc-retry";
+import { RetryingServer } from "../src/lib/rpc-server";
 import type { OwnershipRecord } from "../src/lib/record";
 import { fatal, loadEnv, log, readJson } from "./lib/cli";
 import { secretHash } from "./lib/zk";
@@ -101,7 +103,7 @@ const cli = parseArgs({
 }).values;
 const NETWORK = cli.network ?? "testnet";
 if (NETWORK !== "testnet" && NETWORK !== "mainnet") throw new Error("--network must be testnet or mainnet");
-const RPC = NETWORK === "mainnet" ? new rpc.Server(process.env.STELLAR_MAINNET_RPC_URL ?? "https://mainnet.sorobanrpc.com") : server;
+const RPC = NETWORK === "mainnet" ? new RetryingServer(process.env.STELLAR_MAINNET_RPC_URL ?? "https://mainnet.sorobanrpc.com") : server;
 const HORIZON = NETWORK === "mainnet" ? "https://horizon.stellar.org" : HORIZON_URL;
 const EXPERT = NETWORK === "mainnet" ? "https://stellar.expert/explorer/public/tx" : "https://stellar.expert/explorer/testnet/tx";
 
@@ -321,11 +323,16 @@ function eventsFromMeta(meta: xdr.TransactionMeta): unknown {
  * the same envelope, result and meta XDR, so the scan below is the same.
  */
 async function fetchTx(hash: string): Promise<FetchedTx | null> {
+  // Both reads are read-only, so a dropped connection is retried (src/lib/rpc-retry.ts).
   const tx = await RPC.getTransaction(hash);
   if (tx.status !== "NOT_FOUND") {
     return { source: "rpc", envelopeXdr: tx.envelopeXdr, resultXdr: tx.resultXdr, resultMetaXdr: tx.resultMetaXdr, events: tx.events };
   }
-  const res = await fetch(`${HORIZON}/transactions/${hash}`);
+  const res = await readOnly("horizon transaction", async () => {
+    const r = await fetch(`${HORIZON}/transactions/${hash}`);
+    if (r.status === 429 || r.status >= 502) throw Object.assign(new Error(`Horizon HTTP ${r.status}`), { status: r.status });
+    return r;
+  });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Horizon answered HTTP ${res.status} for ${hash}`);
   const body = (await res.json()) as { envelope_xdr: string; result_xdr: string; result_meta_xdr?: string };

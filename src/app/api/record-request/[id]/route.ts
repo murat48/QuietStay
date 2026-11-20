@@ -7,7 +7,7 @@
  * Public chain data: the requester's account and the SHA-256 of their key.
  */
 
-import { readRecordRequest, server } from "@/lib/contract";
+import { readRecordRequest, latestLedger } from "@/lib/contract";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return Response.json({ error: "request id must be a positive integer" }, { status: 400 });
   }
   try {
-    const [request, latest] = await Promise.all([readRecordRequest(requestId), server.getLatestLedger()]);
+    const [request, latest] = await Promise.all([readRecordRequest(requestId), latestLedger()]);
     if (!request) {
       return Response.json({ error: "no such record request: it was used, cancelled, has lapsed, or never existed" }, { status: 404 });
     }

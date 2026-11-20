@@ -14,8 +14,10 @@ import { Address, Keypair, nativeToScVal, Operation, rpc, TransactionBuilder, xd
 
 import { NETWORK_PASSPHRASE, RPC_URL } from "../../src/lib/config";
 import { struct } from "../../scripts/lib/zk-tx";
+import { RetryingServer } from "../../src/lib/rpc-server";
 
-export const server = new rpc.Server(RPC_URL);
+// Read-only calls are retried on a dropped connection; sendTransaction never is.
+export const server = new RetryingServer(RPC_URL);
 
 /**
  * The Step 2 rights WASM, installed on testnet by its deployment
