@@ -47,9 +47,6 @@ const NEXT_COMMITMENT: u32 = 10;
 
 /// What kind of transfer a proof authorizes. It fixes the `mode` signal and
 /// whether title moves.
-///
-/// Step 4 adds `Swap { counter_right_id }` (mode `2^64 + counter_right_id`,
-/// docs/PHASE3_SPEC.md §7).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransferMode {
     /// Open-ended: title and the commitment move to `to`. Mode signal `0`.
@@ -57,26 +54,51 @@ pub enum TransferMode {
     /// `to` holds until `expires_at`, then the right reverts with no further
     /// transaction. Title and the commitment stay. Mode signal `expires_at`.
     Rental { expires_at: u64 },
+    /// One side of a swap (docs/PHASE3_SPEC.md §7): title and the commitment
+    /// move to `to`, as in a sale, in exchange for `counter_right_id`. Mode
+    /// signal `2^64 + counter_right_id`, above every `u64` a sale (0) or a
+    /// rental (a timestamp) can carry, so a swap proof is never a sale or
+    /// rental proof, nor a proof for a swap against a different week.
+    Swap { counter_right_id: u64 },
 }
+
+/// `2^64`, the base of the swap mode range.
+const SWAP_MODE_BASE: u128 = 1 << 64;
 
 impl TransferMode {
     /// The `mode` public signal this transfer must carry.
-    fn signal(&self) -> u64 {
+    fn signal(&self, env: &Env) -> U256 {
         match self {
-            TransferMode::Sale => 0,
+            TransferMode::Sale => U256::from_u32(env, 0),
             // A real rental end is in the future, so it is never 0: the
             // holding-chain rules refuse one that is not.
-            TransferMode::Rental { expires_at } => *expires_at,
+            TransferMode::Rental { expires_at } => U256::from_u128(env, *expires_at as u128),
+            TransferMode::Swap { counter_right_id } => {
+                U256::from_u128(env, SWAP_MODE_BASE + *counter_right_id as u128)
+            }
         }
     }
 
     /// The term the holding-chain rules grant: `None` is title.
     fn term(&self) -> Option<u64> {
         match self {
-            TransferMode::Sale => None,
+            TransferMode::Sale | TransferMode::Swap { .. } => None,
             TransferMode::Rental { expires_at } => Some(*expires_at),
         }
     }
+
+    /// Whether title and the commitment move to the recipient.
+    fn moves_title(&self) -> bool {
+        !matches!(self, TransferMode::Rental { .. })
+    }
+}
+
+/// What [`check_transfer`] found: everything [`authorize_transfer`] needs to
+/// finish, computed before anything is written.
+struct Checked {
+    chain: Vec<crate::types::Holding>,
+    nullifier_key: DataKey,
+    expiry_ledger: u32,
 }
 
 /// A value as a 32-byte big-endian field element.
@@ -163,6 +185,24 @@ pub fn is_canonical_u256(env: &Env, value: &U256) -> bool {
     *value < verifier::modulus(env)
 }
 
+/// The checks of [`authorize_transfer`] that need no pairing, run against the
+/// current state and writing nothing: steps 1 and 2 below. A swap's taker
+/// calls this at `accept_swap`, so a stored proof is one that matched the
+/// state when it was stored; `complete_swap` then runs the whole of
+/// `authorize_transfer` again, trusting nothing from this. Returns the proof's
+/// `expiry_ledger`.
+pub fn precheck_transfer(
+    env: &Env,
+    right: &Right,
+    from: &Address,
+    to: &Address,
+    mode: TransferMode,
+    next_secret_hash: &U256,
+    signals: &Vec<U256>,
+) -> Result<u32, Error> {
+    check_transfer(env, right, from, to, mode, next_secret_hash, signals).map(|c| c.expiry_ledger)
+}
+
 /// **The one way a right moves.** Checks that `proof` authorizes exactly this
 /// transfer, then applies it to `right`.
 ///
@@ -172,8 +212,9 @@ pub fn is_canonical_u256(env: &Env, value: &U256) -> bool {
 /// stores `right` with `store::put_right` and emits its event.
 ///
 /// `next_secret_hash` is the `h'` the caller expects, taken from state the
-/// buyer controls (their signature, or later their on-chain offer), never from
-/// the seller. It must be non-zero for a sale and zero for a rental.
+/// buyer controls (their signature, their on-chain offer, or the other side's
+/// swap entry), never from the sender. It must be non-zero for a sale or a
+/// swap and zero for a rental.
 ///
 /// In order, all before anything is written:
 ///
@@ -187,8 +228,9 @@ pub fn is_canonical_u256(env: &Env, value: &U256) -> bool {
 /// 3. **The pairing check** against the constructor's key, then the nullifier
 ///    spent with a TTL past `expiry_ledger`.
 ///
-/// Then the new chain is written to `right`, and on a sale the commitment
-/// becomes `next_commitment`, title balances move and the listing is removed.
+/// Then the new chain is written to `right`, and on a sale or a swap the
+/// commitment becomes `next_commitment`, title balances move and the listing
+/// is removed.
 /// A rental also removes the listing, as Phase 2 did.
 ///
 /// The cheap checks run first, so a proof for some other transfer, or one
@@ -205,6 +247,49 @@ pub fn authorize_transfer(
     proof: &Proof,
     signals: &Vec<U256>,
 ) -> Result<(), Error> {
+    let Checked {
+        chain,
+        nullifier_key,
+        expiry_ledger,
+    } = check_transfer(env, right, from, to, mode, next_secret_hash, signals)?;
+
+    // --- 3. the pairing check, then the nullifier is spent ----------------
+    if !verifier::verify(env, &verification_key(env), proof, signals) {
+        return Err(Error::InvalidProof);
+    }
+    // The nullifier goes to temporary storage, made to outlive the proof's own
+    // `expiry_ledger`, so there is no ledger at which the entry is gone while
+    // the proof would still be accepted. That cannot be left to the network's
+    // minimum TTL: on testnet it is 720 ledgers, the same as the window.
+    let now = env.ledger().sequence();
+    let storage = env.storage().temporary();
+    storage.set(&nullifier_key, &expiry_ledger);
+    // live-until = now + extend_to, so this makes it at least expiry_ledger + 1.
+    let extend_to = expiry_ledger - now + 1;
+    storage.extend_ttl(&nullifier_key, extend_to, extend_to);
+
+    // --- 4. applied --------------------------------------------------------
+    if mode.moves_title() {
+        store::adjust_balance(env, from, -1);
+        store::adjust_balance(env, to, 1);
+        right.commitment = to_bytes(&signals.get(NEXT_COMMITMENT).unwrap());
+    }
+    right.holdings = chain;
+    // A transfer supersedes any listing that was standing.
+    store::remove_listing(env, right.id);
+    Ok(())
+}
+
+/// Steps 1 and 2 of [`authorize_transfer`], writing nothing.
+fn check_transfer(
+    env: &Env,
+    right: &Right,
+    from: &Address,
+    to: &Address,
+    mode: TransferMode,
+    next_secret_hash: &U256,
+    signals: &Vec<U256>,
+) -> Result<Checked, Error> {
     // --- 1. the right is live, and the signals --------------------------
     store::require_active(env, right)?;
     if signals.len() != PUBLIC_SIGNALS {
@@ -234,7 +319,7 @@ pub fn authorize_transfer(
     if get(TO_HI) != to_hi || get(TO_LO) != to_lo {
         return Err(Error::RecipientMismatch);
     }
-    if get(MODE) != small(mode.signal()) {
+    if get(MODE) != mode.signal(env) {
         return Err(Error::ModeMismatch);
     }
 
@@ -250,11 +335,11 @@ pub fn authorize_transfer(
         return Err(Error::ExpiryBeyondWindow);
     }
 
-    // A sale hands the buyer a commitment to an h' only the buyer can prove
-    // against; a rental leaves the commitment where it is and carries none.
+    // A sale or a swap hands the recipient a commitment to an h' only they can
+    // prove against; a rental leaves the commitment where it is and carries
+    // none.
     let zero = U256::from_u32(env, 0);
-    let moves_title = matches!(mode, TransferMode::Sale);
-    let h_ok = if moves_title {
+    let h_ok = if mode.moves_title() {
         *next_secret_hash != zero && get(NEXT_SECRET_HASH) == *next_secret_hash
     } else {
         *next_secret_hash == zero && get(NEXT_SECRET_HASH) == zero
@@ -272,28 +357,9 @@ pub fn authorize_transfer(
     // --- 2. the holding chain --------------------------------------------
     let chain = store::grant(env, right, from, to, &mode.term())?;
 
-    // --- 3. the pairing check, then the nullifier is spent ----------------
-    if !verifier::verify(env, &verification_key(env), proof, signals) {
-        return Err(Error::InvalidProof);
-    }
-    // The nullifier goes to temporary storage, made to outlive the proof's own
-    // `expiry_ledger`, so there is no ledger at which the entry is gone while
-    // the proof would still be accepted. That cannot be left to the network's
-    // minimum TTL: on testnet it is 720 ledgers, the same as the window.
-    let storage = env.storage().temporary();
-    storage.set(&nullifier_key, &expiry_ledger);
-    // live-until = now + extend_to, so this makes it at least expiry_ledger + 1.
-    let extend_to = expiry_ledger - now + 1;
-    storage.extend_ttl(&nullifier_key, extend_to, extend_to);
-
-    // --- 4. applied --------------------------------------------------------
-    if moves_title {
-        store::adjust_balance(env, from, -1);
-        store::adjust_balance(env, to, 1);
-        right.commitment = to_bytes(&get(NEXT_COMMITMENT));
-    }
-    right.holdings = chain;
-    // A transfer supersedes any listing that was standing.
-    store::remove_listing(env, right.id);
-    Ok(())
+    Ok(Checked {
+        chain,
+        nullifier_key,
+        expiry_ledger,
+    })
 }

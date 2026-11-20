@@ -142,4 +142,24 @@ pub enum Error {
     AllowanceTooLow = 53,
     /// The buyer's USDC balance is below the price. Checked likewise.
     BalanceTooLow = 54,
+
+    // --- swaps (Phase 3 Step 4, §7) ---------------------------------------
+    /// No swap offer with this id (never made, cancelled, completed, or its
+    /// temporary entry has lapsed).
+    SwapNotFound = 55,
+    /// The swap offer's last ledger has passed.
+    SwapExpired = 56,
+    /// The caller is not this swap's maker, or not its taker.
+    NotSwapParty = 57,
+    /// The swap already has a live acceptance; it must be withdrawn or lapse
+    /// first.
+    SwapAlreadyAccepted = 58,
+    /// The swap has no live acceptance to withdraw or complete.
+    AcceptanceNotFound = 59,
+    /// `burn` refused: the right is part of a pending swap acceptance (D11).
+    SwapPending = 60,
+    /// The record request is for a different right than this swap side.
+    RequestRightMismatch = 61,
+    /// The right is already part of ten pending swap acceptances.
+    TooManyPendingSwaps = 62,
 }

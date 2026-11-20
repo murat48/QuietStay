@@ -72,8 +72,19 @@ export function commitment(d: { hi: bigint; lo: bigint }, account: string, h: bi
   return hash([d.hi, d.lo, aHi, aLo, h]);
 }
 
-/** `mode`: 0 for a sale, the rental's end time (Unix seconds) for a rental. */
-export function transferMode(expiresAt: bigint | null): bigint {
+/** The base of the swap mode range: `2^64`, above every u64 (PHASE3_SPEC.md §7). */
+export const SWAP_MODE_BASE = 1n << 64n;
+
+/**
+ * `mode`: 0 for a sale, the rental's end time (Unix seconds) for a rental, and
+ * `2^64 + counter_right_id` for one side of a swap (PHASE3_SPEC.md §7).
+ */
+export function transferMode(expiresAt: bigint | null, swapFor?: bigint): bigint {
+  if (swapFor !== undefined) {
+    if (expiresAt !== null) throw new Error("a swap moves title: it has no rental end");
+    if (swapFor <= 0n || swapFor >= SWAP_MODE_BASE) throw new Error("a swap names a u64 right id");
+    return SWAP_MODE_BASE + swapFor;
+  }
   if (expiresAt === null) return 0n;
   if (expiresAt <= 0n) throw new Error("a rental must end at a positive time");
   return expiresAt;
@@ -89,6 +100,8 @@ export interface TransferContext {
   expiryLedger: bigint;
   /** h' = Poseidon(s'), from the buyer. Must be 0 on a rental. */
   nextSecretHash: bigint;
+  /** One side of a swap: the right id received in exchange (expiresAt is then null). */
+  swapFor?: bigint;
 }
 
 /** The public signals, in the order the verifier receives them (CIRCUIT.md §7). */
@@ -130,7 +143,7 @@ export async function circuitInput(
 
   const [fromHi, fromLo] = splitAddress(ctx.from);
   const [toHi, toLo] = splitAddress(ctx.to);
-  const mode = transferMode(ctx.expiresAt);
+  const mode = transferMode(ctx.expiresAt, ctx.swapFor);
   const h = await secretHash(secret);
 
   const values = {

@@ -230,3 +230,63 @@ pub struct Resolved {
     pub outcome: Outcome,
     pub decision_hash: BytesN<32>,
 }
+
+/// A maker offered to swap `give_right` for `want_right`. Nothing moved.
+#[contractevent(topics = ["swap_off"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SwapOffered {
+    #[topic]
+    pub maker: Address,
+    pub swap_id: u64,
+    pub give_right: u64,
+    pub want_right: u64,
+    pub maker_next_secret_hash: U256,
+    pub maker_key_hash: BytesN<32>,
+    pub expires_ledger: u32,
+}
+
+/// The maker cancelled a swap offer, and any acceptance with it.
+#[contractevent(topics = ["swap_cxl"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SwapCancelled {
+    #[topic]
+    pub maker: Address,
+    pub swap_id: u64,
+}
+
+/// The holder of `want_right` accepted a swap with a proof that passed every
+/// check but the pairing. Nothing moved.
+#[contractevent(topics = ["swap_acc"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SwapAccepted {
+    #[topic]
+    pub taker: Address,
+    pub swap_id: u64,
+    pub taker_next_secret_hash: U256,
+    pub taker_key_hash: BytesN<32>,
+    pub expiry_ledger: u32,
+}
+
+/// The taker withdrew an acceptance; its proof can no longer be used.
+#[contractevent(topics = ["swap_wd"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SwapWithdrawn {
+    #[topic]
+    pub taker: Address,
+    pub swap_id: u64,
+}
+
+/// Both rights moved, each with its new commitment, in one transaction.
+#[contractevent(topics = ["swap"])]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SwapCompleted {
+    #[topic]
+    pub maker: Address,
+    #[topic]
+    pub taker: Address,
+    pub swap_id: u64,
+    pub give_right: u64,
+    pub want_right: u64,
+    pub give_commitment: BytesN<32>,
+    pub want_commitment: BytesN<32>,
+}

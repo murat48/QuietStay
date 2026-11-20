@@ -24,14 +24,14 @@ use crate::{escrow, payment, store};
 
 // --- storage ---------------------------------------------------------------
 
-fn next(env: &Env, key: &DataKey) -> u64 {
+pub(crate) fn next(env: &Env, key: &DataKey) -> u64 {
     let id: u64 = env.storage().instance().get(key).unwrap_or(1);
     env.storage().instance().set(key, &(id + 1));
     id
 }
 
 /// Write a temporary entry that stays live until just past `expires_ledger`.
-fn put_until<V: soroban_sdk::IntoVal<Env, soroban_sdk::Val>>(
+pub(crate) fn put_until<V: soroban_sdk::IntoVal<Env, soroban_sdk::Val>>(
     env: &Env,
     key: &DataKey,
     value: &V,
@@ -103,7 +103,7 @@ fn remove_from_index(env: &Env, key: &DataKey, id: u64) {
 }
 
 /// `now < expires_ledger ≤ now + MAX_OFFER_LEDGERS` (D9).
-fn check_expiry(env: &Env, expires_ledger: u32) -> Result<(), Error> {
+pub(crate) fn check_expiry(env: &Env, expires_ledger: u32) -> Result<(), Error> {
     let now = env.ledger().sequence();
     if expires_ledger <= now || expires_ledger - now > MAX_OFFER_LEDGERS {
         return Err(Error::InvalidOfferExpiry);
@@ -170,7 +170,7 @@ pub fn request_record(
 }
 
 /// A request that is live and belongs to `requester`.
-fn live_request(env: &Env, requester: &Address, id: u64) -> Result<RecordRequest, Error> {
+pub(crate) fn live_request(env: &Env, requester: &Address, id: u64) -> Result<RecordRequest, Error> {
     let request = get_request(env, id).ok_or(Error::RequestNotFound)?;
     if &request.requester != requester {
         return Err(Error::NotRequester);
@@ -181,7 +181,7 @@ fn live_request(env: &Env, requester: &Address, id: u64) -> Result<RecordRequest
     Ok(request)
 }
 
-fn consume_request(env: &Env, request: &RecordRequest) {
+pub(crate) fn consume_request(env: &Env, request: &RecordRequest) {
     env.storage()
         .temporary()
         .remove(&DataKey::Request(request.id));

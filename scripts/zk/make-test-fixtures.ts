@@ -53,8 +53,8 @@ async function main() {
     ["issuer", "owner", "renter", "buyer", "stranger"].map((n) => [n, account(n).publicKey()]),
   ) as Record<"issuer" | "owner" | "renter" | "buyer" | "stranger", string>;
   const s = Object.fromEntries(
-    ["owner", "renter", "buyer", "stranger", "planted", "wallet"].map((n) => [n, secret(n)]),
-  ) as Record<"owner" | "renter" | "buyer" | "stranger" | "planted" | "wallet", bigint>;
+    ["owner", "renter", "buyer", "stranger", "planted", "wallet", "owner_next", "buyer_next"].map((n) => [n, secret(n)]),
+  ) as Record<"owner" | "renter" | "buyer" | "stranger" | "planted" | "wallet" | "owner_next" | "buyer_next", bigint>;
   // Phase 3 (D1): a smart wallet that holds a right, and one that rents one.
   const wallets = { holder: wallet("holder"), renter: wallet("renter") };
   const h = {
@@ -64,6 +64,9 @@ async function main() {
     stranger: await secretHash(s.stranger),
     planted: await secretHash(s.planted),
     wallet: await secretHash(s.wallet),
+    // Phase 3 Step 4: each swap side's fresh secret for the week it receives.
+    ownerNext: await secretHash(s.owner_next),
+    buyerNext: await secretHash(s.buyer_next),
   };
   const ownerCommitment = await commitment(d, who.owner, h.owner);
   const buyerCommitment = await commitment(d, who.buyer, h.buyer);
@@ -150,6 +153,20 @@ async function main() {
       secret: s.owner,
       ctx: { rightId: 2n, from: who.owner, to: who.buyer, expiresAt: null, expiryLedger: exp, nextSecretHash: h.buyer },
     },
+    // Phase 3 Step 4: a swap. The owner (maker) holds right 1 and wants right
+    // 2, which the buyer (taker) holds with buyer_commitment. Each proof moves
+    // its week to the other side, in mode 2^64 + the week received, with the
+    // other side's h'.
+    swap_taker: {
+      note: "Phase 3 swap: the buyer (taker) moves right 2 to the owner, for right 1, with the owner's h'",
+      secret: s.buyer,
+      ctx: { rightId: 2n, from: who.buyer, to: who.owner, expiresAt: null, swapFor: 1n, expiryLedger: exp, nextSecretHash: h.ownerNext },
+    },
+    swap_maker: {
+      note: "Phase 3 swap: the owner (maker) moves right 1 to the buyer, for right 2, with the buyer's h'",
+      secret: s.owner,
+      ctx: { rightId: 1n, from: who.owner, to: who.buyer, expiresAt: null, swapFor: 2n, expiryLedger: exp, nextSecretHash: h.buyerNext },
+    },
   };
 
   const onlyArg = process.argv.indexOf("--only");
@@ -176,6 +193,7 @@ async function main() {
           to: ctx.to,
           right_id: Number(ctx.rightId),
           expires_at: ctx.expiresAt === null ? null : Number(ctx.expiresAt),
+          ...(ctx.swapFor === undefined ? {} : { swap_for: Number(ctx.swapFor) }),
           expiry_ledger: Number(ctx.expiryLedger),
           next_secret_hash: fr(ctx.nextSecretHash),
           proof: encodeProof(proof),

@@ -60,6 +60,8 @@ fn fixture_json(name: &str) -> &'static str {
         "rental_r2" => include_str!("../tests/fixtures/rental_r2.json"),
         "rental_r3" => include_str!("../tests/fixtures/rental_r3.json"),
         "sale_r2" => include_str!("../tests/fixtures/sale_r2.json"),
+        "swap_taker" => include_str!("../tests/fixtures/swap_taker.json"),
+        "swap_maker" => include_str!("../tests/fixtures/swap_maker.json"),
         _ => panic!("no fixture {name}"),
     }
 }

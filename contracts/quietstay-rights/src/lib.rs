@@ -52,6 +52,14 @@
 //! arbiter and the payment cap are fixed in the constructor; nothing sets them
 //! later and no function takes a token address.
 //!
+//! ## Swaps (Phase 3)
+//!
+//! Two title holders exchange weeks in three steps ([`swap`]): the maker
+//! offers, the other holder accepts with a proof, and the maker completes with
+//! theirs. Completion verifies both proofs through `authorize_transfer` in one
+//! transaction, so both weeks move with new commitments, or neither does. No
+//! money is involved.
+//!
 //! ## Relationship to SEP-41
 //!
 //! The token interface follows SEP-41 with one systematic substitution: usage
@@ -71,6 +79,7 @@ pub mod events;
 pub mod offers;
 pub mod payment;
 pub mod store;
+pub mod swap;
 pub mod types;
 pub mod verifier;
 
@@ -78,12 +87,15 @@ pub mod verifier;
 mod test;
 #[cfg(test)]
 mod test_payments;
+#[cfg(test)]
+mod test_swap;
 
 use auth::TransferMode;
 use error::Error;
 use events::{Burned, Issued, Listed, Transferred, Unlisted};
 use types::{
-    Config, Escrow, Holding, Listing, Offer, Outcome, Period, RecordRequest, Right, Validity,
+    Config, Escrow, Holding, Listing, Offer, Outcome, Period, RecordRequest, Right, SwapAcceptance,
+    SwapOffer, Validity,
 };
 use verifier::{Proof, VerificationKey};
 
@@ -391,7 +403,8 @@ impl QuietStayRights {
     /// renter. The issuer has no part in this and no equivalent function.
     ///
     /// Also refused while the right has a Funded or Disputed escrow, even after
-    /// the rental term has lapsed (D11). Step 4 adds the pending-swap guard.
+    /// the rental term has lapsed, or while it is part of a pending swap
+    /// acceptance (D11).
     pub fn burn(env: Env, from: Address, right_id: u64) -> Result<(), Error> {
         from.require_auth();
 
@@ -407,6 +420,9 @@ impl QuietStayRights {
         }
         if escrow::open_count(&env, right_id) > 0 {
             return Err(Error::EscrowOpen);
+        }
+        if swap::is_pending(&env, right_id) {
+            return Err(Error::SwapPending);
         }
 
         store::remove_right(&env, right_id);
@@ -462,7 +478,8 @@ impl QuietStayRights {
     /// Requires the buyer's authorization, which also covers the USDC
     /// `approve` this call makes: the contract's allowance from the buyer is
     /// set to the sum of the buyer's live offers, this one included, expiring
-    /// 120,960 ledgers from now (D12). The USDC stays in the buyer's account.
+    /// with the last of them (D12, spec note 10). The USDC stays in the
+    /// buyer's account.
     ///
     /// `0 < price ≤ max_payment()`; `h'` non-zero and canonical;
     /// `now < expires_ledger ≤ now + 120,960`; at most 10 live offers per buyer.
@@ -609,7 +626,102 @@ impl QuietStayRights {
         escrow::get(&env, escrow_id).map(|_| ())
     }
 
+    // --- swaps (§7, D5) ------------------------------------------------------
+
+    /// Offer to swap `give_right`, which the maker holds as title, for
+    /// `want_right`. `maker_next_secret_hash` is the maker's h' for
+    /// `want_right`; `maker_request_id` is the maker's own live record request
+    /// for `want_right`, which this consumes (D4a). Requires the maker's
+    /// authorization; `now < expires_ledger ≤ now + 120,960`. Moves nothing.
+    pub fn offer_swap(
+        env: Env,
+        maker: Address,
+        give_right: u64,
+        want_right: u64,
+        maker_next_secret_hash: U256,
+        maker_request_id: u64,
+        expires_ledger: u32,
+    ) -> Result<u64, Error> {
+        swap::offer_swap(
+            &env,
+            maker,
+            give_right,
+            want_right,
+            maker_next_secret_hash,
+            maker_request_id,
+            expires_ledger,
+        )
+    }
+
+    /// Cancel a live swap offer, and any acceptance of it. Only its maker can.
+    pub fn cancel_swap(env: Env, maker: Address, swap_id: u64) -> Result<(), Error> {
+        swap::cancel_swap(&env, maker, swap_id)
+    }
+
+    /// Accept a swap as the title holder of `want_right`, with a proof that
+    /// moves `want_right` to the maker for `give_right` and carries the
+    /// maker's h'. Every check but the pairing runs now, and the proof is
+    /// stored until its `expiry_ledger`; nothing moves and nothing is locked.
+    /// `taker_request_id` is the taker's own live record request for
+    /// `give_right`, which this consumes. Requires the taker's authorization.
+    pub fn accept_swap(
+        env: Env,
+        taker: Address,
+        swap_id: u64,
+        taker_next_secret_hash: U256,
+        taker_request_id: u64,
+        proof: Proof,
+        public_signals: Vec<U256>,
+    ) -> Result<(), Error> {
+        swap::accept_swap(
+            &env,
+            taker,
+            swap_id,
+            taker_next_secret_hash,
+            taker_request_id,
+            proof,
+            public_signals,
+        )
+    }
+
+    /// Withdraw a live acceptance, so its stored proof can never be used.
+    /// Only the taker can. The offer stays open.
+    pub fn withdraw_swap_acceptance(env: Env, taker: Address, swap_id: u64) -> Result<(), Error> {
+        swap::withdraw_swap_acceptance(&env, taker, swap_id)
+    }
+
+    /// Complete an accepted swap with the maker's proof for `give_right`. In
+    /// this one transaction `authorize_transfer` runs for the taker's stored
+    /// proof and then for the maker's, re-checking everything against the
+    /// current state: both weeks move with their new commitments, or neither
+    /// does. Requires the maker's authorization.
+    pub fn complete_swap(
+        env: Env,
+        maker: Address,
+        swap_id: u64,
+        proof: Proof,
+        public_signals: Vec<U256>,
+    ) -> Result<(), Error> {
+        swap::complete_swap(&env, maker, swap_id, proof, public_signals)
+    }
+
     // --- views -----------------------------------------------------------
+
+    /// A swap offer, while its temporary entry is live (expired ones included
+    /// until it lapses).
+    pub fn get_swap(env: Env, swap_id: u64) -> Option<SwapOffer> {
+        swap::get_swap(&env, swap_id)
+    }
+
+    /// A swap's acceptance, with the taker's stored proof.
+    pub fn get_swap_acceptance(env: Env, swap_id: u64) -> Option<SwapAcceptance> {
+        swap::get_acceptance(&env, swap_id)
+    }
+
+    /// The id the next `offer_swap` will assign.
+    pub fn next_swap_id(env: Env) -> u64 {
+        swap::next_swap_id(&env)
+    }
 
     /// The pilot arbiter, fixed in the constructor.
     pub fn arbiter(env: Env) -> Address {

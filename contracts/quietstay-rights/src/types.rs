@@ -1,5 +1,7 @@
 use soroban_sdk::{contracttype, Address, BytesN, String, Vec, U256};
 
+use crate::verifier::Proof;
+
 /// Maximum length of a right's holding chain: the title holder plus three levels
 /// of sub-grant. Bounded so that reads and writes have a fixed worst-case cost.
 pub const MAX_HOLDING_DEPTH: u32 = 4;
@@ -20,6 +22,10 @@ pub const MAX_OPEN_REQUESTS_PER_BUYER: u32 = 10;
 /// Evidence hashes each escrow party may add while Disputed, besides the
 /// renter's problem report (D10).
 pub const MAX_EVIDENCE_PER_PARTY: u32 = 4;
+
+/// Pending swap acceptances one right may be part of at once. Bounds the burn
+/// guard's read (D11).
+pub const MAX_PENDING_SWAPS_PER_RIGHT: u32 = 10;
 
 /// The wait after check-in before an owner may collect, and the end of the
 /// renter's problem-report window: 24 hours, in ledger seconds (§5).
@@ -219,6 +225,44 @@ pub struct Escrow {
     pub decision_hash: Option<BytesN<32>>,
 }
 
+/// A maker's offer to swap `give_right` for `want_right` (§7, D5). It moves
+/// nothing until the holder of `want_right` accepts and the maker completes.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SwapOffer {
+    pub id: u64,
+    pub maker: Address,
+    /// The maker's week, which goes to the taker.
+    pub give_right: u64,
+    /// The week the maker wants, which goes to the maker.
+    pub want_right: u64,
+    /// The maker's `h'` for `want_right`: the taker's proof must carry it.
+    pub maker_next_secret_hash: U256,
+    /// Copied from the maker's consumed record request for `want_right`.
+    pub maker_key_hash: BytesN<32>,
+    /// The last ledger at which the swap can be accepted or completed.
+    pub expires_ledger: u32,
+}
+
+/// The holder of `want_right` accepting a swap. Their proof is checked
+/// without the pairing and stored until its own `expiry_ledger`; the maker's
+/// `complete_swap` verifies it, with everything else, in full.
+#[contracttype]
+#[derive(Clone)]
+pub struct SwapAcceptance {
+    pub swap_id: u64,
+    pub taker: Address,
+    /// The taker's `h'` for `give_right`: the maker's proof must carry it.
+    pub taker_next_secret_hash: U256,
+    /// Copied from the taker's consumed record request for `give_right`.
+    pub taker_key_hash: BytesN<32>,
+    /// The taker's proof: `want_right` → maker, mode `Swap { give_right }`.
+    pub proof: Proof,
+    pub signals: Vec<U256>,
+    /// The proof's last valid ledger; the acceptance lapses with it.
+    pub expiry_ledger: u32,
+}
+
 #[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
@@ -253,4 +297,15 @@ pub enum DataKey {
     Escrow(u64),
     /// Persistent: `u32`, the Funded or Disputed escrows on a right (D11).
     OpenEscrows(u64),
+    /// Instance: `u64`, the id the next `offer_swap` will assign.
+    NextSwapId,
+    /// Temporary: `SwapOffer`, live past its `expires_ledger`.
+    Swap(u64),
+    /// Temporary: `SwapAcceptance`, keyed by swap id, live past the stored
+    /// proof's `expiry_ledger`.
+    SwapAcceptance(u64),
+    /// Temporary: `Vec<u64>`, the swaps with an acceptance pending on a right
+    /// (≤ 10, pruned), for the burn guard (D11). Lives as long as the latest
+    /// of those acceptances.
+    SwapPending(u64),
 }
