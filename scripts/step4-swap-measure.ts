@@ -280,7 +280,7 @@ async function main() {
   const makerNext = await nextSecret(`maker-right-${want.right_id}`);
   const takerNext = await nextSecret(`taker-right-${give.right_id}`);
 
-  let { sequence } = await latestLedger();
+  const { sequence } = await latestLedger();
   await ok("offer_swap (maker)", "maker", "offer_swap", [
     addr(ADDR.maker),
     u64(give.right_id),
