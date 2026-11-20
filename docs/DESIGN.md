@@ -293,7 +293,13 @@ before a signature. Each screen differs by role inside the same four screens:
 | Function | Justification |
 | --- | --- |
 | `issue(owner, period, validity, commitment)` | Only the issuer creates inventory. Writes to a counter-assigned id, so it cannot reach an existing right. Refuses a non-canonical commitment and a contract-address owner, either of which would create a week no proof could ever transfer. |
-| `__constructor(issuer, name, symbol, verification_key)` | Binds the issuer and the verification key once, at deployment. There is no setter for either. |
+| `__constructor(issuer, arbiter, usdc, name, symbol, verification_key, max_payment)` | Binds the issuer, the pilot arbiter, the USDC contract, the verification key and the payment cap once, at deployment (Phase 3, D7). There is no setter for any of them. It refuses `max_payment ≤ 0` and an arbiter that is the issuer. |
+
+**Privileged — requires the arbiter (Phase 3):**
+
+| Function | Justification |
+| --- | --- |
+| `resolve(arbiter, escrow_id, outcome, decision_hash)` | The pilot arbiter settles a **Disputed** escrow only: `PayOwner` pays the escrow's owner, `RefundRenter` refunds its renter, always the escrow's own amount, and the decision's SHA-256 is recorded. It takes no address and no amount, and reads or writes no right. |
 
 **Holder-initiated:**
 
@@ -302,12 +308,41 @@ before a signature. Each screen differs by role inside the same four screens:
 | `transfer(from, to, right_id, expires_at, proof, public_signals)` | `from`'s signature and a valid proof; on a sale also `to`'s signature over `(right_id, h')`. |
 | `list(by, right_id, term_secs)` | The effective holder. |
 | `unlist(by, right_id)` | The effective holder. |
-| `burn(from, right_id)` | The title holder with no live sub-grant. See [known limitation 7](#known-limitations). |
+| `burn(from, right_id)` | The title holder with no live sub-grant, and (Phase 3, D11) no Funded or Disputed escrow on the right. See [known limitation 7](#known-limitations). |
+| `accept_sale(seller, offer_id, price, proof, public_signals)` | The effective title holder and a valid proof to the offer's buyer, with the offer's `h'`; `price` equal to the offer's. Moves the right and pulls the price from buyer to seller in one transaction. |
+| `accept_rental(owner, offer_id, price, proof, public_signals)` | The effective holder and a valid proof to the offer's renter, for the offer's term; check-in not passed. Grants the rental and pulls the price into escrow in one transaction. |
+
+**Buyer- and renter-initiated (Phase 3), each with the caller's own signature:**
+
+| Function | Requires |
+| --- | --- |
+| `request_record(requester, right_id, key_hash, expires_ledger)` | An existing right; ≤ 10 live per requester; ≤ 7 days. Moves nothing, obliges no one. |
+| `cancel_record_request(requester, request_id)` | The requester; request live. |
+| `create_sale_offer(buyer, request_id, price, next_secret_hash, expires_ledger)` | The buyer's own live request for an active right; `0 < price ≤ max_payment`; ≤ 10 live offers. Sets the allowance to the sum of live offers. |
+| `create_rental_offer(renter, right_id, price, expires_at, check_in, expires_ledger)` | An active right; check-in rules; price and count limits as above. Sets the allowance. |
+| `cancel_offer(buyer, offer_id)` | The offer's buyer; offer live. Sets the allowance again. |
+
+**Escrow parties (Phase 3):**
+
+| Function | Requires |
+| --- | --- |
+| `collect(owner, escrow_id)` | The escrow's owner; Funded; ledger time ≥ check-in + 24 h. |
+| `confirm(renter, escrow_id)` | The escrow's renter; Funded or Disputed. Pays the owner. |
+| `report_problem(renter, escrow_id, evidence_hash)` | The escrow's renter; Funded; ledger time < check-in + 24 h. |
+| `refund(owner, escrow_id)` | The escrow's owner; Disputed. Refunds the renter. |
+| `submit_evidence(by, escrow_id, evidence_hash)` | The escrow's owner or renter; Disputed; ≤ 4 each. |
+| `extend_escrow(escrow_id)` | Anyone. TTL only; changes nothing else. |
 
 **Unprivileged reads:** `issuer`, `name`, `symbol`, `decimals`, `balance`, `next_id`,
-`get_right`, `commitment`, `holder`, `holding`, `holdings`, `is_active`, `get_listing`.
+`get_right`, `commitment`, `holder`, `holding`, `holdings`, `is_active`, `get_listing`,
+and from Phase 3 `arbiter`, `usdc`, `max_payment`, `get_record_request`, `get_offer`,
+`get_escrow`, `next_request_id`, `next_offer_id`, `next_escrow_id`.
 
-That is the rights contract's whole interface — 19 functions with the constructor. There is no
+That is the rights contract's whole interface — 42 functions with the constructor
+(Phase 3 Step 3; Step 4 adds the swap). Only `payment.rs` calls the USDC token, and
+only from `create_*_offer`/`cancel_offer` (the allowance), `accept_sale`/`accept_rental`
+(`transfer_from` for the accepted offer's price) and the escrow's final transitions
+(paying its own owner or renter). There is no
 `upgrade`, migrate, pause, freeze, seize, force-transfer, clawback or fee switch, and
 no function that accepts a verification key. Check it against the deployed contract:
 `stellar contract info interface --id CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD --network testnet`.
@@ -334,6 +369,22 @@ secret `s`, and every owner's secret hash `h`.
 | The week's dates and use year | Contract state | An offer has to say what it is offering. |
 | An offer: the account offering it and the rental term | Contract state | A marketplace has to show what is on offer. |
 | A rental's end time | Parameters, event data, contract state | The contract cannot enforce a term it cannot see. |
+
+**Phase 3 makes payments public.** Payment amounts and addresses are on chain, in
+plain view, for every offer and every payment:
+
+| What | Where | Why |
+| --- | --- | --- |
+| Buyer's, renter's, holder's and arbiter's addresses | Parameters, events, offer and escrow state | Who pays whom. Pseudonymous, but linkable across payments. |
+| USDC prices, allowances and payouts | Parameters, events, offer and escrow state, the USDC contract's own state and events | The contract moves exactly these amounts; the token records them too. |
+| Check-in time, rental end, offer and request expiry ledgers | Parameters, events, state | The contract enforces the collect window from them. |
+| A sale offer's `h'` | Parameters, events, offer state | The seller's proof must carry exactly this value (D4). Proves nothing without `s'`. |
+| A record request's `key_hash` | Parameters, events, request state | SHA-256 of the requester's sealed-link key, bound to their account (D4a). The key itself travels only in a link fragment. |
+| Escrow state, problem report, evidence and decision hashes | Escrow state, events | SHA-256 hashes only. The files stay with the parties; anyone holding one can re-hash it. The pilot samples are in `pilot/evidence/`. |
+
+Still never on chain: any record field, the digest `d`, any secret `s` or `s'`.
+`npm run check-privacy -- --tx …` checks each payment transaction for them, and each
+`--evidence <file>` adds an evidence file's contents to the forbidden values.
 
 The honest residual is Phase 1's: an observer learns that some pseudonymous account
 holds a week with these dates and moved it to another. Not whose, not where.
@@ -465,11 +516,12 @@ security audit, a production trusted-setup ceremony, in-browser proving, selecti
 disclosure, any new cryptographic primitive, swaps between owners, payment and
 escrow, real resorts, legal title transfer, and passkey login.
 
-### Phase 3 payment rule: the USDC allowance (approved design, not yet built)
+### Phase 3 payment rule: the USDC allowance (built in Step 3)
 
 *Recorded at the Phase 3 Step 1 review, 2026-11-19 (decision D12 in
-[PHASE3_SPEC.md](./PHASE3_SPEC.md#4-sale-offer)). Step 7 folds this into the
-full Phase 3 payment rules.*
+[PHASE3_SPEC.md](./PHASE3_SPEC.md#4-sale-offer)); built and tested in Step 3
+(`contracts/quietstay-rights/src/offers.rs`, `payment.rs`, `test_payments.rs`).
+Step 7 folds this into the full Phase 3 payment rules.*
 
 A buyer or renter pays through a USDC allowance to the QuietStay contract,
 which the offer calls set themselves:
@@ -491,3 +543,53 @@ expires. The contract calls `transfer_from` in exactly two places,
 An expired offer is refused before any of that is reached, so the leftover
 has no path out of the buyer's account. The buyer can remove it at any time
 with their next offer call, or directly with the USDC contract.
+
+The contract checks the allowance and the buyer's balance itself before
+`transfer_from`, so a refusal carries its own error code (`AllowanceTooLow`
+53, `BalanceTooLow` 54) rather than the token's, whose numbers overlap the
+contract's. `transfer_from` enforces both again.
+
+**USDC sent to the contract directly stays there.** Anyone can send USDC to
+the contract's address with the token itself, outside every QuietStay
+function. No function pays out anything but an escrow's own amount to that
+escrow's owner or renter, so such a transfer cannot be pulled out by anyone,
+including the builder. The Step 3 invariant ("the contract's USDC balance
+equals the sum of Funded and Disputed escrows") therefore holds for every
+contract call, and a direct transfer only raises the balance above that sum,
+by exactly its amount (test
+`usdc_sent_to_the_contract_directly_is_outside_the_invariant_and_cannot_be_pulled`).
+
+### Why the pilot needs no allowlist
+
+The SOW limits pilot access without an allowlist, and the contract has none.
+Access is limited because:
+
+- every sample right is held by a builder-controlled account, and a right
+  moves only through `authorize_transfer`, which needs its holder's signature
+  and proof;
+- money moves only in `accept_sale`, `accept_rental`, `collect`, `confirm`,
+  `refund` and `resolve`, each of which needs a holder's acceptance, an escrow
+  party's own signature, or the arbiter's;
+- an outside account can open a record request or an offer, but neither moves
+  anything until a builder-held right's holder accepts it with a proof.
+
+The Step 3 outside-account tests call every public function from an account
+the builder does not control, both with its own signature and naming a
+builder account it cannot sign for. None of them moves USDC or a right
+(`an_outside_account_cannot_move_usdc_or_a_right_without_a_builder_action`).
+The swap functions get the same test in Step 4.
+
+### The rental escrow and the pilot arbiter
+
+The state machine is in [PHASE3_SPEC.md §5](./PHASE3_SPEC.md#5-rental-offer-and-escrow):
+Funded → PaidOut (the owner collects from check-in + 24 h, or the renter
+confirms), or Funded → Disputed (the renter reports a problem before
+check-in + 24 h) → PaidOut (the renter confirms, or the arbiter pays the
+owner) or Refunded (the owner refunds, or the arbiter refunds the renter).
+PaidOut and Refunded are final. The arbiter is fixed in the constructor with
+no setter, acts only on Disputed escrows, can only pay the escrow's own owner
+or refund its own renter the escrow's own amount, and reads or writes no
+right. It acts through `scripts/arbiter-resolve.sh`, never a screen. A
+refunded renter keeps the rental right until it lapses, because nothing can
+touch a right (a stated limitation).
+

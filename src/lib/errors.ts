@@ -64,7 +64,7 @@ export const CONTRACT_ERRORS: Record<number, { name: string; message: string }> 
     name: "NonCanonicalSignal",
     message: "The proof's values are not in the form the contract accepts. Make the proof again with `npm run zk:prove`.",
   },
-  18: { name: "NotAnAccount", message: "Weeks can only be held by ordinary Stellar accounts (G…), not by contracts." },
+  18: { name: "NotAnAccount", message: "Weeks can only be held by Stellar accounts (G…) or smart wallets (C…)." },
   19: {
     name: "CommitmentMismatch",
     message:
@@ -86,7 +86,60 @@ export const CONTRACT_ERRORS: Record<number, { name: string; message: string }> 
   27: { name: "NullifierUsed", message: "This proof has already been used. Each proof is good for one transfer." },
   28: { name: "InvalidProof", message: "The ownership proof did not verify. The week did not move." },
   29: { name: "MalformedVerifyingKey", message: "The contract was deployed with a malformed verification key." },
+  // --- Phase 3: offers, record requests and the escrow ---
+  30: { name: "InvalidConfig", message: "The contract was deployed with an unusable payment cap or arbiter." },
+  31: { name: "InvalidPrice", message: "A price must be above zero and at most this deployment's payment cap." },
+  32: { name: "PriceMismatch", message: "The amount you accepted is not the offer's amount. Nothing moved." },
+  33: { name: "OfferNotFound", message: "That offer no longer exists: it was accepted, cancelled, or never made." },
+  34: { name: "OfferExpired", message: "That offer has expired and can no longer be accepted." },
+  35: { name: "InvalidOfferExpiry", message: "An offer or record request must end after now and within seven days." },
+  36: { name: "TooManyOffers", message: "You already have ten open offers. Cancel one, or wait for one to expire." },
+  37: { name: "RequestNotFound", message: "That record request no longer exists: it was used, cancelled, or never made." },
+  38: { name: "RequestExpired", message: "That record request has expired. Ask for the record again." },
+  39: { name: "NotRequester", message: "That request or offer belongs to another account." },
+  40: { name: "TooManyRequests", message: "You already have ten open record requests. Cancel one, or wait for one to expire." },
+  41: { name: "InvalidKeyHash", message: "The record request carries no key." },
+  42: { name: "InvalidNextSecretHash", message: "The offer's new secret hash is missing or out of range. Make the offer again." },
+  43: { name: "WrongOfferKind", message: "That is a sale offer where a rental was expected, or the other way round." },
+  44: {
+    name: "InvalidCheckIn",
+    message: "Check-in must be in the future, inside the week, and at least 24 hours before the rental ends.",
+  },
+  45: { name: "EscrowNotFound", message: "No escrow exists with that id." },
+  46: {
+    name: "EscrowNotInState",
+    message: "The escrow is not in a state that allows this. A paid-out or refunded escrow is final.",
+  },
+  47: { name: "NotEscrowParty", message: "Only this escrow's owner or renter can do that, as the rules say." },
+  48: { name: "TooEarlyToCollect", message: "The owner can collect only from 24 hours after check-in." },
+  49: { name: "ReportWindowClosed", message: "A problem can be reported only until 24 hours after check-in." },
+  50: { name: "EvidenceLimit", message: "Each party can add at most four evidence hashes." },
+  51: { name: "NotArbiter", message: "Only this deployment's arbiter can resolve a dispute." },
+  52: { name: "EscrowOpen", message: "This week has a rental payment still in escrow, so it cannot be destroyed yet." },
+  53: {
+    name: "AllowanceTooLow",
+    message:
+      "The buyer's USDC allowance to the contract is below the price or has expired. Nothing moved; the buyer can renew it by making or cancelling an offer.",
+  },
+  54: { name: "BalanceTooLow", message: "The buyer's USDC balance is below the price. Nothing moved." },
 };
+
+/**
+ * Failures raised inside the USDC token rather than by QuietStay's contract.
+ * The token's own error numbers overlap QuietStay's, so they are recognised by
+ * the token's diagnostic text, before any code is read.
+ */
+const TOKEN_FAILURES: { pattern: RegExp; message: string }[] = [
+  {
+    pattern: /trustline entry is missing/i,
+    message:
+      "The receiving account has no USDC trustline, so the token refused the payment. Add a USDC trustline to that account and try again; the escrow keeps the money until then.",
+  },
+  {
+    pattern: /balance is deauthorized|is not authorized/i,
+    message: "The USDC issuer has not authorized this account to hold USDC.",
+  },
+];
 
 /**
  * Pull a contract error out of an RPC simulation or submission failure.
@@ -116,6 +169,10 @@ export function isRightNotFound(raw: unknown): boolean {
 
 export function describeContractFailure(raw: unknown): string {
   const text = typeof raw === "string" ? raw : ((raw as Error)?.message ?? JSON.stringify(raw));
+
+  for (const failure of TOKEN_FAILURES) {
+    if (failure.pattern.test(text)) return failure.message;
+  }
 
   const contractCode = /Error\(Contract,\s*#(\d+)\)/.exec(text);
   if (contractCode?.[1]) {

@@ -1,0 +1,7 @@
+QuietStay pilot — sample arbiter decision
+
+Decision: refund the renter. The unit was not available at the agreed
+check-in, which the owner's own evidence confirms.
+The pilot arbiter is a builder-controlled account. Its only powers are to pay
+the escrow's owner or refund the escrow's renter, for a Disputed escrow.
+Sample text for a controlled technical pilot; no real stay, resort or person.

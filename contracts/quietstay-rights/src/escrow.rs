@@ -100,6 +100,7 @@ pub fn open(env: &Env, offer: &Offer, owner: &Address, terms: &RentalTerms) -> u
         &Escrow {
             id,
             right_id: offer.right_id,
+            offer_id: offer.id,
             owner: owner.clone(),
             renter: offer.buyer.clone(),
             amount: offer.price,

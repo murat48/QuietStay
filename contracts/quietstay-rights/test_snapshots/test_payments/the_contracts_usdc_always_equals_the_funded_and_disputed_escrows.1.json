@@ -1566,6 +1566,14 @@
                   },
                   {
                     "key": {
+                      "symbol": "offer_id"
+                    },
+                    "val": {
+                      "u64": "1"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "owner"
                     },
                     "val": {
@@ -1693,6 +1701,14 @@
                   {
                     "key": {
                       "symbol": "id"
+                    },
+                    "val": {
+                      "u64": "2"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "offer_id"
                     },
                     "val": {
                       "u64": "2"
@@ -1831,6 +1847,14 @@
                   {
                     "key": {
                       "symbol": "id"
+                    },
+                    "val": {
+                      "u64": "3"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "offer_id"
                     },
                     "val": {
                       "u64": "3"

@@ -1127,6 +1127,17 @@ and its output.
 - **The sign-in signing key on mainnet: the one listed exception to "no
   server key on mainnet"** (approved at the Step 2 review). Each point is
   checked on chain:
+  - It is the CLI identity **`mainnet-test`**, a separate identity from the
+    testnet `qs-sep10-server` (Step 2 checkpoint decision). Its public key is
+    `GCEF3BTQVDJ473URMW4556VG67YAPS2J5OP77FBXT7T47M2DOIZ7TDAR`, read with
+    `stellar keys public-key mainnet-test` on 2026-11-20. It is used only in
+    Step 6, as the server-side sign-in key; its secret is never read, printed
+    or used by the builder for anything else.
+  - **Before its secret goes to the server, you reduce its balance to the
+    minimum.** It held XLM when it was recorded. The checklist records the
+    balance read back from mainnet (`stellar` / Horizon `accounts/<G…>`) after
+    you reduce it, and Step 6 does not configure the server until that item
+    passes.
   - It is not the issuer, the arbiter, a holder of any right, or the fee
     payer of any transaction; it appears in no contract's state.
   - It holds only the minimum balance. You fund it yourself. The builder
@@ -1139,6 +1150,50 @@ and its output.
 - **Privacy evidence** (Step 2 review): every evidence transaction has its
   `check-privacy` output in `evidence/privacy/`, made right after the
   transaction, with its events.
+
+## Step 3 implementation notes (for review at the Step 3 checkpoint)
+
+Built in Step 3, 2026-11-20. These are the points where the code adds to, or
+pins down, what the sections above say. None changes an approved decision;
+each is listed so the Step 3 review can accept or reject it.
+
+1. **The arbiter cannot be the issuer.** The constructor refuses
+   `arbiter == issuer` (and `max_payment ≤ 0`) with `InvalidConfig` (30). The
+   prompt asks for "a separate address"; this enforces it.
+2. **Allowance and balance are checked before `transfer_from`.** If either
+   is too low, the contract returns `AllowanceTooLow` (53) or `BalanceTooLow`
+   (54). Without the check the failure would carry the USDC token's own
+   error number, which overlaps this contract's (the token's 9, "allowance",
+   would read as `ExpiryBeyondSenderTerm`). `transfer_from` still enforces
+   both.
+3. **An escrow records its `offer_id`.** The app links an accepted rental
+   offer to its escrow ("offer accepted → escrow funded") from chain state
+   alone.
+4. **Views added** besides those in §10: `get_record_request`,
+   `next_request_id`, `next_offer_id`, `next_escrow_id`. Requests, offers
+   and escrows are enumerated like rights (`1..next_*`).
+5. **Burning a rented-out right** fails with `NotHolder` (4), not
+   `NotTitleHolder` as §3's table says. That is Phase 2's behaviour, unchanged:
+   while the rental is live the renter is the effective holder, and that check
+   comes first. The §3 table is corrected here rather than the code.
+6. **Escrow TTL floor.** §9 says an escrow is extended to the ledgers until
+   `check_in + 24 h + 30 days`, capped at the network maximum. Once that
+   moment has passed, for example in a long dispute, the code still extends
+   to at least 30 days (518,400 ledgers) on every touch, so a live escrow
+   never runs down to zero.
+7. **USDC sent to the contract directly.** The invariant holds for every
+   contract call. A plain token transfer to the contract's address, outside
+   QuietStay's functions, raises the balance above the escrow total, and no
+   function can pay it out. Tested, and documented in DESIGN.md.
+8. **The testnet fee route** now sponsors the one USDC call §13 names: an
+   `approve` by the wallet, directly under a rights-contract call, with the
+   rights contract as spender. Every other USDC call is still refused (tests
+   in `src/lib/sponsor.test.ts`).
+9. **Events** (all in `events.rs`): `rec_req`, `rec_cncl`, `sale_off`,
+   `rent_off`, `off_cncl`, `allow`, `sale`, `funded`, `paid_out`, `refunded`,
+   `dispute`, `evidence`, `resolve`. `accept_sale` and `accept_rental` also
+   emit Phase 2's `transfer` event, so the existing transfer history keeps
+   working.
 
 ## Decisions
 

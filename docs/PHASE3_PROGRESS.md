@@ -9,7 +9,8 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: **Step 2 closed (2026-11-19).** Step 3 starts in a new session
+- Current step: **Step 3 at its checkpoint (2026-11-20):** built and unit-tested;
+  waiting for your approval before the testnet deployment
 
 ## Open issues
 
@@ -27,10 +28,14 @@ actually run.
 | Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device was still to do | 2 | resolved 2026-11-19: Windows Hello (PIN) on a MONSTER ABRA A7 V11.3, Windows 10 Enterprise 10.0.19045, Chrome 157.0.8103.79, authorized `list` from wallet `CAMTPQ3B…44YLT`, tx `059bc1b3…` |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
 | Low | This machine lacked the system libraries Playwright's browsers need | 2 | resolved 2026-11-19: you ran the install with sudo; the unpacked workaround is removed, and both browsers start on the system libraries |
-| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
+| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 evidence (2026-11-20):** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
 | Medium | SEP-45 and the fee route need the deployment's store (Upstash) on Vercel, for single-use nonces and rate limits. Without it they refuse, by design. The SIGNING_KEY account must exist on each network | 2 (review) | open: Step 5 checklist item (spec §14) |
 | Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
 | Low | `npm run lint`: 7 findings remain, all in code from before Step 2 (it was 13 on `96bbb5f`) | 2 | open |
+| Medium | Step 3 testnet deployment and on-chain runs (one-step sale, rental paid out after the wait, disputed rental resolved by the arbiter, the rejected transactions) wait for your approval of the checkpoint | 3 | open |
+| Medium | Two things only you can do before that deployment: create the testnet arbiter identity `qs-arbiter` (a separate address, never the issuer), and get testnet USDC (Circle's faucet) into the accounts that buy and rent, after adding their USDC trustlines | 3 | open: asked at the checkpoint |
+| Medium | **Pre-launch checklist item:** the mainnet sign-in key `mainnet-test` (`GCEF3BTQ…TDAR`) currently holds XLM. You reduce it to the minimum balance before its secret goes to the server (Step 6); the checklist records the balance read back from mainnet | 3 | open: Step 5 checklist item, spec §14 |
+| Low | The payment screens are checked by typecheck, `next build --webpack`, lint and unit tests only. Their end-to-end run needs the Step 3 WASM on testnet and USDC in throwaway accounts, so it comes after the deployment | 3 | open |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
 
 Severity: Critical (blocks mainnet), High, Medium, Low.
@@ -122,9 +127,9 @@ of the spec, the rest at the second review of `def5eb6`.
 | SEP-45 web-auth contract | `CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM` | later, deployed by us | `npx tsx scripts/deploy-web-auth.ts --network testnet --source qs-issuer` (tx `31f480413f355f51a545a2817ccdb1a8e163eab5a49d6f59a92debda5b825ff1`) |
 | Web-auth WASM (must match) | `708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1` | | built from java-stellar-anchor-sdk @ `dc5817fb` |
 | Web-auth admin (unusable) | `CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2` | same | SHA-256("QuietStay SEP-45 web-auth: no admin"); no contract at it |
-| SEP-10 / SEP-45 signing key | `GDC2YUKYIPDETC6M7QVOL4222SJF6MVYCW5ZOOVFQEZQQPYIENPLRRGQ` (exists) | must be funded | `qs-sep10-server` |
+| SEP-10 / SEP-45 signing key | `GDC2YUKYIPDETC6M7QVOL4222SJF6MVYCW5ZOOVFQEZQQPYIENPLRRGQ` (exists) | `GCEF3BTQVDJ473URMW4556VG67YAPS2J5OP77FBXT7T47M2DOIZ7TDAR` (`mainnet-test`; holds XLM now, to be reduced to the minimum by you before Step 6) | testnet: `qs-sep10-server`; mainnet: `stellar keys public-key mainnet-test` (2026-11-20; the secret was not read) |
 | Measurement contract (Step 1 only) | `CCKL74S5L57GZ32K2AWIIRGKNED3CZNWFCM62BMVASLMSHJXOYK4ZLY4` | — | `stellar contract deploy … quietstay_measure.wasm` |
-| Wasm hash (must match) | | | |
+| Wasm hash (must match) | Step 3 build, not yet deployed: `db92ae3eeb552aaf7e1b694fd688af085b62a39f342488131b00e8aef770b38f` (58,704 bytes, env-meta protocol v27) | | `cd contracts && stellar contract build --package quietstay-rights`, then `sha256sum target/wasm32v1-none/release/quietstay_rights.wasm` |
 | App link | | | |
 
 ## Step log
@@ -453,11 +458,132 @@ of the spec, the rest at the second review of `def5eb6`.
     because its throwaway secrets were gone.
 
 ### Step 3 — USDC sale, rental escrow and pilot arbiter
-- Date:
-- Branch / commit:
+- Date: 2026-11-20. **At the checkpoint:** built and tested, not deployed.
+- Branch / commit: `phase3`. `5c6841b` contract and unit tests; the app and
+  docs commit follows it in the git log.
+- Decision from the Step 2 checkpoint, recorded: on mainnet the sign-in key is
+  the separate identity **`mainnet-test`**, not `qs-sep10-server`. Public key
+  `GCEF3BTQVDJ473URMW4556VG67YAPS2J5OP77FBXT7T47M2DOIZ7TDAR`
+  (`stellar keys public-key mainnet-test`, 2026-11-20). Its secret was not
+  read or printed; it was not funded or used. It is used only in Step 6. It
+  holds XLM now: you reduce it to the minimum before its secret goes to the
+  server (checklist item, spec §14).
 - Done:
-- Tx hashes:
-- Open:
+  - **Contract** (`contracts/quietstay-rights`): the constructor takes
+    `(issuer, arbiter, usdc, name, symbol, verification_key, max_payment)`.
+    New modules:
+    - `offers.rs`: record requests, sale and rental offers, acceptance;
+    - `escrow.rs`: the §5 state machine;
+    - `payment.rs`: the only module that calls USDC.
+    Every right still moves only through `authorize_transfer`. `burn` is
+    refused while an escrow is Funded or Disputed (D11).
+  - **Contract surface diff** (`stellar contract info interface`): 19 → 42
+    functions with the constructor.
+    - Added, writes: `request_record`, `cancel_record_request`,
+      `create_sale_offer`, `create_rental_offer`, `cancel_offer`,
+      `accept_sale`, `accept_rental`, `collect`, `confirm`,
+      `report_problem`, `refund`, `submit_evidence`, `resolve`,
+      `extend_escrow`.
+    - Added, views: `arbiter`, `usdc`, `max_payment`, `get_record_request`,
+      `get_offer`, `get_escrow`, `next_request_id`, `next_offer_id`,
+      `next_escrow_id`.
+    - Changed: `__constructor` (arbiter, usdc, max_payment) and `burn` (the
+      escrow guard).
+    - Unchanged: `transfer` and every Phase 2 function. Still no `upgrade`,
+      no admin, no setter.
+    - New error codes 30–54; 13 new events.
+  - **WASM:** 58,704 bytes (45% of 131,072), env-meta protocol v27,
+    sha256 `db92ae3e…b38f`.
+  - **Spec additions to review:** PHASE3_SPEC.md "Step 3 implementation
+    notes", items 1–9.
+  - **App:**
+    - `/stays` ("Offers & stays"): make an offer; offers for your weeks, with
+      in-browser proving to accept; your offers; stays and payments. Statuses
+      shown: offer open, offer expired, accepted, closed, funded, collectable,
+      disputed, paid out, refunded. Evidence files are hashed in the browser.
+    - Routes: `/api/payments` and `/api/record-request/[id]` (public reads);
+      `/api/tx/accept-offer`; `/api/tx/build` gains the 10 non-proof
+      actions.
+    - `/receive` accepts on-chain record requests (link kind `offer`, D4a).
+      The List screen links each week to a paid offer.
+    - Errors 30–54 have messages. USDC-token failures (missing trustline)
+      are recognised by their text.
+    - Amounts are bigint everywhere (`src/lib/usdc.ts`), with no floating
+      point.
+    - The fee route sponsors an offer's USDC `approve` and nothing else
+      in USDC.
+    - "What the chain sees" on `/stays` and in DESIGN.md says plainly that
+      amounts and addresses are public.
+  - **Scripts:**
+    - `scripts/arbiter-resolve.sh`: checks the identity is `arbiter()` and
+      the escrow is Disputed, hashes the decision file, simulates, asks you
+      to type RESOLVE, and signs from the keystore.
+    - `scripts/deploy.sh`: the new constructor, testnet only, identity
+      `qs-arbiter`.
+    - `check-privacy` gains `--evidence <file>`.
+    - The fixture generator gains `--only`.
+  - **Pilot evidence samples:** `pilot/evidence/` (README and 4 text
+    files). `sha256sum pilot/evidence/*.txt`:
+    - problem-report `22f5dc8c…06c7`;
+    - renter-evidence-1 `c2085d8c…f980`;
+    - owner-evidence-1 `f41e4437…ad95`;
+    - arbiter-decision `d55f0ef5…4009`.
+  - **DESIGN.md:** privileged surface, the arbiter, buyer and escrow tables;
+    "What the ledger reveals" for payments; why no allowlist; the escrow and
+    arbiter; the direct-transfer note.
+- Tests (all run 2026-11-20):
+  - `cd contracts && cargo test`: rights **125/125** (73 before, plus 52 in
+    `test_payments.rs`), verifier 6/6, measure 1/1. `cargo clippy
+    --all-targets`: 0 warnings.
+  - The 52 cover every case in the Step 3 list:
+    - sale: one-step sale; unaccepted offer; expired offer; low balance; low
+      allowance; wrong token; wrong amount;
+    - rental and escrow: acceptance funds the escrow and grants the right in
+      one tx; collect at check-in + 24 h − 1 s refused and at + 24 h
+      allowed; early confirmation; report within the window and after it;
+      collect during a dispute; double payout, double refund and refund
+      after payout;
+    - arbiter: on an undisputed escrow; trying to move a right; outsider and
+      issuer calls refused;
+    - evidence hashes recorded and bounded;
+    - the USDC invariant over three escrows;
+    - allowances: five offers on one allowance with an accept, a cancel and
+      a balance drop; an allowance that expires before its offer; an offer
+      that outlives its allowance;
+    - outside accounts: every public function, with its own signature and
+      naming builder accounts. The swap functions come in Step 4;
+    - plus record requests, check-in rules, burn guards, TTL, a smart-wallet
+      seller, and the constructor.
+  - Fixtures: 3 new real proofs (`rental_r2`, `rental_r3`, `sale_r2`, made
+    with `npm run zk:test-fixtures -- --only …`); the existing ones unchanged.
+  - `npm run test:app`: 22/22 (12 before, plus 3 sponsor, 4 USDC amount and
+    3 escrow-status tests).
+  - `npx tsc --noEmit`: clean. `next build --webpack`: passes, `/stays` and
+    the three new routes included. `npm run zk:check-bundle`: passes.
+  - Lint: the new and changed files are clean. The 3 findings on
+    `list/page.tsx` are among the 7 from before Step 2.
+  - `npm run check-privacy` and `-- --phase2`: pass.
+  - `npx playwright test`, the full suite on the Step 2 WASM, as a
+    regression check of the app changes (2026-11-20):
+    - First run: 5 passed, 2 failed, 8 not run. Both failures were
+      `TypeError: fetch failed` (cause `AggregateError`) in the passkey
+      specs' setup, a connection failure from this machine to testnet, before
+      any page loaded.
+    - Reruns: `passkey.spec.ts` 8/8. `passkey-app.spec.ts` failed once more,
+      after its rental landed
+      (`1ad5c0e2ad5141719a4544740d3c64afecbbf156dcf07bb9482f0889f3f3f856`): the
+      `check-privacy` step got `fetch failed` partway. That rental has no
+      privacy check, because its throwaway secrets were gone. The incomplete
+      output was not committed. The third run passed 2/2 (rental
+      `8bc42bdf59f97d9b21169d8e76e3b341b578c1dea12f9c7b392cbbebba4d67bf`,
+      check in `evidence/privacy/2026-11-20-passkey-app-8bc42bdf.txt`).
+    - So every spec passed: no-leak 2/2 (409 requests, 24 forbidden values,
+      0 leaks; `evidence/privacy/2026-11-20-no-leak-d67f31fd.txt`),
+      prover 3/3, passkey 8/8, passkey-app 2/2.
+- Tx hashes: none yet. Nothing was deployed or sent in Step 3. The testnet
+  deployment and its runs follow your approval.
+- Open: see the table at the top (deployment, `qs-arbiter` and testnet
+  USDC, the `mainnet-test` balance item, the payment screens' e2e run).
 
 ### Step 4 — Swap and two-proof cost measurement
 - Date:

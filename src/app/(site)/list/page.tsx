@@ -1022,6 +1022,23 @@ export default function ListScreen() {
                     </div>
                   ) : null}
 
+                  {/*
+                    Phase 3: a paid offer in USDC, on chain. The sale moves the
+                    week and the money together; a rental's money waits in
+                    escrow until 24 hours after check-in. The unpaid asks below
+                    stay as they were.
+                  */}
+                  {right.listing && !sublet && !over && authenticated && !mine ? (
+                    <p style={{ marginTop: "0.7rem", marginBottom: 0 }}>
+                      <a
+                        href={`/stays?right=${right.id}&kind=${right.listing.term_secs === null ? "buy" : "rent"}`}
+                        data-testid={`paid-offer-${right.id}`}
+                      >
+                        {right.listing.term_secs === null ? "Offer to buy it in USDC →" : "Offer to rent it in USDC →"}
+                      </a>
+                    </p>
+                  ) : null}
+
                   {right.listing && !sublet && !over && authenticated && !mine && canRequest ? (
                     <div style={{ marginTop: "0.7rem" }}>
                       {myRequest ? (

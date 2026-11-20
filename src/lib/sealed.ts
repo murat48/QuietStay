@@ -105,7 +105,12 @@ export async function open(privateKey: CryptoKey, keyHash: string, blob: string)
   return JSON.parse(new TextDecoder().decode(plain));
 }
 
-export type RequestKind = "issue" | "buy";
+/**
+ * `issue`: an owner's issuance ask (off-chain store). `buy`: a Phase 2 ask to
+ * buy without payment (off-chain store). `offer`: Phase 3 (D4a), an on-chain
+ * `RecordRequest` id, made before a paid sale offer.
+ */
+export type RequestKind = "issue" | "buy" | "offer";
 
 export function requestLink(origin: string, kind: RequestKind, askId: string, publicRaw: Uint8Array): string {
   return `${origin}/receive#req=${kind}.${askId}.${b64u(publicRaw)}`;
@@ -125,7 +130,10 @@ export function parseFragment(hash: string): Fragment {
   const h = hash.startsWith("#") ? hash.slice(1) : hash;
   if (h.startsWith("req=")) {
     const [kind, askId, key] = h.slice(4).split(".");
-    if ((kind !== "issue" && kind !== "buy") || !askId || !key) throw new Error("this request link is incomplete");
+    if ((kind !== "issue" && kind !== "buy" && kind !== "offer") || !askId || !key) {
+      throw new Error("this request link is incomplete");
+    }
+    if (kind === "offer" && !/^\d{1,19}$/.test(askId)) throw new Error("this request link's request id is not a number");
     const publicRaw = unb64u(key);
     if (publicRaw.length !== 65 || publicRaw[0] !== 4) throw new Error("this request link's key is not a P-256 public key");
     return { type: "request", kind, askId, publicRaw };

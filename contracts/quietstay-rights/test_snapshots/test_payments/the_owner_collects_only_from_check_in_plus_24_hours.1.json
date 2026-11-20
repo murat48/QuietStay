@@ -913,6 +913,14 @@
                   },
                   {
                     "key": {
+                      "symbol": "offer_id"
+                    },
+                    "val": {
+                      "u64": "1"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "owner"
                     },
                     "val": {

@@ -153,7 +153,7 @@ async function main() {
   };
 
   const onlyArg = process.argv.indexOf("--only");
-  const only = onlyArg >= 0 ? new Set(process.argv[onlyArg + 1].split(",")) : null;
+  const only = onlyArg >= 0 ? new Set((process.argv[onlyArg + 1] ?? "").split(",")) : null;
   for (const name of only ?? []) if (!(name in scenarios)) throw new Error(`no scenario ${name}`);
 
   for (const [name, { secret: sec, ctx, note }] of Object.entries(scenarios)) {

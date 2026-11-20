@@ -18,7 +18,11 @@
  *   - the creation of a smart wallet: `CreateContractV2` of the pinned
  *     OpenZeppelin account WASM `c514d35e…`;
  * - every authorization entry's call tree stays inside the rights contract
- *   (or is that same wallet creation), with no sub-invocations elsewhere;
+ *   (or is that same wallet creation). The one exception (Step 3, spec §13,
+ *   D12): directly under a rights-contract call, the wallet may authorize the
+ *   fixed USDC contract's `approve` with the rights contract as spender, which
+ *   is how an offer sets its allowance. No other USDC function, no other
+ *   spender, and no USDC call at the top of a tree;
  * - the fee account appears nowhere but as source: not as an authorizing
  *   address, and not in any argument;
  * - the fee is at most 10,000,000 stroops (1 XLM);
@@ -33,7 +37,7 @@
 
 import { Address, hash, StrKey, xdr } from "@stellar/stellar-sdk";
 
-import { CONTRACT_ID, NETWORK_PASSPHRASE, SMART_ACCOUNT_WASM_HASH } from "./config";
+import { CONTRACT_ID, NETWORK_PASSPHRASE, SMART_ACCOUNT_WASM_HASH, USDC_CONTRACT_ID } from "./config";
 
 export const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 export const MAX_FEE_STROOPS = 10_000_000n;
@@ -97,13 +101,35 @@ function isWalletCreation(args: xdr.CreateContractArgsV2): boolean {
   return exe.switch().name === "contractExecutableWasm" && Buffer.from(exe.wasmHash()).toString("hex") === SMART_ACCOUNT_WASM_HASH;
 }
 
-function checkInvocation(inv: xdr.SorobanAuthorizedInvocation, feeAccount: string): void {
+/**
+ * The offer's allowance: `USDC.approve(from, CONTRACT_ID, amount, expiration)`,
+ * directly under a rights-contract call. Its `from` is the authorizing wallet,
+ * whose auth the token itself requires.
+ */
+function isOfferAllowance(c: xdr.InvokeContractArgs, parentIsRights: boolean): boolean {
+  if (!parentIsRights) return false;
+  if (Address.fromScAddress(c.contractAddress()).toString() !== USDC_CONTRACT_ID) return false;
+  if (c.functionName().toString() !== "approve") return false;
+  const spender = c.args()[1];
+  return spender !== undefined && spender.switch().name === "scvAddress" &&
+    Address.fromScAddress(spender.address()).toString() === CONTRACT_ID;
+}
+
+function checkInvocation(inv: xdr.SorobanAuthorizedInvocation, feeAccount: string, parentIsRights = false): void {
   const f = inv.function();
+  let isRights = false;
   switch (f.switch().name) {
     case "sorobanAuthorizedFunctionTypeContractFn": {
       const c = f.contractFn();
-      if (Address.fromScAddress(c.contractAddress()).toString() !== CONTRACT_ID) {
-        throw new SponsorRefusal("an authorization reaches a contract other than QuietStay's");
+      const target = Address.fromScAddress(c.contractAddress()).toString();
+      if (target === CONTRACT_ID) {
+        isRights = true;
+      } else if (!isOfferAllowance(c, parentIsRights)) {
+        throw new SponsorRefusal(
+          target === USDC_CONTRACT_ID
+            ? "the only USDC call sponsored is an offer's approve, with the rights contract as spender"
+            : "an authorization reaches a contract other than QuietStay's",
+        );
       }
       for (const a of c.args()) {
         if (addressesIn(a).includes(feeAccount)) throw new SponsorRefusal("the fee account appears in an argument");
@@ -116,7 +142,7 @@ function checkInvocation(inv: xdr.SorobanAuthorizedInvocation, feeAccount: strin
     default:
       throw new SponsorRefusal(`an authorization of kind ${f.switch().name} is not sponsored`);
   }
-  for (const sub of inv.subInvocations()) checkInvocation(sub, feeAccount);
+  for (const sub of inv.subInvocations()) checkInvocation(sub, feeAccount, isRights);
 }
 
 /** Apply the rules above to a host function and its authorization entries. */

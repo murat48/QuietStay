@@ -1758,6 +1758,14 @@
                   },
                   {
                     "key": {
+                      "symbol": "offer_id"
+                    },
+                    "val": {
+                      "u64": "3"
+                    }
+                  },
+                  {
+                    "key": {
                       "symbol": "owner"
                     },
                     "val": {

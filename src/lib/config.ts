@@ -208,3 +208,22 @@ export function testnetFeeSecret(): string {
   if (!secret) throw missing("QUIETSTAY_TESTNET_FEE_SECRET", "the testnet fee key (qs-fee-testnet).");
   return secret;
 }
+
+/**
+ * The USDC Stellar Asset Contract the rights contract is constructed with on
+ * testnet (docs/PHASE3_SPEC.md §4). Circle's testnet issuer
+ * `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`, from
+ * developers.circle.com/stablecoins/usdc-contract-addresses, read 2026-11-19;
+ * contract id from `stellar contract id asset --asset USDC:GBBD…LLA5 --network testnet`.
+ *
+ * The contract, not this constant, is the authority: it fixes the token in its
+ * constructor and `usdc()` reads it back. The fee route uses this constant to
+ * recognise the one USDC call it lets a smart wallet authorize (§13).
+ */
+export const USDC_CONTRACT_ID = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
+
+/** USDC has 7 decimals on Stellar: amounts are i128 counts of 10^-7 USDC. */
+export const USDC_DECIMALS = 7;
+
+/** How long a new offer or record request stays open by default: 7 days of ~5 s ledgers (D9). */
+export const OFFER_LEDGERS = 120_960;

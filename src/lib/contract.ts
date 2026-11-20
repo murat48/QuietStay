@@ -33,7 +33,7 @@ import {
 } from "@stellar/stellar-sdk";
 
 import { toHex } from "./canonical";
-import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, RPC_URL } from "./config";
+import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, RPC_URL, USDC_CONTRACT_ID } from "./config";
 import { describeContractFailure, isRightNotFound } from "./errors";
 
 export const server = new rpc.Server(RPC_URL);
@@ -580,6 +580,300 @@ export async function readTransferEvents(rightId: number, contractId: string = C
   return out;
 }
 
+// --- Phase 3: record requests, offers, escrow (docs/PHASE3_SPEC.md §4–§5) --
+
+const i128 = (n: bigint): xdr.ScVal => nativeToScVal(n, { type: "i128" });
+const u32 = (n: number): xdr.ScVal => nativeToScVal(n, { type: "u32" });
+const u256 = (n: bigint | string): xdr.ScVal => nativeToScVal(BigInt(n), { type: "u256" });
+/** A unit enum variant, such as `Outcome::PayOwner`. */
+const unitVariant = (name: string): xdr.ScVal => xdr.ScVal.scvVec([xdr.ScVal.scvSymbol(name)]);
+
+const big = (v: unknown): bigint => BigInt(v as bigint | number);
+const hexOf = (v: unknown): string => toHex(new Uint8Array(v as Buffer));
+const optionalHex = (v: unknown): string | null => (v === null || v === undefined ? null : hexOf(v));
+
+export interface RecordRequest {
+  id: number;
+  requester: string;
+  rightId: number;
+  /** SHA-256 of the requester's raw P-256 public key, hex. */
+  keyHash: string;
+  expiresLedger: number;
+}
+
+export type OfferTerms =
+  | { kind: "sale"; nextSecretHash: string; keyHash: string }
+  | { kind: "rental"; expiresAt: number; checkIn: number };
+
+export interface Offer {
+  id: number;
+  rightId: number;
+  /** The buyer of a sale, or the renter of a rental. */
+  buyer: string;
+  /** Smallest USDC units, as a decimal string (no floating point). */
+  price: string;
+  expiresLedger: number;
+  terms: OfferTerms;
+}
+
+export type EscrowState = "Funded" | "Disputed" | "PaidOut" | "Refunded";
+
+export interface Escrow {
+  id: number;
+  rightId: number;
+  offerId: number;
+  owner: string;
+  renter: string;
+  /** Smallest USDC units, decimal string. */
+  amount: string;
+  checkIn: number;
+  expiresAt: number;
+  fundedAt: number;
+  state: EscrowState;
+  reportHash: string | null;
+  ownerEvidence: string[];
+  renterEvidence: string[];
+  decisionHash: string | null;
+}
+
+/** A `#[contracttype]` enum variant, as `scValToNative` returns it: `[name, ...fields]`. */
+function variant(raw: unknown): [string, unknown] {
+  const arr = raw as unknown[];
+  return [String(arr[0]), arr[1]];
+}
+
+function decodeRequest(raw: Record<string, unknown>): RecordRequest {
+  return {
+    id: num(raw.id),
+    requester: raw.requester as string,
+    rightId: num(raw.right_id),
+    keyHash: hexOf(raw.key_hash),
+    expiresLedger: num(raw.expires_ledger),
+  };
+}
+
+function decodeOffer(raw: Record<string, unknown>): Offer {
+  const [kind, fields] = variant(raw.terms);
+  const f = fields as Record<string, unknown>;
+  return {
+    id: num(raw.id),
+    rightId: num(raw.right_id),
+    buyer: raw.buyer as string,
+    price: big(raw.price).toString(),
+    expiresLedger: num(raw.expires_ledger),
+    terms:
+      kind === "Sale"
+        ? { kind: "sale", nextSecretHash: big(f.next_secret_hash).toString(), keyHash: hexOf(f.key_hash) }
+        : { kind: "rental", expiresAt: num(f.expires_at), checkIn: num(f.check_in) },
+  };
+}
+
+function decodeEscrow(raw: Record<string, unknown>): Escrow {
+  return {
+    id: num(raw.id),
+    rightId: num(raw.right_id),
+    offerId: num(raw.offer_id),
+    owner: raw.owner as string,
+    renter: raw.renter as string,
+    amount: big(raw.amount).toString(),
+    checkIn: num(raw.check_in),
+    expiresAt: num(raw.expires_at),
+    fundedAt: num(raw.funded_at),
+    state: variant(raw.state)[0] as EscrowState,
+    reportHash: optionalHex(raw.report_hash),
+    ownerEvidence: ((raw.owner_evidence as unknown[]) ?? []).map(hexOf),
+    renterEvidence: ((raw.renter_evidence as unknown[]) ?? []).map(hexOf),
+    decisionHash: optionalHex(raw.decision_hash),
+  };
+}
+
+export const readArbiter = (contractId?: string) => simulateCall("arbiter", [], contractId) as Promise<string>;
+export const readUsdc = (contractId?: string) => simulateCall("usdc", [], contractId) as Promise<string>;
+export async function readMaxPayment(contractId?: string): Promise<string> {
+  return big(await simulateCall("max_payment", [], contractId)).toString();
+}
+
+export async function readRecordRequest(id: number, contractId?: string): Promise<RecordRequest | null> {
+  const raw = await simulateCall("get_record_request", [u64(id)], contractId);
+  return raw === null || raw === undefined ? null : decodeRequest(raw as Record<string, unknown>);
+}
+
+export async function readOffer(id: number, contractId?: string): Promise<Offer | null> {
+  const raw = await simulateCall("get_offer", [u64(id)], contractId);
+  return raw === null || raw === undefined ? null : decodeOffer(raw as Record<string, unknown>);
+}
+
+export async function readEscrow(id: number, contractId?: string): Promise<Escrow> {
+  return decodeEscrow((await simulateCall("get_escrow", [u64(id)], contractId)) as Record<string, unknown>);
+}
+
+/** Read ids `1..next` five at a time, retrying a failed read twice (see `readInventory`). */
+async function readAll<T>(next: number, readOne: (id: number) => Promise<T>): Promise<T[]> {
+  const ids = Array.from({ length: Math.max(0, next - 1) }, (_, i) => i + 1);
+  const out: T[] = new Array(ids.length);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(5, ids.length) }, async () => {
+      for (;;) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= ids.length) return;
+        let lastError: unknown = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            out[index] = await readOne(ids[index]!);
+            lastError = null;
+            break;
+          } catch (error) {
+            lastError = error;
+            await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+          }
+        }
+        if (lastError) throw lastError;
+      }
+    }),
+  );
+  return out;
+}
+
+/**
+ * Every offer still in storage. An offer leaves storage when it is accepted or
+ * cancelled, and its entry lapses some time after it expires; one past its
+ * last ledger may still be listed here, and the caller marks it expired.
+ */
+export async function readOffers(contractId?: string): Promise<Offer[]> {
+  const next = num(await simulateCall("next_offer_id", [], contractId));
+  const all = await readAll(next, (id) => readOffer(id, contractId));
+  return all.filter((o): o is Offer => o !== null);
+}
+
+/** Every record request still in storage (they are temporary, like offers). */
+export async function readRecordRequests(contractId?: string): Promise<RecordRequest[]> {
+  const next = num(await simulateCall("next_request_id", [], contractId));
+  const all = await readAll(next, (id) => readRecordRequest(id, contractId));
+  return all.filter((r): r is RecordRequest => r !== null);
+}
+
+/** Every escrow. Escrows are persistent and never deleted. */
+export async function readEscrows(contractId?: string): Promise<Escrow[]> {
+  const next = num(await simulateCall("next_escrow_id", [], contractId));
+  return readAll(next, (id) => readEscrow(id, contractId));
+}
+
+/** A USDC balance in smallest units. A G… account without a trustline reads as `null`. */
+export async function readUsdcBalance(account: string): Promise<string | null> {
+  try {
+    return big(await simulateCall("balance", [addr(account)], USDC_CONTRACT_ID)).toString();
+  } catch (error) {
+    if (/trustline entry is missing/i.test(String((error as ContractCallError).raw ?? error))) return null;
+    throw error;
+  }
+}
+
+/** The allowance `owner` has given the rights contract, in smallest units (0 once expired). */
+export async function readAllowance(owner: string, contractId: string = CONTRACT_ID): Promise<string> {
+  return big(await simulateCall("allowance", [addr(owner), addr(contractId)], USDC_CONTRACT_ID)).toString();
+}
+
+export const buildRequestRecordTx = (
+  p: { requester: string; rightId: number; keyHash: string; expiresLedger: number },
+  contractId?: string,
+) =>
+  buildInvocation(
+    p.requester,
+    "request_record",
+    [addr(p.requester), u64(p.rightId), bytes32(p.keyHash), u32(p.expiresLedger)],
+    contractId,
+  );
+
+export const buildCancelRecordRequestTx = (p: { requester: string; requestId: number }, contractId?: string) =>
+  buildInvocation(p.requester, "cancel_record_request", [addr(p.requester), u64(p.requestId)], contractId);
+
+export const buildSaleOfferTx = (
+  p: { buyer: string; requestId: number; price: bigint; nextSecretHash: string; expiresLedger: number },
+  contractId?: string,
+) =>
+  buildInvocation(
+    p.buyer,
+    "create_sale_offer",
+    [addr(p.buyer), u64(p.requestId), i128(p.price), u256(p.nextSecretHash), u32(p.expiresLedger)],
+    contractId,
+  );
+
+export const buildRentalOfferTx = (
+  p: { renter: string; rightId: number; price: bigint; expiresAt: number; checkIn: number; expiresLedger: number },
+  contractId?: string,
+) =>
+  buildInvocation(
+    p.renter,
+    "create_rental_offer",
+    [addr(p.renter), u64(p.rightId), i128(p.price), u64(p.expiresAt), u64(p.checkIn), u32(p.expiresLedger)],
+    contractId,
+  );
+
+export const buildCancelOfferTx = (p: { buyer: string; offerId: number }, contractId?: string) =>
+  buildInvocation(p.buyer, "cancel_offer", [addr(p.buyer), u64(p.offerId)], contractId);
+
+export type EscrowAction = "collect" | "confirm" | "report_problem" | "refund" | "submit_evidence";
+
+/** An escrow call by one of its parties. `report_problem` and `submit_evidence` carry a SHA-256 hash. */
+export function buildEscrowTx(
+  p: { action: EscrowAction; by: string; escrowId: number; evidenceHash?: string },
+  contractId?: string,
+) {
+  const args = [addr(p.by), u64(p.escrowId)];
+  if (p.action === "report_problem" || p.action === "submit_evidence") {
+    if (!p.evidenceHash || !/^[0-9a-f]{64}$/.test(p.evidenceHash)) {
+      throw new ContractCallError("an evidence hash is 64 lowercase hex digits (SHA-256)", p.evidenceHash);
+    }
+    args.push(bytes32(p.evidenceHash));
+  }
+  return buildInvocation(p.by, p.action, args, contractId);
+}
+
+/** The arbiter's call, for `scripts/arbiter-resolve` and the tests; the app never builds it. */
+export const buildResolveTx = (
+  p: { arbiter: string; escrowId: number; outcome: "PayOwner" | "RefundRenter"; decisionHash: string },
+  contractId?: string,
+) =>
+  buildInvocation(
+    p.arbiter,
+    "resolve",
+    [addr(p.arbiter), u64(p.escrowId), unitVariant(p.outcome), bytes32(p.decisionHash)],
+    contractId,
+  );
+
+/** A proof made in the holder's browser for one offer: the points and the eleven signals. */
+export interface OfferProof {
+  proof: { a: string; b: string; c: string };
+  /** Decimal, in docs/CIRCUIT.md §7 order. */
+  signals: string[];
+}
+
+/**
+ * `accept_sale` or `accept_rental`, simulated. The contract checks the proof,
+ * the price and the allowance during simulation, so a refusal comes back here
+ * with the contract's reason before anyone signs.
+ */
+export async function buildAcceptOfferTx(
+  p: { kind: "sale" | "rental"; by: string; offerId: number; price: bigint } & OfferProof,
+  contractId?: string,
+): Promise<Transaction> {
+  const tx = await buildInvocation(
+    p.by,
+    p.kind === "sale" ? "accept_sale" : "accept_rental",
+    [
+      addr(p.by),
+      u64(p.offerId),
+      i128(p.price),
+      struct({ a: bytesHex(p.proof.a), b: bytesHex(p.proof.b), c: bytesHex(p.proof.c) }),
+      xdr.ScVal.scvVec(p.signals.map((x) => u256(x))),
+    ],
+    contractId,
+  );
+  return prepare(tx);
+}
+
 /** Simulate, apply resources, and return a transaction ready to sign. */
 export async function prepare(tx: Transaction): Promise<Transaction> {
   const sim = await simulateOrThrow(tx);
@@ -636,10 +930,14 @@ export async function submit(tx: Transaction): Promise<SubmitResult> {
         .map((event) => JSON.stringify(event.event().body().v0().data()))
         .find((text) => /Contract, #\d+|InvalidAction/.test(text)) ?? detail;
 
+    // Every diagnostic's text goes along too: a failure inside the USDC token
+    // (a missing trustline, say) is recognised by its message, not its number.
+    const allText = diagnostics.map((event) => JSON.stringify(event.event().body().v0().data())).join(" ");
+
     return {
       hash,
       successful: false,
-      failure: describeContractFailure(reason || "the contract rejected this call"),
+      failure: describeContractFailure(`${reason || "the contract rejected this call"} ${allText}`.trim()),
       explorer: explorerLink,
     };
   }

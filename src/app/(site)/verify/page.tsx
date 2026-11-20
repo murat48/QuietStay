@@ -673,7 +673,8 @@ export default function VerifyScreen() {
             What was never needed to do any of this: the seller&apos;s identity in any registry, a
             document held by a third party, or a call to the resort. What the ledger gave up in
             exchange: an opaque commitment, two account addresses, a proof that reveals neither,
-            and the dates of the week itself.
+            and the dates of the week itself. A paid sale or rental also makes its USDC amount and
+            both addresses public.
           </div>
         </>
       ) : null}

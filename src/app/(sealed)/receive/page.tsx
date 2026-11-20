@@ -8,6 +8,9 @@
  *   buyer's ask. This browser reads the ask from the deployment, refuses unless
  *   the link's key hashes to the `key_hash` recorded with it, shows who asked,
  *   and only then seals `{record, h, holder, right, contract, ask}` to that key.
+ *   For a paid sale (Phase 3, D4a, kind `offer`) the ask is the buyer's
+ *   on-chain `RecordRequest`, so the key hash checked is the one bound on chain
+ *   to the buyer's account.
  * - A **reply link** (`#rec=…`) is opened by the asker. This browser opens it
  *   with the private key it kept, computes `C = Poseidon(d, holder, h)` in the
  *   prover worker, and keeps the record only if `C` is the commitment on chain
@@ -139,6 +142,24 @@ function SealSide({ link }: { link: Extract<Fragment, { type: "request" }> }) {
           const body = (await res.json()) as { request?: Ask; error?: string };
           if (!res.ok || !body.request) throw new Error(body.error ?? "no such issuance request");
           setAsk(body.request);
+        } else if (link.kind === "offer") {
+          const res = await fetch(`/api/record-request/${encodeURIComponent(link.askId)}`);
+          const body = (await res.json()) as {
+            id?: number;
+            requester?: string;
+            rightId?: number;
+            keyHash?: string;
+            live?: boolean;
+            error?: string;
+          };
+          if (!res.ok || body.id === undefined) throw new Error(body.error ?? "no such record request on chain");
+          setAsk({
+            id: String(body.id),
+            by: body.requester!,
+            key_hash: body.keyHash,
+            status: body.live ? "open" : "expired",
+            right_id: body.rightId,
+          });
         } else {
           const res = await authFetch("/api/requests");
           const body = (await res.json()) as { incoming?: Ask[] };
@@ -190,7 +211,7 @@ function SealSide({ link }: { link: Extract<Fragment, { type: "request" }> }) {
           holder: address,
           right_id: ask.right_id,
           contract: CONTRACT_ID,
-          request: { kind: "buy", id: ask.id },
+          request: { kind: link.kind, id: ask.id },
         };
       }
       const blob = await seal(link.publicRaw, ask.key_hash!, payload);
@@ -217,13 +238,19 @@ function SealSide({ link }: { link: Extract<Fragment, { type: "request" }> }) {
   return (
     <div className="card">
       <h2 style={{ marginTop: 0 }}>{link.kind === "issue" ? "Send a new week's record to its owner" : "Send your week's record to a buyer"}</h2>
+      {link.kind === "offer" ? (
+        <p className="muted">
+          This buyer asked on chain, binding their key to their account. Sending the record obliges
+          you to nothing: you can still sell to someone else, rent out, or ignore the request.
+        </p>
+      ) : null}
       {ask ? (
         <dl className="facts">
           <dt>Asked by</dt>
           <dd className="hash">{ask.by}</dd>
           <dt>Week</dt>
           <dd>{ask.right_id ? `#${ask.right_id}` : "not issued yet"}</dd>
-          <dt>Key check</dt>
+          <dt>{link.kind === "offer" ? "Key check (on chain)" : "Key check"}</dt>
           <dd>
             {ask.key_hash === undefined
               ? "this ask carries no key: it was made before sealed links"
@@ -328,8 +355,15 @@ function OpenSide({ blob }: { blob: string }) {
       <p className="muted">
         {state.owner
           ? "You hold the secret for this week in this browser: you can rent it out or sell it from the Transfer screen."
-          : "Kept in this browser. Once the sale lands, this browser can prove for the week with the secret it made when you asked."}
+          : "Kept in this browser. Once the sale lands, this browser can prove for the week with the secret it makes for your offer."}
       </p>
+      {!state.owner ? (
+        <p>
+          <a className="button primary" href={`/stays?right=${state.rightId}&kind=buy`} data-testid="make-offer-link">
+            Make a paid offer for week #{state.rightId}
+          </a>
+        </p>
+      ) : null}
       <details>
         <summary>The record</summary>
         <pre>{JSON.stringify(state.record, null, 2)}</pre>

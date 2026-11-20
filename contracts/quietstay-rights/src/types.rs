@@ -198,6 +198,8 @@ pub enum Outcome {
 pub struct Escrow {
     pub id: u64,
     pub right_id: u64,
+    /// The rental offer whose acceptance funded this escrow.
+    pub offer_id: u64,
     /// The holder who accepted the rental, paid on PaidOut.
     pub owner: Address,
     /// The renter who paid, refunded on Refunded.

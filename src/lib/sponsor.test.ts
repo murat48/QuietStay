@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Address, Keypair, nativeToScVal, StrKey, xdr } from "@stellar/stellar-sdk";
 
-import { CONTRACT_ID, SMART_ACCOUNT_WASM_HASH } from "./config";
+import { CONTRACT_ID, SMART_ACCOUNT_WASM_HASH, USDC_CONTRACT_ID } from "./config";
 import { assertFeeKeyIsolated, checkSponsored, SponsorRefusal } from "./sponsor";
 
 const fee = Keypair.random().publicKey();
@@ -58,12 +58,29 @@ describe("the fee route sponsors", () => {
     assert.equal(c.kind, "call");
     assert.equal(c.wallet, wallet);
   });
+  it("an offer whose allowance the wallet authorizes on the USDC contract (Step 3, D12)", () => {
+    const approve = entry(wallet, USDC_CONTRACT_ID, "approve", approveArgs(CONTRACT_ID)).rootInvocation();
+    const c = checkSponsored(
+      call(CONTRACT_ID, "create_rental_offer", []),
+      [entry(wallet, CONTRACT_ID, "create_rental_offer", [], [approve])],
+      fee,
+    );
+    assert.equal(c.kind, "call");
+  });
   it("the creation of a smart wallet of the pinned account WASM", () => {
     const c = checkSponsored(walletCreation(SMART_ACCOUNT_WASM_HASH), [], fee);
     assert.equal(c.kind, "wallet-deployment");
     assert.match(c.wallet!, /^C/);
   });
 });
+
+/** `approve(from = wallet, spender, 1 USDC, ledger 2000)`. */
+const approveArgs = (spender: string) => [
+  new Address(wallet).toScVal(),
+  new Address(spender).toScVal(),
+  nativeToScVal(10_000_000n, { type: "i128" }),
+  nativeToScVal(2000, { type: "u32" }),
+];
 
 describe("the fee route refuses", () => {
   it("any network but testnet", () =>
@@ -76,6 +93,25 @@ describe("the fee route refuses", () => {
     const sub = entry(wallet, other, "transfer").rootInvocation();
     refused(() => checkSponsored(call(CONTRACT_ID, "list", []), [entry(wallet, CONTRACT_ID, "list", [], [sub])], fee), /other than QuietStay/);
   });
+  it("a USDC approve for any spender but the rights contract", () => {
+    const approve = entry(wallet, USDC_CONTRACT_ID, "approve", approveArgs(other)).rootInvocation();
+    refused(
+      () => checkSponsored(call(CONTRACT_ID, "create_rental_offer", []), [entry(wallet, CONTRACT_ID, "create_rental_offer", [], [approve])], fee),
+      /only USDC call sponsored/,
+    );
+  });
+  it("any USDC function but approve, such as a transfer", () => {
+    const transfer = entry(wallet, USDC_CONTRACT_ID, "transfer", approveArgs(CONTRACT_ID)).rootInvocation();
+    refused(
+      () => checkSponsored(call(CONTRACT_ID, "create_rental_offer", []), [entry(wallet, CONTRACT_ID, "create_rental_offer", [], [transfer])], fee),
+      /only USDC call sponsored/,
+    );
+  });
+  it("a USDC approve at the top of an authorization tree", () =>
+    refused(
+      () => checkSponsored(call(CONTRACT_ID, "create_rental_offer", []), [entry(wallet, USDC_CONTRACT_ID, "approve", approveArgs(CONTRACT_ID))], fee),
+      /only USDC call sponsored/,
+    ));
   it("the fee account as an argument", () =>
     refused(() => checkSponsored(call(CONTRACT_ID, "transfer", [new Address(fee).toScVal()]), [], fee), /fee account appears in an argument/));
   it("the fee account inside a nested argument", () =>

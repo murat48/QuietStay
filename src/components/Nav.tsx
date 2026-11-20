@@ -50,6 +50,8 @@ export function Nav() {
   const screens = [
     ...PUBLIC_SCREENS,
     { href: "/issue", label: issueLabel },
+    // Paid offers and escrows (Phase 3): for anyone signed in.
+    ...(signedIn ? [{ href: "/stays", label: "Offers & stays" }] : []),
     ...(showTransfer ? [{ href: "/transfer", label: "Transfer", badge: awaiting }] : []),
   ];
 

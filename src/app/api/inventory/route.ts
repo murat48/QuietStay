@@ -129,6 +129,10 @@ export async function GET(): Promise<Response> {
       rights,
     });
   } catch (error) {
+    // Logged with its cause: a bare "fetch failed" is undici's connection-level
+    // failure, and the cause (an AggregateError of ECONNRESET, ETIMEDOUT, …)
+    // says which. See the High issue in docs/PHASE3_PROGRESS.md.
+    console.error("[inventory]", error, (error as { cause?: unknown })?.cause);
     return Response.json(
       { error: error instanceof Error ? error.message : "could not read the registry" },
       { status: 502 },

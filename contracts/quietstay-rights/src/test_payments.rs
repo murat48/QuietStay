@@ -891,7 +891,7 @@ fn accepting_a_rental_grants_the_right_and_funds_the_escrow_in_one_transaction()
         (e.amount, e.check_in, e.expires_at),
         (3 * USDC, CHECK_IN, WEEK_END)
     );
-    assert_eq!(e.right_id, 1);
+    assert_eq!((e.right_id, e.offer_id), (1, offer));
     assert!(f.client.get_offer(&offer).is_none());
     p.assert_invariant();
 }

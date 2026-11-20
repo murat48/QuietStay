@@ -54,8 +54,19 @@
  * `h'` by design. All of this comes on top of every
  * inventory record. They are searched for and never printed. `--out` gets the
  * full output in plain text, with the decoded call and every event.
+ *
+ * Phase 3 Step 3 (payments): offers, escrows and their events add values that
+ * are **public by design**, printed in the decoded call and events, never
+ * forbidden: USDC amounts and allowances, buyer, renter, owner and arbiter
+ * addresses, check-in and rental-end times, offer and request expiry ledgers,
+ * a buyer's `h'` in a sale offer, the SHA-256 `key_hash` of a requester's
+ * sealed-link key, and the SHA-256 hashes of evidence files and of the
+ * arbiter's decision. Each `--evidence <file>` (a dispute evidence file, or
+ * the decision) forbids that file's contents: only its hash may be on chain,
+ * and the output says whether that hash was found, as it should be.
  */
 
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { parseArgs } from "node:util";
@@ -82,6 +93,7 @@ const cli = parseArgs({
     record: { type: "string", multiple: true },
     secret: { type: "string", multiple: true },
     "next-secret": { type: "string", multiple: true },
+    evidence: { type: "string", multiple: true },
     network: { type: "string" },
     out: { type: "string" },
   },
@@ -140,7 +152,24 @@ async function givenForbiddenValues(): Promise<{ label: string; value: string }[
     out.push({ label: `${name} next secret s' (raw bytes)`, value: raw(be32(secret)) });
     out.push({ label: `${name} next secret s' (decimal)`, value: secret.toString() });
   }
+  // A dispute evidence file or decision: its hash is public by design, its
+  // contents never go on chain. The whole file, and its first 64 bytes on
+  // their own, are searched for.
+  for (const file of cli.evidence ?? []) {
+    const name = file.split("/").pop();
+    const bytes = readFileSync(file);
+    if (bytes.length >= 4) out.push({ label: `${name} evidence file contents`, value: bytes.toString("latin1") });
+    if (bytes.length > 64) out.push({ label: `${name} evidence file, first 64 bytes`, value: bytes.subarray(0, 64).toString("latin1") });
+  }
   return out;
+}
+
+/** SHA-256 of each --evidence file, which should appear (as 32 raw bytes) on chain. */
+function evidenceHashes(): { file: string; hex: string; raw: string }[] {
+  return (cli.evidence ?? []).map((file) => {
+    const hex = createHash("sha256").update(readFileSync(file)).digest("hex");
+    return { file, hex, raw: raw(hex) };
+  });
 }
 
 interface Evidence {
@@ -381,6 +410,11 @@ async function main(): Promise<void> {
         log.fail(`LEAK — ${hit.label}${hidden ? " (value not printed)" : `: "${hit.value}"`}`);
       }
       problems += hits.length;
+    }
+
+    // Evidence files: the hash is public by design and expected; noted, not a leak.
+    for (const e of evidenceHashes()) {
+      if (combined.includes(e.raw)) log.info(`public by design: SHA-256 of ${e.file} (${e.hex}) is on chain here, as it should be`);
     }
 
     // --- 2. what the operation and the event actually say ----------------
