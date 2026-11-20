@@ -47,6 +47,7 @@ actually run.
 | Medium | **Pre-launch checklist item (Step 3 review):** pilot funds are never sent to the contract address directly. USDC sent there with the token is stuck forever (DESIGN.md known limitation 17). Checked on chain on both networks | 3 | open: Step 5 checklist item, spec §14 |
 | Medium | **Pre-launch checklist item:** the mainnet sign-in key `mainnet-test` (`GCEF3BTQ…TDAR`) currently holds XLM. It is a separate account from `GALA3K…HE3M`. You reduce it to the minimum balance before its secret goes to the server (Step 6); the checklist records the balance read back from mainnet. Kept as it is (Step 3 review) | 3 | open: Step 5 checklist item, spec §14 |
 | Low | The payment screens are checked by typecheck, `next build --webpack`, lint and unit tests only. Their end-to-end run needs the Step 3 WASM on testnet and USDC in throwaway accounts, so it comes after the deployment | 3 | open |
+| Medium | **Swap cost on mainnet.** `complete_swap` measured 174.8 M instructions (43.7%) on testnet (protocol 30). Mainnet (protocol 29) has different CPU/memory cost parameters (`stellar network settings`, 2026-11-20), so its count can differ. 56% headroom, but it is measured, not assumed: the mainnet `--send=no` simulation of each flow (spec §14) | 4 | open: Step 5 checklist item |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
 
 Severity: Critical (blocks mainnet), High, Medium, Low.
@@ -132,6 +133,7 @@ of the spec, the rest at the second review of `def5eb6`.
 | USDC contract | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` | `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75` | Circle issuers (developers.circle.com/stablecoins/usdc-contract-addresses) → `stellar contract id asset --asset USDC:<issuer>` |
 | Arbiter account | `GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC` (`qs-arbiter`, created by you) | | `stellar keys public-key qs-arbiter` (2026-11-20) |
 | **Step 3 rights contract (fixed)** | `CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73` | | `scripts/deploy.sh` (2026-11-20): upload `837df69a0adbbb01119967e8a5bcdda494c7c050238c5d7159a4a5de2bbd7ecd`, deploy `36aaabf9d7a2dae7e9e2bec3d4156c7714626e3827868afa049a44fb23544773`. Read back: arbiter `GACLONYV…EEZC`, usdc `CBIELTK6…DAMA`, max_payment 1000000000, issuer `GBNBWXSC…YUBE`, on-chain WASM `c7473e8e…6b6b` |
+| **Step 4 rights contract (swap; measurement)** | `CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7` | | `scripts/deploy.sh` (2026-11-20, from `dedad4b`): upload `1b9ac00ac8f9f3563ffa5286776e3061979547b46304f0fda598e549e29a22e7`, deploy `adda9b3fd7cfe0f10bd2136c1d22b51fe4cfcc96c2669cb6f6a18a85b0259d82`. Read back: arbiter `GACLONYV…EEZC`, usdc `CBIELTK6…DAMA`, max_payment 1000000000, issuer `GBNBWXSC…YUBE`, on-chain WASM `76d69e79…dddde`, 50 functions |
 | Step 3 rights contract, first deployment (offer calls fail; superseded) | `CDC6XD3WK4GZSJWNBJELDBHAHNPHLS7WL6RZG2KEACC2RGJWCRTGKMZO` | | `scripts/deploy.sh` (2026-11-20): upload `dd7a0153fd19263a890b7ab3c2a6c2f5ad3db4013b03c5e8642cb95fd5963e86`, deploy `c05ada7aacdc3fd98c2e6ef9809c05c7a0d8f8794ab9f14b4a0aa1cf4a4e9194`. Read back: arbiter `GACLONYV…EEZC`, usdc `CBIELTK6…DAMA`, max_payment 1000000000, issuer `GBNBWXSC…YUBE`, on-chain WASM `db92ae3e…b38f` |
 | Testnet owner (USDC trustline, added for the sale payout) | `qs-owner` `GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR` | | trustline `6443bdb5ecf88c0429f96481903d939afac89a67edf9b3de93eb55b20f413025` |
 | Testnet buyer / renter (USDC trustlines) | `qs-buyer` `GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ`, `qs-renter` `GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN` | | trustlines `de0444b6…1bcb`, `bc671422…0a79`; 20 USDC each from Circle's faucet (Horizon, 2026-11-20) |
@@ -922,12 +924,102 @@ of the spec, the rest at the second review of `def5eb6`.
   passes.
 
 ### Step 4 — Swap and two-proof cost measurement
-- Date:
-- Branch / commit:
-- Measured (CPU, memory, fee, % of limits):
-- Decision (mainnet or testnet only):
-- Tx hashes:
+- Date: 2026-11-20 (ledger time). **Stopped at the measurement, with the
+  numbers, as asked.** The rejection tests, the swap screen and the rejected
+  testnet transactions come after your decision.
+- Branch / commit: `phase3`. `dedad4b` is the swap contract, deployed and
+  measured. The measurement driver and this entry are in the next commit.
+- **Why the swap code came first:** spec §11 says Step 4 measures on the
+  integrated contract, and the size can only be measured with the code. So
+  the contract side of the approved §7 design (D5) is built:
+  - `offer_swap`, `cancel_swap`, `accept_swap`, `withdraw_swap_acceptance`
+    and `complete_swap`, plus the views `get_swap`, `get_swap_acceptance` and
+    `next_swap_id`. That is 42 → 50 functions; the Step 3 estimate counted
+    one view.
+  - `auth.rs`: `TransferMode::Swap { counter_right_id }`, with mode
+    `2^64 + id` as a `U256`. Swap moves title like a sale.
+  - `accept_swap` runs `precheck_transfer`, which is `authorize_transfer`'s
+    checks without the pairing, writing nothing.
+  - `complete_swap` runs `authorize_transfer` twice, the taker's stored
+    proof first. It is still the one function that moves a right.
+  - `burn` has the pending-swap guard (D11).
+  - New errors 55–62 and 5 new events.
+  - No circuit change: mode is a free public input (§7).
+  - Script provers: `swapFor` in `scripts/lib/zk.ts`. The browser prover
+    gets it with the screen.
+- Tests (2026-11-20): rights **134/134** (132, plus a valid swap with real
+  proofs on both sides and the local-budget test), verifier 6/6, measure 1/1,
+  clippy 0 warnings. New fixtures: `swap_taker`, `swap_maker`
+  (`npm run zk:test-fixtures -- --only swap_taker,swap_maker`; both verify
+  off-chain). The Step 4 rejection list is not written yet.
+- **Limits, read from the network** (`stellar network settings --output json`,
+  testnet and `--rpc-url https://mainnet.sorobanrpc.com`, 2026-11-20; saved as
+  `evidence/network-settings-{testnet,mainnet}-2026-11-20.json`):
+  - These are identical on both networks: 400,000,000 instructions;
+    41,943,040 bytes of memory; 200 entries / 200,000 bytes read; 200
+    entries / 132,096 bytes written; 132,096-byte transaction; 16,384 bytes
+    of events; 131,072-byte WASM. Testnet runs protocol 30, mainnet 29 (RPC
+    `getNetwork`).
+  - **These differ:**
+    - The CPU and memory cost parameters (`contract_cost_params_*`).
+      Protocols 30 and 29 price host functions differently, so the
+      instruction count below is testnet's.
+    - `soroban_state_target_size_bytes` (7e9 testnet, 3e9 mainnet), which
+      scales rent.
+    - The minimum TTLs, as already known.
+  - Every other fee rate is the same.
+- **Measured: `complete_swap`, two proof verifications in one transaction**
+  (`npx tsx scripts/step4-swap-measure.ts --contract CCSL6J5X…ITK7 --settings
+  evidence/network-settings-testnet-2026-11-20.json`, log
+  `evidence/step4-testnet-CCSL6J5X.json`):
+
+  | | Value | % of the per-tx limit | Source |
+  | --- | --- | --- | --- |
+  | CPU, simulated | **174,763,775** instructions | **43.7%** of 400,000,000 | RPC `simulateTransaction`, ledger 5,838,350 |
+  | Memory, local host budget | **924,903** bytes | **2.2%** of 41,943,040 | `cargo test -p quietstay-rights swap_cost -- --nocapture` (the RPC does not report memory) |
+  | CPU, local host budget (native, no VM) | 151,029,723 instructions | | same test |
+  | Ledger entries | 2 read-only + 12 read-write | 7.0% of 200 read, 6.0% of 200 written | simulated footprint |
+  | Disk read / write | 0 / 1,640 bytes | 0% / 1.2% of 132,096 | simulated |
+  | Transaction size | 3,340 bytes | 2.5% of 132,096 | assembled envelope |
+  | Contract events | 3 events, 944 bytes | 5.8% of 16,384 | transaction meta |
+  | Min resource fee, simulated | 88,137 stroops | | simulation |
+  | **Fee charged, real tx** | **82,477 stroops** (0.0082477 XLM): non-refundable 76,163, refundable 6,214 (of which rent 3,899), inclusion 100 | | transaction meta, ledger 5,838,351 |
+  | **WASM size** | **71,244 bytes** | **54.4%** of 131,072 | `stellar contract build`, sha256 `76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde`, protocol v27 |
+
+  - For comparison, `accept_swap`, which stores the proof and does no
+    pairing: 2,170,029 instructions (0.5%), 3,036 bytes, min resource fee
+    25,549 stroops.
+  - Against the Step 1 estimate:
+    - CPU: 175–180 M estimated, 174.8 M measured.
+    - Memory: under 2% estimated, 2.2% measured, still about 45× headroom.
+    - Size: 70–73 KB estimated, 71.2 KB measured.
+  - **Result: the swap fits** on testnet with 56% CPU headroom.
+  - On mainnet the instruction count can differ, because the cost parameters
+    differ. Mainnet can only be simulated once a contract is deployed there,
+    so the checklist's mainnet `--send=no` simulation of each flow (spec
+    §14) covers it before GO.
+- Tx hashes (testnet, `CCSL6J5X…ITK7`, 2026-11-20):
+  - issue right #1 to `qs-owner`: `372372f3ccf82ad8efda4d3eaf763185225d8d7089aa47446076006663cbef6a`
+  - issue right #2 to `qs-buyer`: `c049f56b83d0f815782fbae097388aa793406d0daf86b8d0f7cfb74104f7762d`
+  - maker's record request for #2: `e4852757f58f71167e8fb19865ecc9a9f6d152b11334bcb791752c33578208c3`
+  - taker's record request for #1: `4f6b6c890c024bc492b610d71fefa710a123906c47b71ed82740bfd649b71c01`
+  - `offer_swap` (swap #1): `c590904ec05746dc1e8b41f4c61934dee68ecd8d7ce871d83059306f2e9a8446`
+  - `accept_swap`: `8ad01279023e010db5acf64dc17bfbd2ad1626a47b3b4a6be7391a12deb7b23a`
+  - **`complete_swap`, the measured transaction:**
+    `bafd6e6fee71169c5258eec7b4ee250d756bf98d306d4ca97bd975c9f1a19eb5`
+    (ledger 5,838,351). Afterwards #1 is held by `qs-buyer` and #2 by
+    `qs-owner`, with the proofs' new commitments.
+  - Privacy record: `evidence/privacy/2026-11-20-step4-CCSL6J5X-swap-measure.txt`
+    (7 transactions, passes).
+- Decision (mainnet or testnet only): **yours.** The numbers say it fits on
+  testnet's limits.
 - Open:
+  - Medium: the mainnet instruction count, measured in Step 5.
+  - The Step 4 rest after your decision: the rejection tests (one side
+    expired, rented out, already transferred, someone else's, a reused
+    proof), outside-account swap tests, the swap screen with the browser
+    prover's `swapFor`, the rejected testnet transactions, and the spec §10
+    table and DESIGN.md for the 8 new functions.
 
 ### Step 5 — Pre-launch checklist
 - Date:

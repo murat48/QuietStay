@@ -1,0 +1,102 @@
+  run 2026-11-20T22:56:40.360Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-20-step4-CCSL6J5X-swap-measure.txt --tx issue-week-1-to-the-maker=372372f3ccf82ad8efda4d3eaf763185225d8d7089aa47446076006663cbef6a --tx issue-week-2-to-the-taker=c049f56b83d0f815782fbae097388aa793406d0daf86b8d0f7cfb74104f7762d --tx maker-s-record-request-for-right-2=e4852757f58f71167e8fb19865ecc9a9f6d152b11334bcb791752c33578208c3 --tx taker-s-record-request-for-right-1=4f6b6c890c024bc492b610d71fefa710a123906c47b71ed82740bfd649b71c01 --tx offer-swap-maker-=c590904ec05746dc1e8b41f4c61934dee68ecd8d7ce871d83059306f2e9a8446 --tx accept-swap-taker-=8ad01279023e010db5acf64dc17bfbd2ad1626a47b3b4a6be7391a12deb7b23a --tx complete-swap-maker-=bafd6e6fee71169c5258eec7b4ee250d756bf98d306d4ca97bd975c9f1a19eb5 --record /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/week-1-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/week-1-maker-secret.json --record /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/week-2-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/week-2-taker-secret.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/next-secret-maker-right-2-2691e0b9.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/next-secret-taker-right-1-66b6b846.json
+
+Checking on-chain exposure
+  7 transactions, 71 forbidden values
+  contract the contracts these testnet transactions call
+
+issue-week-1-to-the-maker — 372372f3ccf82ad8efda4d3eaf763185225d8d7089aa47446076006663cbef6a
+  ✓ no record contents in 3 layers (10116 bytes: envelope, result, meta)
+  call        issue(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                {"end":"1796342400","start":"1795737600"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x271e767708bdf0bbd8c8392658a4d2be72b7c69c9ac32bc52ec1fc6ae06f7e4f",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"commitment":"0x271e767708bdf0bbd8c8392658a4d2be72b7c69c9ac32bc52ec1fc6ae06f7e4f","right_id":"1"}
+
+issue-week-2-to-the-taker — c049f56b83d0f815782fbae097388aa793406d0daf86b8d0f7cfb74104f7762d
+  ✓ no record contents in 3 layers (10116 bytes: envelope, result, meta)
+  call        issue(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                {"end":"1796947200","start":"1796342400"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x28e1e3e008975d5329cdca8851bda619e32070c18e52dbd9a70cbc5e08644245",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"commitment":"0x28e1e3e008975d5329cdca8851bda619e32070c18e52dbd9a70cbc5e08644245","right_id":"2"}
+
+maker-s-record-request-for-right-2 — e4852757f58f71167e8fb19865ecc9a9f6d152b11334bcb791752c33578208c3
+  ✓ no record contents in 3 layers (9784 bytes: envelope, result, meta)
+  call        request_record(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "2",
+                "0xa481da1f9f12ee8f91afdaf146b892ccfd42ad6b95eb97ab05397050c5b87ac6",
+                5840346,
+              )
+  event topics ["rec_req","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840346,"key_hash":"0xa481da1f9f12ee8f91afdaf146b892ccfd42ad6b95eb97ab05397050c5b87ac6","request_id":"1","right_id":"2"}
+
+taker-s-record-request-for-right-1 — 4f6b6c890c024bc492b610d71fefa710a123906c47b71ed82740bfd649b71c01
+  ✓ no record contents in 3 layers (9832 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "1",
+                "0xb40ef93266f1f43c8501f2869567abf186c73b5e633d8812542f440c0b1e92dc",
+                5840347,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5840347,"key_hash":"0xb40ef93266f1f43c8501f2869567abf186c73b5e633d8812542f440c0b1e92dc","request_id":"2","right_id":"1"}
+
+offer-swap-maker- — c590904ec05746dc1e8b41f4c61934dee68ecd8d7ce871d83059306f2e9a8446
+  ✓ no record contents in 3 layers (11068 bytes: envelope, result, meta)
+  call        offer_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "1",
+                "2",
+                "9556719807125261326682195575476774382305650932841776144115878369526072451147",
+                "1",
+                5840348,
+              )
+  event topics ["swap_off","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840348,"give_right":"1","maker_key_hash":"0xa481da1f9f12ee8f91afdaf146b892ccfd42ad6b95eb97ab05397050c5b87ac6","maker_next_secret_hash":"9556719807125261326682195575476774382305650932841776144115878369526072451147","swap_id":"1","want_right":"2"}
+
+accept-swap-taker- — 8ad01279023e010db5acf64dc17bfbd2ad1626a47b3b4a6be7391a12deb7b23a
+  ✓ no record contents in 3 layers (9696 bytes: envelope, result, meta)
+  call        accept_swap(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "1",
+                "36443955064465020745113228629752555972338825216350385547506212581463948152477",
+                "2",
+                {"a":"0x0f34809eab7ca346…6fda8251 (96 bytes)","b":"0x07feacf69229960d…31e1450b (192 bytes)","c":"0x03b46c0fcdfa95fb…d30abdda (96 bytes)"},
+                ["18491627269259333006462191135460498941728584897448811566201173058560805061189","43513833084884056745631286649541617776007386055201954565502462658457727012286","2","158601910193474826750547412602999551399","170114564257537319500281297001123147738","90770094754120608982862790096888743153","178413295460492758105019939507572692766","18446744073709551617","5838709","9556719807125261326682195575476774382305650932841776144115878369526072451147","44504845483519770065847157385775342853910408750843648385108862551339685435808"],
+              )
+  event topics ["swap_acc","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expiry_ledger":5838709,"swap_id":"1","taker_key_hash":"0xb40ef93266f1f43c8501f2869567abf186c73b5e633d8812542f440c0b1e92dc","taker_next_secret_hash":"36443955064465020745113228629752555972338825216350385547506212581463948152477"}
+
+complete-swap-maker- — bafd6e6fee71169c5258eec7b4ee250d756bf98d306d4ca97bd975c9f1a19eb5
+  ✓ no record contents in 3 layers (14596 bytes: envelope, result, meta)
+  call        complete_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "1",
+                {"a":"0x087c66bc11afbce6…174f1f40 (96 bytes)","b":"0x08af7a19dccc4c44…23d16a31 (192 bytes)","c":"0x02f47b29bf6515de…57e3006e (96 bytes)"},
+                ["17694024121913950621846207358825086010132703904468137014960620509909841051215","15872192765980238482801198206640001086690583749251874054487797221119633002592","1","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","18446744073709551618","5838710","36443955064465020745113228629752555972338825216350385547506212581463948152477","5851420525196355349571070968043687403019732905827351281257697243606885298834"],
+              )
+  event topics ["transfer","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"commitment":"0x6264d99207557ff25bf2b3d32ba7ea0dfcf900d6d7e782053b0589e5074cd9a0","expires_at":null,"right_id":"2"}
+  event topics ["transfer","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"commitment":"0x0cefc96205ee6e80a6601358d659c0dc9832a35df60d762447a299dfa6537292","expires_at":null,"right_id":"1"}
+  event topics ["swap","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"give_commitment":"0x0cefc96205ee6e80a6601358d659c0dc9832a35df60d762447a299dfa6537292","give_right":"1","swap_id":"1","want_commitment":"0x6264d99207557ff25bf2b3d32ba7ea0dfcf900d6d7e782053b0589e5074cd9a0","want_right":"2"}
+
+Result
+  ✓ No inventory record value appears in any of these 7 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 2 record(s) given, or s and h of 2 holder secret(s) given, or s' of 2 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/week-1-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/week-2-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/week-1-maker-secret.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/week-2-taker-secret.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/next-secret-maker-right-2-2691e0b9.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/next-secret-taker-right-1-66b6b846.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

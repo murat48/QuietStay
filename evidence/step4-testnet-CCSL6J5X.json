@@ -1,0 +1,93 @@
+{
+  "contract": "CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7",
+  "network": "testnet",
+  "date": "2026-11-20",
+  "limits": {
+    "instructions": 400000000,
+    "memory": 41943040,
+    "readEntries": 200,
+    "readBytes": 200000,
+    "writeEntries": 200,
+    "writeBytes": 132096,
+    "txBytes": 132096,
+    "eventBytes": 16384
+  },
+  "entries": [
+    {
+      "label": "issue week 1 to the maker",
+      "hash": "372372f3ccf82ad8efda4d3eaf763185225d8d7089aa47446076006663cbef6a",
+      "ledger": 5838345,
+      "fee_charged": 83524
+    },
+    {
+      "label": "issue week 2 to the taker",
+      "hash": "c049f56b83d0f815782fbae097388aa793406d0daf86b8d0f7cfb74104f7762d",
+      "ledger": 5838346,
+      "fee_charged": 83524
+    },
+    {
+      "label": "maker's record request for right #2",
+      "hash": "e4852757f58f71167e8fb19865ecc9a9f6d152b11334bcb791752c33578208c3",
+      "ledger": 5838347,
+      "fee_charged": 33562
+    },
+    {
+      "label": "taker's record request for right #1",
+      "hash": "4f6b6c890c024bc492b610d71fefa710a123906c47b71ed82740bfd649b71c01",
+      "ledger": 5838348,
+      "fee_charged": 28525
+    },
+    {
+      "label": "offer_swap (maker)",
+      "hash": "c590904ec05746dc1e8b41f4c61934dee68ecd8d7ce871d83059306f2e9a8446",
+      "ledger": 5838349,
+      "fee_charged": 17173
+    },
+    {
+      "label": "accept_swap (taker)",
+      "hash": "8ad01279023e010db5acf64dc17bfbd2ad1626a47b3b4a6be7391a12deb7b23a",
+      "ledger": 5838350,
+      "fee_charged": 20085
+    },
+    {
+      "label": "complete_swap (maker)",
+      "hash": "bafd6e6fee71169c5258eec7b4ee250d756bf98d306d4ca97bd975c9f1a19eb5",
+      "ledger": 5838351,
+      "fee_charged": 82477
+    }
+  ],
+  "measurement": {
+    "swap_id": 1,
+    "give_right": 1,
+    "want_right": 2,
+    "accept_swap_simulated": {
+      "instructions": 2170029,
+      "disk_read_bytes": 0,
+      "write_bytes": 1512,
+      "footprint_read_only": 5,
+      "footprint_read_write": 5,
+      "min_resource_fee": 25549,
+      "tx_bytes": 3036,
+      "latest_ledger": 5838349
+    },
+    "complete_swap_simulated": {
+      "instructions": 174763775,
+      "disk_read_bytes": 0,
+      "write_bytes": 1640,
+      "footprint_read_only": 2,
+      "footprint_read_write": 12,
+      "min_resource_fee": 88137,
+      "tx_bytes": 3340,
+      "latest_ledger": 5838350
+    },
+    "complete_swap_on_chain": {
+      "fee_charged": 82477,
+      "non_refundable_resource_fee": 76163,
+      "refundable_resource_fee": 6214,
+      "rent_fee": 3899,
+      "contract_events": 3,
+      "contract_event_bytes": 944,
+      "ledger": 5838351
+    }
+  }
+}
