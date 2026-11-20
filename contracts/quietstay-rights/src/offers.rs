@@ -208,24 +208,34 @@ pub fn cancel_record_request(env: &Env, requester: Address, id: u64) -> Result<(
 // --- offers and the allowance (D12) -----------------------------------------
 
 /// The buyer's live offer ids, after dropping expired, accepted and cancelled
-/// ones, and the sum of their prices.
-fn live_offers(env: &Env, buyer: &Address) -> (Vec<u64>, i128) {
+/// ones; the sum of their prices; and the latest of their last ledgers (0 if
+/// there are none).
+fn live_offers(env: &Env, buyer: &Address) -> (Vec<u64>, i128, u32) {
     let now = env.ledger().sequence();
     let ids = prune(env, &DataKey::BuyerOffers(buyer.clone()), |id| {
         get_offer(env, id).is_some_and(|o| o.expires_ledger >= now)
     });
     let mut total: i128 = 0;
+    let mut latest: u32 = 0;
     for id in ids.iter() {
         let offer = get_offer(env, id).expect("kept only live offers");
         total = total.checked_add(offer.price).expect("allowance overflow");
+        latest = latest.max(offer.expires_ledger);
     }
-    (ids, total)
+    (ids, total, latest)
 }
 
 /// Record a new offer for `buyer` and set the allowance to the sum of their
-/// live offers, this one included.
+/// live offers, this one included, expiring with the last of them.
+///
+/// The expiration is the latest `expires_ledger` among those offers, never
+/// "now + n": the buyer signs the `approve` arguments, expiration included,
+/// when the call is simulated, and the transaction lands some ledgers later. A
+/// value read from the ledger sequence would differ by then and the signature
+/// would no longer match (found on testnet, Step 3 deployment). Every live
+/// offer expires by `now + MAX_OFFER_LEDGERS`, so this is never later.
 fn open_offer(env: &Env, mut offer: Offer) -> Result<Offer, Error> {
-    let (mut ids, total) = live_offers(env, &offer.buyer);
+    let (mut ids, total, latest) = live_offers(env, &offer.buyer);
     if ids.len() >= MAX_OPEN_OFFERS_PER_BUYER {
         return Err(Error::TooManyOffers);
     }
@@ -235,7 +245,7 @@ fn open_offer(env: &Env, mut offer: Offer) -> Result<Offer, Error> {
     write_index(env, &DataKey::BuyerOffers(offer.buyer.clone()), &ids);
 
     let total = total.checked_add(offer.price).expect("allowance overflow");
-    payment::set_allowance(env, &offer.buyer, total);
+    payment::set_allowance(env, &offer.buyer, total, latest.max(offer.expires_ledger));
     Ok(offer)
 }
 
@@ -373,8 +383,12 @@ pub fn cancel_offer(env: &Env, buyer: Address, id: u64) -> Result<(), Error> {
         return Err(Error::NotRequester);
     }
     env.storage().temporary().remove(&DataKey::Offer(id));
-    let (_, total) = live_offers(env, &buyer);
-    payment::set_allowance(env, &buyer, total);
+    let (_, total, latest) = live_offers(env, &buyer);
+    // With no live offer left the allowance is zero; its expiration is then
+    // the cancelled offer's own last ledger, which is still a value the buyer
+    // signed and the same at simulation and inclusion.
+    let expiration = if total > 0 { latest } else { offer.expires_ledger };
+    payment::set_allowance(env, &buyer, total, expiration);
     OfferCancelled {
         buyer,
         offer_id: id,

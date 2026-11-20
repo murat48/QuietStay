@@ -16,18 +16,17 @@ use soroban_sdk::{token::TokenClient, Address, Env};
 use crate::error::Error;
 use crate::events::AllowanceSet;
 use crate::store;
-use crate::types::MAX_OFFER_LEDGERS;
 
 fn usdc(env: &Env) -> TokenClient<'_> {
     TokenClient::new(env, &store::config(env).usdc)
 }
 
-/// Set the contract's allowance from `buyer` to `amount`, expiring
-/// `MAX_OFFER_LEDGERS` from now. Every live offer expires by then. The USDC
-/// contract asks for the buyer's authorization of this call, which the buyer
-/// gives as part of the offer call that makes it.
-pub fn set_allowance(env: &Env, buyer: &Address, amount: i128) {
-    let expiration_ledger = env.ledger().sequence() + MAX_OFFER_LEDGERS;
+/// Set the contract's allowance from `buyer` to `amount`, expiring at
+/// `expiration_ledger`: the latest last ledger of the buyer's live offers
+/// (`offers.rs`). The USDC contract asks for the buyer's authorization of this
+/// call, which the buyer gives as part of the offer call that makes it, so its
+/// arguments must be the same when simulated and when applied.
+pub fn set_allowance(env: &Env, buyer: &Address, amount: i128, expiration_ledger: u32) {
     usdc(env).approve(
         buyer,
         &env.current_contract_address(),

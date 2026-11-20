@@ -1206,6 +1206,34 @@ each is listed so the Step 3 review can accept or reject it.
    `dispute`, `evidence`, `resolve`. `accept_sale` and `accept_rental` also
    emit Phase 2's `transfer` event, so the existing transfer history keeps
    working.
+10. **Proposed at the Step 3 deployment, awaiting approval: the allowance's
+    expiration.** §4 says each offer call runs
+    `usdc.approve(buyer, this, total, now + MAX_OFFER_LEDGERS)`. That cannot
+    work on chain.
+    - **Why:** the buyer signs the `approve` arguments, expiration included,
+      when the call is simulated, and the transaction lands some ledgers later.
+      By then `now + 120,960` is a different number, so the call no longer
+      matches the signature.
+    - **On testnet:** the first `create_rental_offer` on `CDC6XD3W…KMZO`
+      failed with `Error(Auth, InvalidAction)`, tx `32ee3532…5f42`. Every
+      offer call on that contract fails the same way.
+    - **Proposed:** the expiration is the latest `expires_ledger` among the
+      buyer's live offers, the new one included. On a cancel that leaves none,
+      it is the cancelled offer's own last ledger, with amount 0. This depends
+      only on signed arguments and stored state, is never later than
+      `now + 120,960`, and still covers every live offer.
+    - **A side effect, for the better:** an allowance now lapses with the
+      buyer's last live offer. So D12's "leftover from offers that expired on
+      their own" remains only while a later offer is still live, and nothing
+      can be pulled from it either way.
+    - **Edge case:** if one of the buyer's offers expires in the few ledgers
+      between simulation and inclusion, the total changes and the call fails
+      the same way. It is safe to send again.
+    - **Tests:** `an_offer_signed_at_one_ledger_still_lands_ledgers_later`
+      (fails with `Error(Auth, InvalidAction)` on the old rule, passes on the
+      new) and `the_allowance_expires_with_the_last_live_offer`. Rights tests
+      128/128.
+    - **WASM:** 58,774 bytes, sha256 `c7473e8e…6b6b`. Not deployed.
 
 ## Decisions
 

@@ -541,6 +541,14 @@ which the offer calls set themselves:
 - Accepting an offer pulls exactly that offer's price and lowers the
   allowance by the same amount.
 
+**Proposed at the Step 3 deployment, awaiting approval:** the allowance
+expires at the latest last ledger of the buyer's live offers, not at "now +
+120,960". The buyer signs the `approve` arguments at simulation, so a value
+taken from the ledger sequence fails the signature once the transaction lands
+(PHASE3_SPEC.md, Step 3 implementation note 10). With that change, an allowance
+lapses with the buyer's last live offer, and the leftover described next exists
+only while a later offer is still live.
+
 **Allowance left over from offers that expired on their own cannot be
 pulled.** No transaction runs when an offer expires, so its price stays in the
 allowance until the buyer's next offer call or until the allowance itself

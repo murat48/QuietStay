@@ -485,9 +485,10 @@ fn an_expired_offer_cannot_be_accepted_and_its_allowance_cannot_be_pulled() {
         Err(Error::OfferExpired)
     );
     assert_eq!(p.snap(), before);
-    // The expired offer's price is still in the allowance (D12)…
-    assert_eq!(p.allowance(&f.buyer), 5 * USDC);
-    // …until the buyer's next offer call recomputes it.
+    // The allowance expired with the buyer's last live offer: nothing is left
+    // over to pull.
+    assert_eq!(p.allowance(&f.buyer), 0);
+    // The buyer's next offer call sets it to the live offers again.
     p.rental_offer(&f.buyer, 2, USDC);
     assert_eq!(p.allowance(&f.buyer), USDC);
     p.assert_allowance_matches(&f.buyer);
@@ -1853,4 +1854,97 @@ fn the_allowance_is_set_inside_the_offer_call_not_by_a_separate_usdc_call() {
     let offer = f.client.next_offer_id() - 1;
     f.client.cancel_offer(&f.buyer, &offer);
     assert_offer_tree_holds_the_approve(&p, &f.buyer, "cancel_offer", 2 * USDC);
+}
+
+// -------------------------------------------------------------------------
+// The signed approve must not depend on the ledger the call lands in
+// -------------------------------------------------------------------------
+
+/// What happened on testnet at the Step 3 deployment: the buyer signs the
+/// offer call with its `approve` sub-call when it is simulated, and the
+/// transaction lands some ledgers later. The allowance's expiration is in the
+/// signed arguments, so it must come from the offers, not from the ledger
+/// sequence. Here the signature is fixed at ledger 1000 and the call lands at
+/// 1007; with an expiration of "now + 120,960" it would be refused.
+#[test]
+fn an_offer_signed_at_one_ledger_still_lands_ledgers_later() {
+    let p = pay_setup();
+    let f = &p.f;
+    // A C… address, so the host can hold it to exactly these signed arguments.
+    let renter = &p.outsider;
+    StellarAssetClient::new(&f.env, &f.usdc).mint(renter, &(10 * USDC));
+    let expires = BASE_LEDGER + OPEN_FOR;
+    let price = 3 * USDC;
+    let offer_args: Vec<Val> = (
+        renter.clone(),
+        1u64,
+        price,
+        WEEK_END,
+        CHECK_IN,
+        expires,
+    )
+        .into_val(&f.env);
+    let approve_args: Vec<Val> = (renter.clone(), f.contract_id.clone(), price, expires).into_val(&f.env);
+
+    f.at_ledger(BASE_LEDGER + 7);
+    f.env.mock_auths(&[MockAuth {
+        address: renter,
+        invoke: &MockAuthInvoke {
+            contract: &f.contract_id,
+            fn_name: "create_rental_offer",
+            args: offer_args,
+            sub_invokes: &[MockAuthInvoke {
+                contract: &f.usdc,
+                fn_name: "approve",
+                args: approve_args,
+                sub_invokes: &[],
+            }],
+        },
+    }]);
+    let offer = f
+        .client
+        .create_rental_offer(renter, &1, &price, &WEEK_END, &CHECK_IN, &expires);
+    assert_eq!(p.allowance(renter), price);
+
+    // Cancelling the only offer: amount 0, expiring at that offer's own last
+    // ledger, also fixed by what the renter signed. Lands later again.
+    f.at_ledger(BASE_LEDGER + 20);
+    f.env.mock_auths(&[MockAuth {
+        address: renter,
+        invoke: &MockAuthInvoke {
+            contract: &f.contract_id,
+            fn_name: "cancel_offer",
+            args: (renter.clone(), offer).into_val(&f.env),
+            sub_invokes: &[MockAuthInvoke {
+                contract: &f.usdc,
+                fn_name: "approve",
+                args: (renter.clone(), f.contract_id.clone(), 0i128, expires).into_val(&f.env),
+                sub_invokes: &[],
+            }],
+        },
+    }]);
+    f.client.cancel_offer(renter, &offer);
+    assert_eq!(p.allowance(renter), 0);
+}
+
+#[test]
+fn the_allowance_expires_with_the_last_live_offer() {
+    let p = pay_setup();
+    let f = &p.f;
+    let b = &f.buyer;
+    let short = BASE_LEDGER + 100;
+    let long = BASE_LEDGER + 900;
+    f.client
+        .create_rental_offer(b, &1, &USDC, &WEEK_END, &CHECK_IN, &long);
+    f.client
+        .create_rental_offer(b, &2, &USDC, &WEEK_END, &CHECK_IN, &short);
+    assert_eq!(p.allowance(b), 2 * USDC);
+    // Past the short offer, the allowance still covers the long one…
+    f.at_ledger(short + 1);
+    assert_eq!(p.allowance(b), 2 * USDC);
+    // …through its last ledger, and lapses after it.
+    f.at_ledger(long);
+    assert_eq!(p.allowance(b), 2 * USDC);
+    f.at_ledger(long + 1);
+    assert_eq!(p.allowance(b), 0);
 }

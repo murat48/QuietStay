@@ -9,9 +9,10 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: **Step 3 at its checkpoint (2026-11-20).** The first review
-  was answered the same day (see "Step 3 review" in the step log). Not
-  approved for deployment yet
+- Current step: **Step 3 checkpoint approved; the testnet runs are stopped
+  (2026-11-20).** The first offer call on the deployed contract failed on chain
+  (allowance-expiration bug). A tested fix waits for your approval, and with
+  it a redeployment. See "Step 3 deployment" in the step log
 
 ## Open issues
 
@@ -33,8 +34,9 @@ actually run.
 | Medium | SEP-45 and the fee route need the deployment's store (Upstash) on Vercel, for single-use nonces and rate limits. Without it they refuse, by design. The SIGNING_KEY account must exist on each network | 2 (review) | open: Step 5 checklist item (spec §14) |
 | Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
 | Low | `npm run lint`: 7 findings remain, all in code from before Step 2 (it was 13 on `96bbb5f`) | 2 | open |
-| Medium | Step 3 testnet deployment and on-chain runs (one-step sale, rental paid out after the wait, disputed rental resolved by the arbiter, the rejected transactions) wait for your approval of the checkpoint | 3 | open |
-| Medium | Before the deployment: you create `qs-arbiter` (testnet, a separate address, never the issuer). Once you approve, I add USDC trustlines to `qs-buyer` and `qs-renter` on testnet and give you their addresses for Circle's faucet | 3 | open: agreed at the Step 3 review |
+| **High** | **Every offer call on `CDC6XD3W…KMZO` fails on chain.** The allowance expiration was `now + 120,960`, a value inside the arguments the buyer signs at simulation, so it no longer matches once the transaction lands. The unit tests mocked every signature and could not see it. The fix (expire with the buyer's latest live offer) is built and tested, but not deployed. It needs your approval, then a fresh deployment. Then the runs start again, the wait rental first | 3 (deployment) | open: spec note 10 |
+| Medium | The Step 3 on-chain runs (one-step sale, rental paid out after the wait, disputed rental resolved by the arbiter, the rejected transactions) are waiting on the fix above | 3 | open |
+| Low | The first deployment `CDC6XD3W…KMZO` stays on testnet as is, with weeks #1–#5 issued to `qs-owner`. Nothing moved on it. It will not be used once the fix is deployed | 3 | open (record only) |
 | Medium | **Pre-launch checklist item (Step 3 review):** pilot funds are never sent to the contract address directly. USDC sent there with the token is stuck forever (DESIGN.md known limitation 17). Checked on chain on both networks | 3 | open: Step 5 checklist item, spec §14 |
 | Medium | **Pre-launch checklist item:** the mainnet sign-in key `mainnet-test` (`GCEF3BTQ…TDAR`) currently holds XLM. It is a separate account from `GALA3K…HE3M`. You reduce it to the minimum balance before its secret goes to the server (Step 6); the checklist records the balance read back from mainnet. Kept as it is (Step 3 review) | 3 | open: Step 5 checklist item, spec §14 |
 | Low | The payment screens are checked by typecheck, `next build --webpack`, lint and unit tests only. Their end-to-end run needs the Step 3 WASM on testnet and USDC in throwaway accounts, so it comes after the deployment | 3 | open |
@@ -121,7 +123,9 @@ of the spec, the rest at the second review of `def5eb6`.
 | Rights contract | | | |
 | Other contracts (if any) | | | |
 | USDC contract | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` | `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75` | Circle issuers (developers.circle.com/stablecoins/usdc-contract-addresses) → `stellar contract id asset --asset USDC:<issuer>` |
-| Arbiter account | | | |
+| Arbiter account | `GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC` (`qs-arbiter`, created by you) | | `stellar keys public-key qs-arbiter` (2026-11-20) |
+| Step 3 rights contract, first deployment (offer calls fail; superseded once the fix is approved) | `CDC6XD3WK4GZSJWNBJELDBHAHNPHLS7WL6RZG2KEACC2RGJWCRTGKMZO` | | `scripts/deploy.sh` (2026-11-20): upload `dd7a0153fd19263a890b7ab3c2a6c2f5ad3db4013b03c5e8642cb95fd5963e86`, deploy `c05ada7aacdc3fd98c2e6ef9809c05c7a0d8f8794ab9f14b4a0aa1cf4a4e9194`. Read back: arbiter `GACLONYV…EEZC`, usdc `CBIELTK6…DAMA`, max_payment 1000000000, issuer `GBNBWXSC…YUBE`, on-chain WASM `db92ae3e…b38f` |
+| Testnet buyer / renter (USDC trustlines) | `qs-buyer` `GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ`, `qs-renter` `GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN` | | trustlines `de0444b6…1bcb`, `bc671422…0a79`; 20 USDC each from Circle's faucet (Horizon, 2026-11-20) |
 | Smart wallet (passkey) | `CDSI6FMLEA5LRMCTFU2RBMVBMFHWH4TJN7PEMEWSK477S4KP2KAKOKWY` (Step 2 probe) | | `npm run passkey:probe` |
 | WebAuthn verifier (OZ, via kit) | `CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F` | `CB7HENHJ7NF34I5FFXQK7D5I3WWQRGB5O5XO77D3NXMT7LM7LOKRQ5YR` | smart-account-kit deployment manifests. Checked on chain in Step 2: both run WASM `e63a030d…6b72b76` (`stellar contract fetch --id …`, then `sha256sum`) |
 | Step 2 staging rights contract | `CCR2Z4IQNKXO2YCTQI2JBU5YLQTFXCXWVY6HV6H6TWNFWL5RAQ3IMAX5` | — | `stellar contract deploy` (Step 2). Step 3 redeploys with USDC/arbiter |
@@ -131,7 +135,7 @@ of the spec, the rest at the second review of `def5eb6`.
 | Web-auth admin (unusable) | `CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2` | same | SHA-256("QuietStay SEP-45 web-auth: no admin"); no contract at it |
 | SEP-10 / SEP-45 signing key | `GDC2YUKYIPDETC6M7QVOL4222SJF6MVYCW5ZOOVFQEZQQPYIENPLRRGQ` (exists) | `GCEF3BTQVDJ473URMW4556VG67YAPS2J5OP77FBXT7T47M2DOIZ7TDAR` (`mainnet-test`; holds XLM now, to be reduced to the minimum by you before Step 6) | testnet: `qs-sep10-server`; mainnet: `stellar keys public-key mainnet-test` (2026-11-20; the secret was not read) |
 | Measurement contract (Step 1 only) | `CCKL74S5L57GZ32K2AWIIRGKNED3CZNWFCM62BMVASLMSHJXOYK4ZLY4` | — | `stellar contract deploy … quietstay_measure.wasm` |
-| Wasm hash (must match) | Step 3 build, not yet deployed: `db92ae3eeb552aaf7e1b694fd688af085b62a39f342488131b00e8aef770b38f` (58,704 bytes, env-meta protocol v27) | | `cd contracts && stellar contract build --package quietstay-rights`, then `sha256sum target/wasm32v1-none/release/quietstay_rights.wasm` |
+| Wasm hash (must match) | Deployed on `CDC6XD3W…KMZO`: `db92ae3eeb552aaf7e1b694fd688af085b62a39f342488131b00e8aef770b38f` (58,704 bytes, protocol v27; offer calls fail). With the proposed fix, not deployed: `c7473e8e8a449328704964db8ec1285080fc303794e3a41e9b4fd59eaeec6b6b` (58,774 bytes, protocol v27, 42 functions) | | `cd contracts && stellar contract build --package quietstay-rights`, then `sha256sum target/wasm32v1-none/release/quietstay_rights.wasm` |
 | App link | | | |
 
 ## Step log
@@ -663,6 +667,71 @@ of the spec, the rest at the second review of `def5eb6`.
 - For the deployment, once you approve: you create `qs-arbiter`; I add USDC
   trustlines to `qs-buyer` and `qs-renter` on testnet and give you their
   addresses for Circle's faucet.
+
+#### Step 3 deployment (2026-11-20): stopped at the first offer
+
+- **Approved:** the test results, the interface change (19 → 42 functions)
+  and spec notes 1–9. `qs-arbiter` was created by you; only its public key
+  was read: `GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC`.
+- **Trustlines** (`stellar tx new change-trust --line USDC:GBBD47IF…LLA5`):
+  - `qs-buyer`: `de0444b60182e8128b4e3c04e85fcae00916e9f17bff9808058d52e644ee1bcb`
+  - `qs-renter`: `bc671422389c435a069ef9fc89e37b6a2dbe1d95edb2befcb6f034d3ad3e0a79`
+  - You sent faucet USDC; Horizon shows 20 USDC on each.
+- **Deployed** with `scripts/deploy.sh` (tests, build, deploy as `qs-issuer`,
+  arbiter `qs-arbiter`): `CDC6XD3WK4GZSJWNBJELDBHAHNPHLS7WL6RZG2KEACC2RGJWCRTGKMZO`.
+  - Upload: `dd7a0153fd19263a890b7ab3c2a6c2f5ad3db4013b03c5e8642cb95fd5963e86`.
+  - Deploy: `c05ada7aacdc3fd98c2e6ef9809c05c7a0d8f8794ab9f14b4a0aa1cf4a4e9194`.
+  - Read back from chain: arbiter, usdc, max_payment and issuer are as
+    configured. `stellar contract fetch` + `sha256sum` = `db92ae3e…b38f`, the
+    committed build.
+- **Weeks issued** by `scripts/step3-evidence.ts issue` (signed by
+  `qs-issuer` through the keystore). Rights #1–#5 to `qs-owner`, 2026-11-20 →
+  2026-11-27:
+  - `532e6c5bea7370cbae5a540d496734cec4e3ad397aebf0ad0e4cb74077191c39`
+  - `1c02d4944d977157a178bce64f6d1822e8effe701bc26e90afb893d63725e4bf`
+  - `c771936b3a54d397b23ee35b1336dddc43d2b059186ea6a24fe4b6efd24e7397`
+  - `00d6aa7fddf5b1b9e63a65a58d5912b77ee9dcaa8547dbc7e2f981cc6a53f1b9`
+  - `1800b54adea51d31c1f09932b93f3f1574c69c3491e2f1ac1ca1d3b16248fb9f`
+  - Privacy record: `evidence/privacy/2026-11-20-step3-issue.txt`. Records
+    and secrets are in `.secrets/CDC6XD3W/step3/` (gitignored).
+- **The first rental offer failed on chain:** `create_rental_offer` by
+  `qs-renter`,
+  `32ee35321401a80e5b1e6752f275febcbcb029fa2317f7eadd74711214dc5f42`,
+  `Error(Auth, InvalidAction)`. It passed simulation; nothing moved; only the
+  fee was charged.
+  - **Cause, read from chain:** the signed authorization holds
+    `approve(…, expiration_ledger = simulation ledger + 120,960)` (5,957,168
+    at simulation ledger 5,836,208). At inclusion the contract computes a
+    later ledger + 120,960, so its `approve` call no longer matches what was
+    signed.
+  - This is the D12 text as approved (§4), so it cannot be fixed without
+    you. **The runs stopped here.** No sale, no dispute and no rejected
+    transaction was attempted on this contract.
+- **Proposed fix, built and tested, not deployed:** spec note 10. The
+  allowance expires at the latest `expires_ledger` of the buyer's live
+  offers.
+  - New tests `an_offer_signed_at_one_ledger_still_lands_ledgers_later` (on
+    the old rule it fails with exactly `Error(Auth, InvalidAction)`, checked
+    by reverting temporarily) and
+    `the_allowance_expires_with_the_last_live_offer`.
+  - One test changed meaning: an expired lone offer now leaves no allowance.
+  - Rights 128/128, verifier 6/6, measure 1/1, clippy 0 warnings.
+  - WASM `c7473e8e…6b6b`, 58,774 bytes.
+- **`scripts/step3-evidence.ts`:** the evidence driver.
+  - Signing: every envelope is signed by a CLI identity (`stellar tx sign
+    --sign-with-key`). The only in-memory key is a Friendbot-funded throwaway
+    outside account.
+  - Each rejected transaction is sent with a valid sibling's resources and
+    must fail with exactly the expected error.
+  - Each step writes its privacy record. The log goes to
+    `evidence/step3-testnet.json`.
+  - Steps: issue, wait-rental (check-in = last ledger time + 90 s),
+    sale, dispute-open/close, confirm, sale-rejections, escrow-rejections.
+- **To continue, once you approve note 10:**
+  1. Deploy the fixed WASM, which gives a new contract id.
+  2. Issue the weeks again.
+  3. Run wait-rental first, and report the exact collect time.
+  4. Run the other steps.
 
 ### Step 4 — Swap and two-proof cost measurement
 - Date:
