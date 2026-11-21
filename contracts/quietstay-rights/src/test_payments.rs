@@ -1732,7 +1732,8 @@ fn an_outside_account_cannot_move_usdc_or_a_right_without_a_builder_action() {
         &sale.signals
     )));
     assert_eq!(p.snap(), before);
-    // The swap functions arrive in Step 4 and get the same test there.
+    // The swap functions get the same test in test_swap.rs
+    // (an_outside_account_cannot_move_a_right_through_any_swap_function).
 }
 
 #[test]

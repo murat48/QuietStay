@@ -170,7 +170,11 @@ pub fn request_record(
 }
 
 /// A request that is live and belongs to `requester`.
-pub(crate) fn live_request(env: &Env, requester: &Address, id: u64) -> Result<RecordRequest, Error> {
+pub(crate) fn live_request(
+    env: &Env,
+    requester: &Address,
+    id: u64,
+) -> Result<RecordRequest, Error> {
     let request = get_request(env, id).ok_or(Error::RequestNotFound)?;
     if &request.requester != requester {
         return Err(Error::NotRequester);
@@ -387,7 +391,11 @@ pub fn cancel_offer(env: &Env, buyer: Address, id: u64) -> Result<(), Error> {
     // With no live offer left the allowance is zero; its expiration is then
     // the cancelled offer's own last ledger, which is still a value the buyer
     // signed and the same at simulation and inclusion.
-    let expiration = if total > 0 { latest } else { offer.expires_ledger };
+    let expiration = if total > 0 {
+        latest
+    } else {
+        offer.expires_ledger
+    };
     payment::set_allowance(env, &buyer, total, expiration);
     OfferCancelled {
         buyer,

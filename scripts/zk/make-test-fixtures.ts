@@ -167,6 +167,40 @@ async function main() {
       secret: s.owner,
       ctx: { rightId: 1n, from: who.owner, to: who.buyer, expiresAt: null, swapFor: 2n, expiryLedger: exp, nextSecretHash: h.buyerNext },
     },
+    // Step 4 rejection cases.
+    swap_maker_short: {
+      note: "Phase 3 swap: as swap_maker, but the proof is valid only through BASE_LEDGER + 100",
+      secret: s.owner,
+      ctx: { rightId: 1n, from: who.owner, to: who.buyer, expiresAt: null, swapFor: 2n, expiryLedger: BASE_LEDGER + 100n, nextSecretHash: h.buyerNext },
+    },
+    swap_stranger_taker: {
+      note: "Phase 3 swap: the stranger, who does not hold right 2, proves for it with a secret of their own",
+      secret: s.stranger,
+      ctx: { rightId: 2n, from: who.stranger, to: who.owner, expiresAt: null, swapFor: 1n, expiryLedger: exp, nextSecretHash: h.ownerNext },
+    },
+    // After swap_taker/swap_maker, a swap back with each side's *original*
+    // h, so both commitments return to what they were and the first swap's
+    // proofs match them again: the replay the nullifier must stop.
+    swap_back_taker: {
+      note: "Phase 3 swap back: the buyer, now holding right 1, moves it to the owner for right 2, with the owner's original h",
+      secret: s.buyer_next,
+      ctx: { rightId: 1n, from: who.buyer, to: who.owner, expiresAt: null, swapFor: 2n, expiryLedger: exp, nextSecretHash: h.owner },
+    },
+    swap_back_maker: {
+      note: "Phase 3 swap back: the owner, now holding right 2, moves it to the buyer for right 1, with the buyer's original h",
+      secret: s.owner_next,
+      ctx: { rightId: 2n, from: who.owner, to: who.buyer, expiresAt: null, swapFor: 1n, expiryLedger: exp, nextSecretHash: h.buyer },
+    },
+    rental_by_buyer_r2: {
+      note: "Phase 3: the buyer, holding right 2, rents it to renter until WEEK_END",
+      secret: s.buyer,
+      ctx: { rightId: 2n, from: who.buyer, to: who.renter, expiresAt: WEEK_END, expiryLedger: exp, nextSecretHash: 0n },
+    },
+    sale_by_buyer_r2: {
+      note: "Phase 3: the buyer, holding right 2, sells it to stranger",
+      secret: s.buyer,
+      ctx: { rightId: 2n, from: who.buyer, to: who.stranger, expiresAt: null, expiryLedger: exp, nextSecretHash: h.stranger },
+    },
   };
 
   const onlyArg = process.argv.indexOf("--only");

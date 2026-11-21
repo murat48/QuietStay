@@ -62,6 +62,12 @@ fn fixture_json(name: &str) -> &'static str {
         "sale_r2" => include_str!("../tests/fixtures/sale_r2.json"),
         "swap_taker" => include_str!("../tests/fixtures/swap_taker.json"),
         "swap_maker" => include_str!("../tests/fixtures/swap_maker.json"),
+        "swap_maker_short" => include_str!("../tests/fixtures/swap_maker_short.json"),
+        "swap_stranger_taker" => include_str!("../tests/fixtures/swap_stranger_taker.json"),
+        "swap_back_taker" => include_str!("../tests/fixtures/swap_back_taker.json"),
+        "swap_back_maker" => include_str!("../tests/fixtures/swap_back_maker.json"),
+        "rental_by_buyer_r2" => include_str!("../tests/fixtures/rental_by_buyer_r2.json"),
+        "sale_by_buyer_r2" => include_str!("../tests/fixtures/sale_by_buyer_r2.json"),
         _ => panic!("no fixture {name}"),
     }
 }
@@ -204,7 +210,7 @@ pub(crate) struct Fixture<'a> {
 impl Fixture<'_> {
     /// Submit a transfer with every signature it might need available. Tests
     /// about *which* signatures are needed use `mock_auths` instead.
-    fn send(&self, t: &Tx) -> Result<(), Error> {
+    pub(crate) fn send(&self, t: &Tx) -> Result<(), Error> {
         self.env.mock_all_auths();
         match self.client.try_transfer(
             &t.from,
