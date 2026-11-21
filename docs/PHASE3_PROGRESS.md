@@ -48,6 +48,8 @@ actually run.
 | Medium | **Pre-launch checklist item:** the mainnet sign-in key `mainnet-test` (`GCEF3BTQ…TDAR`) currently holds XLM. It is a separate account from `GALA3K…HE3M`. You reduce it to the minimum balance before its secret goes to the server (Step 6); the checklist records the balance read back from mainnet. Kept as it is (Step 3 review) | 3 | open: Step 5 checklist item, spec §14 |
 | Low | The payment screens are checked by typecheck, `next build --webpack`, lint and unit tests only. Their end-to-end run needs the Step 3 WASM on testnet and USDC in throwaway accounts, so it comes after the deployment | 3 | open |
 | Medium | **Swap cost on mainnet.** `complete_swap` measured 174.8 M instructions (43.7%) on testnet (protocol 30). Mainnet (protocol 29) has different CPU/memory cost parameters (`stellar network settings`, 2026-11-20), so its count can differ. 56% headroom, but it is measured, not assumed: the mainnet `--send=no` simulation of each flow (spec §14) | 4 | open: Step 5 checklist item |
+| ~~Medium~~ | **Found by the Step 4 browser test:** for a G account with no USDC trustline, `/api/payments` returned 502, so Step 3's "no trustline" notice never showed. The token's `balance` fails with only `Error(Contract, #13)`, without the "trustline entry is missing" text the app matched on | 3 (found in 4) | resolved 2026-11-20: `readUsdcBalance` reads the trustline ledger entry for a G account (`null` if absent); checked on a throwaway account without one and on `qs-buyer` (200,000,000) |
+| Low | The same token #13, inside a submitted transaction (for example `collect` by an owner without a trustline), is described by `src/lib/errors.ts` as QuietStay's #13 "AlreadyListed". The accept screens now block before it can happen; `collect` does not | 4 | open |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
 
 Severity: Critical (blocks mainnet), High, Medium, Low.
@@ -1020,6 +1022,182 @@ of the spec, the rest at the second review of `def5eb6`.
     proof), outside-account swap tests, the swap screen with the browser
     prover's `swapFor`, the rejected testnet transactions, and the spec §10
     table and DESIGN.md for the 8 new functions.
+
+#### Step 4, the rest (2026-11-20, ledger time): stopped at the checkpoint
+
+- **Your decision (recorded):** the swap goes to mainnet, as the SOW says,
+  because it fits on testnet. The Step 5 mainnet simulation is the final
+  check; if it does not fit there, the swap stays testnet-only and you
+  decide then. The Medium "swap cost on mainnet" item stays open until then.
+- **Contract:** no change since `dedad4b`; the WASM is still `76d69e79…dddde`
+  (rebuilt and compared; the only source diff is `rustfmt`).
+- **Unit tests** (`contracts/quietstay-rights/src/test_swap.rs`, 26 tests):
+  - Every refusal compares both rights, the title counts and the swap entries
+    before and after, so each one moves nothing.
+  - The plan's cases:
+    - one side expired: the right past its validity (#6); the maker's proof
+      past its window, with the taker's leg reverted (#24); the acceptance
+      lapsing with the taker's proof (#59); the swap offer expired (#56);
+    - rented out: by the taker, and by the maker, after the acceptance (#4);
+      and a rented-out week cannot be offered (#4);
+    - already transferred: sold by the taker, and by the maker, after the
+      acceptance (#19);
+    - belonging to someone else: the holder's proof (#21); a proof of their
+      own (#19); a week the maker does not hold (#4); only the maker completes
+      or cancels and only the taker withdraws (#57);
+    - a reused proof: a completed swap again (#55); the first swap's proof
+      after a swap back to the original secrets (#27).
+  - Also: a swap proof used as a sale (#23); withdraw, then a new acceptance
+    with the same unspent proof; a second live acceptance (#58); cancel drops
+    the acceptance; the burn guard on both weeks (#60), lifted by withdrawal
+    or lapse; record requests in both directions, consumed, wrong week (#61)
+    or another's (#39); the wrong h' on either side (#26).
+  - **Outside account** (deferred from Step 3):
+    `an_outside_account_cannot_move_a_right_through_any_swap_function`. All
+    five write functions, with the outsider's own signature (each refused)
+    and naming builder accounts (host refuses the signature). Nothing changes,
+    and the builder's swap still completes.
+  - 6 new fixtures: `swap_maker_short`, `swap_stranger_taker`,
+    `swap_back_taker`, `swap_back_maker`, `rental_by_buyer_r2`,
+    `sale_by_buyer_r2`.
+- **Browser prover:** `swapFor` in `src/lib/zk-fields.ts`, the worker core,
+  the worker's message and `prover-client.ts`. Two parity cases (G and C
+  holders) in `circuits/test/prover-core.test.ts`.
+- **App:**
+  - `/swap` ("Swap" in the header when signed in): offer a swap, swap offers
+    for your weeks, your swap offers.
+  - Each side asks on chain for the other week's record, gets the request
+    link, and must hold the record checked against the chain before
+    offering or accepting (D4a). It is checked again just before committing.
+  - Statuses: offer open, accepted, accepted by someone else, expired,
+    completed (kept in localStorage once the entries leave storage).
+  - Buttons: prove and accept, prove and complete, withdraw, cancel. Errors
+    come from simulation, mapped by `src/lib/errors.ts` (new 55–62).
+  - Routes: `/api/swaps` (public read); `/api/tx/swap` (accept and complete,
+    proof only); `/api/tx/build` gains `offer_swap`, `cancel_swap` and
+    `withdraw_swap_acceptance`. The fee route already sponsors any
+    rights-contract call.
+  - `/receive` links a received record to `/swap` too.
+- **DESIGN.md:** "Swaps (built in Step 4)", and the no-allowlist section
+  points to the swap outside-account test. **Spec §10:** the view row lists
+  every view, the swap ones included.
+- **Testnet transactions** (`CCSL6J5X…ITK7`; `scripts/step4-evidence.ts`;
+  log `evidence/step4-testnet-CCSL6J5X.json`). Every refusal was sent with a
+  valid sibling's resources, plus read-only exactly the entry the sibling
+  does not read (another account's record request, or the replayed proof's
+  nullifier), and failed with exactly the expected error:
+  - **requests-rented** (#3 owner, #4 buyer):
+    - D4a both directions: requests `249de4e9172069353b9d90f52305a3513b34dcef519f32edc68c71897331adad`
+      (maker, for #4) and `99d19c8e82a38788aadc098682abbf0ccdbcff4c461e91d9fe3a848925730152`
+      (taker, for #3). Read back before, and `null` after the offer / the
+      acceptance consumed them.
+    - offer `891cb669fc5e79b952e27f3e4fe7dab0078a09d0e67290882d1c7c0e1985a65a`
+    - refused #61 (wrong-week request `8849d368…b157`): `b24582e8cc18ad9c199cbd7f5ebe588f18adc44192b1ae803158e157ceea6202`
+    - refused #21 (qs-renter, request `efe400b6…7457`, the holder's proof): `8b8ef24ab833874c6527252f7e4157d6db0c7949d6eb84c7a8df72fb0a40c47c`
+    - refused #19 (qs-renter, a proof of its own): `7e675e577c47fc9d9deebe3434041b56931ae23643b11801bb56e94324c2562c`
+    - accept `a6591c4b822faf82f9e365fc5bb063c4916fe6c604da7700c162c102a220365c`
+    - **D5:** the taker rents #4 out (`transfer`, rental)
+      `60d31006ef16b73c352697ded51b94718e7646d5929c0bd0ef0a8d7c566f2c52`;
+      complete refused #4 `fd6a040f7b4e869a0232198fb322539d4c94855080cad96d162df3b19798070d`
+    - **withdraw** `c70fc6e703de6e2d207d9ca5d1462c2a5cf9e680a08feb5301564522eafe4b5b`;
+      complete refused #59 `0b55c8ee99b2b2c3dd6a983412b2df34a66af4dcaecdc44b19c7e6015e45ddf6`
+    - Afterwards #3 is the owner's and #4 the renter's (rental), both
+      commitments as issued.
+    - The script logged "acceptance after the withdrawal: present". That was
+      a bug in the script: the view returned `null`, and the script compared
+      it with `undefined`. Fixed. The log keeps a corrected reading (`null`,
+      re-read with `stellar contract invoke --send=no`) next to it.
+  - **sold** (#5, #6): offer `d99abe26b6ff05fb73a0bcc984f2ae07e1dc7aaf71847f17dde4b6bc0828a21d`,
+    accept `eedf41b2bd5ca60b4ebb31a67b88c60f8659c4c2e77baf6fdafe30a17e586998`;
+    the taker sells #6 to qs-renter for 1 USDC (request `af4cf0f9…7141`,
+    offer `a9982f89…c82d`, `accept_sale`
+    `f2ac186c85bf2000e9ec668accdefb6a531e4c3896be83d63531d028a55ba611`);
+    complete refused #19 `3152ea4a301e7ff24915a2726786ce2a4a90759d1f634f97534c75b101ac7a12`.
+  - **replay** (#9, #10): swap 1 offer `4b5c1496…841e`, accept
+    `ab1187fe…773d`, **complete `a9d3b3e1b207bc5fa04829e7a37a8a63b7da34728bf1396fdfbb776a38d82d7c`**;
+    swap back with the original h: requests `de1c9831…7f88` /
+    `dcb3ccb8…c17c`, offer `17d0dc7f…d229`, accept `dc7ce156…2367`,
+    **complete `172e7553afcb026068d27690974f755ba84415d3c354cad369f94920b5c8d7db`**.
+    Both commitments read back equal to the issued ones. Then the same swap
+    offered again (`d03cc5bd…fed4`, requests `53ea069f…4a4d` / `eb7dbbcd…c20a`),
+    and swap 1's taker proof refused **#27**
+    `5902f48a580fe3843686b5153de72c82496678e3888255c9969e9420fa90dc15`;
+    clean-up cancel `1c71291e…cef2`.
+  - **expired:**
+    - right #11 issued with validity ending 2026-11-20T23:27:55Z: offer
+      `d2245334…2476`, accept `34721314…2f4e`; complete refused **#6**
+      `7810639603ca63c8855022b17de7a9b570e888cbd1da16b11043f3449e26e8d5`.
+    - #13/#14: offer `4062d341…4e89`, accept `448ec1f0…05f7`; a maker proof
+      with a 12-ledger window; complete refused **#24**
+      `8b7b21e3a4b9191be819cc82cd528e2846edfee29287488916ad8097cee88273`.
+  - Every issue and request hash is in the log.
+  - **Not evidence:** the first `replay` run issued #7/#8 and made two
+    requests, then `offer_swap` was refused in simulation (#5: the taker's
+    week was dated in 2027, so not yet valid). Nothing more was sent. Those
+    4 transactions are marked in the log; the script now keeps weeks inside
+    2026. Their record files were overwritten by the rerun, so their privacy
+    record checks the inventory values and the four holder secrets only.
+  - Separately, the first `expired` run stopped before sending anything
+    (record check-out equal to check-in).
+- **Privacy records**, all passing: `evidence/privacy/2026-11-20-step4-CCSL6J5X-{swap-measure,requests-rented,sold,replay,expired,replay-aborted}.txt`.
+  Holder secrets are checked as `--secret` (s and h). Swap-side secrets are
+  checked as `--next-secret`, because a swap publishes h' by design. In
+  `replay`, the original secrets are checked as `--next-secret` too, because
+  the swap back republishes their h as h' on purpose.
+- **EVIDENCE.md:** a new entry, "a swap of two weeks, and every way it must
+  fail" (from `docs/evidence-phase3.md`).
+- **Browser test** `e2e/swap.spec.ts` (`npx playwright test e2e/swap.spec.ts`):
+  **1/1 passed** (3.1 min, 2026-11-21 UTC). It runs on a fresh Step 4
+  contract `CAM73642…RDWG` with throwaway accounts.
+  - Each owner gets a week through the issue flow; the record requests and
+    sealed records go both ways.
+  - Swap transactions: offer `90584073e43d43167da2222d6d5de3158264ad36d743c7164ffa44f1a76fd220`,
+    accept `8671e8439eab2fc8457d89212f093a30acdd66f752268c33a1989fa71db6a82b`,
+    withdraw `d35d9883d6f39ae3a039a11a233d0525f4a0b7d15e53f8d165e54410facfd935`.
+  - Then the maker's stale complete is refused in simulation; the screen
+    shows the #59 message, and both holders are checked unchanged.
+  - Re-accept `b6c7701d9c05405d5d6e13d32715a037692568d29d92f096f94dab918f45d1b8`,
+    then complete `6c7579b9c15ca8965177e42cfd7e773967f859cc6d84af153c1cc64c042653a5`;
+    both holders are checked swapped.
+  - Then `/stays`: a rental offer for the maker's new week. With no USDC
+    trustline, the notice shows and "Prove and rent out" is disabled; after
+    a change-trust, the notice is gone and the button is enabled.
+  - Privacy record `evidence/privacy/2026-11-21-swap-e2e-6c7579b9.txt`
+    passes (5 transactions). Three earlier runs that completed a swap
+    before failing later have passing records too: `…-323ed350`, `…-340037b9`,
+    `…-ea0a371c`.
+  - **It took 8 runs, and found 3 real bugs, all fixed:**
+    1. The prover worker bundle is built only by `npm run dev`/`build`, and
+       the harness starts `next dev` directly. So it ran a stale prover
+       without `swapFor`, and the contract refused the proof (#23); the
+       screen showed it. `e2e/lib/app.ts` now builds the worker first.
+    2. A G account without a USDC trustline made `/api/payments` fail, so the
+       Step 3 trustline notice could never show (see the open issues).
+    3. A response race on `/stays`: an earlier `/api/payments` read without
+       the account could finish last and drop the balance, and with it the
+       notice. Both `/stays` and `/swap` now keep only the latest read.
+  - Harness fixes: `next dev` reloads a page when it first compiles a route,
+    which dropped sign-ins, so the spec now compiles every route first and
+    waits for a signed-in marker. A link to `/receive` from `/receive`
+    differs only by fragment and does not reload, so links open from a
+    blank page. Steps time out at 3 min.
+  - Two runs that stopped mid-flow left an offer, and in one an acceptance,
+    on their throwaway contracts (`CC2JEWQZ…`, `CCNBH7GN…`) with no privacy
+    record. Their secrets were gone with the browsers. Not evidence.
+- Error message #23 now names swaps too.
+- **Tests at the checkpoint (all run 2026-11-21 UTC):**
+  - `cd contracts && cargo test`: rights **158/158** (134, plus 24 swap
+    tests), verifier 6/6, measure 1/1. `cargo clippy --all-targets`: 0
+    warnings.
+  - `npm run test:app`: 35/35. `npm run zk:test`: **29/29** (27, plus 2 swap
+    parity cases). `npm run check-privacy`: passes. `npx tsc --noEmit`: clean.
+    `npm run zk:check-bundle`: passes. `next build --webpack`: passes, with
+    `/swap`, `/api/swaps` and `/api/tx/swap`.
+  - `npx playwright test`: **16/16**: swap 1/1 (above) and, as a regression
+    run after the app changes, no-leak 2/2, passkey-app 2/2, passkey 8/8 and
+    prover 3/3. Their privacy records: `evidence/privacy/2026-11-21-{no-leak-9c5c5917,passkey-app-0cbd4a88,passkey-spec-1a5f6532}.txt`.
+- **Stopped at the Step 4 checkpoint.** The escrow #1 collect on
+  `CA4B3MIZ…PPV73` is still pending (from 2026-11-21T20:28:30Z).
 
 ### Step 5 — Pre-launch checklist
 - Date:

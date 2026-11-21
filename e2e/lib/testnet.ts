@@ -10,7 +10,7 @@
 
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { Address, Keypair, nativeToScVal, Operation, rpc, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
+import { Address, Asset, Keypair, nativeToScVal, Operation, rpc, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
 
 import { NETWORK_PASSPHRASE, RPC_URL } from "../../src/lib/config";
 import { struct } from "../../scripts/lib/zk-tx";
@@ -87,4 +87,84 @@ export async function deployRights(issuer: Keypair): Promise<string> {
   const { returnValue } = await submit(tx, issuer);
   if (!returnValue) throw new Error("deploy returned nothing");
   return Address.fromScVal(returnValue).toString();
+}
+
+/**
+ * The Step 4 rights WASM (swaps), installed on testnet by the Step 4
+ * deployment (`CCSL6J5X…ITK7`, upload tx 1b9ac00a…). Built from `dedad4b`.
+ */
+export const RIGHTS_STEP4_WASM_HASH = "76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde";
+
+/** Circle's testnet USDC: the SAC and the classic asset behind it (PHASE3_SPEC.md §4). */
+export const USDC_SAC = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
+export const USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+
+/**
+ * Deploy a Step 4 rights contract (Phase 3 constructor) with `issuer` and
+ * `arbiter`, Circle's testnet USDC, the committed key and the testnet cap.
+ */
+export async function deployRightsStep4(issuer: Keypair, arbiter: Keypair): Promise<string> {
+  const vk = JSON.parse(readFileSync("circuits/keys/verification_key.soroban.json", "utf8")) as {
+    alpha: string;
+    beta: string;
+    gamma: string;
+    delta: string;
+    ic: string[];
+  };
+  const b = (hex: string) => nativeToScVal(Buffer.from(hex, "hex"));
+  const vkVal = struct({
+    alpha: b(vk.alpha),
+    beta: b(vk.beta),
+    gamma: b(vk.gamma),
+    delta: b(vk.delta),
+    ic: xdr.ScVal.scvVec(vk.ic.map(b)),
+  });
+  const account = await server.getAccount(issuer.publicKey());
+  const tx = new TransactionBuilder(account, { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
+    .addOperation(
+      Operation.createCustomContract({
+        address: new Address(issuer.publicKey()),
+        wasmHash: Buffer.from(RIGHTS_STEP4_WASM_HASH, "hex"),
+        salt: randomBytes(32),
+        constructorArgs: [
+          new Address(issuer.publicKey()).toScVal(),
+          new Address(arbiter.publicKey()).toScVal(),
+          new Address(USDC_SAC).toScVal(),
+          nativeToScVal("QuietStay e2e", { type: "string" }),
+          nativeToScVal("QSE2E", { type: "string" }),
+          vkVal,
+          nativeToScVal(1_000_000_000n, { type: "i128" }),
+        ],
+      }),
+    )
+    .setTimeout(120)
+    .build();
+  const { returnValue } = await submit(tx, issuer);
+  if (!returnValue) throw new Error("deploy returned nothing");
+  return Address.fromScVal(returnValue).toString();
+}
+
+/** Add a USDC trustline to a throwaway account (a classic change-trust operation). */
+export async function addUsdcTrustline(kp: Keypair): Promise<string> {
+  const account = await server.getAccount(kp.publicKey());
+  const tx = new TransactionBuilder(account, { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
+    .addOperation(Operation.changeTrust({ asset: new Asset("USDC", USDC_ISSUER) }))
+    .setTimeout(120)
+    .build();
+  tx.sign(kp);
+  const sent = await server.sendTransaction(tx);
+  if (sent.status !== "PENDING") throw new Error(`change-trust refused: ${sent.status}`);
+  const done = await server.pollTransaction(sent.hash, { attempts: 30 });
+  if (done.status !== rpc.Api.GetTransactionStatus.SUCCESS) throw new Error(`${sent.hash} ended ${done.status}`);
+  return sent.hash;
+}
+
+/** Call the rights contract as `kp`, signed here (the caller is the source account). */
+export async function invokeAs(kp: Keypair, contract: string, fn: string, args: xdr.ScVal[]) {
+  const account = await server.getAccount(kp.publicKey());
+  const tx = new TransactionBuilder(account, { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
+    .addOperation(Operation.invokeContractFunction({ contract, function: fn, args }))
+    .setTimeout(120)
+    .build();
+  return submit(tx, kp);
 }

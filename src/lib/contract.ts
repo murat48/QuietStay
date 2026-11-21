@@ -21,6 +21,7 @@
 import {
   Account,
   Address,
+  Asset,
   Contract,
   Keypair,
   Operation,
@@ -33,7 +34,7 @@ import {
 } from "@stellar/stellar-sdk";
 
 import { toHex } from "./canonical";
-import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, RPC_URL, USDC_CONTRACT_ID } from "./config";
+import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, RPC_URL, USDC_CONTRACT_ID, USDC_ISSUER } from "./config";
 import { describeContractFailure, isRightNotFound } from "./errors";
 import { RetryingServer } from "./rpc-server";
 
@@ -768,14 +769,29 @@ export async function readEscrows(contractId?: string): Promise<Escrow[]> {
   return readAll(next, (id) => readEscrow(id, contractId));
 }
 
-/** A USDC balance in smallest units. A G… account without a trustline reads as `null`. */
+/**
+ * A USDC balance in smallest units. A G… account without a trustline reads as
+ * `null`.
+ *
+ * For a G… account the trustline ledger entry is read directly, and its
+ * absence decides. The token's `balance` call fails for such an account with
+ * only `Error(Contract, #13)`, whose number collides with QuietStay's own
+ * #13 and carries no text to recognise (found by the Step 4 browser test).
+ * A C… account holds the balance in the token contract and needs no trustline.
+ */
 export async function readUsdcBalance(account: string): Promise<string | null> {
-  try {
-    return big(await simulateCall("balance", [addr(account)], USDC_CONTRACT_ID)).toString();
-  } catch (error) {
-    if (/trustline entry is missing/i.test(String((error as ContractCallError).raw ?? error))) return null;
-    throw error;
+  if (account.startsWith("G")) {
+    const key = xdr.LedgerKey.trustline(
+      new xdr.LedgerKeyTrustLine({
+        accountId: Keypair.fromPublicKey(account).xdrAccountId(),
+        asset: new Asset("USDC", USDC_ISSUER).toTrustLineXDRObject(),
+      }),
+    );
+    const { entries } = await server.getLedgerEntries(key);
+    if (entries.length === 0) return null;
+    return entries[0]!.val.trustLine().balance().toString();
   }
+  return big(await simulateCall("balance", [addr(account)], USDC_CONTRACT_ID)).toString();
 }
 
 /** The allowance `owner` has given the rights contract, in smallest units (0 once expired). */
@@ -880,6 +896,113 @@ export async function buildAcceptOfferTx(
     contractId,
   );
   return prepare(tx);
+}
+
+// --- swaps (Phase 3 Step 4, docs/PHASE3_SPEC.md §7) -------------------------
+
+export interface SwapOffer {
+  id: number;
+  maker: string;
+  /** The maker's week, which goes to the taker. */
+  giveRight: number;
+  /** The week the maker wants, which goes to the maker. */
+  wantRight: number;
+  /** The maker's h' for wantRight, decimal. */
+  makerNextSecretHash: string;
+  makerKeyHash: string;
+  expiresLedger: number;
+}
+
+export interface SwapAcceptance {
+  swapId: number;
+  taker: string;
+  /** The taker's h' for giveRight, decimal. */
+  takerNextSecretHash: string;
+  takerKeyHash: string;
+  /** The stored proof's last valid ledger; the acceptance lapses with it. */
+  expiryLedger: number;
+}
+
+function decodeSwap(raw: Record<string, unknown>): SwapOffer {
+  return {
+    id: num(raw.id),
+    maker: raw.maker as string,
+    giveRight: num(raw.give_right),
+    wantRight: num(raw.want_right),
+    makerNextSecretHash: big(raw.maker_next_secret_hash).toString(),
+    makerKeyHash: hexOf(raw.maker_key_hash),
+    expiresLedger: num(raw.expires_ledger),
+  };
+}
+
+function decodeAcceptance(raw: Record<string, unknown>): SwapAcceptance {
+  return {
+    swapId: num(raw.swap_id),
+    taker: raw.taker as string,
+    takerNextSecretHash: big(raw.taker_next_secret_hash).toString(),
+    takerKeyHash: hexOf(raw.taker_key_hash),
+    expiryLedger: num(raw.expiry_ledger),
+  };
+}
+
+export async function readSwap(id: number, contractId?: string): Promise<SwapOffer | null> {
+  const raw = await simulateCall("get_swap", [u64(id)], contractId);
+  return raw === null || raw === undefined ? null : decodeSwap(raw as Record<string, unknown>);
+}
+
+export async function readSwapAcceptance(id: number, contractId?: string): Promise<SwapAcceptance | null> {
+  const raw = await simulateCall("get_swap_acceptance", [u64(id)], contractId);
+  return raw === null || raw === undefined ? null : decodeAcceptance(raw as Record<string, unknown>);
+}
+
+/** Every swap offer still in storage, with its acceptance if one is stored. */
+export async function readSwaps(contractId?: string): Promise<{ offer: SwapOffer; acceptance: SwapAcceptance | null }[]> {
+  const next = num(await simulateCall("next_swap_id", [], contractId));
+  const all = await readAll(next, async (id) => {
+    const offer = await readSwap(id, contractId);
+    return offer ? { offer, acceptance: await readSwapAcceptance(id, contractId) } : null;
+  });
+  return all.filter((s): s is { offer: SwapOffer; acceptance: SwapAcceptance | null } => s !== null);
+}
+
+export const buildOfferSwapTx = (
+  p: { maker: string; giveRight: number; wantRight: number; nextSecretHash: string; requestId: number; expiresLedger: number },
+  contractId?: string,
+) =>
+  buildInvocation(
+    p.maker,
+    "offer_swap",
+    [addr(p.maker), u64(p.giveRight), u64(p.wantRight), u256(p.nextSecretHash), u64(p.requestId), u32(p.expiresLedger)],
+    contractId,
+  );
+
+export const buildCancelSwapTx = (p: { maker: string; swapId: number }, contractId?: string) =>
+  buildInvocation(p.maker, "cancel_swap", [addr(p.maker), u64(p.swapId)], contractId);
+
+export const buildWithdrawSwapTx = (p: { taker: string; swapId: number }, contractId?: string) =>
+  buildInvocation(p.taker, "withdraw_swap_acceptance", [addr(p.taker), u64(p.swapId)], contractId);
+
+const proofVal = (p: OfferProof) => [
+  struct({ a: bytesHex(p.proof.a), b: bytesHex(p.proof.b), c: bytesHex(p.proof.c) }),
+  xdr.ScVal.scvVec(p.signals.map((x) => u256(x))),
+];
+
+/**
+ * `accept_swap` or `complete_swap`, simulated. The contract runs every check
+ * during simulation (complete: both proofs in full), so a refusal comes back
+ * here with the contract's reason before anyone signs.
+ */
+export async function buildSwapProofTx(
+  p:
+    | ({ step: "accept"; by: string; swapId: number; nextSecretHash: string; requestId: number } & OfferProof)
+    | ({ step: "complete"; by: string; swapId: number } & OfferProof),
+  contractId?: string,
+): Promise<Transaction> {
+  const args =
+    p.step === "accept"
+      ? [addr(p.by), u64(p.swapId), u256(p.nextSecretHash), u64(p.requestId), ...proofVal(p)]
+      : [addr(p.by), u64(p.swapId), ...proofVal(p)];
+  return prepare(await buildInvocation(p.by, p.step === "accept" ? "accept_swap" : "complete_swap", args, contractId));
 }
 
 /** Simulate, apply resources, and return a transaction ready to sign. */

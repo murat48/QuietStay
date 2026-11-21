@@ -863,7 +863,7 @@ state is rejected.
 | Function | Who can call | When |
 | --- | --- | --- |
 | `__constructor` | deployer, once | deployment |
-| `name`, `symbol`, `decimals`, `balance`, `issuer`, `arbiter`, `usdc`, `next_id`, `get_right`, `commitment`, `holder`, `holding`, `holdings`, `is_active`, `get_listing`, `get_offer`, `get_escrow`, `get_swap` | anyone (read-only) | always |
+| `name`, `symbol`, `decimals`, `balance`, `issuer`, `arbiter`, `usdc`, `max_payment`, `next_id`, `get_right`, `commitment`, `holder`, `holding`, `holdings`, `is_active`, `get_listing`, `get_record_request`, `get_offer`, `get_escrow`, `next_request_id`, `next_offer_id`, `next_escrow_id`, `get_swap`, `get_swap_acceptance`, `next_swap_id` | anyone (read-only) | always |
 | `issue` | issuer | always; fresh ids only |
 | `list`, `unlist` | effective holder | right active |
 | `transfer` (no payment) | effective holder + valid proof (+ buyer's signature on a sale) | right active |

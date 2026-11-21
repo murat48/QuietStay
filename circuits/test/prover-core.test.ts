@@ -78,6 +78,9 @@ describe("the browser prover's core", async () => {
     ["a rental from a G… holder", { rightId: 3n, from: owner, to: buyer, expiresAt: 1_783_728_000n, expiryLedger: 5_000_360n, nextSecretHash: 0n }],
     ["a sale from a G… holder", { rightId: 3n, from: owner, to: buyer, expiresAt: null, expiryLedger: 5_000_360n, nextSecretHash: prover.secretHash(s2) }],
     ["a sale from a C… holder", { rightId: 9n, from: wallet, to: buyer, expiresAt: null, expiryLedger: 7n, nextSecretHash: prover.secretHash(s2) }],
+    // Phase 3 Step 4: one side of a swap, mode 2^64 + the week received.
+    ["a swap side from a G… holder", { rightId: 3n, from: owner, to: buyer, expiresAt: null, swapFor: 4n, expiryLedger: 5_000_360n, nextSecretHash: prover.secretHash(s2) }],
+    ["a swap side from a C… holder", { rightId: 9n, from: wallet, to: buyer, expiresAt: null, swapFor: 3n, expiryLedger: 7n, nextSecretHash: prover.secretHash(s2) }],
     ["a rental to a C… recipient", { rightId: 1n, from: owner, to: wallet, expiresAt: 1_783_728_000n, expiryLedger: 7n, nextSecretHash: 0n }],
   ];
 

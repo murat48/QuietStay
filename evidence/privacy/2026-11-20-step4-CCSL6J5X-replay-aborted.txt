@@ -1,0 +1,59 @@
+  run 2026-11-20T23:26:06.385Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-20-step4-CCSL6J5X-replay-aborted.txt --tx replay-aborted-issue-7=27e059f15b1a6cc0af09f77510fca8f37b7f1dfc65af8f1d5f1ac61beca7778d --tx replay-aborted-issue-8=5861dbc1ba066918d34a48a15e35c4b03a0d9e3e76970c671401db0cc2dfb1cc --tx replay-aborted-request-for-8=f6ed33be0b8b1bab1f1a36a140ec7606dfa36f42dba58a3d42c0369a93d6a40a --tx replay-aborted-request-for-7=4113ff00e7f820128337d2163dc9fdbf190d79313c05f5c98f9b7f0041e29f00 --secret .secrets/CCSL6J5X/step4/replay-week-5-owner-d868be96.json --secret .secrets/CCSL6J5X/step4/replay-week-5-owner-a557210f.json --secret .secrets/CCSL6J5X/step4/replay-week-6-buyer-23224d64.json --secret .secrets/CCSL6J5X/step4/replay-week-6-buyer-9fab0812.json
+
+Checking on-chain exposure
+  4 transactions, 55 forbidden values
+  contract the contracts these testnet transactions call
+
+replay-aborted-issue-7 — 27e059f15b1a6cc0af09f77510fca8f37b7f1dfc65af8f1d5f1ac61beca7778d
+  ✓ no record contents in 3 layers (10488 bytes: envelope, result, meta)
+  call        issue(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                {"end":"1798761600","start":"1798156800"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x3fc022226ab655a35fd1e69879b72c83457478ad219519c5fd6d5fd6df486835",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"commitment":"0x3fc022226ab655a35fd1e69879b72c83457478ad219519c5fd6d5fd6df486835","right_id":"7"}
+
+replay-aborted-issue-8 — 5861dbc1ba066918d34a48a15e35c4b03a0d9e3e76970c671401db0cc2dfb1cc
+  ✓ no record contents in 3 layers (10488 bytes: envelope, result, meta)
+  call        issue(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                {"end":"1799366400","start":"1798761600"},
+                {"from":"1798761600","until":"1830297600"},
+                "0x255a74b28d404f0a6f5818f1b429df3cb0d17f1b1f575b5649f87fb3cc174051",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"commitment":"0x255a74b28d404f0a6f5818f1b429df3cb0d17f1b1f575b5649f87fb3cc174051","right_id":"8"}
+
+replay-aborted-request-for-8 — f6ed33be0b8b1bab1f1a36a140ec7606dfa36f42dba58a3d42c0369a93d6a40a
+  ✓ no record contents in 3 layers (10008 bytes: envelope, result, meta)
+  call        request_record(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "8",
+                "0x11cdfb7278e5825ea78d5963f33b235acb066a2fa106d3c6613c0afbf6b1972b",
+                5840574,
+              )
+  event topics ["rec_req","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840574,"key_hash":"0x11cdfb7278e5825ea78d5963f33b235acb066a2fa106d3c6613c0afbf6b1972b","request_id":"10","right_id":"8"}
+
+replay-aborted-request-for-7 — 4113ff00e7f820128337d2163dc9fdbf190d79313c05f5c98f9b7f0041e29f00
+  ✓ no record contents in 3 layers (10216 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "7",
+                "0x8b442dbde4a40c01afd3975c48435ec3432f694247672d9a9727e9e63843dc10",
+                5840575,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5840575,"key_hash":"0x8b442dbde4a40c01afd3975c48435ec3432f694247672d9a9727e9e63843dc10","request_id":"11","right_id":"7"}
+
+Result
+  ✓ No inventory record value appears in any of these 4 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 0 record(s) given, or s and h of 4 holder secret(s) given, or s' of 0 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • .secrets/CCSL6J5X/step4/replay-week-5-owner-d868be96.json
+    • .secrets/CCSL6J5X/step4/replay-week-5-owner-a557210f.json
+    • .secrets/CCSL6J5X/step4/replay-week-6-buyer-23224d64.json
+    • .secrets/CCSL6J5X/step4/replay-week-6-buyer-9fab0812.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

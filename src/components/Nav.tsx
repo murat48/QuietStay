@@ -51,7 +51,7 @@ export function Nav() {
     ...PUBLIC_SCREENS,
     { href: "/issue", label: issueLabel },
     // Paid offers and escrows (Phase 3): for anyone signed in.
-    ...(signedIn ? [{ href: "/stays", label: "Offers & stays" }] : []),
+    ...(signedIn ? [{ href: "/stays", label: "Offers & stays" }, { href: "/swap", label: "Swap" }] : []),
     ...(showTransfer ? [{ href: "/transfer", label: "Transfer", badge: awaiting }] : []),
   ];
 

@@ -15,6 +15,13 @@
  *   - `collect` | `confirm` | `refund`             { escrowId }
  *   - `report_problem` | `submit_evidence`         { escrowId, evidenceHash }
  *
+ * Phase 3 Step 4 actions (§7), without a proof:
+ *   - `offer_swap`                { giveRight, wantRight, nextSecretHash, requestId, expiresLedger }
+ *   - `cancel_swap`               { swapId }
+ *   - `withdraw_swap_acceptance`  { swapId }
+ *
+ * Accepting and completing a swap carry a proof and go through `/api/tx/swap`.
+ *
  * `price` is a decimal string of USDC's smallest units, never a float. An
  * offer's simulation records the buyer's USDC `approve` as part of the same
  * authorization, which the buyer's wallet or passkey signs.
@@ -32,6 +39,9 @@ import {
   ContractCallError,
   buildCancelOfferTx,
   buildCancelRecordRequestTx,
+  buildCancelSwapTx,
+  buildOfferSwapTx,
+  buildWithdrawSwapTx,
   buildEscrowTx,
   buildListTx,
   buildRentalOfferTx,
@@ -53,6 +63,9 @@ const ACTIONS = [
   "create_sale_offer",
   "create_rental_offer",
   "cancel_offer",
+  "offer_swap",
+  "cancel_swap",
+  "withdraw_swap_acceptance",
   ...ESCROW_ACTIONS,
 ] as const;
 type Action = (typeof ACTIONS)[number];
@@ -74,6 +87,9 @@ interface BuildRequest {
   expiresLedger?: number;
   expiresAt?: number;
   checkIn?: number;
+  giveRight?: number;
+  wantRight?: number;
+  swapId?: number;
 }
 
 class BadRequest extends Error {}
@@ -126,6 +142,19 @@ function build(body: BuildRequest, by: string) {
       });
     case "cancel_offer":
       return buildCancelOfferTx({ buyer: by, offerId: int(body.offerId, "offerId") });
+    case "offer_swap":
+      return buildOfferSwapTx({
+        maker: by,
+        giveRight: int(body.giveRight, "giveRight"),
+        wantRight: int(body.wantRight, "wantRight"),
+        nextSecretHash: decimal(body.nextSecretHash, "nextSecretHash"),
+        requestId: int(body.requestId, "requestId"),
+        expiresLedger: int(body.expiresLedger, "expiresLedger"),
+      });
+    case "cancel_swap":
+      return buildCancelSwapTx({ maker: by, swapId: int(body.swapId, "swapId") });
+    case "withdraw_swap_acceptance":
+      return buildWithdrawSwapTx({ taker: by, swapId: int(body.swapId, "swapId") });
     default: {
       const action = body.action as EscrowAction;
       if (!ESCROW_ACTIONS.includes(action)) throw new BadRequest(`unknown action ${String(body.action)}`);

@@ -1,0 +1,182 @@
+  run 2026-11-20T23:13:10.845Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-20-step4-CCSL6J5X-requests-rented.txt --tx requests-rented-issue-week-1-to-qs-owner=14db4ccb6b2d573a8983709f840e450d3f95da80b4bf8c80a88aef9ebe5b2c34 --tx requests-rented-issue-week-2-to-qs-buyer=b8bc70c44a454b9d2ac7d514fd64bf9ae147b11ee42f2109f959fa5eb8eba78f --tx requests-rented-maker-s-record-request-for-4=249de4e9172069353b9d90f52305a3513b34dcef519f32edc68c71897331adad --tx requests-rented-taker-s-record-request-for-3=99d19c8e82a38788aadc098682abbf0ccdbcff4c461e91d9fe3a848925730152 --tx requests-rented-offer-swap-maker-=891cb669fc5e79b952e27f3e4fe7dab0078a09d0e67290882d1c7c0e1985a65a --tx requests-rented-taker-s-request-for-the-wrong-week-4=8849d368eed83a1aab0fa49b1b954e844c0574347034235f8a96b161b76bb157 --tx rejected-accept-with-a-record-request-for-the-wrong-week=b24582e8cc18ad9c199cbd7f5ebe588f18adc44192b1ae803158e157ceea6202 --tx requests-rented-someone-else-s-qs-renter-request-for-3=efe400b679ccac6ea48f18d768ece641eed6ef92f37af80571834af4651e7457 --tx rejected-someone-else-accepts-with-the-holder-s-proof=8b8ef24ab833874c6527252f7e4157d6db0c7949d6eb84c7a8df72fb0a40c47c --tx rejected-someone-else-accepts-with-a-proof-of-their-own=7e675e577c47fc9d9deebe3434041b56931ae23643b11801bb56e94324c2562c --tx requests-rented-accept-swap-taker-=a6591c4b822faf82f9e365fc5bb063c4916fe6c604da7700c162c102a220365c --tx requests-rented-the-taker-rents-4-out-to-qs-renter-transfer-rental-=60d31006ef16b73c352697ded51b94718e7646d5929c0bd0ef0a8d7c566f2c52 --tx rejected-complete-swap-after-the-taker-rented-the-week-out=fd6a040f7b4e869a0232198fb322539d4c94855080cad96d162df3b19798070d --tx requests-rented-withdraw-swap-acceptance-taker-=c70fc6e703de6e2d207d9ca5d1462c2a5cf9e680a08feb5301564522eafe4b5b --tx rejected-complete-swap-after-the-acceptance-was-withdrawn=0b55c8ee99b2b2c3dd6a983412b2df34a66af4dcaecdc44b19c7e6015e45ddf6 --record /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-week-1-record.json --record /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-week-2-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-week-1-owner-40a737e4.json --secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-week-2-buyer-eafcd33c.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-maker-next-4-8447022e.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-taker-next-3-0eba02f4.json
+
+Checking on-chain exposure
+  15 transactions, 71 forbidden values
+  contract the contracts these testnet transactions call
+
+requests-rented-issue-week-1-to-qs-owner — 14db4ccb6b2d573a8983709f840e450d3f95da80b4bf8c80a88aef9ebe5b2c34
+  ✓ no record contents in 3 layers (10400 bytes: envelope, result, meta)
+  call        issue(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                {"end":"1796342400","start":"1795737600"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x21c4cad0a81945fc456d2d0b7253176a2e03b7df0ec7a9fdadc623f6b33e810c",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"commitment":"0x21c4cad0a81945fc456d2d0b7253176a2e03b7df0ec7a9fdadc623f6b33e810c","right_id":"3"}
+
+requests-rented-issue-week-2-to-qs-buyer — b8bc70c44a454b9d2ac7d514fd64bf9ae147b11ee42f2109f959fa5eb8eba78f
+  ✓ no record contents in 3 layers (10400 bytes: envelope, result, meta)
+  call        issue(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                {"end":"1796947200","start":"1796342400"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x450b82248c0296a7f0e6d8868612469e949bd41ae13dc24f779d179e62c8a34f",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"commitment":"0x450b82248c0296a7f0e6d8868612469e949bd41ae13dc24f779d179e62c8a34f","right_id":"4"}
+
+requests-rented-maker-s-record-request-for-4 — 249de4e9172069353b9d90f52305a3513b34dcef519f32edc68c71897331adad
+  ✓ no record contents in 3 layers (9920 bytes: envelope, result, meta)
+  call        request_record(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "4",
+                "0xa6dd38aad5d43e6136bbf4a64f2a2f31993974337f37884dace073e452bb83a1",
+                5840536,
+              )
+  event topics ["rec_req","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840536,"key_hash":"0xa6dd38aad5d43e6136bbf4a64f2a2f31993974337f37884dace073e452bb83a1","request_id":"3","right_id":"4"}
+
+requests-rented-taker-s-record-request-for-3 — 99d19c8e82a38788aadc098682abbf0ccdbcff4c461e91d9fe3a848925730152
+  ✓ no record contents in 3 layers (9920 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "3",
+                "0xb78426cbc65f4ba36a46efbd0d6d03d7eed21c74a442cfc8fdd767e5384ba1a5",
+                5840537,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5840537,"key_hash":"0xb78426cbc65f4ba36a46efbd0d6d03d7eed21c74a442cfc8fdd767e5384ba1a5","request_id":"4","right_id":"3"}
+
+requests-rented-offer-swap-maker- — 891cb669fc5e79b952e27f3e4fe7dab0078a09d0e67290882d1c7c0e1985a65a
+  ✓ no record contents in 3 layers (11112 bytes: envelope, result, meta)
+  call        offer_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "3",
+                "4",
+                "39841240042340364476349841473799426804948537674872782546052979887516895202754",
+                "3",
+                5840538,
+              )
+  event topics ["swap_off","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840538,"give_right":"3","maker_key_hash":"0xa6dd38aad5d43e6136bbf4a64f2a2f31993974337f37884dace073e452bb83a1","maker_next_secret_hash":"39841240042340364476349841473799426804948537674872782546052979887516895202754","swap_id":"2","want_right":"4"}
+
+requests-rented-taker-s-request-for-the-wrong-week-4 — 8849d368eed83a1aab0fa49b1b954e844c0574347034235f8a96b161b76bb157
+  ✓ no record contents in 3 layers (10128 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "4",
+                "0x9464bd57e8f90a897b6815fc805091f4ba1017f440f4c7f3c068396a75bd54f7",
+                5840539,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5840539,"key_hash":"0x9464bd57e8f90a897b6815fc805091f4ba1017f440f4c7f3c068396a75bd54f7","request_id":"5","right_id":"4"}
+
+rejected-accept-with-a-record-request-for-the-wrong-week — b24582e8cc18ad9c199cbd7f5ebe588f18adc44192b1ae803158e157ceea6202
+  ✓ no record contents in 3 layers (6648 bytes: envelope, result, meta)
+  call        accept_swap(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "2",
+                "21043458239264433093172053225494927732019715246018128805477666684789616224966",
+                "5",
+                {"a":"0x1204333d8e8bfcd7…bb37fea2 (96 bytes)","b":"0x010da79cdc2ac8c4…c99751b6 (192 bytes)","c":"0x0b3c8a30f4043351…2a19a747 (96 bytes)"},
+                ["31229920082285891496866371362878474077371966770950420262969533401911433667407","17040006674161867973626581386740494372734014093427671781399533493098921683742","4","158601910193474826750547412602999551399","170114564257537319500281297001123147738","90770094754120608982862790096888743153","178413295460492758105019939507572692766","18446744073709551619","5839239","39841240042340364476349841473799426804948537674872782546052979887516895202754","9155973260008660688479043080429003369563854138034433722631191059956270568900"],
+              )
+
+requests-rented-someone-else-s-qs-renter-request-for-3 — efe400b679ccac6ea48f18d768ece641eed6ef92f37af80571834af4651e7457
+  ✓ no record contents in 3 layers (9920 bytes: envelope, result, meta)
+  call        request_record(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "3",
+                "0xff950b0b237cce3a8df9619bdb21ed10412a7284591a9b66a8d56cbeaaa2c34a",
+                5840541,
+              )
+  event topics ["rec_req","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"expires_ledger":5840541,"key_hash":"0xff950b0b237cce3a8df9619bdb21ed10412a7284591a9b66a8d56cbeaaa2c34a","request_id":"6","right_id":"3"}
+
+rejected-someone-else-accepts-with-the-holder-s-proof — 8b8ef24ab833874c6527252f7e4157d6db0c7949d6eb84c7a8df72fb0a40c47c
+  ✓ no record contents in 3 layers (6648 bytes: envelope, result, meta)
+  call        accept_swap(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "2",
+                "21043458239264433093172053225494927732019715246018128805477666684789616224966",
+                "6",
+                {"a":"0x1204333d8e8bfcd7…bb37fea2 (96 bytes)","b":"0x010da79cdc2ac8c4…c99751b6 (192 bytes)","c":"0x0b3c8a30f4043351…2a19a747 (96 bytes)"},
+                ["31229920082285891496866371362878474077371966770950420262969533401911433667407","17040006674161867973626581386740494372734014093427671781399533493098921683742","4","158601910193474826750547412602999551399","170114564257537319500281297001123147738","90770094754120608982862790096888743153","178413295460492758105019939507572692766","18446744073709551619","5839239","39841240042340364476349841473799426804948537674872782546052979887516895202754","9155973260008660688479043080429003369563854138034433722631191059956270568900"],
+              )
+
+rejected-someone-else-accepts-with-a-proof-of-their-own — 7e675e577c47fc9d9deebe3434041b56931ae23643b11801bb56e94324c2562c
+  ✓ no record contents in 3 layers (6648 bytes: envelope, result, meta)
+  call        accept_swap(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "2",
+                "21043458239264433093172053225494927732019715246018128805477666684789616224966",
+                "6",
+                {"a":"0x03f23c2557b6e110…4b6b5932 (96 bytes)","b":"0x08fd1c5635aaf8de…d874cd39 (192 bytes)","c":"0x172306ccce73a3fc…0c98c3c9 (96 bytes)"},
+                ["41364912766949104785673839841386283134042248240871753684590433915037754712232","25181789812698407824987412564049661248994852151465071388353530590456312374108","4","119936345663412135197073293566390678772","121829635756908778636933183208725995740","90770094754120608982862790096888743153","178413295460492758105019939507572692766","18446744073709551619","5839243","39841240042340364476349841473799426804948537674872782546052979887516895202754","9155973260008660688479043080429003369563854138034433722631191059956270568900"],
+              )
+
+requests-rented-accept-swap-taker- — a6591c4b822faf82f9e365fc5bb063c4916fe6c604da7700c162c102a220365c
+  ✓ no record contents in 3 layers (9652 bytes: envelope, result, meta)
+  call        accept_swap(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "2",
+                "21043458239264433093172053225494927732019715246018128805477666684789616224966",
+                "4",
+                {"a":"0x1204333d8e8bfcd7…bb37fea2 (96 bytes)","b":"0x010da79cdc2ac8c4…c99751b6 (192 bytes)","c":"0x0b3c8a30f4043351…2a19a747 (96 bytes)"},
+                ["31229920082285891496866371362878474077371966770950420262969533401911433667407","17040006674161867973626581386740494372734014093427671781399533493098921683742","4","158601910193474826750547412602999551399","170114564257537319500281297001123147738","90770094754120608982862790096888743153","178413295460492758105019939507572692766","18446744073709551619","5839239","39841240042340364476349841473799426804948537674872782546052979887516895202754","9155973260008660688479043080429003369563854138034433722631191059956270568900"],
+              )
+  event topics ["swap_acc","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expiry_ledger":5839239,"swap_id":"2","taker_key_hash":"0xb78426cbc65f4ba36a46efbd0d6d03d7eed21c74a442cfc8fdd767e5384ba1a5","taker_next_secret_hash":"21043458239264433093172053225494927732019715246018128805477666684789616224966"}
+
+requests-rented-the-taker-rents-4-out-to-qs-renter-transfer-rental- — 60d31006ef16b73c352697ded51b94718e7646d5929c0bd0ef0a8d7c566f2c52
+  ✓ no record contents in 3 layers (7992 bytes: envelope, result, meta)
+  call        transfer(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "4",
+                "1796947200",
+                {"a":"0x0a52ed53a86fe099…a3b2d525 (96 bytes)","b":"0x0d23d64b6aded0f4…4dd28b49 (192 bytes)","c":"0x04fc2208bdceb861…974b58fa (96 bytes)"},
+                ["31229920082285891496866371362878474077371966770950420262969533401911433667407","45962787965675040251014418418298231100362918142454642660058456719741243487198","4","158601910193474826750547412602999551399","170114564257537319500281297001123147738","119936345663412135197073293566390678772","121829635756908778636933183208725995740","1796947200","5839245","0","36745009904274803436000760020155205463462431264692380484336665513402877829309"],
+              )
+  event topics ["transfer","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"commitment":"0x450b82248c0296a7f0e6d8868612469e949bd41ae13dc24f779d179e62c8a34f","expires_at":"1796947200","right_id":"4"}
+
+rejected-complete-swap-after-the-taker-rented-the-week-out — fd6a040f7b4e869a0232198fb322539d4c94855080cad96d162df3b19798070d
+  ✓ no record contents in 3 layers (6824 bytes: envelope, result, meta)
+  call        complete_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "2",
+                {"a":"0x106a1f10392a7980…388ad569 (96 bytes)","b":"0x08e45fbf5678af17…248ca9d7 (192 bytes)","c":"0x134273db97b71b40…4c841eaf (96 bytes)"},
+                ["15274025806078174472194050854847515979844066333338075947128154646975031968012","14636463527360458934632826029869759324436871817902836475453161922746917638562","3","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","18446744073709551620","5839245","21043458239264433093172053225494927732019715246018128805477666684789616224966","2901359518875019744067687549893438916170288978722342626350675368354609531631"],
+              )
+
+requests-rented-withdraw-swap-acceptance-taker- — c70fc6e703de6e2d207d9ca5d1462c2a5cf9e680a08feb5301564522eafe4b5b
+  ✓ no record contents in 3 layers (5792 bytes: envelope, result, meta)
+  call        withdraw_swap_acceptance(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "2",
+              )
+  event topics ["swap_wd","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"swap_id":"2"}
+
+rejected-complete-swap-after-the-acceptance-was-withdrawn — 0b55c8ee99b2b2c3dd6a983412b2df34a66af4dcaecdc44b19c7e6015e45ddf6
+  ✓ no record contents in 3 layers (6824 bytes: envelope, result, meta)
+  call        complete_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "2",
+                {"a":"0x106a1f10392a7980…388ad569 (96 bytes)","b":"0x08e45fbf5678af17…248ca9d7 (192 bytes)","c":"0x134273db97b71b40…4c841eaf (96 bytes)"},
+                ["15274025806078174472194050854847515979844066333338075947128154646975031968012","14636463527360458934632826029869759324436871817902836475453161922746917638562","3","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","18446744073709551620","5839245","21043458239264433093172053225494927732019715246018128805477666684789616224966","2901359518875019744067687549893438916170288978722342626350675368354609531631"],
+              )
+
+Result
+  ✓ No inventory record value appears in any of these 15 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 2 record(s) given, or s and h of 2 holder secret(s) given, or s' of 2 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-week-1-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-week-2-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-week-1-owner-40a737e4.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-week-2-buyer-eafcd33c.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-maker-next-4-8447022e.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/requests-rented-taker-next-3-0eba02f4.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

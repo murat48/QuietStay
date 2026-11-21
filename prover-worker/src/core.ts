@@ -88,7 +88,7 @@ export function makeProver(poseidon: Poseidon, groth16: Groth16, keys: () => Pro
       const d = await digest(record);
       const [fromHi, fromLo] = splitAddress(ctx.from);
       const [toHi, toLo] = splitAddress(ctx.to);
-      const mode = transferMode(ctx.expiresAt);
+      const mode = transferMode(ctx.expiresAt, ctx.swapFor);
       const h = H([secret]);
 
       const values: Record<(typeof PUBLIC_SIGNALS)[number], bigint> = {

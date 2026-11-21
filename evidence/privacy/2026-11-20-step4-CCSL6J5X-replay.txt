@@ -1,0 +1,221 @@
+  run 2026-11-20T23:17:18.052Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-20-step4-CCSL6J5X-replay.txt --tx replay-issue-week-5-to-qs-owner=8f5eedc9a4ee72dc14501fb1ef05a1d7f77765e16b2bdd04118d84027fbe9ea4 --tx replay-issue-week-6-to-qs-buyer=757fb68614f406cd0e8bc9588f65a7fbda22b7f53dbc9ffd69647a3f3eecd559 --tx replay-maker-s-record-request-for-10=b775ad5fb3da095923b7bae9375d223c3cc76b427e0c8f7cae2224e571075a44 --tx replay-taker-s-record-request-for-9=968669d5d17982ee742bd524d0d1d03586d88da8c11832f91bb7195cbb6f3d17 --tx replay-offer-swap-maker-=4b5c1496ba6802ff7fc757c7f4022b1ee271a67c8d54f845f9ec31a15665841e --tx replay-accept-swap-taker-=ab1187fe9dde7164ca4eb485101bbf5963296b13b85f7ddc5784925d0195773d --tx replay-complete-swap-4-maker-=a9d3b3e1b207bc5fa04829e7a37a8a63b7da34728bf1396fdfbb776a38d82d7c --tx replay-maker-s-record-request-for-9-swap-back-=de1c9831c118b895509788d46ada00b25c5602c4e73d3ced89b427052d187f88 --tx replay-taker-s-record-request-for-10-swap-back-=dcb3ccb87ea6ac9653dfa1a0f8bf2b9e3b58c416cf2aa63286c1833dad85c17c --tx replay-offer-swap-back-maker-h-the-owner-s-original-h=17d0dc7ff863323d4966b27bc86c2c0f0ea40df8333f026ead5ddea27f31d229 --tx replay-accept-swap-back-taker-h-the-buyer-s-original-h=dc7ce15625efe105b7cfcdea6fdeb8d80302500cd2c66f65db8d638b98af2367 --tx replay-complete-swap-back-5-maker-=172e7553afcb026068d27690974f755ba84415d3c354cad369f94920b5c8d7db --tx replay-maker-s-record-request-for-10-replay-=53ea069fdd95ae8a23efad84770ffe2dc9d6ce62110a92015c59ea6d182b5d4a --tx replay-taker-s-record-request-for-9-replay-=eb7dbbcd62cbe81118768c82b622e73880c06daa1fa7af6dc739e15d9211c20a --tx replay-offer-swap-again-as-swap-1=d03cc5bd5dce7d6a725a9eb6c247b1dc886de78b638c56a985c20ac806b7fed4 --tx rejected-swap-4-s-taker-proof-replayed-after-the-swap-back=5902f48a580fe3843686b5153de72c82496678e3888255c9969e9420fa90dc15 --tx replay-cancel-swap-6-maker-clean-up-=1c71291e2dbdc45f314a97052cc518661e6b139bdbca724de87bfa3b6e79cef2 --record /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-week-5-record.json --record /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-week-6-record.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-week-5-owner-a557210f.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-week-6-buyer-9fab0812.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-maker-next-10-b1129a1b.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-taker-next-9-6d1ec678.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-taker-next-replay-34669b0d.json
+
+Checking on-chain exposure
+  17 transactions, 71 forbidden values
+  contract the contracts these testnet transactions call
+
+replay-issue-week-5-to-qs-owner — 8f5eedc9a4ee72dc14501fb1ef05a1d7f77765e16b2bdd04118d84027fbe9ea4
+  ✓ no record contents in 3 layers (10488 bytes: envelope, result, meta)
+  call        issue(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                {"end":"1798761600","start":"1798156800"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x4aced842608c72aee08d9432507eb0802f75aaa320b5d0f3a8bf81babb0ee825",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"commitment":"0x4aced842608c72aee08d9432507eb0802f75aaa320b5d0f3a8bf81babb0ee825","right_id":"9"}
+
+replay-issue-week-6-to-qs-buyer — 757fb68614f406cd0e8bc9588f65a7fbda22b7f53dbc9ffd69647a3f3eecd559
+  ✓ no record contents in 3 layers (10488 bytes: envelope, result, meta)
+  call        issue(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                {"end":"1796342400","start":"1795737600"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x3a67e7e7e44c8f3d94c207ff7df341418a5bee404d740d487c968b8fefe79068",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"commitment":"0x3a67e7e7e44c8f3d94c207ff7df341418a5bee404d740d487c968b8fefe79068","right_id":"10"}
+
+replay-maker-s-record-request-for-10 — b775ad5fb3da095923b7bae9375d223c3cc76b427e0c8f7cae2224e571075a44
+  ✓ no record contents in 3 layers (10216 bytes: envelope, result, meta)
+  call        request_record(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "10",
+                "0xcd9bcd7c60d6d73fbae70f937704bfe6241eb98ad68f34c520881bde6c828ed4",
+                5840581,
+              )
+  event topics ["rec_req","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840581,"key_hash":"0xcd9bcd7c60d6d73fbae70f937704bfe6241eb98ad68f34c520881bde6c828ed4","request_id":"12","right_id":"10"}
+
+replay-taker-s-record-request-for-9 — 968669d5d17982ee742bd524d0d1d03586d88da8c11832f91bb7195cbb6f3d17
+  ✓ no record contents in 3 layers (10324 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "9",
+                "0xebc4fd77d2c3b3dea5e568786c9900e7df82ef83ff0e2419e54b104335515ee9",
+                5840582,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5840582,"key_hash":"0xebc4fd77d2c3b3dea5e568786c9900e7df82ef83ff0e2419e54b104335515ee9","request_id":"13","right_id":"9"}
+
+replay-offer-swap-maker- — 4b5c1496ba6802ff7fc757c7f4022b1ee271a67c8d54f845f9ec31a15665841e
+  ✓ no record contents in 3 layers (11156 bytes: envelope, result, meta)
+  call        offer_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "9",
+                "10",
+                "8198380197287770149614768462612959107065397645458431286600805576298317372472",
+                "12",
+                5840583,
+              )
+  event topics ["swap_off","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840583,"give_right":"9","maker_key_hash":"0xcd9bcd7c60d6d73fbae70f937704bfe6241eb98ad68f34c520881bde6c828ed4","maker_next_secret_hash":"8198380197287770149614768462612959107065397645458431286600805576298317372472","swap_id":"4","want_right":"10"}
+
+replay-accept-swap-taker- — ab1187fe9dde7164ca4eb485101bbf5963296b13b85f7ddc5784925d0195773d
+  ✓ no record contents in 3 layers (9676 bytes: envelope, result, meta)
+  call        accept_swap(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "4",
+                "19332292715956393014251533704878201382173187041066685526197812165108890467361",
+                "13",
+                {"a":"0x107bcdd1d99d67cb…ecad4aa9 (96 bytes)","b":"0x15b013d03af6a8b4…ac4b708a (192 bytes)","c":"0x041aee9524f5db21…90896763 (96 bytes)"},
+                ["26417731020698110109343781248031553592854228760671932108580985774393510039656","12571276540904216567655017793844011860232131090362244303037907559001622835566","10","158601910193474826750547412602999551399","170114564257537319500281297001123147738","90770094754120608982862790096888743153","178413295460492758105019939507572692766","18446744073709551625","5839284","8198380197287770149614768462612959107065397645458431286600805576298317372472","23466671224197382034786722361913079354212719994676035713564602653685016850588"],
+              )
+  event topics ["swap_acc","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expiry_ledger":5839284,"swap_id":"4","taker_key_hash":"0xebc4fd77d2c3b3dea5e568786c9900e7df82ef83ff0e2419e54b104335515ee9","taker_next_secret_hash":"19332292715956393014251533704878201382173187041066685526197812165108890467361"}
+
+replay-complete-swap-4-maker- — a9d3b3e1b207bc5fa04829e7a37a8a63b7da34728bf1396fdfbb776a38d82d7c
+  ✓ no record contents in 3 layers (14492 bytes: envelope, result, meta)
+  call        complete_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "4",
+                {"a":"0x14cc7a69f3778c5a…24c19e3a (96 bytes)","b":"0x0e3cbd73e9d1217e…7926c80b (192 bytes)","c":"0x15b072867a449785…fbe646f0 (96 bytes)"},
+                ["33836613857241203653586963693491444333675408967201550583965997572696201685029","3344272922990519026446243648052044375987152081404688903422890955110813215294","9","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","18446744073709551626","5839286","19332292715956393014251533704878201382173187041066685526197812165108890467361","4572953812170597841301472643165375279098669267645553719914900459835988545211"],
+              )
+  event topics ["transfer","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"commitment":"0x33e1aa4c68d698fa7e2b63717f5401842e327e9d353eef6a5603fe6f58f2709c","expires_at":null,"right_id":"10"}
+  event topics ["transfer","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"commitment":"0x0a1c333c11b24a03d1712e414cbd1b10858efa07d940c03160aa88732a028ebb","expires_at":null,"right_id":"9"}
+  event topics ["swap","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"give_commitment":"0x0a1c333c11b24a03d1712e414cbd1b10858efa07d940c03160aa88732a028ebb","give_right":"9","swap_id":"4","want_commitment":"0x33e1aa4c68d698fa7e2b63717f5401842e327e9d353eef6a5603fe6f58f2709c","want_right":"10"}
+
+replay-maker-s-record-request-for-9-swap-back- — de1c9831c118b895509788d46ada00b25c5602c4e73d3ced89b427052d187f88
+  ✓ no record contents in 3 layers (10216 bytes: envelope, result, meta)
+  call        request_record(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "9",
+                "0xb4d61ad0b6f689101a665e437d64f26efcd3255bf71ffb66021f726e07f662d5",
+                5840587,
+              )
+  event topics ["rec_req","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840587,"key_hash":"0xb4d61ad0b6f689101a665e437d64f26efcd3255bf71ffb66021f726e07f662d5","request_id":"14","right_id":"9"}
+
+replay-taker-s-record-request-for-10-swap-back- — dcb3ccb87ea6ac9653dfa1a0f8bf2b9e3b58c416cf2aa63286c1833dad85c17c
+  ✓ no record contents in 3 layers (10324 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "10",
+                "0x7442457a6f10e81f9575a71c8f1b4ef5946452ab808854694678e209f91bf1e9",
+                5840589,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5840589,"key_hash":"0x7442457a6f10e81f9575a71c8f1b4ef5946452ab808854694678e209f91bf1e9","request_id":"15","right_id":"10"}
+
+replay-offer-swap-back-maker-h-the-owner-s-original-h — 17d0dc7ff863323d4966b27bc86c2c0f0ea40df8333f026ead5ddea27f31d229
+  ✓ no record contents in 3 layers (11156 bytes: envelope, result, meta)
+  call        offer_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "10",
+                "9",
+                "40159944249985390792715030108454858997657016496418521365271483289316979081958",
+                "14",
+                5840590,
+              )
+  event topics ["swap_off","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840590,"give_right":"10","maker_key_hash":"0xb4d61ad0b6f689101a665e437d64f26efcd3255bf71ffb66021f726e07f662d5","maker_next_secret_hash":"40159944249985390792715030108454858997657016496418521365271483289316979081958","swap_id":"5","want_right":"9"}
+
+replay-accept-swap-back-taker-h-the-buyer-s-original-h — dc7ce15625efe105b7cfcdea6fdeb8d80302500cd2c66f65db8d638b98af2367
+  ✓ no record contents in 3 layers (9676 bytes: envelope, result, meta)
+  call        accept_swap(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "5",
+                "19311068707424742855059984651169902159330207867077896669704851861908293178116",
+                "15",
+                {"a":"0x0b5c059384ef4518…433a3a56 (96 bytes)","b":"0x18d294e80649e126…a7e726ee (192 bytes)","c":"0x0253eb0bb7d34cc2…a80a2768 (96 bytes)"},
+                ["4572953812170597841301472643165375279098669267645553719914900459835988545211","26197595977425286201815511028197857667770170287368281707529554526119795665646","9","158601910193474826750547412602999551399","170114564257537319500281297001123147738","90770094754120608982862790096888743153","178413295460492758105019939507572692766","18446744073709551626","5839291","40159944249985390792715030108454858997657016496418521365271483289316979081958","33836613857241203653586963693491444333675408967201550583965997572696201685029"],
+              )
+  event topics ["swap_acc","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expiry_ledger":5839291,"swap_id":"5","taker_key_hash":"0x7442457a6f10e81f9575a71c8f1b4ef5946452ab808854694678e209f91bf1e9","taker_next_secret_hash":"19311068707424742855059984651169902159330207867077896669704851861908293178116"}
+
+replay-complete-swap-back-5-maker- — 172e7553afcb026068d27690974f755ba84415d3c354cad369f94920b5c8d7db
+  ✓ no record contents in 3 layers (14492 bytes: envelope, result, meta)
+  call        complete_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "5",
+                {"a":"0x15950c9feac7e281…dc79c5bd (96 bytes)","b":"0x00e6b5897ff03899…86d15006 (192 bytes)","c":"0x08462bd6135c9228…fd0fad4e (96 bytes)"},
+                ["23466671224197382034786722361913079354212719994676035713564602653685016850588","6499319313965566668221059195384141633418653879611335945618283201062131243185","10","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","18446744073709551625","5839292","19311068707424742855059984651169902159330207867077896669704851861908293178116","26417731020698110109343781248031553592854228760671932108580985774393510039656"],
+              )
+  event topics ["transfer","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"commitment":"0x4aced842608c72aee08d9432507eb0802f75aaa320b5d0f3a8bf81babb0ee825","expires_at":null,"right_id":"9"}
+  event topics ["transfer","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"commitment":"0x3a67e7e7e44c8f3d94c207ff7df341418a5bee404d740d487c968b8fefe79068","expires_at":null,"right_id":"10"}
+  event topics ["swap","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"give_commitment":"0x3a67e7e7e44c8f3d94c207ff7df341418a5bee404d740d487c968b8fefe79068","give_right":"10","swap_id":"5","want_commitment":"0x4aced842608c72aee08d9432507eb0802f75aaa320b5d0f3a8bf81babb0ee825","want_right":"9"}
+
+replay-maker-s-record-request-for-10-replay- — 53ea069fdd95ae8a23efad84770ffe2dc9d6ce62110a92015c59ea6d182b5d4a
+  ✓ no record contents in 3 layers (10216 bytes: envelope, result, meta)
+  call        request_record(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "10",
+                "0x237e9b6e36b69a2a5ef91134cb567fc78bbb7432d339fdca3ece6399eecf5eb3",
+                5840593,
+              )
+  event topics ["rec_req","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840593,"key_hash":"0x237e9b6e36b69a2a5ef91134cb567fc78bbb7432d339fdca3ece6399eecf5eb3","request_id":"16","right_id":"10"}
+
+replay-taker-s-record-request-for-9-replay- — eb7dbbcd62cbe81118768c82b622e73880c06daa1fa7af6dc739e15d9211c20a
+  ✓ no record contents in 3 layers (10324 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "9",
+                "0x32eb07c59426f7efe71507f05da43372be16d3a085136157be2b08a9455326e9",
+                5840594,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5840594,"key_hash":"0x32eb07c59426f7efe71507f05da43372be16d3a085136157be2b08a9455326e9","request_id":"17","right_id":"9"}
+
+replay-offer-swap-again-as-swap-1 — d03cc5bd5dce7d6a725a9eb6c247b1dc886de78b638c56a985c20ac806b7fed4
+  ✓ no record contents in 3 layers (11156 bytes: envelope, result, meta)
+  call        offer_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "9",
+                "10",
+                "8198380197287770149614768462612959107065397645458431286600805576298317372472",
+                "16",
+                5840595,
+              )
+  event topics ["swap_off","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"expires_ledger":5840595,"give_right":"9","maker_key_hash":"0x237e9b6e36b69a2a5ef91134cb567fc78bbb7432d339fdca3ece6399eecf5eb3","maker_next_secret_hash":"8198380197287770149614768462612959107065397645458431286600805576298317372472","swap_id":"6","want_right":"10"}
+
+rejected-swap-4-s-taker-proof-replayed-after-the-swap-back — 5902f48a580fe3843686b5153de72c82496678e3888255c9969e9420fa90dc15
+  ✓ no record contents in 3 layers (6680 bytes: envelope, result, meta)
+  call        accept_swap(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "6",
+                "37580107871813310203458230909686287063265841856691939352697009938249250143586",
+                "17",
+                {"a":"0x107bcdd1d99d67cb…ecad4aa9 (96 bytes)","b":"0x15b013d03af6a8b4…ac4b708a (192 bytes)","c":"0x041aee9524f5db21…90896763 (96 bytes)"},
+                ["26417731020698110109343781248031553592854228760671932108580985774393510039656","12571276540904216567655017793844011860232131090362244303037907559001622835566","10","158601910193474826750547412602999551399","170114564257537319500281297001123147738","90770094754120608982862790096888743153","178413295460492758105019939507572692766","18446744073709551625","5839284","8198380197287770149614768462612959107065397645458431286600805576298317372472","23466671224197382034786722361913079354212719994676035713564602653685016850588"],
+              )
+
+replay-cancel-swap-6-maker-clean-up- — 1c71291e2dbdc45f314a97052cc518661e6b139bdbca724de87bfa3b6e79cef2
+  ✓ no record contents in 3 layers (4260 bytes: envelope, result, meta)
+  call        cancel_swap(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "6",
+              )
+  event topics ["swap_cxl","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"swap_id":"6"}
+
+Result
+  ✓ No inventory record value appears in any of these 17 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 2 record(s) given, or s and h of 0 holder secret(s) given, or s' of 5 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-week-5-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-week-6-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-week-5-owner-a557210f.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-week-6-buyer-9fab0812.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-maker-next-10-b1129a1b.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-taker-next-9-6d1ec678.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CCSL6J5X/step4/replay-taker-next-replay-34669b0d.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

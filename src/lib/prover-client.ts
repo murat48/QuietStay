@@ -80,6 +80,7 @@ export const prover = {
         expiresAt: ctx.expiresAt === null ? null : ctx.expiresAt.toString(),
         expiryLedger: ctx.expiryLedger.toString(),
         nextSecretHash: ctx.nextSecretHash.toString(),
+        ...(ctx.swapFor === undefined ? {} : { swapFor: ctx.swapFor.toString() }),
       },
     }),
 };

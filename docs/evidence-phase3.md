@@ -156,3 +156,42 @@ Reproduce: `npx tsx scripts/step3-evidence.ts unaccepted-offer --contract <C…>
 (the readings are kept in `evidence/step3-testnet-CA4B3MIZ.json`, under
 `readings`). Privacy record:
 [`evidence/privacy/2026-11-20-step3-CA4B3MIZ-unaccepted-offer.txt`](../evidence/privacy/2026-11-20-step3-CA4B3MIZ-unaccepted-offer.txt).
+
+### Phase 3: a swap of two weeks, and every way it must fail
+
+**Claim:** two holders exchange weeks in one transaction that verifies both
+ownership proofs. Both weeks move with new commitments, or neither moves.
+Every refusal below was sent on purpose and refused by the contract's own
+check, with nothing moved.
+
+| | |
+| --- | --- |
+| Contract (testnet) | [`CCSL6J5X…ITK7`](https://stellar.expert/explorer/testnet/contract/CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7), WASM `76d69e79…dddde`, 2026-11-20 |
+| A completed swap (two proofs, one transaction) | [`bafd6e6f…9eb5`](https://stellar.expert/explorer/testnet/tx/bafd6e6fee71169c5258eec7b4ee250d756bf98d306d4ca97bd975c9f1a19eb5): 174,763,775 instructions simulated, 43.7% of the 400 M limit; fee 82,477 stroops |
+| The record requests, both directions, before the swap (D4a) | maker's for the taker's week [`249de4e9…adad`](https://stellar.expert/explorer/testnet/tx/249de4e9172069353b9d90f52305a3513b34dcef519f32edc68c71897331adad), taker's for the maker's week [`99d19c8e…0152`](https://stellar.expert/explorer/testnet/tx/99d19c8e82a38788aadc098682abbf0ccdbcff4c461e91d9fe3a848925730152). The offer [`891cb669…a65a`](https://stellar.expert/explorer/testnet/tx/891cb669fc5e79b952e27f3e4fe7dab0078a09d0e67290882d1c7c0e1985a65a) consumes the first, the acceptance [`a6591c4b…365c`](https://stellar.expert/explorer/testnet/tx/a6591c4b822faf82f9e365fc5bb063c4916fe6c604da7700c162c102a220365c) the second |
+
+| Refused | Error | Transaction |
+| --- | --- | --- |
+| The taker rents the week out after accepting (D5: nothing is locked), then the maker completes | `#4` NotHolder | [`fd6a040f…070d`](https://stellar.expert/explorer/testnet/tx/fd6a040f7b4e869a0232198fb322539d4c94855080cad96d162df3b19798070d) (rental [`60d31006…2c52`](https://stellar.expert/explorer/testnet/tx/60d31006ef16b73c352697ded51b94718e7646d5929c0bd0ef0a8d7c566f2c52)) |
+| Completing after the taker withdrew ([`c70fc6e7…4b5b`](https://stellar.expert/explorer/testnet/tx/c70fc6e703de6e2d207d9ca5d1462c2a5cf9e680a08feb5301564522eafe4b5b)) | `#59` AcceptanceNotFound | [`0b55c8ee…ddf6`](https://stellar.expert/explorer/testnet/tx/0b55c8ee99b2b2c3dd6a983412b2df34a66af4dcaecdc44b19c7e6015e45ddf6) |
+| The taker's week already transferred: sold ([`f2ac186c…a611`](https://stellar.expert/explorer/testnet/tx/f2ac186c85bf2000e9ec668accdefb6a531e4c3896be83d63531d028a55ba611)) after accepting | `#19` CommitmentMismatch | [`3152ea4a…7a12`](https://stellar.expert/explorer/testnet/tx/3152ea4a301e7ff24915a2726786ce2a4a90759d1f634f97534c75b101ac7a12) |
+| Someone else accepts with the holder's proof | `#21` WrongAccount | [`8b8ef24a…c47c`](https://stellar.expert/explorer/testnet/tx/8b8ef24ab833874c6527252f7e4157d6db0c7949d6eb84c7a8df72fb0a40c47c) |
+| Someone else accepts with a proof of their own | `#19` CommitmentMismatch | [`7e675e57…562c`](https://stellar.expert/explorer/testnet/tx/7e675e577c47fc9d9deebe3434041b56931ae23643b11801bb56e94324c2562c) |
+| An acceptance with a record request for the wrong week | `#61` RequestRightMismatch | [`b24582e8…6202`](https://stellar.expert/explorer/testnet/tx/b24582e8cc18ad9c199cbd7f5ebe588f18adc44192b1ae803158e157ceea6202) |
+| A reused proof: swap ([`a9d3b3e1…2d7c`](https://stellar.expert/explorer/testnet/tx/a9d3b3e1b207bc5fa04829e7a37a8a63b7da34728bf1396fdfbb776a38d82d7c)), swap back to the original secrets ([`172e7553…d7db`](https://stellar.expert/explorer/testnet/tx/172e7553afcb026068d27690974f755ba84415d3c354cad369f94920b5c8d7db)), then the first swap's proof replayed | `#27` NullifierUsed | [`5902f48a…dc15`](https://stellar.expert/explorer/testnet/tx/5902f48a580fe3843686b5153de72c82496678e3888255c9969e9420fa90dc15) |
+| One side expired: the maker's week reached the end of its validity while the swap was pending | `#6` RightExpired | [`78106396…e8d5`](https://stellar.expert/explorer/testnet/tx/7810639603ca63c8855022b17de7a9b570e888cbd1da16b11043f3449e26e8d5) |
+| One side expired: the maker's proof past its window | `#24` ProofExpired | [`8b7b21e3…8273`](https://stellar.expert/explorer/testnet/tx/8b7b21e3a4b9191be819cc82cd528e2846edfee29287488916ad8097cee88273) |
+
+**What to look for:** on the completed swap's page, one `complete_swap`
+call, two `transfer` events (one each way, each with the week's new
+commitment) and one `swap` event. On each refused transaction, the result
+is `invokeHostFunctionTrapped` and the diagnostic events carry the error in
+the table. For the replay, the two commitments after the swap back are the
+ones the weeks were issued with, so only the nullifier stands between the old
+proof and a second swap.
+
+Reproduce: `npx tsx scripts/step4-swap-measure.ts` and
+`npx tsx scripts/step4-evidence.ts <requests-rented|sold|replay|expired>`,
+each with `--contract <C…>`. The log, with readings, is
+[`evidence/step4-testnet-CCSL6J5X.json`](../evidence/step4-testnet-CCSL6J5X.json).
+The privacy records are `evidence/privacy/2026-11-20-step4-CCSL6J5X-*.txt`.

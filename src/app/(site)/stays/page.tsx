@@ -22,7 +22,7 @@
  * The arbiter acts through `scripts/arbiter-resolve`, never through this page.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ProverNotice } from "@/components/ProverNotice";
 import { useWallet } from "@/components/WalletProvider";
@@ -180,9 +180,15 @@ function Stays() {
     void Promise.resolve().then(() => setFocus({ rightId: right, kind: q.get("kind") === "buy" ? "buy" : "rent" }));
   }, []);
 
+  // Only the latest read may set the data: an earlier one (made before the
+  // address was known, say) can finish later and would drop the account's
+  // balance, and with it the trustline notice (found by the Step 4 browser test).
+  const latestLoad = useRef(0);
   const load = useCallback(async () => {
+    const n = ++latestLoad.current;
     const res = await fetch(`/api/payments${address ? `?account=${address}` : ""}`);
     const body = (await res.json()) as Payments & { error?: string };
+    if (n !== latestLoad.current) return;
     if (!res.ok) throw new Error(body.error ?? "could not read the payment state");
     setData(body);
     const ids = new Set<number>([

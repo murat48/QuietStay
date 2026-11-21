@@ -361,6 +361,9 @@ function OpenSide({ blob }: { blob: string }) {
         <p>
           <a className="button primary" href={`/stays?right=${state.rightId}&kind=buy`} data-testid="make-offer-link">
             Make a paid offer for week #{state.rightId}
+          </a>{" "}
+          <a className="button" href="/swap" data-testid="swap-link">
+            Or continue a swap
           </a>
         </p>
       ) : null}

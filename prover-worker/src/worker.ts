@@ -70,7 +70,15 @@ type Request =
       op: "prove";
       record: JsonValue;
       secret: string;
-      ctx: { rightId: string; from: string; to: string; expiresAt: string | null; expiryLedger: string; nextSecretHash: string };
+      ctx: {
+        rightId: string;
+        from: string;
+        to: string;
+        expiresAt: string | null;
+        expiryLedger: string;
+        nextSecretHash: string;
+        swapFor?: string;
+      };
     };
 
 async function handle(req: Request): Promise<unknown> {
@@ -95,6 +103,7 @@ async function handle(req: Request): Promise<unknown> {
         expiresAt: c.expiresAt === null ? null : BigInt(c.expiresAt),
         expiryLedger: BigInt(c.expiryLedger),
         nextSecretHash: BigInt(c.nextSecretHash),
+        ...(c.swapFor === undefined ? {} : { swapFor: BigInt(c.swapFor) }),
       });
     }
     default:

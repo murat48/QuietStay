@@ -54,6 +54,637 @@
       "hash": "bafd6e6fee71169c5258eec7b4ee250d756bf98d306d4ca97bd975c9f1a19eb5",
       "ledger": 5838351,
       "fee_charged": 82477
+    },
+    {
+      "step": "requests-rented",
+      "label": "requests-rented: issue week 1 to qs-owner",
+      "hash": "14db4ccb6b2d573a8983709f840e450d3f95da80b4bf8c80a88aef9ebe5b2c34",
+      "ledger": 5838535,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67235
+    },
+    {
+      "step": "requests-rented",
+      "label": "requests-rented: issue week 2 to qs-buyer",
+      "hash": "b8bc70c44a454b9d2ac7d514fd64bf9ae147b11ee42f2109f959fa5eb8eba78f",
+      "ledger": 5838536,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67235
+    },
+    {
+      "step": "requests-rented",
+      "label": "requests-rented: maker's record request for #4",
+      "hash": "249de4e9172069353b9d90f52305a3513b34dcef519f32edc68c71897331adad",
+      "ledger": 5838537,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 28690
+    },
+    {
+      "step": "requests-rented",
+      "label": "requests-rented: taker's record request for #3",
+      "hash": "99d19c8e82a38788aadc098682abbf0ccdbcff4c461e91d9fe3a848925730152",
+      "ledger": 5838538,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 28690
+    },
+    {
+      "step": "requests-rented",
+      "label": "requests-rented: offer_swap (maker)",
+      "hash": "891cb669fc5e79b952e27f3e4fe7dab0078a09d0e67290882d1c7c0e1985a65a",
+      "ledger": 5838539,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12561
+    },
+    {
+      "step": "requests-rented",
+      "label": "requests-rented: taker's request for the wrong week, #4",
+      "hash": "8849d368eed83a1aab0fa49b1b954e844c0574347034235f8a96b161b76bb157",
+      "ledger": 5838540,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 11984
+    },
+    {
+      "step": "requests-rented",
+      "label": "rejected: accept with a record request for the wrong week",
+      "hash": "b24582e8cc18ad9c199cbd7f5ebe588f18adc44192b1ae803158e157ceea6202",
+      "ledger": 5838541,
+      "accepted": false,
+      "expected": "Error(Contract, #61)",
+      "errors": [
+        "Error(Contract, #61)",
+        "Error(Contract, #61)"
+      ],
+      "fee_charged": 65994
+    },
+    {
+      "step": "requests-rented",
+      "label": "requests-rented: someone else's (qs-renter) request for #3",
+      "hash": "efe400b679ccac6ea48f18d768ece641eed6ef92f37af80571834af4651e7457",
+      "ledger": 5838542,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 28690
+    },
+    {
+      "step": "requests-rented",
+      "label": "rejected: someone else accepts with the holder's proof",
+      "hash": "8b8ef24ab833874c6527252f7e4157d6db0c7949d6eb84c7a8df72fb0a40c47c",
+      "ledger": 5838543,
+      "accepted": false,
+      "expected": "Error(Contract, #21)",
+      "errors": [
+        "Error(Contract, #21)",
+        "Error(Contract, #21)"
+      ],
+      "fee_charged": 65994
+    },
+    {
+      "step": "requests-rented",
+      "label": "rejected: someone else accepts with a proof of their own",
+      "hash": "7e675e577c47fc9d9deebe3434041b56931ae23643b11801bb56e94324c2562c",
+      "ledger": 5838544,
+      "accepted": false,
+      "expected": "Error(Contract, #19)",
+      "errors": [
+        "Error(Contract, #19)",
+        "Error(Contract, #19)"
+      ],
+      "fee_charged": 65994
+    },
+    {
+      "step": "requests-rented",
+      "label": "requests-rented: accept_swap (taker)",
+      "hash": "a6591c4b822faf82f9e365fc5bb063c4916fe6c604da7700c162c102a220365c",
+      "ledger": 5838545,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 20175
+    },
+    {
+      "step": "requests-rented",
+      "label": "requests-rented: the taker rents #4 out to qs-renter (transfer, rental)",
+      "hash": "60d31006ef16b73c352697ded51b94718e7646d5929c0bd0ef0a8d7c566f2c52",
+      "ledger": 5838546,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 49769
+    },
+    {
+      "step": "requests-rented",
+      "label": "rejected: complete_swap after the taker rented the week out",
+      "hash": "fd6a040f7b4e869a0232198fb322539d4c94855080cad96d162df3b19798070d",
+      "ledger": 5838547,
+      "accepted": false,
+      "expected": "Error(Contract, #4)",
+      "errors": [
+        "Error(Contract, #4)",
+        "Error(Contract, #4)"
+      ],
+      "fee_charged": 135166
+    },
+    {
+      "step": "requests-rented",
+      "label": "requests-rented: withdraw_swap_acceptance (taker)",
+      "hash": "c70fc6e703de6e2d207d9ca5d1462c2a5cf9e680a08feb5301564522eafe4b5b",
+      "ledger": 5838548,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 7214
+    },
+    {
+      "step": "requests-rented",
+      "label": "rejected: complete_swap after the acceptance was withdrawn",
+      "hash": "0b55c8ee99b2b2c3dd6a983412b2df34a66af4dcaecdc44b19c7e6015e45ddf6",
+      "ledger": 5838549,
+      "accepted": false,
+      "expected": "Error(Contract, #59)",
+      "errors": [
+        "Error(Contract, #59)",
+        "Error(Contract, #59)"
+      ],
+      "fee_charged": 135166
+    },
+    {
+      "step": "sold",
+      "label": "sold: issue week 3 to qs-owner",
+      "hash": "cda33d82dcaf5a33e540c96a302e5f55f2fde69b00775ec927f2307f6e8d604f",
+      "ledger": 5838558,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67235
+    },
+    {
+      "step": "sold",
+      "label": "sold: issue week 4 to qs-buyer",
+      "hash": "42e40ef9ff335e9095441117c3b8fe88c7e93ed9dc7741a11d8f9d378040b793",
+      "ledger": 5838559,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67235
+    },
+    {
+      "step": "sold",
+      "label": "sold: maker's record request for #6",
+      "hash": "468c8ff508cf0072b07de8ed4f9817d8dce27299b9579dd7b07ebbb1d8f348be",
+      "ledger": 5838560,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 28690
+    },
+    {
+      "step": "sold",
+      "label": "sold: taker's record request for #5",
+      "hash": "dd8c9fddb88d26bb34f3b11221b1479c9f2fba531a95d0724a8feea0275892cb",
+      "ledger": 5838561,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 11984
+    },
+    {
+      "step": "sold",
+      "label": "sold: offer_swap (maker)",
+      "hash": "d99abe26b6ff05fb73a0bcc984f2ae07e1dc7aaf71847f17dde4b6bc0828a21d",
+      "ledger": 5838562,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12561
+    },
+    {
+      "step": "sold",
+      "label": "sold: accept_swap (taker)",
+      "hash": "eedf41b2bd5ca60b4ebb31a67b88c60f8659c4c2e77baf6fdafe30a17e586998",
+      "ledger": 5838563,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 20175
+    },
+    {
+      "step": "sold",
+      "label": "sold: qs-renter's record request to buy #6",
+      "hash": "af4cf0f94e445dbef456042dc22f4d604c8728cd190324fdeb9dc253d0b67141",
+      "ledger": 5838564,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 11984
+    },
+    {
+      "step": "sold",
+      "label": "sold: qs-renter's sale offer for #6 (1 USDC)",
+      "hash": "a9982f89af1366f047a2561cbccb02f025008dd08a33f4372a09c19ce5f5c82d",
+      "ledger": 5838565,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 41576
+    },
+    {
+      "step": "sold",
+      "label": "sold: the taker sells #6 to qs-renter (accept_sale)",
+      "hash": "f2ac186c85bf2000e9ec668accdefb6a531e4c3896be83d63531d028a55ba611",
+      "ledger": 5838566,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 69752
+    },
+    {
+      "step": "sold",
+      "label": "rejected: complete_swap after the taker sold the week",
+      "hash": "3152ea4a301e7ff24915a2726786ce2a4a90759d1f634f97534c75b101ac7a12",
+      "ledger": 5838567,
+      "accepted": false,
+      "expected": "Error(Contract, #19)",
+      "errors": [
+        "Error(Contract, #19)",
+        "Error(Contract, #19)"
+      ],
+      "fee_charged": 135164
+    },
+    {
+      "step": "replay",
+      "label": "replay: issue week 5 to qs-owner",
+      "hash": "27e059f15b1a6cc0af09f77510fca8f37b7f1dfc65af8f1d5f1ac61beca7778d",
+      "ledger": 5838573,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67258,
+      "note": "aborted first replay run: offer_swap was then refused in simulation (Error(Contract, #5): the taker's week was dated in 2027, not yet valid), nothing more was sent. Not used as swap evidence. Its two record files were overwritten by the rerun; privacy record evidence/privacy/2026-11-20-step4-CCSL6J5X-replay-aborted.txt checks the inventory values and the four holder secrets."
+    },
+    {
+      "step": "replay",
+      "label": "replay: issue week 6 to qs-buyer",
+      "hash": "5861dbc1ba066918d34a48a15e35c4b03a0d9e3e76970c671401db0cc2dfb1cc",
+      "ledger": 5838574,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67258,
+      "note": "aborted first replay run: offer_swap was then refused in simulation (Error(Contract, #5): the taker's week was dated in 2027, not yet valid), nothing more was sent. Not used as swap evidence. Its two record files were overwritten by the rerun; privacy record evidence/privacy/2026-11-20-step4-CCSL6J5X-replay-aborted.txt checks the inventory values and the four holder secrets."
+    },
+    {
+      "step": "replay",
+      "label": "replay: maker's record request for #8",
+      "hash": "f6ed33be0b8b1bab1f1a36a140ec7606dfa36f42dba58a3d42c0369a93d6a40a",
+      "ledger": 5838575,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 28711,
+      "note": "aborted first replay run: offer_swap was then refused in simulation (Error(Contract, #5): the taker's week was dated in 2027, not yet valid), nothing more was sent. Not used as swap evidence. Its two record files were overwritten by the rerun; privacy record evidence/privacy/2026-11-20-step4-CCSL6J5X-replay-aborted.txt checks the inventory values and the four holder secrets."
+    },
+    {
+      "step": "replay",
+      "label": "replay: taker's record request for #7",
+      "hash": "4113ff00e7f820128337d2163dc9fdbf190d79313c05f5c98f9b7f0041e29f00",
+      "ledger": 5838576,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12006,
+      "note": "aborted first replay run: offer_swap was then refused in simulation (Error(Contract, #5): the taker's week was dated in 2027, not yet valid), nothing more was sent. Not used as swap evidence. Its two record files were overwritten by the rerun; privacy record evidence/privacy/2026-11-20-step4-CCSL6J5X-replay-aborted.txt checks the inventory values and the four holder secrets."
+    },
+    {
+      "step": "replay",
+      "label": "replay: issue week 5 to qs-owner",
+      "hash": "8f5eedc9a4ee72dc14501fb1ef05a1d7f77765e16b2bdd04118d84027fbe9ea4",
+      "ledger": 5838580,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67258
+    },
+    {
+      "step": "replay",
+      "label": "replay: issue week 6 to qs-buyer",
+      "hash": "757fb68614f406cd0e8bc9588f65a7fbda22b7f53dbc9ffd69647a3f3eecd559",
+      "ledger": 5838581,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67258
+    },
+    {
+      "step": "replay",
+      "label": "replay: maker's record request for #10",
+      "hash": "b775ad5fb3da095923b7bae9375d223c3cc76b427e0c8f7cae2224e571075a44",
+      "ledger": 5838582,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12006
+    },
+    {
+      "step": "replay",
+      "label": "replay: taker's record request for #9",
+      "hash": "968669d5d17982ee742bd524d0d1d03586d88da8c11832f91bb7195cbb6f3d17",
+      "ledger": 5838583,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12222
+    },
+    {
+      "step": "replay",
+      "label": "replay: offer_swap (maker)",
+      "hash": "4b5c1496ba6802ff7fc757c7f4022b1ee271a67c8d54f845f9ec31a15665841e",
+      "ledger": 5838584,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12666
+    },
+    {
+      "step": "replay",
+      "label": "replay: accept_swap (taker)",
+      "hash": "ab1187fe9dde7164ca4eb485101bbf5963296b13b85f7ddc5784925d0195773d",
+      "ledger": 5838586,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 20182
+    },
+    {
+      "step": "replay",
+      "label": "replay: complete_swap #4 (maker)",
+      "hash": "a9d3b3e1b207bc5fa04829e7a37a8a63b7da34728bf1396fdfbb776a38d82d7c",
+      "ledger": 5838587,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 81221
+    },
+    {
+      "step": "replay",
+      "label": "replay: maker's record request for #9 (swap back)",
+      "hash": "de1c9831c118b895509788d46ada00b25c5602c4e73d3ced89b427052d187f88",
+      "ledger": 5838589,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12006
+    },
+    {
+      "step": "replay",
+      "label": "replay: taker's record request for #10 (swap back)",
+      "hash": "dcb3ccb87ea6ac9653dfa1a0f8bf2b9e3b58c416cf2aa63286c1833dad85c17c",
+      "ledger": 5838590,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12221
+    },
+    {
+      "step": "replay",
+      "label": "replay: offer_swap back (maker), h' = the owner's original h",
+      "hash": "17d0dc7ff863323d4966b27bc86c2c0f0ea40df8333f026ead5ddea27f31d229",
+      "ledger": 5838591,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12667
+    },
+    {
+      "step": "replay",
+      "label": "replay: accept_swap back (taker), h' = the buyer's original h",
+      "hash": "dc7ce15625efe105b7cfcdea6fdeb8d80302500cd2c66f65db8d638b98af2367",
+      "ledger": 5838592,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 20181
+    },
+    {
+      "step": "replay",
+      "label": "replay: complete_swap back #5 (maker)",
+      "hash": "172e7553afcb026068d27690974f755ba84415d3c354cad369f94920b5c8d7db",
+      "ledger": 5838593,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 81221
+    },
+    {
+      "step": "replay",
+      "label": "replay: maker's record request for #10 (replay)",
+      "hash": "53ea069fdd95ae8a23efad84770ffe2dc9d6ce62110a92015c59ea6d182b5d4a",
+      "ledger": 5838594,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12008
+    },
+    {
+      "step": "replay",
+      "label": "replay: taker's record request for #9 (replay)",
+      "hash": "eb7dbbcd62cbe81118768c82b622e73880c06daa1fa7af6dc739e15d9211c20a",
+      "ledger": 5838595,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12224
+    },
+    {
+      "step": "replay",
+      "label": "replay: offer_swap again, as swap 1",
+      "hash": "d03cc5bd5dce7d6a725a9eb6c247b1dc886de78b638c56a985c20ac806b7fed4",
+      "ledger": 5838596,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12666
+    },
+    {
+      "step": "replay",
+      "label": "rejected: swap #4's taker proof replayed after the swap back",
+      "hash": "5902f48a580fe3843686b5153de72c82496678e3888255c9969e9420fa90dc15",
+      "ledger": 5838598,
+      "accepted": false,
+      "expected": "Error(Contract, #27)",
+      "errors": [
+        "Error(Contract, #27)",
+        "Error(Contract, #27)"
+      ],
+      "fee_charged": 66138
+    },
+    {
+      "step": "replay",
+      "label": "replay: cancel_swap #6 (maker, clean-up)",
+      "hash": "1c71291e2dbdc45f314a97052cc518661e6b139bdbca724de87bfa3b6e79cef2",
+      "ledger": 5838599,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 8360
+    },
+    {
+      "step": "expired",
+      "label": "expired: issue week 7 to qs-owner",
+      "hash": "d45d76ca50b3fff2602ee12875c68ec2dd08c6a61d0b5fda0f50fd8941a31bc9",
+      "ledger": 5838609,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67363
+    },
+    {
+      "step": "expired",
+      "label": "expired: issue week 8 to qs-buyer",
+      "hash": "1c09277a612821a2ecd554e417d818f13fe963d6e3f41ef734e8ce519b431300",
+      "ledger": 5838610,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67363
+    },
+    {
+      "step": "expired",
+      "label": "expired: maker's record request for #12",
+      "hash": "44fab8be84c279800accddf7620897e7e11eddd3892caf8f59b8dcffd5ce9247",
+      "ledger": 5838611,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12008
+    },
+    {
+      "step": "expired",
+      "label": "expired: taker's record request for #11",
+      "hash": "92119e488db52e6f7a318a5c86897620c37835686cb6ea0a27d1caee3cbcac72",
+      "ledger": 5838612,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12441
+    },
+    {
+      "step": "expired",
+      "label": "expired: offer_swap (maker)",
+      "hash": "d2245334a768deef236e8a856db0156ae696b0bfa75d8d1a5b33aa965bd02476",
+      "ledger": 5838613,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12666
+    },
+    {
+      "step": "expired",
+      "label": "expired: accept_swap (taker)",
+      "hash": "34721314e55ee2910cdc85dfd7b7ee0d802b88a3acda9eb18606cae988272f4e",
+      "ledger": 5838614,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 20190
+    },
+    {
+      "step": "expired",
+      "label": "expired: issue week 9 to qs-owner",
+      "hash": "b34dfbfd3f3995e5453ea0c77552385c31771a4dd69a409b1550f69b199a9c09",
+      "ledger": 5838615,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67363
+    },
+    {
+      "step": "expired",
+      "label": "expired: issue week 10 to qs-buyer",
+      "hash": "77c710bfd4dcb517716a5ec38d3add8a485e89b9217c281c3f18d93435d0cc10",
+      "ledger": 5838616,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 67363
+    },
+    {
+      "step": "expired",
+      "label": "expired: maker's record request for #14",
+      "hash": "1d9e91c7e6a70a3c7ff70aee8107252fedda844006fc9578c9d529830037694d",
+      "ledger": 5838617,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12008
+    },
+    {
+      "step": "expired",
+      "label": "expired: taker's record request for #13",
+      "hash": "2e4acde7b230ed89c863223f15bd111d004773194ce00744732451c23b05008c",
+      "ledger": 5838618,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12440
+    },
+    {
+      "step": "expired",
+      "label": "expired: offer_swap (maker)",
+      "hash": "4062d341afaf30e1a62543071dfd94cff50c26b29a0a065f5127b20064a44e89",
+      "ledger": 5838619,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 12666
+    },
+    {
+      "step": "expired",
+      "label": "expired: accept_swap (taker)",
+      "hash": "448ec1f0eef07d86fe54a5c1f88f16c0d8f5790682e2df5761c0d2f8220e05f7",
+      "ledger": 5838620,
+      "accepted": true,
+      "expected": null,
+      "errors": [],
+      "fee_charged": 20190
+    },
+    {
+      "step": "expired",
+      "label": "rejected: complete_swap with a maker proof past its window",
+      "hash": "8b7b21e3a4b9191be819cc82cd528e2846edfee29287488916ad8097cee88273",
+      "ledger": 5838634,
+      "accepted": false,
+      "expected": "Error(Contract, #24)",
+      "errors": [
+        "Error(Contract, #24)",
+        "Error(Contract, #24)"
+      ],
+      "fee_charged": 135170
+    },
+    {
+      "step": "expired",
+      "label": "rejected: complete_swap after right #11 expired",
+      "hash": "7810639603ca63c8855022b17de7a9b570e888cbd1da16b11043f3449e26e8d5",
+      "ledger": 5838728,
+      "accepted": false,
+      "expected": "Error(Contract, #6)",
+      "errors": [
+        "Error(Contract, #6)",
+        "Error(Contract, #6)"
+      ],
+      "fee_charged": 135167
     }
   ],
   "measurement": {
@@ -89,5 +720,200 @@
       "contract_event_bytes": 944,
       "ledger": 5838351
     }
-  }
+  },
+  "readings": [
+    {
+      "step": "requests-rented",
+      "label": "request #3 (maker, for #4) before the offer",
+      "value": {
+        "expires_ledger": 5840536,
+        "id": "3",
+        "key_hash": {
+          "type": "Buffer",
+          "data": [
+            166,
+            221,
+            56,
+            170,
+            213,
+            212,
+            62,
+            97,
+            54,
+            187,
+            244,
+            166,
+            79,
+            42,
+            47,
+            49,
+            153,
+            57,
+            116,
+            51,
+            127,
+            55,
+            136,
+            77,
+            172,
+            224,
+            115,
+            228,
+            82,
+            187,
+            131,
+            161
+          ]
+        },
+        "requester": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+        "right_id": "4"
+      }
+    },
+    {
+      "step": "requests-rented",
+      "label": "request #4 (taker, for #3) before the acceptance",
+      "value": {
+        "expires_ledger": 5840537,
+        "id": "4",
+        "key_hash": {
+          "type": "Buffer",
+          "data": [
+            183,
+            132,
+            38,
+            203,
+            198,
+            95,
+            75,
+            163,
+            106,
+            70,
+            239,
+            189,
+            13,
+            109,
+            3,
+            215,
+            238,
+            210,
+            28,
+            116,
+            164,
+            66,
+            207,
+            200,
+            253,
+            215,
+            103,
+            229,
+            56,
+            75,
+            161,
+            165
+          ]
+        },
+        "requester": "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+        "right_id": "3"
+      }
+    },
+    {
+      "step": "requests-rented",
+      "label": "request #3 after offer_swap (consumed)",
+      "value": null
+    },
+    {
+      "step": "requests-rented",
+      "label": "request #4 after accept_swap (consumed)",
+      "value": null
+    },
+    {
+      "step": "requests-rented",
+      "label": "holder of #4 after the rental",
+      "value": "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"
+    },
+    {
+      "step": "requests-rented",
+      "label": "acceptance of swap #2 after the withdrawal",
+      "value": "present"
+    },
+    {
+      "step": "requests-rented",
+      "label": "holders afterwards",
+      "value": {
+        "#3": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+        "#4": "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"
+      }
+    },
+    {
+      "step": "requests-rented",
+      "label": "commitments unchanged",
+      "value": {
+        "#3": true,
+        "#4": true
+      }
+    },
+    {
+      "step": "requests-rented",
+      "label": "acceptance of swap #2 after the withdrawal, re-read with stellar contract invoke --send=no -- get_swap_acceptance --swap_id 2 (the reading above saying \"present\" was a script bug: the view returned null and the script compared with undefined)",
+      "value": null
+    },
+    {
+      "step": "sold",
+      "label": "holder of #6 after the sale",
+      "value": "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"
+    },
+    {
+      "step": "sold",
+      "label": "holders afterwards",
+      "value": {
+        "#5": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+        "#6": "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"
+      }
+    },
+    {
+      "step": "sold",
+      "label": "commitment of #5 unchanged",
+      "value": true
+    },
+    {
+      "step": "replay",
+      "label": "holders after swap 1",
+      "value": {
+        "#9": "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+        "#10": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"
+      }
+    },
+    {
+      "step": "replay",
+      "label": "commitments after the swap back equal the issued ones",
+      "value": {
+        "#9": true,
+        "#10": true
+      }
+    },
+    {
+      "step": "replay",
+      "label": "holders afterwards",
+      "value": {
+        "#9": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+        "#10": "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"
+      }
+    },
+    {
+      "step": "expired",
+      "label": "holders afterwards (second swap)",
+      "value": {
+        "#13": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+        "#14": "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"
+      }
+    },
+    {
+      "step": "expired",
+      "label": "holders afterwards (expired week)",
+      "value": {
+        "#11": "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+        "#12": "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"
+      }
+    }
+  ]
 }

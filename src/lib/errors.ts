@@ -75,7 +75,8 @@ export const CONTRACT_ERRORS: Record<number, { name: string; message: string }> 
   22: { name: "RecipientMismatch", message: "This proof was made for a different recipient." },
   23: {
     name: "ModeMismatch",
-    message: "This proof was made for a different kind of transfer — a sale instead of a rental, or a rental ending at another time.",
+    message:
+      "This proof was made for a different kind of transfer: a sale instead of a rental, a rental ending at another time, or a swap for another week.",
   },
   24: { name: "ProofExpired", message: "This proof's window has passed. Make a fresh one with `npm run zk:prove`." },
   25: { name: "ExpiryBeyondWindow", message: "This proof claims to stay valid for longer than the contract allows (about an hour)." },
@@ -122,6 +123,24 @@ export const CONTRACT_ERRORS: Record<number, { name: string; message: string }> 
       "The buyer's USDC allowance to the contract is below the price or has expired. Nothing moved; the buyer can renew it by making or cancelling an offer.",
   },
   54: { name: "BalanceTooLow", message: "The buyer's USDC balance is below the price. Nothing moved." },
+  // --- Phase 3 Step 4: swaps ---
+  55: { name: "SwapNotFound", message: "That swap no longer exists: it was completed, cancelled, or never made." },
+  56: { name: "SwapExpired", message: "That swap offer has expired. Neither week moved." },
+  57: { name: "NotSwapParty", message: "Only the swap's maker can complete or cancel it, and only its taker can withdraw an acceptance." },
+  58: {
+    name: "SwapAlreadyAccepted",
+    message: "This swap already has a live acceptance. It must be withdrawn, or lapse with its proof, before another.",
+  },
+  59: {
+    name: "AcceptanceNotFound",
+    message: "This swap has no live acceptance: it was withdrawn, or its proof's hour passed. Neither week moved.",
+  },
+  60: { name: "SwapPending", message: "This week is part of a pending swap acceptance, so it cannot be destroyed yet." },
+  61: {
+    name: "RequestRightMismatch",
+    message: "That record request is for a different week. Each side asks for the record of the week it receives.",
+  },
+  62: { name: "TooManyPendingSwaps", message: "This week is already part of ten pending swap acceptances." },
 };
 
 /**

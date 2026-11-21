@@ -611,7 +611,11 @@ The Step 3 outside-account tests call every public function from an account
 the builder does not control, both with its own signature and naming a
 builder account it cannot sign for. None of them moves USDC or a right
 (`an_outside_account_cannot_move_usdc_or_a_right_without_a_builder_action`).
-The swap functions get the same test in Step 4.
+The five swap write functions get the same test
+(`an_outside_account_cannot_move_a_right_through_any_swap_function`,
+test_swap.rs): an outsider's own calls are refused (`NotHolder`,
+`NotSwapParty`, `WrongAccount`), calls naming a builder account fail for the
+missing signature, nothing changes, and the builder's swap still completes.
 
 ### The rental escrow and the pilot arbiter
 
@@ -626,4 +630,49 @@ or refund its own renter the escrow's own amount, and reads or writes no
 right. It acts through `scripts/arbiter-resolve.sh`, never a screen. A
 refunded renter keeps the rental right until it lapses, because nothing can
 touch a right (a stated limitation).
+
+### Swaps (built in Step 4)
+
+The design is [PHASE3_SPEC.md §7](./PHASE3_SPEC.md#7-swap) (decision D5); the
+code is `contracts/quietstay-rights/src/swap.rs`. Two title holders exchange
+weeks in three on-chain steps, each signed by its own party:
+
+1. **`offer_swap`** by the maker, the title holder of `give_right`, for
+   `want_right`. It consumes the maker's own record request for `want_right`
+   (D4a) and stores the maker's `h'` for it. It moves nothing.
+2. **`accept_swap`** by the title holder of `want_right`, with a proof that
+   moves `want_right` to the maker in mode `2^64 + give_right` with the
+   maker's `h'`. It consumes the taker's record request for `give_right`.
+   Every check of `authorize_transfer` except the pairing runs now
+   (`precheck_transfer`, which writes nothing). The proof is stored until its
+   own last ledger, at most 720 ledgers ahead. **Nothing moves, and nothing is
+   locked:** the taker can still sell or rent the week out, or withdraw the
+   acceptance (`withdraw_swap_acceptance`).
+3. **`complete_swap`** by the maker, with a proof for `give_right`.
+   `authorize_transfer` runs twice in this one transaction, the taker's stored
+   proof first, against the state at that moment. Nothing checked at
+   acceptance is trusted. Both weeks move with their new commitments, or the
+   whole call reverts.
+
+Rules that follow from it:
+
+- **One code path.** A swap moves rights only through `authorize_transfer`,
+  like a sale. `swap.rs` touches no USDC.
+- **The mode separates proofs.** A sale proof carries mode 0, a rental proof
+  its end time (a u64), and a swap proof `2^64 + the week received`. So a swap
+  proof is never a sale or rental proof, nor a proof for a swap against
+  another week (test `a_swap_proof_cannot_be_used_as_a_sale`).
+- **A replayed proof is stopped by its nullifier.** After a swap, both
+  commitments change, so an old proof normally fails the commitment check.
+  If the two sides swap back with their original secrets, both commitments
+  return to what they were and an old proof matches them again; the spent
+  nullifier still refuses it. Shown on testnet (`NullifierUsed`, #27) and in
+  `a_swap_proof_replayed_after_a_swap_back_is_refused_by_its_nullifier`.
+- **The burn guard (D11).** While an acceptance is pending, `burn` is refused
+  on both weeks (`SwapPending`, #60). The guard lapses with the acceptance.
+- **The issuer and the arbiter have no part in a swap.** No swap function
+  reads either.
+- **What the ledger shows.** The two weeks, the two accounts, each side's
+  `h'` and key hash, the proofs' public signals and the two new commitments.
+  As with a sale, `h'` proves nothing without the record and the secret.
 

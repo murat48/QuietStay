@@ -9,7 +9,7 @@
  * store.
  */
 
-import { spawn, type ChildProcess } from "node:child_process";
+import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -53,6 +53,9 @@ export async function startApp(opts: {
   };
   // Spawned directly (not through npx) and as its own process group, so that
   // stopping it stops next's own child processes too.
+  // `next dev` is started directly, so `npm run dev`'s predev step does not
+  // run: build the prover worker here, so a test never runs a stale prover.
+  execFileSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "prover-worker/build.ts"], { stdio: "ignore" });
   const child: ChildProcess = spawn(
     process.execPath,
     ["node_modules/next/dist/bin/next", "dev", "--webpack", "-p", String(opts.port)],
