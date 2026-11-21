@@ -4,7 +4,8 @@
 # (docs/PHASE3_SPEC.md §13, the mainnet signing flow; decision D6).
 #
 #   scripts/mainnet-sign-submit.sh <xdr-file> <identity> --network mainnet
-#   scripts/mainnet-sign-submit.sh <xdr-file> <identity> --network testnet   # the rehearsal
+#   scripts/mainnet-sign-submit.sh <xdr-file> <identity> --network testnet            # the rehearsal
+#   scripts/mainnet-sign-submit.sh <xdr-file> <identity> --network mainnet --resume   # after a failed submission
 #
 # <xdr-file> holds the unsigned envelope the app showed: its source is the fee
 # identity, and the smart wallet's authorization entry is already signed by
@@ -17,31 +18,68 @@
 #      exceeds the D7 cap, if an authorization expires within 60 ledgers, or if
 #      the source is not <identity>;
 #   4. asks you to type SEND;
-#   5. signs with `stellar tx sign --sign-with-key <identity>` and sends with
-#      `stellar tx send`. The CLI keystore signs; this script never reads a key;
-#   6. prints the hash and the Stellar Expert link.
+#   5. signs with `stellar tx sign --sign-with-key <identity>`. The CLI keystore
+#      signs; this script never reads a key. The signed envelope and its hash
+#      are saved in <xdr-file>.submission/ before anything is sent;
+#   6. submits it, then confirms it by hash (the recovery rule below);
+#   7. prints the hash and the Stellar Expert link.
 #
-# If the identity's sequence number moved since the app built the envelope
-# (another transaction from it in between), sending fails: rebuild in the app.
+# **Submission recovery (pre-launch checklist item, Step 5).** If a
+# submission fails on the network, the transaction is looked up by its hash
+# first. Only if the network confirms it is not on chain is the *same signed
+# envelope* sent again. A new transaction is never built or signed for the
+# same action:
+#
+#   - this script signs an envelope once: if <xdr-file>.submission/ exists, it
+#     refuses to sign again and points to --resume;
+#   - on chain, SUCCESS or FAILED: it stops and reports; nothing is resent;
+#   - confirmed not found (after waiting for it): the same envelope, same
+#     hash, is sent again, at most 3 sends in all;
+#   - unknown (the lookup itself failed): it is never resent on that basis;
+#     the script keeps looking, then stops with the --resume command;
+#   - if the network answers that the envelope can no longer be included (its
+#     sequence number was used, or its time bound passed), the script stops.
+#     Whether to build a new transaction is then your decision, after checking
+#     on chain that the action did not happen.
+#
+# --resume continues from the saved signed envelope: it looks the hash up
+# first, and asks you to type RESEND before sending the same envelope again.
+#
+# Testnet only, for the rehearsal: QS_TEST_FAIL_FIRST_SEND=1 sends the first
+# attempt to an unreachable RPC, so the recovery path can be shown.
 
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 <xdr-file> <identity> --network mainnet|testnet" >&2
+  echo "usage: $0 <xdr-file> <identity> --network mainnet|testnet [--resume]" >&2
   exit 64
 }
 
-[ $# -eq 4 ] || usage
+[ $# -eq 4 ] || [ $# -eq 5 ] || usage
 XDR_FILE="$1"
 IDENTITY="$2"
 [ "$3" = "--network" ] || usage
 NETWORK="$4"
+RESUME=0
+if [ $# -eq 5 ]; then
+  [ "$5" = "--resume" ] || usage
+  RESUME=1
+fi
 case "$NETWORK" in
   mainnet) EXPERT="https://stellar.expert/explorer/public/tx" ;;
   testnet) EXPERT="https://stellar.expert/explorer/testnet/tx" ;;
   *) echo "the network must be given explicitly: mainnet or testnet" >&2; exit 64 ;;
 esac
 [ -f "$XDR_FILE" ] || { echo "no such file: $XDR_FILE" >&2; exit 66; }
+if [ "${QS_TEST_FAIL_FIRST_SEND:-}" = "1" ] && [ "$NETWORK" != "testnet" ]; then
+  echo "QS_TEST_FAIL_FIRST_SEND is for the testnet rehearsal only" >&2
+  exit 64
+fi
+
+STATE="${XDR_FILE}.submission"
+SIGNED_FILE="$STATE/signed.xdr"
+HASH_FILE="$STATE/hash"
+MAX_SENDS=3
 
 cd "$(dirname "$0")/.."
 
@@ -49,21 +87,137 @@ SOURCE="$(stellar keys address "$IDENTITY")"
 echo "Identity     $IDENTITY ($SOURCE)"
 echo
 
-if ! npx tsx scripts/tx-review.ts --xdr-file "$XDR_FILE" --network "$NETWORK" --source "$SOURCE"; then
-  echo "Refused. Nothing was signed." >&2
-  exit 1
+# The transaction's status by hash: SUCCESS, FAILED, NOT_FOUND or UNKNOWN.
+lookup() {
+  local out
+  if out="$(stellar tx fetch result --hash "$1" --network "$NETWORK" 2>&1)"; then
+    if printf '%s' "$out" | grep -q '"tx_success"'; then echo SUCCESS; else echo FAILED; fi
+  elif printf '%s' "$out" | grep -q "not found on"; then
+    echo NOT_FOUND
+  else
+    echo UNKNOWN
+  fi
+}
+
+# Wait up to ~60 s for the hash to appear; print the last status seen.
+await_status() {
+  local status=NOT_FOUND
+  for _ in $(seq 1 12); do
+    status="$(lookup "$1")"
+    case "$status" in SUCCESS | FAILED) echo "$status"; return ;; esac
+    sleep 5
+  done
+  echo "$status"
+}
+
+# The first line of the CLI's output that names an error, or its first line.
+first_error() {
+  printf '%s\n' "$1" | grep -m1 -i "error" || printf '%s\n' "$1" | head -1
+}
+
+# One submission of the saved signed envelope. Prints "sent", "refused: <why>"
+# (the network will never include it), or "error: <why>" (it may not have
+# arrived). Never signs anything.
+send_once() {
+  local args=(--network "$NETWORK") out
+  if [ "${QS_TEST_FAIL_FIRST_SEND:-}" = "1" ] && [ "${SENDS:-0}" -eq 0 ]; then
+    args=(--rpc-url "http://127.0.0.1:9" --network-passphrase "Test SDF Network ; September 2015")
+  fi
+  if out="$(stellar tx send "${args[@]}" < "$SIGNED_FILE" 2>&1)"; then
+    echo "sent"
+  elif printf '%s' "$out" | grep -Eqi "txBadSeq|txTooLate|txTooEarly|tx_bad_seq|tx_too_late|bad.?seq|too.?late"; then
+    echo "refused: $(first_error "$out")"
+  else
+    echo "error: $(first_error "$out")"
+  fi
+}
+
+report_done() {
+  local status="$1" hash="$2"
+  echo
+  if [ "$status" = "SUCCESS" ]; then
+    echo "On chain, successful: $hash"
+  else
+    echo "On chain, FAILED (the contract or the network refused it; it is final): $hash"
+  fi
+  echo "      $EXPERT/$hash"
+  [ "$status" = "SUCCESS" ]
+}
+
+if [ "$RESUME" -eq 0 ]; then
+  if [ -e "$STATE" ]; then
+    echo "Refused: $XDR_FILE was already signed ($STATE exists, hash $(cat "$HASH_FILE" 2>/dev/null || echo '?'))." >&2
+    echo "Never sign a second transaction for the same action. Continue with:" >&2
+    echo "  $0 $XDR_FILE $IDENTITY --network $NETWORK --resume" >&2
+    exit 1
+  fi
+
+  if ! npx tsx scripts/tx-review.ts --xdr-file "$XDR_FILE" --network "$NETWORK" --source "$SOURCE"; then
+    echo "Refused. Nothing was signed." >&2
+    exit 1
+  fi
+
+  echo
+  read -r -p "Type SEND to sign as $IDENTITY and submit to $NETWORK: " ANSWER
+  if [ "$ANSWER" != "SEND" ]; then
+    echo "Not sent." >&2
+    exit 1
+  fi
+
+  # Signed once, and kept before anything is sent.
+  mkdir -m 700 "$STATE"
+  (umask 077 && stellar tx sign --sign-with-key "$IDENTITY" --network "$NETWORK" < "$XDR_FILE" > "$SIGNED_FILE")
+  stellar tx hash --network "$NETWORK" < "$SIGNED_FILE" > "$HASH_FILE"
+  HASH="$(cat "$HASH_FILE")"
+  echo
+  echo "Signed: $HASH (kept in $STATE)"
+else
+  [ -f "$SIGNED_FILE" ] && [ -f "$HASH_FILE" ] || { echo "nothing to resume: $SIGNED_FILE is missing" >&2; exit 66; }
+  HASH="$(cat "$HASH_FILE")"
+  echo "Resuming $HASH from $STATE"
+  STATUS="$(lookup "$HASH")"
+  echo "Looked up by hash first: $STATUS"
+  case "$STATUS" in
+    SUCCESS | FAILED) report_done "$STATUS" "$HASH"; exit $? ;;
+    UNKNOWN) echo "The lookup failed, so nothing is resent. Try --resume again." >&2; exit 1 ;;
+  esac
+  read -r -p "Not on chain. Type RESEND to send the same signed envelope ($HASH) again: " ANSWER
+  if [ "$ANSWER" != "RESEND" ]; then
+    echo "Not sent." >&2
+    exit 1
+  fi
 fi
 
-echo
-read -r -p "Type SEND to sign as $IDENTITY and submit to $NETWORK: " ANSWER
-if [ "$ANSWER" != "SEND" ]; then
-  echo "Not sent." >&2
-  exit 1
-fi
-
-SIGNED="$(stellar tx sign --sign-with-key "$IDENTITY" --network "$NETWORK" < "$XDR_FILE")"
-HASH="$(printf '%s' "$SIGNED" | stellar tx hash --network "$NETWORK")"
-printf '%s' "$SIGNED" | stellar tx send --network "$NETWORK" > /dev/null
-echo
-echo "Sent: $HASH"
-echo "      $EXPERT/$HASH"
+SENDS=0
+while :; do
+  RESULT="$(send_once)"
+  SENDS=$((SENDS + 1))
+  echo "Send $SENDS of at most $MAX_SENDS: $RESULT"
+  case "$RESULT" in
+    refused:*)
+      STATUS="$(lookup "$HASH")"
+      case "$STATUS" in SUCCESS | FAILED) report_done "$STATUS" "$HASH"; exit $? ;; esac
+      echo "The network will not include this envelope, and it is not on chain ($STATUS)." >&2
+      echo "Nothing was re-signed. Check on chain that the action did not happen before building anything new." >&2
+      exit 1
+      ;;
+  esac
+  echo "Looking it up by hash…"
+  STATUS="$(await_status "$HASH")"
+  echo "Status: $STATUS"
+  case "$STATUS" in
+    SUCCESS | FAILED) report_done "$STATUS" "$HASH"; exit $? ;;
+    UNKNOWN)
+      echo "The lookup failed, so it is not resent on that basis. Continue with:" >&2
+      echo "  $0 $XDR_FILE $IDENTITY --network $NETWORK --resume" >&2
+      exit 1
+      ;;
+  esac
+  # Confirmed not on chain: the same signed envelope again.
+  if [ "$SENDS" -ge "$MAX_SENDS" ]; then
+    echo "Not on chain after $SENDS sends of the same envelope. Stopping; continue later with:" >&2
+    echo "  $0 $XDR_FILE $IDENTITY --network $NETWORK --resume" >&2
+    exit 1
+  fi
+  echo "Confirmed not on chain: sending the same signed envelope again (same hash)."
+done

@@ -1179,6 +1179,37 @@ and its output.
   repeated before each mainnet acceptance. The app also tells a seller or
   owner without one before they accept, and refuses to start the acceptance
   (`/stays`, `needsUsdcTrustline` in `src/lib/usdc.ts`).
+- **One server log per test run, never overwritten** (recorded 2026-11-21).
+  `e2e/lib/app.ts` streams each run's `next dev` output to
+  `e2e/results/logs/next-dev-<time>-port<port>-<random>.log`. The file is
+  opened with `wx`, so it can never replace another, and is written as the
+  server writes. `e2e/lib/failures.ts` writes
+  `e2e/results/logs/failed-requests-<spec>-<run>.json` the same way. Before
+  this, a later spec on the same port overwrote the log holding a network
+  drop's error code. The checklist records two consecutive runs on the same
+  port leaving two logs (done 2026-11-21: `passkey.spec.ts` twice on port
+  4322).
+- **Submission recovery on mainnet** (recorded 2026-11-21). If a submission
+  fails on the network, the transaction is looked up by its hash first. If
+  it is not on chain, the *same signed envelope* is sent again. A new
+  transaction is never built and signed for the same action.
+  `scripts/mainnet-sign-submit.sh` enforces it:
+  - it signs an envelope once, and keeps the signed envelope and its hash in
+    `<xdr-file>.submission/` before sending;
+  - it refuses to sign the same file again, and points to `--resume`;
+  - after a send, it polls `stellar tx fetch result --hash`. SUCCESS or
+    FAILED: it stops. Confirmed not found: it resends the same envelope, at
+    most 3 sends. Unknown (the lookup failed): it never resends on that
+    basis, and stops with the `--resume` command;
+  - "can no longer be included" (bad sequence, time bound): it stops,
+    re-signs nothing, and says to check on chain before anything new;
+  - `--resume` looks the hash up first and asks for RESEND.
+
+  The checklist records the testnet rehearsal of each path (done
+  2026-11-21, see PHASE3_PROGRESS.md) and repeats the "not found" path on
+  testnet before GO. Any other mainnet sender used in Steps 6–7 (for example
+  the CLI deploy) follows the same rule by hand: look up by hash, then
+  resubmit the same signed envelope.
 - **Privacy evidence** (Step 2 review): every evidence transaction has its
   `check-privacy` output in `evidence/privacy/`, made right after the
   transaction, with its events.

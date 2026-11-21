@@ -15,6 +15,10 @@
  *   escrow-rejections  week 1's Funded escrow: collect too early, the arbiter on an undisputed escrow,
  *                      an outside account; and the arbiter trying to move a right
  *   unaccepted-offer   week 4: a sale offer nobody accepts, which expires; USDC read before, during, after
+ *   collect-wait       escrow #1 after check-in + 24 h: first the renter's problem report, refused
+ *                      (#49, the window has closed; sent while still Funded, because a PaidOut escrow
+ *                      refuses it on state, #46), then the owner's collect. Refuses to send anything
+ *                      before ledger time reaches check-in + 24 h
  *
  * **Testnet only.** Every envelope is signed by a Stellar CLI identity
  * (`stellar tx sign --sign-with-key <identity>`); this script never reads a
@@ -671,7 +675,69 @@ async function unacceptedOffer() {
   checkPrivacy("unaccepted-offer", { weeks: [w], nextSecrets: [sFile] });
 }
 
+/**
+ * Close the wait rental (escrow #1): the problem report after the window,
+ * refused, then the collect. Prints check-in, the collect time and the
+ * ledger times of both transactions side by side.
+ */
+async function collectWait() {
+  const e = state.escrows.wait;
+  if (!e) throw new Error("no wait escrow in the state file");
+  const esc = (await read("get_escrow", [u64(e)])) as { check_in: bigint; state: string[]; owner: string; renter: string; amount: bigint };
+  const checkIn = Number(esc.check_in);
+  const collectAt = checkIn + DAY;
+  const iso = (t: number) => new Date(t * 1000).toISOString();
+  const { closedAt, sequence } = await latestLedger();
+  log.info(`escrow #${e}: ${esc.state[0]}, check-in ${iso(checkIn)}, collect from ${iso(collectAt)}; ledger ${sequence} closed ${iso(closedAt)}`);
+  if (closedAt < collectAt) {
+    throw new Error(`too early: the last ledger closed at ${iso(closedAt)}, before ${iso(collectAt)}. Nothing was sent.`);
+  }
+  if (esc.state[0] !== "Funded") throw new Error(`escrow #${e} is ${esc.state[0]}, not Funded`);
+  const sib = await view("get_escrow", [u64(e)]);
+  const report = await rejected(
+    "rejected: problem report after the window (check-in + 24 h)",
+    "renter",
+    "report_problem",
+    [addr(ADDR.renter), u64(e), bytes32(sha256File(EVIDENCE.report))],
+    sib,
+    "Error(Contract, #49)",
+  );
+  const before = { owner: await balanceOf(ADDR.owner), contract: await balanceOf(C) };
+  const out = await ok("wait rental: collect (owner, after check-in + 24 h)", "owner", "collect", [addr(ADDR.owner), u64(e)]);
+  const after = { owner: await balanceOf(ADDR.owner), contract: await balanceOf(C) };
+  const closed = async (hash: string) => {
+    const res = await fetch(`${HORIZON}/transactions/${hash}`);
+    return Math.floor(Date.parse(((await res.json()) as { created_at: string }).created_at) / 1000);
+  };
+  const reportAt = await closed(report.hash);
+  const collectedAt = await closed(out.hash);
+  const final = (await read("get_escrow", [u64(e)])) as { state: string[] };
+  const times = {
+    check_in: iso(checkIn),
+    collect_opens: iso(collectAt),
+    problem_report_refused_at: `${iso(reportAt)} (ledger ${report.ledger}), ${reportAt - collectAt} s after the window closed`,
+    collected_at: `${iso(collectedAt)} (ledger ${out.ledger}), ${collectedAt - checkIn} s after check-in`,
+    escrow_state_after: final.state[0],
+    owner_usdc: `${before.owner} → ${after.owner}`,
+    contract_usdc: `${before.contract} → ${after.contract}`,
+  };
+  (evidence as typeof evidence & { readings?: unknown[] }).readings ??= [];
+  (evidence as unknown as { readings: unknown[] }).readings.push({ step: STEP, label: "wait rental closed", value: times });
+  writeFileSync(LOG, JSON.stringify(evidence, null, 2) + "\n");
+  log.step("Check-in and collect, side by side");
+  for (const [k, v] of Object.entries(times)) log.info(`${k.padEnd(26)} ${v}`);
+  if (collectedAt < collectAt) throw new Error("the collect landed before check-in + 24 h");
+  if (final.state[0] !== "PaidOut") throw new Error(`escrow #${e} is ${final.state[0]} after collect`);
+  checkPrivacy("collect-wait", { weeks: [week(1)], evidence: [EVIDENCE.report] });
+}
+
+async function balanceOf(who: string): Promise<string> {
+  const { sim } = await simulated("issuer", "balance", [addr(who)], USDC_CONTRACT_ID);
+  return BigInt(scValToNative(sim.result!.retval) as bigint).toString();
+}
+
 const STEPS: Record<string, () => Promise<void>> = {
+  "collect-wait": collectWait,
   "unaccepted-offer": unacceptedOffer,
   "cancel-last": cancelLast,
   issue,

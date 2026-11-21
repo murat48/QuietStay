@@ -73,3 +73,5 @@ proofs/
 /contracts/vendor/*/target/
 /e2e/results/next-dev-*.log
 /e2e/results/failed-requests-*.json
+# One server log and one failed-request list per test run, never overwritten.
+/e2e/results/logs/

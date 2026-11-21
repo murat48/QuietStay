@@ -10,7 +10,7 @@
  */
 
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { closeSync, mkdirSync, mkdtempSync, openSync, writeSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -61,9 +61,26 @@ export async function startApp(opts: {
     ["node_modules/next/dist/bin/next", "dev", "--webpack", "-p", String(opts.port)],
     { env, stdio: ["ignore", "pipe", "pipe"], detached: true },
   );
+  // One server log per run, never overwritten (Step 5 checklist item): the
+  // file is created with "wx", which fails rather than replace one, and the
+  // name carries the time, the port and a random suffix. It is written as the
+  // server writes, so a crash or a killed run still leaves it. A later spec on
+  // the same port once overwrote the log that held a network drop's code.
+  mkdirSync("e2e/results/logs", { recursive: true });
+  const logPath = `e2e/results/logs/next-dev-${new Date().toISOString().replace(/[:.]/g, "-")}-port${opts.port}-${randomBytes(3).toString("hex")}.log`;
+  const logFd = openSync(logPath, "wx", 0o600);
+  console.log(`next dev log: ${logPath}`);
   let log = "";
-  child.stdout?.on("data", (d) => (log += d));
-  child.stderr?.on("data", (d) => (log += d));
+  const keep = (d: Buffer | string) => {
+    log += d;
+    try {
+      writeSync(logFd, typeof d === "string" ? d : d.toString("utf8"));
+    } catch {
+      // the in-memory copy is still printed on a start failure
+    }
+  };
+  child.stdout?.on("data", keep);
+  child.stderr?.on("data", keep);
 
   const url = `http://${host}`;
   const deadline = Date.now() + 180_000;
@@ -81,10 +98,10 @@ export async function startApp(opts: {
   return {
     url,
     stop: async () => {
-      // Kept for diagnosis: the routes log the errors they catch (Step 2 review).
+      // Kept for diagnosis: the routes log the errors they catch (Step 2
+      // review). Already on disk, line by line; closed here.
       try {
-        mkdirSync("e2e/results", { recursive: true });
-        writeFileSync(`e2e/results/next-dev-${opts.port}.log`, log);
+        closeSync(logFd);
       } catch {
         // not fatal
       }

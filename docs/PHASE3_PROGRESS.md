@@ -9,8 +9,12 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: **Step 4 closed 2026-11-21 (approved). Step 3 waits only for
-  the escrow #1 collect, tonight.** Earlier note: Step 4 started 2026-11-20 while Step 3 waited. Step 3's
+- Current step: **Step 4 closed 2026-11-21 (approved). Step 3 is still open:
+  the escrow #1 collect is not possible yet.** At 2026-11-21T13:00:06Z (ledger
+  5,848,473) escrow #1 was Funded, and collect opens at ledger time
+  2026-11-21T20:28:30Z. The step is ready:
+  `npx tsx scripts/step3-evidence.ts collect-wait --contract CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73`
+  (it refuses to send anything before then). Earlier note: Step 4 started 2026-11-20 while Step 3 waited. Step 3's
   remaining items (wrong token, unaccepted offer, trustlines, the expiry race,
   the EVIDENCE.md generator) are done; Step 3 waits only for the collect on
   escrow #1 of `CA4B3MIZ…PPV73`, **possible from ledger time
@@ -35,7 +39,7 @@ actually run.
 | Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device was still to do | 2 | resolved 2026-11-19: Windows Hello (PIN) on a MONSTER ABRA A7 V11.3, Windows 10 Enterprise 10.0.19045, Chrome 157.0.8103.79, authorized `list` from wallet `CAMTPQ3B…44YLT`, tx `059bc1b3…` |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
 | Low | This machine lacked the system libraries Playwright's browsers need | 2 | resolved 2026-11-19: you ran the install with sudo; the unpacked workaround is removed, and both browsers start on the system libraries |
-| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 review (2026-11-20):** read-only RPC calls now retry a dropped connection, up to 3 attempts, and log the network code; `sendTransaction` is never retried. In the first run after that, the server logged `[rpc-retry] simulate next_id: attempt 1 of 3 failed (fetch failed)`, the retry succeeded, and no failed `/api` response was saved. The code was not readable: the SDK's HTTP layer (`feaxios`) drops the error's cause. The retry log now also reads undici's diagnostics channels, which carry the code. The next run had no drop, so the code is still to be confirmed at the next one. **2026-11-20, later:** a one-off `Account not found` for `qs-issuer` (`GBNBWXSC…YUBE`) from the testnet RPC's `getAccount`, while Horizon returned 200 for that account and the same read had worked two minutes earlier. The immediate rerun passed. So the RPC can also answer wrongly, not only drop the connection; `getAccount` is a read and could join the retry, but a "not found" can also be true, so it is recorded here rather than retried blindly. **2026-11-21, Step 4 close:** a regression run of `passkey-app` got two 502s `{"error":"fetch failed"}` (`/api/me`, `/api/requests/issuance`), and its rerun failed in the test process itself (`TypeError: fetch failed`) before any page. Horizon, RPC and Friendbot answered a moment later, and the next rerun passed 2/2. The server log of the failing run was overwritten by the next spec, which uses the same port, so the code was lost again. The harness should keep one log per run before Step 5. **Earlier Step 3 evidence:** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
+| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 review (2026-11-20):** read-only RPC calls now retry a dropped connection, up to 3 attempts, and log the network code; `sendTransaction` is never retried. In the first run after that, the server logged `[rpc-retry] simulate next_id: attempt 1 of 3 failed (fetch failed)`, the retry succeeded, and no failed `/api` response was saved. The code was not readable: the SDK's HTTP layer (`feaxios`) drops the error's cause. The retry log now also reads undici's diagnostics channels, which carry the code. The next run had no drop, so the code is still to be confirmed at the next one. **2026-11-20, later:** a one-off `Account not found` for `qs-issuer` (`GBNBWXSC…YUBE`) from the testnet RPC's `getAccount`, while Horizon returned 200 for that account and the same read had worked two minutes earlier. The immediate rerun passed. So the RPC can also answer wrongly, not only drop the connection; `getAccount` is a read and could join the retry, but a "not found" can also be true, so it is recorded here rather than retried blindly. **2026-11-21, Step 4 close:** a regression run of `passkey-app` got two 502s `{"error":"fetch failed"}` (`/api/me`, `/api/requests/issuance`), and its rerun failed in the test process itself (`TypeError: fetch failed`) before any page. Horizon, RPC and Friendbot answered a moment later, and the next rerun passed 2/2. The server log of the failing run was overwritten by the next spec, which uses the same port, so the code was lost again. The harness should keep one log per run before Step 5 (done 2026-11-21, see the Step 5 items below). **Earlier Step 3 evidence:** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
 | Medium | SEP-45 and the fee route need the deployment's store (Upstash) on Vercel, for single-use nonces and rate limits. Without it they refuse, by design. The SIGNING_KEY account must exist on each network | 2 (review) | open: Step 5 checklist item (spec §14) |
 | Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
 | Low | `npm run lint`: 7 findings remain, all in code from before Step 2 (it was 13 on `96bbb5f`) | 2 | open |
@@ -51,6 +55,8 @@ actually run.
 | Medium | **Swap cost on mainnet.** `complete_swap` measured 174.8 M instructions (43.7%) on testnet (protocol 30). Mainnet (protocol 29) has different CPU/memory cost parameters (`stellar network settings`, 2026-11-20), so its count can differ. 56% headroom, but it is measured, not assumed: the mainnet `--send=no` simulation of each flow (spec §14) | 4 | open: Step 5 checklist item |
 | ~~Medium~~ | **Found by the Step 4 browser test:** for a G account with no USDC trustline, `/api/payments` returned 502, so Step 3's "no trustline" notice never showed. The token's `balance` fails with only `Error(Contract, #13)`, without the "trustline entry is missing" text the app matched on | 3 (found in 4) | resolved 2026-11-20: `readUsdcBalance` reads the trustline ledger entry for a G account (`null` if absent); checked on a throwaway account without one and on `qs-buyer` (200,000,000) |
 | ~~Low~~ | A USDC token failure was shown as QuietStay's error of the same number (the token's #13 TrustlineMissingError as QuietStay's #13 "AlreadyListed"), and `collect` was not blocked for an owner without a trustline | 4 | resolved 2026-11-21 (Step 4 close): failures are explained by the contract they started in, on all four paths; collect is blocked with the same notice; unit and browser tests |
+| Medium | **Pre-launch checklist item (recorded 2026-11-21):** one server log per test run, never overwritten (`e2e/results/logs/`, opened with `wx`, streamed). Done and checked: `passkey.spec.ts` twice on port 4322 left two logs, both 8/8 | 4 (close) | open: Step 5 checklist item, spec §14 |
+| Medium | **Pre-launch checklist item (recorded 2026-11-21):** submission recovery. Look the transaction up by hash; if it is not on chain, resend the same signed envelope; never build and sign a new transaction for the same action. `scripts/mainnet-sign-submit.sh` enforces it; every path rehearsed on testnet | 4 (close) | open: Step 5 checklist item, spec §14 |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
 
 Severity: Critical (blocks mainnet), High, Medium, Low.
@@ -925,6 +931,52 @@ of the spec, the rest at the second review of `def5eb6`.
 - Tests: `npm run test:app` 35/35 (27 before, plus 4 trustline and 4 guard).
   `tsc` clean, eslint clean on the changed files, `next build --webpack`
   passes.
+
+#### Step 3, the collect (2026-11-21): not possible yet, so Step 3 stays open
+
+- You said the wait was over. The ledger disagrees: the latest ledger,
+  5,848,308, closed at **2026-11-21T12:46:21Z**, and escrow #1 can be
+  collected from **2026-11-21T20:28:30Z** (check-in 1795206510 + 86,400 s,
+  read back with `get_escrow`, which showed it Funded). A collect now would
+  only be refused with #48. That refusal is already on record
+  (`a4a28c10…05a2`), so nothing was sent.
+- **Prepared:** `scripts/step3-evidence.ts collect-wait`. It reads escrow #1
+  and refuses before ledger time reaches check-in + 24 h; run at 13:00:06Z it
+  refused and sent nothing. Once the window opens, it does three things:
+  1. sends the renter's problem report, which must be refused **#49**
+     (ReportWindowClosed). This goes first, while the escrow is still Funded:
+     `report_problem` checks the state before the window, so after a collect
+     it would be refused #46 instead (`escrow.rs` lines 204–206);
+  2. collects as `qs-owner`, and checks the escrow is PaidOut;
+  3. prints check-in, the collect time, and both transactions' ledger times
+     side by side, logs them, and writes the privacy record.
+- **Step 5 checklist items recorded now** (spec §14, open-issues table):
+  1. **One server log per test run, never overwritten.**
+     - `e2e/lib/app.ts` streams `next dev` output to
+       `e2e/results/logs/next-dev-<time>-port<port>-<random>.log`, opened
+       with `wx`, from the start (a crash still leaves it).
+     - `e2e/lib/failures.ts` writes a per-run
+       `failed-requests-<spec>-<run>.json`. Both are gitignored, as before.
+     - Checked: `npx playwright test e2e/passkey.spec.ts` twice on port 4322,
+       8/8 both times, left two separate logs.
+  2. **Submission recovery.** `scripts/mainnet-sign-submit.sh` signs once,
+     keeps the signed envelope and hash, looks up by hash after every send,
+     resends only the same envelope and only on a confirmed "not found", and
+     never re-signs. Rehearsed on testnet with `qs-issuer` and read-only calls
+     on `CCSL6J5X…` (2026-11-21):
+     - normal: `adb9e23c8edfdb0b57f4087930c1b2cbb53c2f23aaedc76c8f0fc035252cf833`,
+       SUCCESS;
+     - the same file again: refused to sign, pointing to `--resume`;
+     - `--resume` of a landed one: looked up first, SUCCESS, nothing sent;
+     - first send failed (test hook `QS_TEST_FAIL_FIRST_SEND=1`, testnet only:
+       the first attempt goes to an unreachable RPC). The lookup said not
+       found, and the same envelope landed on the second send:
+       `2ad818681c54fb5aa38315d444c1a960e36e9f20d7a9fc138a006ed03f43e80d`;
+     - stale envelope: its sequence number was used first by
+       `4ecdac05b52b97326357d727ea38d2fe398c13a97a754c1232e01d22500915ff`.
+       Its send got TxBadSeq (`76e3044c…66cc`, never on chain), and the
+       script stopped without re-signing.
+     These carry no record or secret, so they have no privacy record.
 
 ### Step 4 — Swap and two-proof cost measurement
 - Date: 2026-11-20 (ledger time). **Stopped at the measurement, with the
