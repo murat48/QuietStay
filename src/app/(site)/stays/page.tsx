@@ -380,13 +380,15 @@ function Stays() {
               Open until ledger {o.expiresLedger.toLocaleString()}.
             </p>
             {noTrustline ? (
-              <div className="note bad" data-testid={`no-trustline-${o.id}`}>
-                <strong>Add a USDC trustline before you accept.</strong>{" "}
-                {o.terms.kind === "sale"
-                  ? "This account has no USDC trustline, so it cannot receive the payment: the sale would be refused and nothing would move."
-                  : "This account has no USDC trustline, so you could not collect the payment from escrow; it would wait there until you add one."}{" "}
-                In your wallet, add the asset USDC issued by <code>{shortAddress(USDC_ISSUER)}</code> ({USDC_ISSUER}), then reload this page.
-              </div>
+              <TrustlineNotice
+                testid={`no-trustline-${o.id}`}
+                before="accept"
+                why={
+                  o.terms.kind === "sale"
+                    ? "This account has no USDC trustline, so it cannot receive the payment: the sale would be refused and nothing would move."
+                    : "This account has no USDC trustline, so you could not collect the payment from escrow; it would wait there until you add one."
+                }
+              />
             ) : null}
             <button
               className="primary"
@@ -416,7 +418,7 @@ function Stays() {
         <p className="muted">No rental payments involve this account yet.</p>
       ) : (
         myEscrows.map((e) => (
-          <EscrowCard key={e.id} e={e} now={now} address={address} busy={busy} step={step} run={run} />
+          <EscrowCard key={e.id} e={e} now={now} address={address} busy={busy} step={step} run={run} noTrustline={noTrustline} />
         ))
       )}
 
@@ -751,8 +753,10 @@ function EscrowCard(props: {
   busy: string | null;
   step: string | null;
   run: (key: string, body: Record<string, unknown>, success: string) => Promise<boolean>;
+  /** This account is a G… account with no USDC trustline: it cannot be paid. */
+  noTrustline: boolean;
 }) {
-  const { e, now, address, busy, step, run } = props;
+  const { e, now, address, busy, step, run, noTrustline } = props;
   const [file, setFile] = useState<{ name: string; hash: string } | null>(null);
   const status = escrowStatus(e, now);
   const isOwner = e.owner === address;
@@ -819,11 +823,19 @@ function EscrowCard(props: {
         </div>
       ) : null}
 
+      {isOwner && noTrustline && (e.state === "Funded" || e.state === "Disputed") ? (
+        <TrustlineNotice
+          testid={`escrow-no-trustline-${e.id}`}
+          before="collect"
+          why="This account has no USDC trustline, so the token cannot pay it: collecting would be refused, and so would the renter's release or an arbiter's payout to you. The payment stays in escrow until you add one."
+        />
+      ) : null}
+
       <div className="row" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
         {isOwner && e.state === "Funded" ? (
           <button
             className="primary"
-            disabled={busy !== null || windowOpen}
+            disabled={busy !== null || windowOpen || noTrustline}
             title={windowOpen ? "available from 24 hours after check-in" : undefined}
             onClick={() => void run(key("collect"), { action: "collect", escrowId: e.id }, `Collected ${amount} USDC.`)}
             data-testid={`collect-${e.id}`}
@@ -882,6 +894,20 @@ function EscrowCard(props: {
       {isRenter && e.state === "Funded" && !windowOpen ? (
         <p className="muted">The window to report a problem closed 24 hours after check-in.</p>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The notice for a G… account with no USDC trustline (Step 3 trustline item):
+ * shown wherever this account is about to be paid, and the action that would
+ * pay it is disabled with it.
+ */
+function TrustlineNotice({ testid, before, why }: { testid: string; before: "accept" | "collect"; why: string }) {
+  return (
+    <div className="note bad" data-testid={testid}>
+      <strong>Add a USDC trustline before you {before}.</strong> {why} In your wallet, add the asset USDC issued by{" "}
+      <code>{shortAddress(USDC_ISSUER)}</code> ({USDC_ISSUER}), then reload this page.
     </div>
   );
 }

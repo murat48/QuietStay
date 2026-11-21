@@ -23,18 +23,27 @@
  * says so and the accept button is disabled. Once the maker adds one, the
  * notice is gone and the button is enabled.
  *
+ * Then the collect notice: the third account gets 1 testnet USDC from the
+ * builder's qs-renter (signed by the Stellar CLI from its keystore; this
+ * process never sees the key), the maker accepts its rental offer in the
+ * browser, which funds an escrow, and the maker's empty trustline is removed.
+ * The escrow card says to add a trustline before collecting and keeps
+ * collect disabled; with the trustline back, the notice is gone. (Collect
+ * itself stays disabled by its 24-hour window: the week is in December.)
+ *
  * Every swap transaction gets a privacy record: each owner's issued secret
  * is forbidden as s and h; each side's new secret, whose h' a swap publishes
  * by design, as s'.
  */
 
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { Address, Keypair, nativeToScVal, xdr } from "@stellar/stellar-sdk";
 
 import { startApp, type App } from "./lib/app";
-import { addUsdcTrustline, deployRightsStep4, fund, invokeAs, server } from "./lib/testnet";
+import { addUsdcTrustline, deployRightsStep4, fund, invokeAs, removeUsdcTrustline, server, USDC_SAC } from "./lib/testnet";
 import { captureFailures, reportFailures, type FailedResponse } from "./lib/failures";
 import { checkPendingPrivacy, evidenceLanded, hashOf } from "./lib/privacy";
 import { attachWallet } from "./lib/wallet";
@@ -298,6 +307,42 @@ test("two owners swap weeks through the swap screen, with the records exchanged 
   await expect(M.page.getByTestId(`accept-offer-${offerId}`)).toBeVisible({ timeout: 60_000 });
   await expect(M.page.getByTestId(`no-trustline-${offerId}`)).toHaveCount(0);
   await expect(M.page.getByTestId(`accept-offer-${offerId}`)).toBeEnabled();
+
+  // --- the collect notice on /stays ----------------------------------------------------
+  const renterAddress = renter.publicKey();
+  const qsRenter = execFileSync("stellar", ["keys", "public-key", "qs-renter"], { encoding: "utf8" }).trim();
+  execFileSync(
+    "stellar",
+    ["contract", "invoke", "--id", USDC_SAC, "--source", "qs-renter", "--network", "testnet", "--", "transfer", "--from", qsRenter, "--to", renterAddress, "--amount", "10000000"],
+    { stdio: "ignore" },
+  );
+  await M.page.getByTestId(`accept-offer-${offerId}`).click();
+  const stays = M.page.getByTestId("stays-outcome");
+  await expect(stays).toContainText("Rented out", { timeout: 180_000 });
+  txs["rental-accept"] = hashOf(await stays.locator("a").getAttribute("href"));
+  const escrowCard = M.page.locator('[data-testid^="escrow-"][data-testid$="-status"]').first();
+  await expect(escrowCard).toBeVisible({ timeout: 60_000 });
+  const escrowId = ((await escrowCard.getAttribute("data-testid")) ?? "").replace("escrow-", "").replace("-status", "");
+
+  await removeUsdcTrustline(maker);
+  await signIn(M.page, "/stays");
+  await expect(M.page.getByTestId(`escrow-no-trustline-${escrowId}`)).toContainText("Add a USDC trustline before you collect", { timeout: 60_000 });
+  await expect(M.page.getByTestId(`collect-${escrowId}`)).toBeDisabled();
+
+  await addUsdcTrustline(maker);
+  await signIn(M.page, "/stays");
+  await expect(M.page.getByTestId(`collect-${escrowId}`)).toBeVisible({ timeout: 60_000 });
+  await expect(M.page.getByTestId(`escrow-no-trustline-${escrowId}`)).toHaveCount(0);
+
+  // The rental acceptance's privacy record, with the maker's secrets.
+  evidenceLanded({
+    txs: { "collect-notice-rental-accept": txs["rental-accept"]! },
+    records,
+    secrets: issuedSecrets,
+    nextSecrets: (await vaultSecrets(M.page)).filter((x) => !issuedSecrets.includes(x)),
+    out: `evidence/privacy/${new Date().toISOString().slice(0, 10)}-collect-notice-${txs["rental-accept"]!.slice(0, 8)}.txt`,
+  });
+  checkPendingPrivacy();
 
   for (const c of [M, T, I]) await c.c.close();
 });

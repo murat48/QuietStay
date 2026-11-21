@@ -168,3 +168,18 @@ export async function invokeAs(kp: Keypair, contract: string, fn: string, args: 
     .build();
   return submit(tx, kp);
 }
+
+/** Remove an empty USDC trustline (a change-trust with limit 0). */
+export async function removeUsdcTrustline(kp: Keypair): Promise<string> {
+  const account = await server.getAccount(kp.publicKey());
+  const tx = new TransactionBuilder(account, { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
+    .addOperation(Operation.changeTrust({ asset: new Asset("USDC", USDC_ISSUER), limit: "0" }))
+    .setTimeout(120)
+    .build();
+  tx.sign(kp);
+  const sent = await server.sendTransaction(tx);
+  if (sent.status !== "PENDING") throw new Error(`change-trust refused: ${sent.status}`);
+  const done = await server.pollTransaction(sent.hash, { attempts: 30 });
+  if (done.status !== rpc.Api.GetTransactionStatus.SUCCESS) throw new Error(`${sent.hash} ended ${done.status}`);
+  return sent.hash;
+}

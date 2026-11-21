@@ -1,0 +1,58 @@
+{
+  "source": "testnet simulateTransaction of accept_sale on CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7 by a seller with no USDC trustline (right #16, offer #3), 2026-11-21; captured by a one-off script, reduced to emitter, kind and code",
+  "error": "HostError: Error(Contract, #13)",
+  "rights": "CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7",
+  "token": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+  "events": [
+    {
+      "contract": null,
+      "error": false,
+      "code": null
+    },
+    {
+      "contract": "CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7",
+      "error": false,
+      "code": null
+    },
+    {
+      "contract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+      "error": false,
+      "code": null
+    },
+    {
+      "contract": "CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7",
+      "error": false,
+      "code": null
+    },
+    {
+      "contract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+      "error": false,
+      "code": null
+    },
+    {
+      "contract": "CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7",
+      "error": false,
+      "code": null
+    },
+    {
+      "contract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+      "error": true,
+      "code": 13
+    },
+    {
+      "contract": "CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7",
+      "error": true,
+      "code": 13
+    },
+    {
+      "contract": "CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7",
+      "error": true,
+      "code": 13
+    },
+    {
+      "contract": "CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7",
+      "error": false,
+      "code": null
+    }
+  ]
+}

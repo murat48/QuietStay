@@ -161,6 +161,82 @@ const TOKEN_FAILURES: { pattern: RegExp; message: string }[] = [
 ];
 
 /**
+ * The USDC token's own errors: the Stellar Asset Contract's built-in codes
+ * (soroban-env-host 27, `builtin_contracts/contract_error.rs`). Their numbers
+ * overlap QuietStay's, so a token error must never be read from its number
+ * alone: #13 is the token's TrustlineMissingError and QuietStay's
+ * AlreadyListed.
+ */
+export const TOKEN_ERRORS: Record<number, { name: string; message: string }> = {
+  2: { name: "OperationNotSupportedError", message: "the token does not support this operation" },
+  3: { name: "AlreadyInitializedError", message: "the token is already initialized" },
+  4: { name: "UnauthorizedError", message: "the account is not authorized for this token operation" },
+  5: { name: "AuthenticationError", message: "the token could not authenticate the account" },
+  6: { name: "AccountMissingError", message: "the account does not exist on this network" },
+  7: { name: "AccountIsNotClassic", message: "the account is not a classic Stellar account" },
+  8: { name: "NegativeAmountError", message: "the amount is negative" },
+  9: {
+    name: "AllowanceError",
+    message: "the buyer's allowance to the contract is too low or has expired; the buyer can renew it by making or cancelling an offer",
+  },
+  10: { name: "BalanceError", message: "the paying account's USDC balance is too low" },
+  11: { name: "BalanceDeauthorizedError", message: "the USDC issuer has not authorized this account to hold USDC" },
+  12: { name: "OverflowError", message: "the amount overflows the token's balance" },
+  13: {
+    name: "TrustlineMissingError",
+    message:
+      "the receiving account has no USDC trustline. Add a USDC trustline to that account in its wallet and try again; money in escrow stays there until then",
+  },
+  14: { name: "InsufficientAccountReserve", message: "the account lacks the XLM reserve for this" },
+  15: { name: "TooManyAccountSubentries", message: "the account has too many subentries" },
+};
+
+/** One diagnostic event of a failed call, reduced to what classifying needs. */
+export interface FailureEvent {
+  /** The contract that emitted it, as `C…`; null for the host's own events. */
+  contract: string | null;
+  /** Whether it is an `error` event. */
+  error: boolean;
+  /** The contract error code it carries, if any. */
+  code: number | null;
+}
+
+/**
+ * Explain a failed call by the contract that raised it, not by its number.
+ *
+ * The first `error` event names the contract the failure started in: when
+ * QuietStay calls USDC and the token refuses, the token emits the error and
+ * QuietStay re-raises the same code after it. The RPC's error text alone is
+ * only `HostError: Error(Contract, #13)`, with no contract, which is how a
+ * missing trustline was once shown as QuietStay's "AlreadyListed" (found in
+ * Step 4). So:
+ *
+ *   - started in the USDC token (or the call was to the token itself): the
+ *     token's own message, by the token's code;
+ *   - started in another contract: said so, with that contract's code;
+ *   - otherwise: QuietStay's own code, as before (`describeContractFailure`).
+ */
+export function explainFailure(
+  raw: unknown,
+  ctx: { events?: FailureEvent[]; invoked: string; token: string },
+): string {
+  const origin = (ctx.events ?? []).find((e) => e.error && e.code !== null);
+  const from = origin ? (origin.contract ?? ctx.invoked) : ctx.invoked;
+  const code = origin?.code ?? contractErrorCode(raw);
+  if (from === ctx.token) {
+    if (code === null) return `The USDC token refused this call. ${describeContractFailure(raw)}`;
+    const known = TOKEN_ERRORS[code];
+    return known
+      ? `The USDC token refused this: ${known.message}. Nothing moved. (USDC token error #${code} ${known.name})`
+      : `The USDC token refused this with its error #${code}. Nothing moved.`;
+  }
+  if (origin && from !== ctx.invoked) {
+    return `Another contract, ${from}, refused this call with its error #${code}. Nothing moved; QuietStay's own checks did not refuse it.`;
+  }
+  return describeContractFailure(raw);
+}
+
+/**
  * Pull a contract error out of an RPC simulation or submission failure.
  *
  * Host errors arrive as text like `Error(Contract, #4)`; auth failures arrive

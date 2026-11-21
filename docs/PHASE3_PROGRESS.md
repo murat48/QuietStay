@@ -9,7 +9,8 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: **Step 4, started 2026-11-20 while Step 3 waits.** Step 3's
+- Current step: **Step 4 closed 2026-11-21 (approved). Step 3 waits only for
+  the escrow #1 collect, tonight.** Earlier note: Step 4 started 2026-11-20 while Step 3 waited. Step 3's
   remaining items (wrong token, unaccepted offer, trustlines, the expiry race,
   the EVIDENCE.md generator) are done; Step 3 waits only for the collect on
   escrow #1 of `CA4B3MIZ…PPV73`, **possible from ledger time
@@ -34,7 +35,7 @@ actually run.
 | Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device was still to do | 2 | resolved 2026-11-19: Windows Hello (PIN) on a MONSTER ABRA A7 V11.3, Windows 10 Enterprise 10.0.19045, Chrome 157.0.8103.79, authorized `list` from wallet `CAMTPQ3B…44YLT`, tx `059bc1b3…` |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
 | Low | This machine lacked the system libraries Playwright's browsers need | 2 | resolved 2026-11-19: you ran the install with sudo; the unpacked workaround is removed, and both browsers start on the system libraries |
-| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 review (2026-11-20):** read-only RPC calls now retry a dropped connection, up to 3 attempts, and log the network code; `sendTransaction` is never retried. In the first run after that, the server logged `[rpc-retry] simulate next_id: attempt 1 of 3 failed (fetch failed)`, the retry succeeded, and no failed `/api` response was saved. The code was not readable: the SDK's HTTP layer (`feaxios`) drops the error's cause. The retry log now also reads undici's diagnostics channels, which carry the code. The next run had no drop, so the code is still to be confirmed at the next one. **2026-11-20, later:** a one-off `Account not found` for `qs-issuer` (`GBNBWXSC…YUBE`) from the testnet RPC's `getAccount`, while Horizon returned 200 for that account and the same read had worked two minutes earlier. The immediate rerun passed. So the RPC can also answer wrongly, not only drop the connection; `getAccount` is a read and could join the retry, but a "not found" can also be true, so it is recorded here rather than retried blindly. **Earlier Step 3 evidence:** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
+| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 review (2026-11-20):** read-only RPC calls now retry a dropped connection, up to 3 attempts, and log the network code; `sendTransaction` is never retried. In the first run after that, the server logged `[rpc-retry] simulate next_id: attempt 1 of 3 failed (fetch failed)`, the retry succeeded, and no failed `/api` response was saved. The code was not readable: the SDK's HTTP layer (`feaxios`) drops the error's cause. The retry log now also reads undici's diagnostics channels, which carry the code. The next run had no drop, so the code is still to be confirmed at the next one. **2026-11-20, later:** a one-off `Account not found` for `qs-issuer` (`GBNBWXSC…YUBE`) from the testnet RPC's `getAccount`, while Horizon returned 200 for that account and the same read had worked two minutes earlier. The immediate rerun passed. So the RPC can also answer wrongly, not only drop the connection; `getAccount` is a read and could join the retry, but a "not found" can also be true, so it is recorded here rather than retried blindly. **2026-11-21, Step 4 close:** a regression run of `passkey-app` got two 502s `{"error":"fetch failed"}` (`/api/me`, `/api/requests/issuance`), and its rerun failed in the test process itself (`TypeError: fetch failed`) before any page. Horizon, RPC and Friendbot answered a moment later, and the next rerun passed 2/2. The server log of the failing run was overwritten by the next spec, which uses the same port, so the code was lost again. The harness should keep one log per run before Step 5. **Earlier Step 3 evidence:** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
 | Medium | SEP-45 and the fee route need the deployment's store (Upstash) on Vercel, for single-use nonces and rate limits. Without it they refuse, by design. The SIGNING_KEY account must exist on each network | 2 (review) | open: Step 5 checklist item (spec §14) |
 | Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
 | Low | `npm run lint`: 7 findings remain, all in code from before Step 2 (it was 13 on `96bbb5f`) | 2 | open |
@@ -49,7 +50,7 @@ actually run.
 | Low | The payment screens are checked by typecheck, `next build --webpack`, lint and unit tests only. Their end-to-end run needs the Step 3 WASM on testnet and USDC in throwaway accounts, so it comes after the deployment | 3 | open |
 | Medium | **Swap cost on mainnet.** `complete_swap` measured 174.8 M instructions (43.7%) on testnet (protocol 30). Mainnet (protocol 29) has different CPU/memory cost parameters (`stellar network settings`, 2026-11-20), so its count can differ. 56% headroom, but it is measured, not assumed: the mainnet `--send=no` simulation of each flow (spec §14) | 4 | open: Step 5 checklist item |
 | ~~Medium~~ | **Found by the Step 4 browser test:** for a G account with no USDC trustline, `/api/payments` returned 502, so Step 3's "no trustline" notice never showed. The token's `balance` fails with only `Error(Contract, #13)`, without the "trustline entry is missing" text the app matched on | 3 (found in 4) | resolved 2026-11-20: `readUsdcBalance` reads the trustline ledger entry for a G account (`null` if absent); checked on a throwaway account without one and on `qs-buyer` (200,000,000) |
-| Low | The same token #13, inside a submitted transaction (for example `collect` by an owner without a trustline), is described by `src/lib/errors.ts` as QuietStay's #13 "AlreadyListed". The accept screens now block before it can happen; `collect` does not | 4 | open |
+| ~~Low~~ | A USDC token failure was shown as QuietStay's error of the same number (the token's #13 TrustlineMissingError as QuietStay's #13 "AlreadyListed"), and `collect` was not blocked for an owner without a trustline | 4 | resolved 2026-11-21 (Step 4 close): failures are explained by the contract they started in, on all four paths; collect is blocked with the same notice; unit and browser tests |
 | Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
 
 Severity: Critical (blocks mainnet), High, Medium, Low.
@@ -1198,6 +1199,94 @@ of the spec, the rest at the second review of `def5eb6`.
     prover 3/3. Their privacy records: `evidence/privacy/2026-11-21-{no-leak-9c5c5917,passkey-app-0cbd4a88,passkey-spec-1a5f6532}.txt`.
 - **Stopped at the Step 4 checkpoint.** The escrow #1 collect on
   `CA4B3MIZ…PPV73` is still pending (from 2026-11-21T20:28:30Z).
+
+#### Step 4 close (2026-11-21): approved; the Low item fixed
+
+- **Approved:** Step 4, at the checkpoint above.
+- **Collect blocked without a trustline.** On `/stays`, the owner's escrow
+  card shows the same notice as the accept cards. They share one
+  `TrustlineNotice` component. It shows while the escrow is Funded or
+  Disputed, because every payout to the owner (collect, the renter's
+  confirm, the arbiter's PayOwner) needs the trustline. "Collect the
+  payment" is disabled until there is one.
+- **Why a token failure showed as "AlreadyListed".**
+  - Reproduced on testnet, in simulation: `accept_sale` by a seller with no
+    trustline, on `CCSL6J5X`. Setup sent: issue right #16
+    (`7ab2bfa97ffc55778c36a78e27066edba68842119d79d499bb91f5f2aa04c856`),
+    qs-buyer's request (`7bf5605b16c3abde5d92cfc3899598cdf9cdc82bd4af6e26d36ecb7e92d0c780`)
+    and 1 USDC sale offer #3 (`56c40e7b3f8ef936010b5fe5af0af5c91473d8843be68d48dbbdd8b5bc1764ea`).
+    The acceptance was only simulated.
+  - A first attempt had sent issue #15 `52cf31f3…f749`, request
+    `5986ef04…320b` and offer #2 `288b9f7a…35e4`, then my script failed
+    building the simulation. Its seller's record and secret existed only in
+    memory, so the setup was redone. Those 6 setup transactions have no
+    privacy record; they carry no record or secret of any kept account, only
+    throwaway ones. Not evidence.
+  - **The cause:** the RPC's error text is only
+    `HostError: Error(Contract, #13)`. The app took the first
+    `Error(Contract, #N)` from the text, whichever contract raised it. The
+    diagnostic events do say: the first `error` event comes from the USDC
+    token `CBIELTK6…`, with code 13 and "trustline entry is missing for
+    account"; QuietStay re-raises the same code after it.
+  - The token's codes are the Stellar Asset Contract's built-in ones
+    (soroban-env-host 27, `contract_error.rs`): 13 TrustlineMissingError,
+    10 BalanceError, 9 AllowanceError, 11 BalanceDeauthorizedError,
+    6 AccountMissingError, and so on.
+- **Every place a token error could be read as ours:**
+
+  | Path | Before | Now |
+  | --- | --- | --- |
+  | `simulateCall` (reads, including token reads) | text only | explained by origin |
+  | `simulateOrThrow` (every build: accept, collect, offers…) | text only | explained by origin |
+  | `submit` (a landed failure's diagnostic events) | text only, events present but unused | explained by origin |
+  | `/api/tx/sponsor` (passkey transactions) | raw first line, unmapped | explained by origin |
+  | `readUsdcBalance` | text match (fixed at the checkpoint) | trustline ledger entry |
+  | `describeError` (browser) | passes messages through | unchanged |
+  | `isRightNotFound` (`get_right` reads) | code #1 | unchanged; no token involved |
+
+  - `explainFailure` (`src/lib/errors.ts`) takes the first `error` event and
+    the contract that emitted it:
+    - the USDC token, or a call made to the token itself: the token's own
+      message, e.g. "The USDC token refused this: the receiving account has
+      no USDC trustline… (USDC token error #13 TrustlineMissingError)";
+    - another contract: says so, with that contract's code;
+    - otherwise: QuietStay's code, as before.
+  - Helpers in `src/lib/contract.ts`: `failureEvents` (reads emitter and
+    code from the XDR), `invokedContract` and `explainSimulationFailure`.
+  - The scripts report raw codes with the contract (`describeScError`); they
+    do not map to QuietStay names.
+- **Tests:**
+  - `src/lib/errors.test.ts`, 5 tests, on the real capture
+    (`src/lib/fixtures/token-trustline-simulation.json`). The old mapper
+    gives "AlreadyListed" for it; the new one names the token's missing
+    trustline. The tests also cover a QuietStay #13 kept as ours, a direct
+    token call, another contract, and `failureEvents` on XDR events.
+    `npm run test:app`: **40/40**.
+  - `e2e/swap.spec.ts` now ends with the collect notice: **1/1 passed**
+    (3.9 min).
+    - The throwaway renter gets 1 testnet USDC from qs-renter (CLI-signed;
+      the test process never sees the key).
+    - The maker accepts its rental offer in the browser (escrow funded,
+      `0b3866418b9ac52352b489b55580057c3b8915aabdd42a613057eedb78246018`),
+      and its empty trustline is removed.
+    - The escrow card shows "Add a USDC trustline before you collect" and
+      collect is disabled. With the trustline back, the notice is gone.
+    - Collect itself stays disabled by its 24-hour window (the week is in
+      December). That 1 USDC stays in the throwaway contract's escrow.
+    - Swap txs this run: offer `2da59e6f…7567`, accept `082d8681…e2af`,
+      withdraw `bc4041fa…3b4f`, accept `88f6ec4a…8ec3`, complete
+      `16ef22e14ca3e9b42a352512b0a5b3ae994b482a2b74cfcf0bc940fb82be5e4d`.
+    - Privacy records `evidence/privacy/2026-11-21-{swap-e2e-16ef22e1,collect-notice-0b386641}.txt`
+      pass.
+  - Regression of the other browser specs: no-leak 2/2, passkey 8/8,
+    prover 3/3. passkey-app failed on a network drop (see the High issue),
+    failed again in its own set-up, then passed 2/2 (rental
+    `7d4796397cc35cb591d921fe0590f22870a491386257f65b3ed11dd039d775e4`).
+    So the browser suite is **16/16** on the passing runs.
+  - `tsc`, eslint (changed files), `next build --webpack` and
+    `zk:check-bundle` pass. Contract tests unchanged: 158/158.
+- **Step 4 is closed.** The escrow #1 collect on `CA4B3MIZ…PPV73` stays for
+  tonight (from 2026-11-21T20:28:30Z).
 
 ### Step 5 — Pre-launch checklist
 - Date:

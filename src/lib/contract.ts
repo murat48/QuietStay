@@ -35,7 +35,7 @@ import {
 
 import { toHex } from "./canonical";
 import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, RPC_URL, USDC_CONTRACT_ID, USDC_ISSUER } from "./config";
-import { describeContractFailure, isRightNotFound } from "./errors";
+import { explainFailure, isRightNotFound, type FailureEvent } from "./errors";
 import { RetryingServer } from "./rpc-server";
 
 export const server = new RetryingServer(RPC_URL);
@@ -45,6 +45,41 @@ export const server = new RetryingServer(RPC_URL);
  * connection and never retries `sendTransaction` (src/lib/rpc-server.ts).
  */
 export const latestLedger = () => server.getLatestLedger();
+
+/** Diagnostic events, reduced to what `explainFailure` needs: who emitted an error, and its code. */
+export function failureEvents(events: xdr.DiagnosticEvent[]): FailureEvent[] {
+  return events.map((d) => {
+    const ev = d.event();
+    const id = ev.contractId();
+    const topics = ev.body().v0().topics();
+    const isError = topics[0]?.switch().name === "scvSymbol" && topics[0].sym().toString() === "error";
+    let code: number | null = null;
+    const t1 = topics[1];
+    if (isError && t1?.switch().name === "scvError" && t1.error().switch().name === "sceContract") {
+      code = Number(t1.error().contractCode());
+    }
+    return {
+      contract: id ? Address.contract(id as unknown as Buffer).toString() : null,
+      error: isError,
+      code,
+    };
+  });
+}
+
+/** The contract a single-operation invocation calls. */
+export function invokedContract(tx: Transaction): string {
+  const op = tx.operations[0] as { func?: xdr.HostFunction } | undefined;
+  const func = op?.func;
+  if (func && func.switch().name === "hostFunctionTypeInvokeContract") {
+    return Address.fromScAddress(func.invokeContract().contractAddress()).toString();
+  }
+  return CONTRACT_ID;
+}
+
+/** A failed simulation, explained by the contract the failure started in. */
+export function explainSimulationFailure(sim: rpc.Api.SimulateTransactionErrorResponse, invoked: string): string {
+  return explainFailure(sim.error, { events: failureEvents(sim.events ?? []), invoked, token: USDC_CONTRACT_ID });
+}
 
 /**
  * Source account used only for read simulations. Simulation never submits and
@@ -174,7 +209,7 @@ async function simulateCall(
 
   const sim = await server.simulateTransaction(tx);
   if (rpc.Api.isSimulationError(sim)) {
-    throw new ContractCallError(describeContractFailure(sim.error), sim.error);
+    throw new ContractCallError(explainSimulationFailure(sim, contractId), sim.error);
   }
   const retval = sim.result?.retval;
   return retval === undefined ? undefined : scValToNative(retval);
@@ -438,7 +473,7 @@ async function simulateOrThrow(
   // Simulation is read-only: it never submits, so `server` retries a dropped connection.
   const sim = await server.simulateTransaction(tx);
   if (rpc.Api.isSimulationError(sim)) {
-    throw new ContractCallError(describeContractFailure(sim.error), sim.error);
+    throw new ContractCallError(explainSimulationFailure(sim, invokedContract(tx)), sim.error);
   }
   if (!rpc.Api.isSimulationSuccess(sim)) {
     throw new ContractCallError("simulation returned no result", sim);
@@ -1063,14 +1098,19 @@ export async function submit(tx: Transaction): Promise<SubmitResult> {
         .map((event) => JSON.stringify(event.event().body().v0().data()))
         .find((text) => /Contract, #\d+|InvalidAction/.test(text)) ?? detail;
 
-    // Every diagnostic's text goes along too: a failure inside the USDC token
-    // (a missing trustline, say) is recognised by its message, not its number.
+    // Every diagnostic's text goes along too, and the events themselves: a
+    // failure inside the USDC token (a missing trustline, say) is recognised
+    // by the contract it started in, never by its number alone.
     const allText = diagnostics.map((event) => JSON.stringify(event.event().body().v0().data())).join(" ");
 
     return {
       hash,
       successful: false,
-      failure: describeContractFailure(`${reason || "the contract rejected this call"} ${allText}`.trim()),
+      failure: explainFailure(`${reason || "the contract rejected this call"} ${allText}`.trim(), {
+        events: failureEvents(diagnostics),
+        invoked: invokedContract(tx),
+        token: USDC_CONTRACT_ID,
+      }),
       explorer: explorerLink,
     };
   }

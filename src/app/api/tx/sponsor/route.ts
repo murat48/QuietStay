@@ -27,7 +27,7 @@ import {
 } from "@stellar/stellar-sdk";
 
 import { ConfigurationError, NETWORK_PASSPHRASE, testnetFeeSecret } from "@/lib/config";
-import { readInventory, readIssuer, server, submit } from "@/lib/contract";
+import { explainSimulationFailure, invokedContract, readInventory, readIssuer, server, submit } from "@/lib/contract";
 import { countInWindow } from "@/lib/once-store";
 import { serverAccount } from "@/lib/sep10";
 import { assertFeeKeyIsolated, checkSponsored, LIMITS, MAX_FEE_STROOPS, SponsorRefusal } from "@/lib/sponsor";
@@ -112,7 +112,9 @@ export async function POST(request: Request): Promise<Response> {
       .build();
     const sim = await server.simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) {
-      return Response.json({ error: `the network refuses this transaction: ${sim.error.split("\n")[0]}` }, { status: 400 });
+      // Explained by the contract the failure started in: a USDC token error
+      // must not be read as one of QuietStay's codes.
+      return Response.json({ error: `the network refuses this transaction: ${explainSimulationFailure(sim, invokedContract(tx))}` }, { status: 400 });
     }
     const ok = sim as rpc.Api.SimulateTransactionSuccessResponse;
     // Headroom: a passkey signature was already in place for this simulation,
