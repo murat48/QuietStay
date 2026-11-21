@@ -1,0 +1,28 @@
+mainnet, offline (soroban-env-host 30.0.0 and the 2026-11-21 settings); nothing signed or sent
+final WASM ../../contracts/target/wasm32v1-none/release/quietstay_rights.wasm: 71244 B; code entry XDR 71344 B; rent size 1086431 B (XDR + module memory 1015087 B)
+  cost inputs: V1(ContractCodeEntryV1 { ext: V0, cost_inputs: ContractCodeCostInputs { ext: V0, n_instructions: 15367, n_functions: 187, n_globals: 4, n_table_entries: 0, n_types: 44, n_data_segments: 7, n_elem_segments: 0, n_imports: 48, n_exports: 54, n_data_segment_bytes: 37199 } })
+  rent rate 1000 stroops/KB, min persistent TTL 2073600 ledgers, code rent ÷3
+  instructions               18300 stroops     0.0018 XLM  write fee, non-refundable
+  entry write                 1250 stroops     0.0001 XLM  write fee, non-refundable
+  bytes written              30447 stroops     0.0030 XLM  write fee, non-refundable
+  transaction size           15972 stroops     0.0016 XLM  write fee, non-refundable
+  history                   160234 stroops     0.0160 XLM  write fee, non-refundable
+  rent                   603574049 stroops    60.3574 XLM  rent, refundable, charged exactly
+  15% margin              90536107 stroops     9.0536 XLM  declared by the simulation, refunded
+  = 694336359 stroops; simulated 694336359: REPRODUCED EXACTLY (envelope priced at 80567 B)
+  charged on the network ≈ 60.3800 XLM (all but the margin)
+wasm-size/no-docs.wasm: 50115 B, rent size 1022882 B, rent 56.8269 XLM, charged ≈ 56.8435 XLM (simulation would ask 65.3675), saves ≈ 3.5365 XLM
+  cost inputs: V1(ContractCodeEntryV1 { ext: V0, cost_inputs: ContractCodeCostInputs { ext: V0, n_instructions: 15367, n_functions: 187, n_globals: 4, n_table_entries: 0, n_types: 44, n_data_segments: 7, n_elem_segments: 0, n_imports: 48, n_exports: 54, n_data_segment_bytes: 16071 } })
+wasm-size/no-docs-meta.wasm: 49772 B, rent size 1021409 B, rent 56.7451 XLM, charged ≈ 56.7615 XLM (simulation would ask 65.2733), saves ≈ 3.6185 XLM
+  cost inputs: V1(ContractCodeEntryV1 { ext: V0, cost_inputs: ContractCodeCostInputs { ext: V0, n_instructions: 15367, n_functions: 187, n_globals: 4, n_table_entries: 0, n_types: 44, n_data_segments: 5, n_elem_segments: 0, n_imports: 48, n_exports: 54, n_data_segment_bytes: 15735 } })
+wasm-size/no-spec.wasm: 36721 B, rent size 982378 B, rent 54.5767 XLM, charged ≈ 54.5894 XLM (simulation would ask 62.7759), saves ≈ 5.7906 XLM
+  cost inputs: V1(ContractCodeEntryV1 { ext: V0, cost_inputs: ContractCodeCostInputs { ext: V0, n_instructions: 15367, n_functions: 187, n_globals: 4, n_table_entries: 0, n_types: 44, n_data_segments: 6, n_elem_segments: 0, n_imports: 48, n_exports: 54, n_data_segment_bytes: 2681 } })
+wasm-size/opt-s.wasm: 97939 B, rent size 1719501 B, rent 95.5280 XLM, charged ≈ 95.5582 XLM (simulation would ask 109.8874), saves ≈ -35.1782 XLM
+  cost inputs: V1(ContractCodeEntryV1 { ext: V0, cost_inputs: ContractCodeCostInputs { ext: V0, n_instructions: 26991, n_functions: 222, n_globals: 4, n_table_entries: 9, n_types: 43, n_data_segments: 14, n_elem_segments: 1, n_imports: 48, n_exports: 54, n_data_segment_bytes: 39748 } })
+wasm-size/opt-3.wasm: 100803 B, rent size 1746061 B, rent 97.0035 XLM, charged ≈ 97.0346 XLM (simulation would ask 111.5851), saves ≈ -36.6546 XLM
+  cost inputs: V1(ContractCodeEntryV1 { ext: V0, cost_inputs: ContractCodeCostInputs { ext: V0, n_instructions: 27998, n_functions: 153, n_globals: 4, n_table_entries: 8, n_types: 45, n_data_segments: 7, n_elem_segments: 1, n_imports: 48, n_exports: 54, n_data_segment_bytes: 39306 } })
+oz-wasm/account.wasm: 48273 B, rent size 780232 B, rent 43.3463 XLM, charged ≈ 43.3624 XLM (simulation would ask 49.8643), saves ≈ 17.0176 XLM
+  cost inputs: V1(ContractCodeEntryV1 { ext: V0, cost_inputs: ContractCodeCostInputs { ext: V0, n_instructions: 11249, n_functions: 108, n_globals: 4, n_table_entries: 0, n_types: 32, n_data_segments: 10, n_elem_segments: 0, n_imports: 42, n_exports: 22, n_data_segment_bytes: 23808 } })
+oz-wasm/verifier.wasm: 12105 B, rent size 302262 B, rent 16.7925 XLM, charged ≈ 16.7981 XLM (simulation would ask 19.3170), saves ≈ 43.5819 XLM
+  cost inputs: V1(ContractCodeEntryV1 { ext: V0, cost_inputs: ContractCodeCostInputs { ext: V0, n_instructions: 4515, n_functions: 33, n_globals: 4, n_table_entries: 0, n_types: 18, n_data_segments: 7, n_elem_segments: 0, n_imports: 17, n_exports: 7, n_data_segment_bytes: 2835 } })
+wrote /home/murat/QuietStay/QuietStay/tools/upload-fee/../../evidence/checklist/mainnet-upload-fee-breakdown-2026-11-21.json

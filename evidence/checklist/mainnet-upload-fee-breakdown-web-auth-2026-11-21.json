@@ -1,0 +1,25 @@
+{
+  "bytes": 1547,
+  "charged_estimate": 29917263,
+  "code_entry_xdr_bytes": 1648,
+  "computed_with": "tools/upload-fee (soroban-env-host 30.0.0), offline",
+  "envelope_bytes_priced": 4051,
+  "min_persistent_ttl": 2073600,
+  "module_memory_cost_bytes": 52179,
+  "rent": 29905160,
+  "rent_fee_per_1kb": 1000,
+  "rent_size_bytes": 53827,
+  "reproduced_exactly": true,
+  "simulated_min_resource_fee": 34403037,
+  "simulation_margin_15_percent_refunded": 4485774,
+  "variants": [],
+  "wasm_sha256": "708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1",
+  "write_fees_non_refundable": {
+    "bytes written": 704,
+    "entry write": 1250,
+    "history": 8622,
+    "instructions": 723,
+    "transaction size": 804
+  },
+  "write_fees_total": 12103
+}

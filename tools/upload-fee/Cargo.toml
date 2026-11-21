@@ -1,0 +1,15 @@
+[package]
+name = "upload-fee"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Read-only: a WASM's mainnet upload fee, part by part, with the network's own host (soroban-env-host 30.0.0)"
+
+# Standalone: not part of the contracts workspace, and nothing here is deployed.
+[workspace]
+
+[dependencies]
+# The host the networks' RPC runs (stellar-rpc 30.0.1). Its rent size for a
+# code entry counts custom sections; 27.0.1 does not.
+soroban-env-host = { version = "=30.0.0", features = ["testutils"] }
+serde_json = "1"

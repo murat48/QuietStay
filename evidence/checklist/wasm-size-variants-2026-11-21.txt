@@ -1,0 +1,18 @@
+input contracts/target/wasm32v1-none/release/quietstay_rights.wasm: 71244 B, sha256 76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde
+  section 1: 292 B
+  section 2: 292 B
+  section 3: 192 B
+  section 5: 5 B
+  section 6: 35 B
+  section 7: 767 B
+  section 12: 3 B
+  section 10: 32405 B
+  section 11: 2347 B
+  section custom:contractmetav0: 258 B
+  section custom:contractspecv0: 34523 B
+  section custom:contractenvmetav0: 32 B
+  section custom:contractmetav0: 85 B
+  spec entries: 93; doc strings in them: 21128 B
+no-docs: 50115 B (-21129 B), sha256 97285f51d2cbfd04f24f8105f67c1673431291fb121ab02395d6e20fd74c7427, every non-custom section identical: true
+no-docs-meta: 49772 B (-21472 B), sha256 79de8d20033e9d6911c2a886f3e68dbbec751deef5236354a6b493e1d149bf91, every non-custom section identical: true
+no-spec: 36721 B (-34523 B), sha256 bd1ae862f9bcbde39f4a0bc49dcc578288dc131fd912af76d3c42cc65bb0068d, every non-custom section identical: true

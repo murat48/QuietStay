@@ -1,0 +1,96 @@
+{
+  "bytes": 71244,
+  "charged_estimate": 603800252,
+  "code_entry_xdr_bytes": 71344,
+  "computed_with": "tools/upload-fee (soroban-env-host 30.0.0), offline",
+  "envelope_bytes_priced": 80567,
+  "min_persistent_ttl": 2073600,
+  "module_memory_cost_bytes": 1015087,
+  "rent": 603574049,
+  "rent_fee_per_1kb": 1000,
+  "rent_size_bytes": 1086431,
+  "reproduced_exactly": true,
+  "simulated_min_resource_fee": 694336359,
+  "simulation_margin_15_percent_refunded": 90536107,
+  "variants": [
+    {
+      "bytes": 50115,
+      "charged_estimate_stroops": 568434757,
+      "file": "wasm-size/no-docs.wasm",
+      "non_refundable_stroops": 165708,
+      "rent_size_bytes": 1022882,
+      "rent_stroops": 568269049,
+      "saving_vs_final_charged_stroops": 35365495,
+      "simulated_estimate_stroops": 653675114
+    },
+    {
+      "bytes": 49772,
+      "charged_estimate_stroops": 567615439,
+      "file": "wasm-size/no-docs-meta.wasm",
+      "non_refundable_stroops": 164723,
+      "rent_size_bytes": 1021409,
+      "rent_stroops": 567450716,
+      "saving_vs_final_charged_stroops": 36184813,
+      "simulated_estimate_stroops": 652733046
+    },
+    {
+      "bytes": 36721,
+      "charged_estimate_stroops": 545894189,
+      "file": "wasm-size/no-spec.wasm",
+      "non_refundable_stroops": 127362,
+      "rent_size_bytes": 982378,
+      "rent_stroops": 545766827,
+      "saving_vs_final_charged_stroops": 57906063,
+      "simulated_estimate_stroops": 627759213
+    },
+    {
+      "bytes": 97939,
+      "charged_estimate_stroops": 955582248,
+      "file": "wasm-size/opt-s.wasm",
+      "non_refundable_stroops": 302643,
+      "rent_size_bytes": 1719501,
+      "rent_stroops": 955279605,
+      "saving_vs_final_charged_stroops": -351781996,
+      "simulated_estimate_stroops": 1098874188
+    },
+    {
+      "bytes": 100803,
+      "charged_estimate_stroops": 970346003,
+      "file": "wasm-size/opt-3.wasm",
+      "non_refundable_stroops": 310843,
+      "rent_size_bytes": 1746061,
+      "rent_stroops": 970035160,
+      "saving_vs_final_charged_stroops": -366545751,
+      "simulated_estimate_stroops": 1115851277
+    },
+    {
+      "bytes": 48273,
+      "charged_estimate_stroops": 433623932,
+      "file": "oz-wasm/account.wasm",
+      "non_refundable_stroops": 160438,
+      "rent_size_bytes": 780232,
+      "rent_stroops": 433463494,
+      "saving_vs_final_charged_stroops": 170176320,
+      "simulated_estimate_stroops": 498643456
+    },
+    {
+      "bytes": 12105,
+      "charged_estimate_stroops": 167981483,
+      "file": "oz-wasm/verifier.wasm",
+      "non_refundable_stroops": 56878,
+      "rent_size_bytes": 302262,
+      "rent_stroops": 167924605,
+      "saving_vs_final_charged_stroops": 435818769,
+      "simulated_estimate_stroops": 193170173
+    }
+  ],
+  "wasm_sha256": "76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde",
+  "write_fees_non_refundable": {
+    "bytes written": 30447,
+    "entry write": 1250,
+    "history": 160234,
+    "instructions": 18300,
+    "transaction size": 15972
+  },
+  "write_fees_total": 226203
+}

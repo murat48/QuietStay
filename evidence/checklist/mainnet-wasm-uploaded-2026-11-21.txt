@@ -1,0 +1,8 @@
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-mainnet-wasm.ts --network mainnet
+mainnet (https://mainnet.sorobanrpc.com), protocol 29, latest ledger 65600766, read 2026-11-21T19:38:00.280Z
+read only: getLedgerEntries; nothing signed or sent
+  76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde  NOT UPLOADED (or archived)   QuietStay rights (final, Step 5)
+  708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1  NOT UPLOADED (or archived)   SEP-45 web-auth (Anchor Platform @ dc5817fb, our build)
+  c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1  UPLOADED, 48273 B, live until ledger 67205504 (1604738 ledgers, ~92.9 days)   OpenZeppelin smart account (stellar-accounts v0.8.0)
+  e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76  UPLOADED, 12105 B, live until ledger 66824189 (1223423 ledgers, ~70.8 days)   OpenZeppelin WebAuthn verifier

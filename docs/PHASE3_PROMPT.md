@@ -61,6 +61,28 @@ Network and money
 - Never read, print, log or commit a secret key. Mainnet identities live only
   in the Stellar CLI keystore, under names I create. If a step needs a key you
   do not have, stop and ask me.
+- **I run every mainnet command myself** (added 2026-11-21, Step 5 review; it
+  applies from now on, and to Step 6 and Step 7).
+  - You prepare the exact command; I run it in my own terminal and paste you
+    the output. You verify the result by reading the chain.
+  - You never run a command that signs or sends anything with a mainnet
+    identity or with `--network mainnet`: no `stellar tx new`, `tx sign`,
+    `tx send`, `contract upload`, `contract deploy`, `contract invoke
+    --send=yes`, `contract extend` or `contract restore` on mainnet, and no
+    script that does one. That includes the mainnet path of
+    `scripts/mainnet-sign-submit.sh` and `scripts/arbiter-resolve.sh`.
+  - You may still read mainnet: RPC and Horizon reads, and
+    `simulateTransaction` with a public key as the source, which signs and
+    sends nothing.
+  - Never load `.env.local` or any other secret yourself: no reading,
+    printing or deriving anything from a secret key, seed phrase or a file or
+    variable that holds one, not even a public key. Never run
+    `stellar keys secret`.
+  - Run no command at all on a mainnet identity, not even a read like
+    `stellar keys address qs-main-…`. Ask me for its public key.
+  - On testnet, signing through the CLI keystore with a testnet identity
+    (`--source qs-owner`, and the like) stays as before: the CLI signs and
+    you never see the key.
 - Pilot limits on mainnet: no single payment above 1 USDC, and no more than
   5 USDC held across all pilot accounts at any time, unless I raise these
   limits in writing. All pilot accounts are mine, so this USDC circulates

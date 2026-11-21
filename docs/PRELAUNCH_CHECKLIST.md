@@ -19,6 +19,21 @@ calls that nothing signed.
 - **Evidence files:** `evidence/checklist/`, `evidence/network/` and
   `evidence/privacy/2026-11-21-*CATUBRZZ*`.
 
+**Step 5 review (2026-11-21, the owner's decisions; not GO yet):**
+- The High network issue is **closed**. The connection drops that remain are
+  kept as a Low (§9).
+- The swap-cost Medium is **closed**, with the Step 6 gate: simulate
+  `complete_swap` right after the mainnet deploy, before any swap
+  transaction (§5.2).
+- The deploy cost is accepted in principle. The XLM budget per account, the
+  reuse check, the rent and write-fee breakdown and the size estimate are in
+  §5.4. The runbook for the accounts is [MAINNET_SETUP.md](MAINNET_SETUP.md).
+- **New rule:** from Step 6 on, the owner runs every mainnet command in their
+  own terminal. Claude prepares the exact commands and verifies the results
+  by reading the chain. Claude never runs a command that signs or sends with
+  a mainnet identity or on `--network mainnet`, and never loads `.env.local`
+  or any secret (PHASE3_PROMPT.md, hard constraints).
+
 Status words: **PASS** (checked, with evidence below); **OPEN — yours** (needs
 the owner's action or decision before GO); **Step 6** (can only be done once
 the mainnet contracts exist, and is a gate inside Step 6 before the first
@@ -32,15 +47,17 @@ flow).
 | 2 | Money movement: every USDC path, the invariant, the allowance and outside-account tests | **PASS** |
 | 3 | Proof, offer and escrow reuse | **PASS** |
 | 4 | Storage: the TTL plan, and every extend/restore command run on testnet | **PASS** |
-| 5 | Transaction costs: each flow on testnet, against mainnet limits and fees | **PASS**, with a funding note (§5.3) |
-| 5a | Swap cost on mainnet (the open Medium) | **PASS by parameters**; the live `--send=no` is a Step 6 gate (§5.2) |
+| 5 | Transaction costs: each flow on testnet, against mainnet limits and fees | **PASS**; deploy cost accepted in principle, budget in §5.4 |
+| 5a | Swap cost on mainnet (the Medium) | **Closed** (your decision); the live `--send=no` is a Step 6 gate (§5.2) |
+| 5b | The WebAuthn verifier the passkey wallets use is someone else's contract instance (found in the review) | **OPEN — yours**: proposal in §5.4 |
 | 6 | Configuration, testnet and mainnet side by side | **PASS** for every value that exists; mainnet ids are **OPEN — yours** / **Step 6** (§6) |
 | 7 | Tests: every suite passes, no known serious bug | **PASS** (§7) |
 | 8 | Spec §14 additions | see §8, item by item |
-| 9 | Open issues: the High network issue | **proposed: close** (§9) |
+| 9 | Open issues: the High network issue | **Closed** (your decision); the drops stay as a Low (§9) |
 
-**What GO still needs from you:** the list in §10. None of it is a code
-change.
+**What GO still needs from you:** the list in §10, which now includes running
+[MAINNET_SETUP.md](MAINNET_SETUP.md). None of it is a change to the rights
+contract.
 
 ---
 
@@ -175,8 +192,14 @@ instance start with 2,073,600 ledgers on mainnet, about 120 days at 5 s.
 - When fewer than 17,280 remain (after about 119 days), the next call extends
   both to 518,400 ledgers. That call pays the code entry's rent for those
   ledgers.
-- That is about **17 XLM**, scaled from the upload simulation in §5.3. It is
-  an estimate.
+- That is about **14.6 XLM charged**, with 16.8 XLM declared because the
+  simulation adds 15% to the rent. The amount is computed from the code
+  entry's rent size, 1,086,431 bytes (§5.4), for the 501,120 ledgers from
+  17,280 to 518,400, at mainnet's rate.
+  - The Step 5 figure of "about 17 XLM" was scaled from the simulated upload,
+    so it included that 15%.
+  - It is an estimate: the rate moves with mainnet's state size, and it is at
+    its floor today.
 - This falls after the 30-day pilot. You can avoid it landing on a pilot
   account by running `stellar contract extend` on the code entry yourself
   beforehand.
@@ -255,10 +278,19 @@ instead:
      is higher. The local run does not model the transaction's own
      authorization and storage setup, but neither does that difference
      depend on the network's parameters.
+   - **Correction (Step 5 review).** The local run uses soroban-env-host
+     27.0.1. The host the networks run is newer, and it counts more when it
+     parses a module: every custom section, the 34.5 KB interface spec
+     included, as data-segment bytes, and every `br_table` target as an
+     instruction. That is a further part of the gap.
+     - It is the same on both networks. The exact reproduction of mainnet's
+       upload simulation with host 30.0.0 (§5.4) shows mainnet uses it.
+     - The closing stands, and so does the Step 6 gate.
 3. **The upload of this exact WASM simulated on mainnet** (§5.3), which shows
    mainnet accepts it. It used 60,999,798 instructions to upload.
 
-**Proposal:** close the Medium as measured, and keep one gate in Step 6: right
+**Decision (Step 5 review): closed**, with the gate below. The proposal was:
+close the Medium as measured, and keep one gate in Step 6: right
 after the mainnet deploy, before any swap transaction, a mainnet `--send=no`
 of `complete_swap`. If it is ever above 400 M, the swap stays testnet-only,
 as the SOW says. Based on the above, the expectation is about 175 M, 44%.
@@ -301,13 +333,139 @@ key):
 For comparison, the same rights WASM's testnet upload (`1b9ac00a…`) charged
 38,127,317 stroops = 3.81 XLM.
 
-**Funding note for GO:** the mainnet deployer identity needs **at least about
-75 XLM** for the two uploads, plus the two deploys and the minimum balance.
+**Funding note for GO** (Step 5; superseded by the budget in §5.4): the
+deployer needs at least about 75 XLM.
 
-- The deploys can only be simulated once the WASM is uploaded. Their estimate
-  is about 0.5 XLM each, mostly the instance's rent, scaled the same way.
-- Each pilot account needs about 1–2 XLM for its fees, plus the reserve for
-  its USDC trustline.
+### 5.4 Deploy cost review (Step 5 review, 2026-11-21)
+
+Everything here was read-only or offline. Nothing was signed or sent, and the
+WASM was not changed.
+
+**1. Can an uploaded WASM be reused?** Each code entry was read by its hash on
+mainnet with `npx tsx scripts/check-mainnet-wasm.ts --network mainnet`
+(`getLedgerEntries`; output `evidence/checklist/mainnet-wasm-uploaded-2026-11-21.txt`,
+ledger 65,600,766):
+
+| WASM | sha256 | On mainnet | Reuse |
+| --- | --- | --- | --- |
+| QuietStay rights (final) | `76d69e79…dddde` | not uploaded | no: we upload it |
+| SEP-45 web-auth (Anchor Platform @ `dc5817fb`, our pinned build) | `708cacdc…cbc1` | **not uploaded** | no: we upload it. A build by anyone else would have to be byte-identical to be "the pinned build", which `check-web-auth.ts` requires. **Saving: 0** |
+| OpenZeppelin smart account (stellar-accounts v0.8.0) | `c514d35e…4b9e1` | uploaded, 48,273 B, live until ledger 67,205,504 (about 93 days) | **already reused.** The kit deploys each wallet from this hash; QuietStay never planned to upload it. **Saving: 43.36 XLM charged** (49.86 declared) |
+| OpenZeppelin WebAuthn verifier | `e63a030d…6b72b76` | uploaded, 12,105 B, live until ledger 66,824,189 (about 71 days) | **yes, if you approve the change below. Saving: 16.80 XLM charged** (19.32 declared), against uploading it ourselves |
+
+The two savings were priced by `tools/upload-fee`, on the WASMs fetched by
+hash with `stellar contract fetch --wasm-hash … --network testnet`; their
+sha256 match. **Reusing both saves about 60.2 XLM.** The two QuietStay WASMs
+are not on mainnet, so they have to be uploaded.
+
+**The verifier is someone else's contract instance.** This came out of your
+rule, "only reuse an uploaded WASM, never someone else's contract instance".
+- Today the app gives the kit the verifier **instance** from the kit's
+  deployment manifest: testnet `CC7EKIHQ…OM3F`, mainnet `CB7HENHJ…Q5YR`
+  (`src/lib/config.ts`, `WEBAUTHN_VERIFIER_ID`; spec §12).
+- Every passkey wallet stores that address in its signer and calls it to
+  check each passkey signature.
+- Its interface (`stellar contract info interface --wasm-hash e63a030d…`) is
+  `verify`, `canonicalize_key` and `batch_canonicalize_key`. It has no
+  constructor, no admin and no `upgrade`, so nobody can change it.
+- But its instance's TTL is not ours. If it were archived, our wallets would
+  stop working until someone restored it.
+
+**Proposal:** deploy our own verifier instance from the uploaded WASM
+`e63a030d…`, on mainnet in Step 6 and on testnet before it.
+- It runs identical code; the change is only to which instance the wallets
+  call.
+- Cost: an instance entry and no storage, about 0.03 XLM (scaled from the
+  web-auth instance deploy, `31f48041…`: 22,724 stroops of rent on testnet).
+- It means `WEBAUTHN_VERIFIER_ID` per network in the app, not a change to the
+  rights WASM. Then one testnet rerun of the passkey specs.
+- Wallets made before the change keep the old address. The pilot's mainnet
+  wallet does not exist yet.
+- **Your decision.**
+
+The shared "default deployer" the kit uses is not a contract instance. It is
+a G key with a published seed, used only to derive wallet addresses; the fee
+account pays (`src/lib/passkey-wallet.ts`).
+
+**2. The 69.43 XLM, broken down.** `cd tools/upload-fee && cargo run --release --
+../../contracts/target/wasm32v1-none/release/quietstay_rights.wasm` is offline
+and uses the host's own fee functions with mainnet's settings. It reproduces
+the simulated 694,336,359 stroops **exactly**, to the stroop (output
+`evidence/checklist/mainnet-upload-fee-breakdown-2026-11-21.{txt,json}`):
+
+| Part | Stroops | XLM | Kind |
+| --- | ---: | ---: | --- |
+| Instructions (61.0 M) | 18,300 | 0.0018 | write fee, non-refundable |
+| One entry written | 1,250 | 0.0001 | write fee, non-refundable |
+| 71,344 bytes written | 30,447 | 0.0030 | write fee, non-refundable |
+| Transaction size | 15,972 | 0.0016 | write fee, non-refundable |
+| History | 160,234 | 0.0160 | write fee, non-refundable |
+| **Write fees, total** | **226,203** | **0.0226** | |
+| **Rent**: 2,073,600 ledgers at 1,000 stroops per KB | **603,574,049** | **60.3574** | refundable, charged in full |
+| Simulation margin, +15% of the rent | 90,536,107 | 9.0536 | declared, **refunded** after the transaction |
+| **Simulated = declared** | **694,336,359** | **69.4336** | |
+| **Charged** | **603,800,252** | **60.3800** | |
+
+- **The deployer must hold the full 69.43 XLM** (plus its 1 XLM minimum) when
+  it sends the upload. The network reserves the declared fee and refunds the
+  9.05 XLM after.
+- **Why the rent is so high.** Code is priced on its size in memory, not its
+  file size.
+  - The rent size is 1,086,431 bytes: the 71,344-byte entry plus 1,015,087
+    bytes of parsed-module memory cost, then ÷3 for code.
+  - Of that memory cost, 792,757 bytes come from the 15,367 WASM
+    instructions. 74,688 come from 37,199 bytes of data and custom sections;
+    the rest from functions, imports, types and exports.
+  - At mainnet's rate, each WASM instruction costs about 0.0029 XLM of rent.
+- **The two OZ WASMs have shorter TTLs than ours will.** They are live for
+  about 93 days (account) and 71 days (verifier) from 2026-11-21.
+  - Every wallet needs both code entries live.
+  - Anyone can extend them. Extending them over the pilot is a Step 6 item to
+    decide; it is not needed for a 30-day pilot.
+- **The same check for web-auth:** 3.4403 XLM simulated, also reproduced
+  exactly. That is 0.0012 XLM of write fees, 2.9905 XLM of rent and 0.4486 XLM
+  of margin, so 2.99 XLM charged
+  (`evidence/checklist/mainnet-upload-fee-breakdown-web-auth-2026-11-21.txt`).
+- **Two findings while reproducing it:**
+  - The simulation's 15% rent margin, which the network refunds.
+  - The networks' host counts custom sections in the memory cost; host 27.0.1
+    does not. The tool uses soroban-env-host 30.0.0 for that reason. Host
+    27.0.1 gave 563 M stroops of rent and could not reproduce the simulation.
+
+**3. How much smaller without changing behaviour?** The WASM is not changed.
+Variants were written to the scratchpad by `npx tsx scripts/wasm-size-variants.ts`
+(output `evidence/checklist/wasm-size-variants-2026-11-21.txt`), which checks
+that every non-custom section stays byte-identical. The two compiler settings
+were built into a scratch target directory. All were priced by the same tool:
+
+| Variant | Bytes | Charged on mainnet | Saving | What is lost |
+| --- | ---: | ---: | ---: | --- |
+| Final WASM (as tested) | 71,244 | 60.38 XLM | — | — |
+| Interface spec without its doc strings | 50,115 | 56.84 XLM | **3.54 XLM** | the doc text in explorers and bindings. All 50 functions and every type stay |
+| …and no free-form `contractmetav0` | 49,772 | 56.76 XLM | 3.62 XLM | also the recorded Rust, SDK and CLI versions |
+| No interface spec at all | 36,721 | 54.59 XLM | 5.79 XLM | `stellar contract invoke`, `info interface`, bindings and explorers can no longer read the interface from the chain. For scale only; not recommended |
+| `opt-level = "s"` (compiler setting) | 97,939 | 95.56 XLM | −35.18 XLM | larger |
+| `opt-level = 3` | 100,803 | 97.03 XLM | −36.65 XLM | larger |
+
+- The build is already at its smallest compiler setting (`opt-level = "z"`,
+  LTO, one codegen unit, `wasm-opt`). `stellar contract optimize` on it
+  gains 0 bytes.
+- **So without code changes, the most is 3.5–3.6 XLM (about 6%)**, from
+  dropping the doc strings. That changes the WASM hash, which means redoing
+  the Step 5 testnet run. A smaller instruction count would need source
+  changes, at about 2.9 XLM saved per 1,000 WASM instructions (about 6.5% of
+  the code each).
+- **My recommendation:** keep the tested WASM. The saving is about 6% of the
+  deploy cost, and it would cost a new testnet run and a reproducibility step
+  after the build. **Your decision.**
+
+**4. XLM budget per account.** The table is in
+[MAINNET_SETUP.md](MAINNET_SETUP.md#budget) with each part's source.
+- **121 XLM in all**, of which `mainnet-test` passes on 8.0000900 XLM, so
+  **113 XLM from you**. That is when the buyer and renter buy their 4 USDC on
+  the DEX; it is 81 XLM if the USDC comes from an exchange.
+- About 64.6 XLM of it is spent on the deploy and fees. The DEX XLM becomes
+  USDC, which stays in the pilot accounts.
 
 ## 6. Configuration — PASS for every value that exists
 
@@ -387,7 +545,10 @@ privacy record (`evidence/privacy/2026-11-21-step3-CATUBRZZ-*.txt`,
 | Privacy evidence for every evidence transaction | **PASS** | §7 |
 | The store (Upstash) for SEP-45 and the fee route | **Step 6**, for each deployment's environment | PHASE3_PROGRESS.md (Medium) |
 
-## 9. The High network issue — proposed: close
+## 9. The High network issue — closed (Step 5 review)
+
+**Decision:** closed. The connection drops on this machine's line stay as a
+Low (PHASE3_PROGRESS.md, open issues). The analysis below is unchanged.
 
 **Measured** (`evidence/network/`). A read-only probe ran from this machine
 every 3 s for 90 minutes, then two 30-minute probes side by side. It hit the
@@ -431,31 +592,42 @@ the sends recover by hash". The decision is yours.
 
 ## 10. Before GO: what is yours
 
-1. **Mainnet identities**, created by you in the CLI keystore. I create none.
-   - the issuer/deployer, funded with at least about 75 XLM (§5.3);
-   - the arbiter (not the issuer);
-   - the fee identity for the mainnet CLI signing flow (spec §13);
-   - the pilot owner, buyer and renter.
+Updated at the Step 5 review (2026-11-21). The High and the swap Medium are
+closed, and the deploy cost is accepted in principle.
 
-   Then give me their public keys.
-2. **USDC trustlines** on every mainnet G account that will receive USDC.
-   After that, `scripts/check-pilot-accounts.ts --network mainnet --accounts …`
-   must pass, total ≤ 5 USDC.
-3. **`mainnet-test`'s balance** reduced to the minimum (it holds 9.0001000
-   XLM).
-4. **Decisions:**
-   - close the High (§9);
-   - close the swap Medium with the Step 6 gate (§5.2);
-   - accept the about-75 XLM deploy cost (§5.3), and the about-17 XLM code
-     extension after about 119 days (§4).
-5. **Step 3 still open:** the escrow #1 collect on `CA4B3MIZ…`, which you run
-   after 2026-11-21T20:28:30Z.
+1. **Run [MAINNET_SETUP.md](MAINNET_SETUP.md)** in your own terminal, and
+   paste me the read-only check after each part. It covers:
+   - the six `qs-main-` identities (issuer/deployer, arbiter, fee, owner,
+     buyer, renter), created by you. I create none;
+   - funding in order, from the budget (113 XLM from you on the DEX route);
+   - `mainnet-test` down to its 1 XLM minimum, with the rest going to the
+     deployer;
+   - USDC trustlines (limit 5 USDC) on owner, buyer and renter, and 4 USDC in
+     total into the buyer and renter.
+
+   I check each pasted output against the chain. GO comes after that.
+2. **Decisions still open:**
+   - **the WebAuthn verifier** (§5.4): our own instance from the uploaded WASM
+     `e63a030d…` (my proposal, following your rule), or the kit's instance
+     `CB7HENHJ…`;
+   - **the WASM size** (§5.4): keep the tested WASM (my recommendation), or
+     drop the spec's doc strings to save about 3.5 XLM and redo the Step 5
+     testnet run;
+   - the code extension after about 119 days: about 14.6 XLM charged (§4).
+3. **Step 3 still open:** the escrow #1 collect on `CA4B3MIZ…`, which you run
+   after 2026-11-21T20:28:30Z with `npx tsx scripts/step3-evidence.ts
+   collect-wait`. Paste me the output and I close Step 3.
    - Separately, the final deployment's wait rental (escrow #1 on `CATUBRZZ…`)
      can be collected from **2026-11-22T13:50:56Z** with `npx tsx
      scripts/step3-evidence.ts collect-wait --contract
      CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM`.
    - That is the one flow on the final WASM that needs the 24 h wait. Its
      refusal before the window is already on chain: #48, `396deb7b…`.
+   - **Testnet note:** the final WASM's code entry on testnet is live until
+     ledger 5,959,276, about 2026-11-27 (`scripts/check-mainnet-wasm.ts
+     --network testnet`). The collect is well before that. A testnet
+     rehearsal after that date needs a `stellar contract extend` of the code
+     first. That is a testnet transaction, which I can run.
 
 **Step 6 gates**, before the first flow on mainnet:
 - the upload and the deploy, each simulated before it is sent;
@@ -464,6 +636,9 @@ the sends recover by hash". The decision is yours.
 - `check-web-auth --network mainnet`;
 - a `--send=no` of each flow, the swap included;
 - the store configured;
-- the sign-in key at its minimum balance.
+- the sign-in key at its minimum balance;
+- `complete_swap` simulated right after the deploy, before any swap
+  transaction (the swap Medium's gate).
 
-Each needs your confirmation of the exact command first.
+From Step 6 on, I prepare each exact command, you run it in your own
+terminal, and I verify the result by reading the chain.

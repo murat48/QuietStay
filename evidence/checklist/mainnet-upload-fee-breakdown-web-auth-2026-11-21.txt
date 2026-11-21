@@ -1,0 +1,14 @@
+mainnet, offline (soroban-env-host 30.0.0 and the 2026-11-21 settings); nothing signed or sent
+final WASM ../../contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm: 1547 B; code entry XDR 1648 B; rent size 53827 B (XDR + module memory 52179 B)
+  cost inputs: V1(ContractCodeEntryV1 { ext: V0, cost_inputs: ContractCodeCostInputs { ext: V0, n_instructions: 310, n_functions: 6, n_globals: 4, n_table_entries: 0, n_types: 6, n_data_segments: 5, n_elem_segments: 0, n_imports: 11, n_exports: 7, n_data_segment_bytes: 651 } })
+  rent rate 1000 stroops/KB, min persistent TTL 2073600 ledgers, code rent ÷3
+  instructions                 723 stroops     0.0001 XLM  write fee, non-refundable
+  entry write                 1250 stroops     0.0001 XLM  write fee, non-refundable
+  bytes written                704 stroops     0.0001 XLM  write fee, non-refundable
+  transaction size             804 stroops     0.0001 XLM  write fee, non-refundable
+  history                     8622 stroops     0.0009 XLM  write fee, non-refundable
+  rent                    29905160 stroops     2.9905 XLM  rent, refundable, charged exactly
+  15% margin               4485774 stroops     0.4486 XLM  declared by the simulation, refunded
+  = 34403037 stroops; simulated 34403037: REPRODUCED EXACTLY (envelope priced at 4051 B)
+  charged on the network ≈ 2.9917 XLM (all but the margin)
+wrote /home/murat/QuietStay/QuietStay/tools/upload-fee/../../evidence/checklist/mainnet-upload-fee-breakdown-web-auth-2026-11-21.json
