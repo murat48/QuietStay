@@ -1,0 +1,9 @@
+read 2026-11-21T15:13:28Z
+testnet WebAuthn verifier CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F wasm e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76
+testnet OZ account wasm installed, sha256 c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1
+testnet verifier  • Protocol: v26
+testnet account  • Protocol: v28
+mainnet WebAuthn verifier CB7HENHJ7NF34I5FFXQK7D5I3WWQRGB5O5XO77D3NXMT7LM7LOKRQ5YR wasm e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76
+mainnet OZ account wasm installed, sha256 c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1
+mainnet verifier  • Protocol: v26
+mainnet account  • Protocol: v28

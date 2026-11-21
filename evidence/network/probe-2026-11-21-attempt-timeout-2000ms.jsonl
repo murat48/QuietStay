@@ -1,0 +1,130 @@
+{"start":"2026-11-21T15:08:40.220Z","minutes":30,"node":"v24.17.0"}
+{"at":"2026-11-21T15:08:40.226Z","target":"testnet-rpc","ms":10652,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 104.18.6.25:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:08:40.337Z","target":"mainnet-rpc","ms":10544,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 104.21.42.228:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:08:53.888Z","target":"testnet-horizon","slow":5517,"status":200}
+{"at":"2026-11-21T15:09:02.407Z","target":"testnet-rpc","ms":4012,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"AggregateError","message":"","code":"ETIMEDOUT"},{"name":"Error","message":"connect ETIMEDOUT 104.18.6.25:443","code":"ETIMEDOUT","errno":-110,"syscall":"connect","address":"104.18.6.25","port":443},{"name":"Error","message":"connect ENETUNREACH 2606:4700::6812:619:443 - Local (:::0)","code":"ENETUNREACH","errno":-101,"syscall":"connect","address":"2606:4700::6812:619","port":443},{"name":"Error","message":"connect ETIMEDOUT 104.18.7.25:443","code":"ETIMEDOUT","errno":-110,"syscall":"connect","address":"104.18.7.25","port":443},{"name":"Error","message":"connect ENETUNREACH 2606:4700::6812:719:443 - Local (:::0)","code":"ENETUNREACH","errno":-101,"syscall":"connect","address":"2606:4700::6812:719","port":443}]}
+{"at":"2026-11-21T15:09:02.412Z","target":"mainnet-rpc","slow":6598,"status":200}
+{"at":"2026-11-21T15:09:18.895Z","target":"testnet-horizon","slow":6758,"status":200}
+{"at":"2026-11-21T15:09:33.688Z","target":"mainnet-rpc","slow":5078,"status":200}
+{"at":"2026-11-21T15:09:33.685Z","target":"testnet-rpc","slow":5466,"status":200}
+{"at":"2026-11-21T15:09:53.444Z","target":"mainnet-rpc","slow":5581,"status":200}
+{"at":"2026-11-21T15:09:53.441Z","target":"testnet-rpc","slow":6361,"status":200}
+{"at":"2026-11-21T15:10:02.813Z","target":"mainnet-rpc","slow":9716,"status":200}
+{"at":"2026-11-21T15:10:15.532Z","target":"testnet-horizon","slow":7527,"status":200}
+{"at":"2026-11-21T15:10:15.535Z","target":"mainnet-rpc","ms":30002,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:10:48.538Z","target":"testnet-rpc","slow":6156,"status":200}
+{"at":"2026-11-21T15:10:57.698Z","target":"friendbot","ms":10012,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"Error","message":"getaddrinfo EAI_AGAIN friendbot.stellar.org","code":"EAI_AGAIN","errno":-3001,"syscall":"getaddrinfo"}]}
+{"at":"2026-11-21T15:10:57.697Z","target":"testnet-horizon","ms":10496,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: horizon-testnet.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:10:57.698Z","target":"mainnet-rpc","ms":10495,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: mainnet.sorobanrpc.com:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:11.197Z","target":"testnet-horizon","ms":10508,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: horizon-testnet.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:11.198Z","target":"mainnet-rpc","ms":10507,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: mainnet.sorobanrpc.com:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:11.197Z","target":"testnet-rpc","ms":10509,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: soroban-testnet.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:11.198Z","target":"friendbot","ms":10508,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: friendbot.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:24.711Z","target":"testnet-horizon","ms":10498,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: horizon-testnet.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:24.713Z","target":"mainnet-rpc","ms":10497,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: mainnet.sorobanrpc.com:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:24.711Z","target":"testnet-rpc","ms":10499,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: soroban-testnet.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:24.712Z","target":"friendbot","ms":10499,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: friendbot.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:38.212Z","target":"testnet-horizon","ms":10502,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: horizon-testnet.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:38.213Z","target":"mainnet-rpc","ms":10501,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: mainnet.sorobanrpc.com:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:38.211Z","target":"testnet-rpc","ms":10503,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: soroban-testnet.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:38.213Z","target":"friendbot","ms":10502,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: friendbot.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:11:58.232Z","target":"mainnet-rpc","slow":10764,"status":200}
+{"at":"2026-11-21T15:12:19.441Z","target":"testnet-horizon","ms":10490,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 44.212.158.57:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:12:32.936Z","target":"mainnet-rpc","slow":7067,"status":200}
+{"at":"2026-11-21T15:12:32.936Z","target":"friendbot","slow":7220,"status":400}
+{"at":"2026-11-21T15:12:32.934Z","target":"testnet-rpc","slow":9142,"status":200}
+{"at":"2026-11-21T15:12:32.935Z","target":"testnet-horizon","slow":10063,"status":200}
+{"at":"2026-11-21T15:12:52.558Z","target":"testnet-rpc","slow":10608,"status":200}
+{"at":"2026-11-21T15:13:46.398Z","target":"testnet-rpc","slow":7156,"status":200}
+{"at":"2026-11-21T15:13:46.399Z","target":"mainnet-rpc","slow":22719,"status":200}
+{"at":"2026-11-21T15:14:12.123Z","target":"mainnet-rpc","ms":30002,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:14:58.716Z","target":"friendbot","ms":4006,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"AggregateError","message":"","code":"ETIMEDOUT"},{"name":"Error","message":"connect ETIMEDOUT 104.18.6.25:443","code":"ETIMEDOUT","errno":-110,"syscall":"connect","address":"104.18.6.25","port":443},{"name":"Error","message":"connect ENETUNREACH 2606:4700::6812:619:443 - Local (:::0)","code":"ENETUNREACH","errno":-101,"syscall":"connect","address":"2606:4700::6812:619","port":443},{"name":"Error","message":"connect ETIMEDOUT 104.18.7.25:443","code":"ETIMEDOUT","errno":-110,"syscall":"connect","address":"104.18.7.25","port":443},{"name":"Error","message":"connect ENETUNREACH 2606:4700::6812:719:443 - Local (:::0)","code":"ENETUNREACH","errno":-101,"syscall":"connect","address":"2606:4700::6812:719","port":443}]}
+{"at":"2026-11-21T15:14:58.715Z","target":"testnet-rpc","slow":7899,"status":200}
+{"at":"2026-11-21T15:14:58.717Z","target":"mainnet-rpc","slow":8908,"status":200}
+{"at":"2026-11-21T15:15:22.817Z","target":"mainnet-rpc","slow":5963,"status":200}
+{"at":"2026-11-21T15:15:31.782Z","target":"testnet-horizon","slow":5481,"status":200}
+{"at":"2026-11-21T15:15:31.785Z","target":"mainnet-rpc","slow":23800,"status":200}
+{"at":"2026-11-21T15:15:59.067Z","target":"testnet-rpc","slow":8542,"status":200}
+{"at":"2026-11-21T15:15:59.070Z","target":"mainnet-rpc","ms":30002,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:17:02.106Z","target":"mainnet-rpc","slow":6350,"status":200}
+{"at":"2026-11-21T15:17:11.461Z","target":"mainnet-rpc","ms":30003,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:17:44.476Z","target":"mainnet-rpc","slow":10079,"status":200}
+{"at":"2026-11-21T15:17:57.564Z","target":"mainnet-rpc","slow":11155,"status":200}
+{"at":"2026-11-21T15:18:11.725Z","target":"mainnet-rpc","slow":8876,"status":200}
+{"at":"2026-11-21T15:18:23.605Z","target":"mainnet-rpc","slow":24642,"status":200}
+{"at":"2026-11-21T15:18:51.252Z","target":"testnet-horizon","slow":6092,"status":200}
+{"at":"2026-11-21T15:18:51.254Z","target":"mainnet-rpc","ms":30001,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:19:36.671Z","target":"testnet-horizon","slow":8187,"status":200}
+{"at":"2026-11-21T15:19:36.672Z","target":"mainnet-rpc","ms":10495,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: mainnet.sorobanrpc.com:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:19:36.670Z","target":"testnet-rpc","ms":10498,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 104.18.6.25:443, 2606:4700::6812:719:443, 104.18.7.25:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:19:50.170Z","target":"friendbot","slow":6714,"status":400}
+{"at":"2026-11-21T15:19:50.169Z","target":"testnet-rpc","slow":7350,"status":200}
+{"at":"2026-11-21T15:19:50.171Z","target":"mainnet-rpc","ms":10492,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: mainnet.sorobanrpc.com:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:19:50.170Z","target":"testnet-horizon","slow":11559,"status":200}
+{"at":"2026-11-21T15:20:04.732Z","target":"friendbot","slow":9137,"status":400}
+{"at":"2026-11-21T15:20:04.733Z","target":"mainnet-rpc","slow":10595,"status":200}
+{"at":"2026-11-21T15:20:04.732Z","target":"testnet-rpc","slow":10719,"status":200}
+{"at":"2026-11-21T15:20:31.745Z","target":"mainnet-rpc","slow":5352,"status":200}
+{"at":"2026-11-21T15:20:57.188Z","target":"testnet-rpc","slow":7414,"status":200}
+{"at":"2026-11-21T15:21:08.058Z","target":"testnet-horizon","slow":5797,"status":200}
+{"at":"2026-11-21T15:21:08.059Z","target":"mainnet-rpc","ms":10486,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 172.67.167.169:443, 2606:4700:3035::ac43:a7a9:443, 104.21.42.228:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:21:08.057Z","target":"testnet-rpc","slow":21783,"status":200}
+{"at":"2026-11-21T15:21:32.841Z","target":"testnet-rpc","slow":10870,"status":200}
+{"at":"2026-11-21T15:21:46.714Z","target":"testnet-rpc","slow":7745,"status":200}
+{"at":"2026-11-21T15:21:46.717Z","target":"mainnet-rpc","ms":30001,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:22:45.939Z","target":"mainnet-rpc","slow":6066,"status":200}
+{"at":"2026-11-21T15:22:55.008Z","target":"friendbot","slow":5379,"status":400}
+{"at":"2026-11-21T15:22:55.007Z","target":"testnet-horizon","slow":9685,"status":200}
+{"at":"2026-11-21T15:22:55.007Z","target":"testnet-rpc","slow":10542,"status":200}
+{"at":"2026-11-21T15:23:08.551Z","target":"mainnet-rpc","slow":7870,"status":200}
+{"at":"2026-11-21T15:24:40.976Z","target":"testnet-horizon","slow":6605,"status":200}
+{"at":"2026-11-21T15:25:07.756Z","target":"testnet-horizon","slow":9794,"status":200}
+{"at":"2026-11-21T15:25:56.721Z","target":"friendbot","slow":8240,"status":400}
+{"at":"2026-11-21T15:26:07.963Z","target":"testnet-rpc","slow":6296,"status":200}
+{"at":"2026-11-21T15:26:07.964Z","target":"testnet-horizon","ms":10502,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 100.24.214.28:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:26:07.965Z","target":"mainnet-rpc","slow":10783,"status":200}
+{"at":"2026-11-21T15:26:28.851Z","target":"mainnet-rpc","slow":9077,"status":200}
+{"at":"2026-11-21T15:26:45.937Z","target":"friendbot","ms":10523,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 104.18.7.25:443, 2606:4700::6812:719:443, 104.18.6.25:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:26:59.462Z","target":"testnet-horizon","slow":5589,"status":200}
+{"at":"2026-11-21T15:27:08.054Z","target":"mainnet-rpc","slow":27813,"status":200}
+{"at":"2026-11-21T15:27:38.869Z","target":"mainnet-rpc","slow":28670,"status":200}
+{"at":"2026-11-21T15:28:11.034Z","target":"mainnet-rpc","slow":25610,"status":200}
+{"at":"2026-11-21T15:28:39.646Z","target":"mainnet-rpc","ms":30002,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:29:35.046Z","target":"friendbot","ms":10013,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"Error","message":"getaddrinfo EAI_AGAIN friendbot.stellar.org","code":"EAI_AGAIN","errno":-3001,"syscall":"getaddrinfo"}]}
+{"at":"2026-11-21T15:29:35.044Z","target":"testnet-horizon","ms":10502,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: horizon-testnet.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:29:48.549Z","target":"mainnet-rpc","slow":6154,"status":200}
+{"at":"2026-11-21T15:29:57.706Z","target":"mainnet-rpc","slow":7382,"status":200}
+{"at":"2026-11-21T15:30:08.092Z","target":"mainnet-rpc","slow":8993,"status":200}
+{"at":"2026-11-21T15:30:20.089Z","target":"mainnet-rpc","ms":30001,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:31:01.051Z","target":"testnet-rpc","ms":30003,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:31:34.059Z","target":"testnet-horizon","slow":6560,"status":200}
+{"at":"2026-11-21T15:31:34.061Z","target":"mainnet-rpc","slow":8488,"status":200}
+{"at":"2026-11-21T15:32:12.592Z","target":"friendbot","ms":10013,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"Error","message":"getaddrinfo EAI_AGAIN friendbot.stellar.org","code":"EAI_AGAIN","errno":-3001,"syscall":"getaddrinfo"}]}
+{"at":"2026-11-21T15:32:12.591Z","target":"testnet-horizon","ms":10595,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: horizon-testnet.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:32:12.590Z","target":"testnet-rpc","ms":10598,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted address: soroban-testnet.stellar.org:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:32:26.190Z","target":"testnet-rpc","slow":9291,"status":200}
+{"at":"2026-11-21T15:32:26.192Z","target":"friendbot","slow":9396,"status":400}
+{"at":"2026-11-21T15:32:26.191Z","target":"testnet-horizon","ms":10506,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 100.24.214.28:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:32:26.192Z","target":"mainnet-rpc","ms":30001,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:32:59.196Z","target":"mainnet-rpc","slow":6672,"status":200}
+{"at":"2026-11-21T15:33:08.870Z","target":"testnet-rpc","slow":10110,"status":200}
+{"at":"2026-11-21T15:33:08.874Z","target":"mainnet-rpc","ms":30002,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:33:41.879Z","target":"friendbot","slow":6736,"status":400}
+{"at":"2026-11-21T15:33:41.878Z","target":"testnet-horizon","slow":7241,"status":200}
+{"at":"2026-11-21T15:33:41.878Z","target":"testnet-rpc","slow":7745,"status":200}
+{"at":"2026-11-21T15:33:41.880Z","target":"mainnet-rpc","slow":8470,"status":200}
+{"at":"2026-11-21T15:33:58.703Z","target":"mainnet-rpc","slow":5771,"status":200}
+{"at":"2026-11-21T15:34:07.479Z","target":"friendbot","slow":5670,"status":400}
+{"at":"2026-11-21T15:34:07.478Z","target":"testnet-horizon","ms":10541,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 44.212.158.57:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:34:46.928Z","target":"mainnet-rpc","slow":25220,"status":200}
+{"at":"2026-11-21T15:35:15.154Z","target":"mainnet-rpc","slow":9966,"status":200}
+{"at":"2026-11-21T15:35:28.126Z","target":"testnet-horizon","ms":10488,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 44.212.158.57:443, 100.24.214.28:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:35:28.128Z","target":"mainnet-rpc","ms":30001,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:36:41.631Z","target":"testnet-horizon","ms":30002,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"at":"2026-11-21T15:37:14.632Z","target":"testnet-rpc","slow":8721,"status":200}
+{"at":"2026-11-21T15:37:14.633Z","target":"friendbot","slow":8759,"status":400}
+{"at":"2026-11-21T15:37:14.634Z","target":"mainnet-rpc","slow":9956,"status":200}
+{"at":"2026-11-21T15:37:14.633Z","target":"testnet-horizon","ms":10494,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"ConnectTimeoutError","message":"Connect Timeout Error (attempted addresses: 44.212.158.57:443, timeout: 10000ms)","code":"UND_ERR_CONNECT_TIMEOUT"}]}
+{"at":"2026-11-21T15:37:57.793Z","target":"friendbot","ms":5233,"error":[{"name":"TypeError","message":"fetch failed"},{"name":"AggregateError","message":"","code":"ETIMEDOUT"},{"name":"Error","message":"connect ETIMEDOUT 104.18.6.25:443","code":"ETIMEDOUT","errno":-110,"syscall":"connect","address":"104.18.6.25","port":443},{"name":"Error","message":"connect ENETUNREACH 2606:4700::6812:619:443 - Local (:::0)","code":"ENETUNREACH","errno":-101,"syscall":"connect","address":"2606:4700::6812:619","port":443},{"name":"Error","message":"connect ETIMEDOUT 104.18.7.25:443","code":"ETIMEDOUT","errno":-110,"syscall":"connect","address":"104.18.7.25","port":443},{"name":"Error","message":"connect ENETUNREACH 2606:4700::6812:719:443 - Local (:::0)","code":"ENETUNREACH","errno":-101,"syscall":"connect","address":"2606:4700::6812:719","port":443}]}
+{"at":"2026-11-21T15:37:57.793Z","target":"mainnet-rpc","ms":30001,"error":[{"name":"TimeoutError","message":"The operation was aborted due to timeout","code":23}]}
+{"end":"2026-11-21T15:38:41.435Z","stats":{"testnet-rpc":{"ok":163,"fail":8,"codes":{"23":1,"UND_ERR_CONNECT_TIMEOUT":6,"ETIMEDOUT/ETIMEDOUT/ENETUNREACH/ETIMEDOUT/ENETUNREACH":1}},"testnet-horizon":{"ok":158,"fail":13,"codes":{"23":1,"UND_ERR_CONNECT_TIMEOUT":12}},"friendbot":{"ok":162,"fail":9,"codes":{"EAI_AGAIN":3,"UND_ERR_CONNECT_TIMEOUT":4,"ETIMEDOUT/ETIMEDOUT/ENETUNREACH/ETIMEDOUT/ENETUNREACH":2}},"mainnet-rpc":{"ok":151,"fail":20,"codes":{"23":12,"UND_ERR_CONNECT_TIMEOUT":8}}}}

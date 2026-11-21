@@ -1,0 +1,32 @@
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+Rights       CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          6568 stroops (declared, including resources)
+Sequence     17686881483358419
+Valid until  2026-11-21T15:45:43.000Z
+Latest ledger 5849740
+Operation 1: invokeHostFunction
+  contract   CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM
+  function   next_id
+Re-simulating with the signed authorization entries in place…
+  resource fee 6468 stroops
+  instructions 946414, read 0 bytes, write 0 bytes
+  declared     resource fee 6468 stroops, 946414 instructions
+
+No reason to refuse.
+
+ℹ️  Signing transaction: d4369423d4a6b67785bfbb25ce327e5ef561979073bdc985cdb4b7a9577eec5d
+
+Signed: d4369423d4a6b67785bfbb25ce327e5ef561979073bdc985cdb4b7a9577eec5d (kept in /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal-not-found.xdr.submission)
+Send 1 of at most 3: error: ❌ error: transaction submission failed: No status yet:
+Looking it up by hash…
+Status: NOT_FOUND
+Confirmed not on chain: sending the same signed envelope again (same hash).
+Send 2 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: d4369423d4a6b67785bfbb25ce327e5ef561979073bdc985cdb4b7a9577eec5d
+      https://stellar.expert/explorer/testnet/tx/d4369423d4a6b67785bfbb25ce327e5ef561979073bdc985cdb4b7a9577eec5d

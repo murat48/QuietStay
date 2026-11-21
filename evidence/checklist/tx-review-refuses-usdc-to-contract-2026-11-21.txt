@@ -1,0 +1,21 @@
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/tx-review.ts --xdr-file /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/usdc-to-contract.xdr --network testnet --source GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ
+Rights       CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ
+Fee          100 stroops (declared, including resources)
+Sequence     17686902958194741
+Latest ledger 5849721
+Operation 1: invokeHostFunction
+  contract   CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
+  function   transfer
+  arg 0      "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"
+  arg 1      "CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM"
+  arg 2      "1"
+  REFUSE: a USDC transfer straight to the rights contract: it would be stuck there forever (DESIGN.md limitation 17)
+Re-simulating with the signed authorization entries in place…
+  resource fee 11328 stroops
+  instructions 290400, read 116 bytes, write 340 bytes
+  REFUSE: the envelope declares no resources (it was never simulated and assembled)
+
+2 reason(s) to refuse. Nothing was signed.

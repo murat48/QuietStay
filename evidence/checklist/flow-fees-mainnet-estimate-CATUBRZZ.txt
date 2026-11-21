@@ -1,0 +1,42 @@
+issue week 1                                                   91239     82076     82209   1142542     1151705  +0.16%
+issue week 2                                                   72765     63596     63701    894605      903774  +0.17%
+issue week 3                                                   72765     63596     63701    894605      903774  +0.17%
+issue week 4                                                   72765     63596     63701    894605      903774  +0.17%
+issue week 5                                                   72765     63596     63701    894605      903774  +0.17%
+wait rental: rental offer                                      80338     67767     67873    371175      383746  +0.16%
+wait rental: accept (rental right + escrow)                   511926    457561    458318   1812696     1867061  +0.17%
+sale: record request                                           53820     44866     44937    364375      373329  +0.16%
+sale: sale offer                                               81530     65673     65776    300368      316225  +0.16%
+sale: accept (right and USDC together)                         71297     19799     19827    250153      301651  +0.14%
+dispute: rental offer                                          58073     45445     45514    283455      296083  +0.15%
+dispute: accept (rental right + escrow)                       393046    339555    340117   1364758     1418249  +0.17%
+dispute: problem report (renter)                               23186     18540     18571     60000       64646  +0.17%
+dispute: evidence (renter)                                     25266     20600     20634     66667       71333  +0.17%
+dispute: evidence (owner)                                      25284     20600     20634     66667       71351  +0.17%
+confirm: rental offer                                          58072     45444     45513    283454      296082  +0.15%
+confirm: accept (rental right + escrow)                       393045    339554    340115   1364758     1418249  +0.17%
+confirm: the renter releases early                             10555         0         0         0       10555  +0.00%
+sale rejections: offer A record request                        48243     39286     39347    284375      293332  +0.16%
+sale rejections: offer A sale offer                            64335     48469     48543    285983      301849  +0.15%
+sale rejections: the buyer lowers the allowance directly        4545         0         0         0        4545  +0.00%
+sale rejections: offer B record request                        48243     39286     39347    284375      293332  +0.16%
+sale rejections: offer B (expires in 12 ledgers)               18950      2825      1431     24438       40563  -49.35%  MISMATCH
+sale rejections: the buyer moves USDC away                      7244         0         0         0        7244  +0.00%
+sale rejections: the USDC comes back                            7244         0         0         0        7244  +0.00%
+sale rejections: the buyer cancels offer A                      9246         0         0         0        9246  +0.00%
+issue week 1 to the maker                                      72834     63596     63701    894605      903843  +0.17%
+issue week 2 to the taker                                      72834     63596     63701    894605      903843  +0.17%
+maker's record request for right #7                            30404     21447     21478    271375      280332  +0.14%
+taker's record request for right #6                            30419     21462     21478    271375      280332  +0.07%
+offer_swap (maker)                                             17754      6789      6793     77494       88459  +0.06%
+accept_swap (taker)                                            20137      4336      4337     14314       30115  +0.02%
+complete_swap (maker)                                          81232      2637      2637      4431       83026  +0.00%
+dispute: arbiter resolves (refund renter)                      30121     18539     18570     60000       71582  +0.17%
+passkey probe: wallet deploy                                  132669    118567    118661   1613549     1627651  +0.08%
+passkey probe: issue to the wallet                             90425     81211     81277   1129208     1138422  +0.08%
+passkey probe: passkey-authorized transfer (rental)           292327    249746    249950   1134087     1176668  +0.08%
+wrote /home/murat/QuietStay/QuietStay/contracts/quietstay-rights/../../evidence/checklist/flow-fees-mainnet-estimate-CATUBRZZ.json; 1 transaction(s) where the model misses testnet's charged rent by more than 1%
+test test::mainnet_fees_of_the_final_testnet_transactions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 159 filtered out; finished in 0.01s
+

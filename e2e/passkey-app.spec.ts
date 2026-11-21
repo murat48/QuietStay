@@ -25,7 +25,7 @@ import { Keypair } from "@stellar/stellar-sdk";
 import { startApp, type App } from "./lib/app";
 import { captureFailures, reportFailures, type FailedResponse } from "./lib/failures";
 import { checkPendingPrivacy, evidenceLanded, hashOf } from "./lib/privacy";
-import { deployRights, fund } from "./lib/testnet";
+import { deployRightsStep4, fund } from "./lib/testnet";
 import { attachWallet } from "./lib/wallet";
 
 let app: App;
@@ -43,7 +43,7 @@ test.setTimeout(15 * 60_000);
 test.beforeAll(async () => {
   test.setTimeout(10 * 60_000);
   await Promise.all([issuer, sep10, fee, renter, renter2].map(fund));
-  contract = await deployRights(issuer);
+  contract = await deployRightsStep4(issuer, Keypair.random()); // the final WASM (76d69e79…), as on the final testnet deployment
   console.log(`e2e contract ${contract}`);
   app = await startApp({ contract, issuer, sep10, fee, port: 4323 });
 });

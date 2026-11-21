@@ -1,0 +1,298 @@
+{
+  "wasm_sha256": "76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde",
+  "source": "WebAssembly.Module.imports on the built WASM, matched against soroban-env-common 27.0.1 env.json; a missing min_protocol means available since protocol 20",
+  "count": 48,
+  "highest_min_supported_protocol": 22,
+  "unknown": 0,
+  "with_max_protocol": 0,
+  "functions": [
+    {
+      "import": "i._",
+      "host_fn": "int::obj_from_u64",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.0",
+      "host_fn": "int::obj_to_u64",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "l.1",
+      "host_fn": "ledger::get_contract_data",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "l.7",
+      "host_fn": "ledger::extend_contract_data_ttl",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "l._",
+      "host_fn": "ledger::put_contract_data",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "b._",
+      "host_fn": "buf::serialize_to_bytes",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "b.f",
+      "host_fn": "buf::bytes_slice",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.a",
+      "host_fn": "int::u256_val_from_be_bytes",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "v.3",
+      "host_fn": "vec::vec_len",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.c",
+      "host_fn": "int::obj_to_u256_hi_hi",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.d",
+      "host_fn": "int::obj_to_u256_hi_lo",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.e",
+      "host_fn": "int::obj_to_u256_lo_hi",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.f",
+      "host_fn": "int::obj_to_u256_lo_lo",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "v.9",
+      "host_fn": "vec::vec_back",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "v.6",
+      "host_fn": "vec::vec_push_back",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "v.1",
+      "host_fn": "vec::vec_get",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.r",
+      "host_fn": "int::u256_rem_euclid",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "c.6",
+      "host_fn": "crypto::bls12_381_g1_mul",
+      "min_protocol": 22,
+      "max_protocol": null
+    },
+    {
+      "import": "c.5",
+      "host_fn": "crypto::bls12_381_g1_add",
+      "min_protocol": 22,
+      "max_protocol": null
+    },
+    {
+      "import": "b.8",
+      "host_fn": "buf::bytes_len",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "b.2",
+      "host_fn": "buf::bytes_copy_from_linear_memory",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "c.g",
+      "host_fn": "crypto::bls12_381_multi_pairing_check",
+      "min_protocol": 22,
+      "max_protocol": null
+    },
+    {
+      "import": "i.b",
+      "host_fn": "int::u256_val_to_be_bytes",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "v._",
+      "host_fn": "vec::vec_new",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "l.2",
+      "host_fn": "ledger::del_contract_data",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "v.7",
+      "host_fn": "vec::vec_pop_back",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "l.8",
+      "host_fn": "ledger::extend_current_contract_instance_and_code_ttl",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "x.1",
+      "host_fn": "context::contract_event",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "x.8",
+      "host_fn": "context::get_max_live_until_ledger",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "x.7",
+      "host_fn": "context::get_current_contract_address",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "a.0",
+      "host_fn": "address::require_auth",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "x.0",
+      "host_fn": "context::obj_cmp",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "a._",
+      "host_fn": "address::require_auth_for_args",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "v.g",
+      "host_fn": "vec::vec_new_from_linear_memory",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "b.1",
+      "host_fn": "buf::bytes_copy_to_linear_memory",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "b.3",
+      "host_fn": "buf::bytes_new_from_linear_memory",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.8",
+      "host_fn": "int::obj_to_i128_hi64",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.7",
+      "host_fn": "int::obj_to_i128_lo64",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.6",
+      "host_fn": "int::obj_from_i128_pieces",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "b.j",
+      "host_fn": "buf::symbol_new_from_linear_memory",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "d._",
+      "host_fn": "call::call",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "i.9",
+      "host_fn": "int::obj_from_u256_pieces",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "x.3",
+      "host_fn": "context::get_ledger_sequence",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "x.4",
+      "host_fn": "context::get_ledger_timestamp",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "l.0",
+      "host_fn": "ledger::has_contract_data",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "m.9",
+      "host_fn": "map::map_new_from_linear_memory",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "m.a",
+      "host_fn": "map::map_unpack_to_linear_memory",
+      "min_protocol": null,
+      "max_protocol": null
+    },
+    {
+      "import": "b.m",
+      "host_fn": "buf::symbol_index_in_linear_memory",
+      "min_protocol": null,
+      "max_protocol": null
+    }
+  ]
+}

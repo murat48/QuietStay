@@ -1,0 +1,469 @@
+{
+  "contract": "CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM",
+  "network": "testnet",
+  "entries": [
+    {
+      "step": "issue",
+      "label": "issue week 1",
+      "hash": "792223d24e76020d6f1f2de7934fbab3e0f6c15612eb116bdc227d547e1452d8",
+      "ledger": 5849060,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "issue",
+      "label": "issue week 2",
+      "hash": "cf49406b00b78262e894d6e26783900e7db4a0ac837c80a2f94c2b46319a725e",
+      "ledger": 5849061,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "issue",
+      "label": "issue week 3",
+      "hash": "df1a9128d0c3af316b04f2b38e65338b23e04a4774d9da0d0af1bb3ce80ad4d7",
+      "ledger": 5849062,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "issue",
+      "label": "issue week 4",
+      "hash": "679969483b270f27aa1412c2e15a7e9b21680d6d332ee1a279f49a737f0bb540",
+      "ledger": 5849063,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "issue",
+      "label": "issue week 5",
+      "hash": "1db72ba3394c838723ee641a53694fd746b6c8f1685f2f59072587d9727c89a5",
+      "ledger": 5849064,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "wait-rental",
+      "label": "wait rental: rental offer",
+      "hash": "7ef308d29bc10b9facb3d7ecf53622df96f18e8a7b00a1c609f833b477877ede",
+      "ledger": 5849066,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "wait-rental",
+      "label": "wait rental: accept (rental right + escrow)",
+      "hash": "88c73f2e11d7cb3b89bd9d84cb9f1ebc8a5e6cef57a1d4e3421832f38b687313",
+      "ledger": 5849068,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "sale",
+      "label": "sale: record request",
+      "hash": "0f83e9d6d4cc4266e1b9045bef0733f21f07637941382b7026b5a9fab228b4f9",
+      "ledger": 5849085,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "sale",
+      "label": "sale: sale offer",
+      "hash": "094c906133a9644b83894dc13d36233b35f5dc99a4d6f5ea33c8049b562adf75",
+      "ledger": 5849087,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "sale",
+      "label": "sale: accept (right and USDC together)",
+      "hash": "f01dda8d3fcde5be3d11053c58ab42109cd64876819d986d7e029f52983feecc",
+      "ledger": 5849089,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "dispute-open",
+      "label": "dispute: rental offer",
+      "hash": "f865d7aa334b9f6074becc32273bdb443198eed642bff2ed71f3a85140454835",
+      "ledger": 5849091,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "dispute-open",
+      "label": "dispute: accept (rental right + escrow)",
+      "hash": "a5b050de44bca3e03b796e4c76eabda514449818ccd2ae8dac1a7044ee87502b",
+      "ledger": 5849093,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "dispute-open",
+      "label": "dispute: problem report (renter)",
+      "hash": "6111325f6783999d5177c98ed262300e7a4d3017bc7cafd5d398233555571c9e",
+      "ledger": 5849094,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "dispute-open",
+      "label": "dispute: evidence (renter)",
+      "hash": "0d21f5f8465db71bece25d61700408531a1d0f00abeefbf8c5c8f7b519e3409e",
+      "ledger": 5849095,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "dispute-open",
+      "label": "dispute: evidence (owner)",
+      "hash": "80eda0ff9805e397df812bd0256a06c92e2bdca6b1a7b7ef7e617e5516b2178a",
+      "ledger": 5849096,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "dispute-open",
+      "label": "rejected: collect during a dispute",
+      "hash": "bb1b672ca3bdfb707456815103998af455fb3e43f1a49499e4d91c695f8df29b",
+      "ledger": 5849097,
+      "accepted": false,
+      "expected": "Error(Contract, #46)",
+      "errors": [
+        "Error(Contract, #46)",
+        "Error(Contract, #46)"
+      ]
+    },
+    {
+      "step": "dispute-open",
+      "label": "rejected: an outside account resolves",
+      "hash": "b2083a5340706d933ae1288ffd2416cc189d6aba820cb1488860e0a15438fdaf",
+      "ledger": 5849099,
+      "accepted": false,
+      "expected": "Error(Contract, #51)",
+      "errors": [
+        "Error(Contract, #51)",
+        "Error(Contract, #51)"
+      ]
+    },
+    {
+      "step": "dispute-open",
+      "label": "rejected: an outside account submits evidence",
+      "hash": "3f585a02a9726ad29ed1c6e91d389d5c2bf199ef443749a51ba7be478906bd82",
+      "ledger": 5849100,
+      "accepted": false,
+      "expected": "Error(Contract, #47)",
+      "errors": [
+        "Error(Contract, #47)",
+        "Error(Contract, #47)"
+      ]
+    },
+    {
+      "step": "dispute-close",
+      "label": "rejected: double refund",
+      "hash": "4442ec9022fc775157a5dc1dcdc27077e20c9f1ea560c623415cdbf07bac5e0a",
+      "ledger": 5849107,
+      "accepted": false,
+      "expected": "Error(Contract, #46)",
+      "errors": [
+        "Error(Contract, #46)",
+        "Error(Contract, #46)"
+      ]
+    },
+    {
+      "step": "dispute-close",
+      "label": "rejected: the arbiter resolves again",
+      "hash": "c50642cbecfde83db2cbbe0130bb487df859ee5ba12c571eeb97233bb7924c92",
+      "ledger": 5849108,
+      "accepted": false,
+      "expected": "Error(Contract, #46)",
+      "errors": [
+        "Error(Contract, #46)",
+        "Error(Contract, #46)"
+      ]
+    },
+    {
+      "step": "dispute-close",
+      "label": "rejected: payout after refund",
+      "hash": "8ac6df508a7ab3fd1068063c923532162e858acfa435ed8aec6160f6e06eaa94",
+      "ledger": 5849109,
+      "accepted": false,
+      "expected": "Error(Contract, #46)",
+      "errors": [
+        "Error(Contract, #46)",
+        "Error(Contract, #46)"
+      ]
+    },
+    {
+      "step": "confirm",
+      "label": "confirm: rental offer",
+      "hash": "ba4a6cc7e096ad5ea43ccb123558cf1956ef0023723e9c683460e1faaaa3337f",
+      "ledger": 5849111,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "confirm",
+      "label": "confirm: accept (rental right + escrow)",
+      "hash": "b1c488667e0f46f927962533672dfb48a922d28eabec745938f9c62e32d51607",
+      "ledger": 5849112,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "confirm",
+      "label": "confirm: the renter releases early",
+      "hash": "7efa759e5d4735104ebc8825ff75a165a85519fedcb34994d6faf70a6b6340f1",
+      "ledger": 5849113,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "confirm",
+      "label": "rejected: double payout",
+      "hash": "fa595342e3084eda8456ebe8eb7baef95f6ba2fba9f9b46a35a6ec6ff9d4aed1",
+      "ledger": 5849114,
+      "accepted": false,
+      "expected": "Error(Contract, #46)",
+      "errors": [
+        "Error(Contract, #46)",
+        "Error(Contract, #46)"
+      ]
+    },
+    {
+      "step": "confirm",
+      "label": "rejected: refund after payout",
+      "hash": "44650834b7f9bfe26408f74a603358b3a00f1c598ba64e2df9faa1a86624572d",
+      "ledger": 5849115,
+      "accepted": false,
+      "expected": "Error(Contract, #46)",
+      "errors": [
+        "Error(Contract, #46)",
+        "Error(Contract, #46)"
+      ]
+    },
+    {
+      "step": "confirm",
+      "label": "rejected: problem report after payout",
+      "hash": "b93a479e2d4ef9e075a7789a596cae598cd7f94e544f3ba0b4dabed890a1b867",
+      "ledger": 5849116,
+      "accepted": false,
+      "expected": "Error(Contract, #46)",
+      "errors": [
+        "Error(Contract, #46)",
+        "Error(Contract, #46)"
+      ]
+    },
+    {
+      "step": "sale-rejections",
+      "label": "sale rejections: offer A record request",
+      "hash": "4a671501478181be0939bf7e324befff8eeb4104299893d2bac58ef293dbd79d",
+      "ledger": 5849118,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "sale-rejections",
+      "label": "sale rejections: offer A sale offer",
+      "hash": "122f90afd73ddf4bfbfbee51848e729a6d5dcdd42876d8db63ff29b138622dea",
+      "ledger": 5849119,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "sale-rejections",
+      "label": "rejected: wrong amount",
+      "hash": "36189608f0a83b3121bc51dcada9085bc72322e25d613bf7f9ce5efbed846a9b",
+      "ledger": 5849120,
+      "accepted": false,
+      "expected": "Error(Contract, #32)",
+      "errors": [
+        "Error(Contract, #32)",
+        "Error(Contract, #32)"
+      ]
+    },
+    {
+      "step": "sale-rejections",
+      "label": "sale rejections: the buyer lowers the allowance directly",
+      "hash": "28e013cc2dc90fb596c960b8a02c6aaac9d28eb663b43e6d50d36ee61740bd20",
+      "ledger": 5849121,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "sale-rejections",
+      "label": "rejected: low allowance",
+      "hash": "10e75ff8eb8ceaa447405946234502ce5627baf3a368255f8938a03fcba7b07f",
+      "ledger": 5849122,
+      "accepted": false,
+      "expected": "Error(Contract, #53)",
+      "errors": [
+        "Error(Contract, #53)",
+        "Error(Contract, #53)"
+      ]
+    },
+    {
+      "step": "sale-rejections",
+      "label": "sale rejections: offer B record request",
+      "hash": "97505612aa01cb834992ba7672ef47ad931489ff4d3997ac10e2c8eeef28db2e",
+      "ledger": 5849123,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "sale-rejections",
+      "label": "sale rejections: offer B (expires in 12 ledgers)",
+      "hash": "8fc3ffe57313c22a63011d8b92825ad15e67f3e580da2edeb92666b9a5c4bfc6",
+      "ledger": 5849124,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "sale-rejections",
+      "label": "sale rejections: the buyer moves USDC away",
+      "hash": "a669c92f85708fe1964779f2fe220ef9562de6968b64fa81f45f003bddea1e3d",
+      "ledger": 5849125,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "sale-rejections",
+      "label": "rejected: low balance",
+      "hash": "17f876061fb749d0f7b0d75a69c4e5dc2617ac3a394c107f9561d00d71bf4451",
+      "ledger": 5849126,
+      "accepted": false,
+      "expected": "Error(Contract, #54)",
+      "errors": [
+        "Error(Contract, #54)",
+        "Error(Contract, #54)"
+      ]
+    },
+    {
+      "step": "sale-rejections",
+      "label": "sale rejections: the USDC comes back",
+      "hash": "ac6215ca7b5fe1d2929d52796ceb00e55f39abbc10ce45f3ffc6279f6b8db7df",
+      "ledger": 5849127,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "sale-rejections",
+      "label": "rejected: expired offer",
+      "hash": "b741558d0556c3e80a3b267b99195be2567b2771a9d54db042cb296b12907404",
+      "ledger": 5849137,
+      "accepted": false,
+      "expected": "Error(Contract, #34)",
+      "errors": [
+        "Error(Contract, #34)",
+        "Error(Contract, #34)"
+      ]
+    },
+    {
+      "step": "sale-rejections",
+      "label": "sale rejections: the buyer cancels offer A",
+      "hash": "0995cf6815df6611f41309dc0443c50122b04fd28905e6517c0175067e59fa63",
+      "ledger": 5849138,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    },
+    {
+      "step": "escrow-rejections",
+      "label": "rejected: collect before check-in + 24 h",
+      "hash": "396deb7bc02c32c0ffdf46d2c78f50d3bf193755027f65469dd2b0ce4fbb2ded",
+      "ledger": 5849140,
+      "accepted": false,
+      "expected": "Error(Contract, #48)",
+      "errors": [
+        "Error(Contract, #48)",
+        "Error(Contract, #48)"
+      ]
+    },
+    {
+      "step": "escrow-rejections",
+      "label": "rejected: the arbiter on an undisputed escrow",
+      "hash": "e2bfbd870813b07b1fe5448e8e4c3cd9cd9a404a2c1e4dc0b0d1c328a4ac2c73",
+      "ledger": 5849141,
+      "accepted": false,
+      "expected": "Error(Contract, #46)",
+      "errors": [
+        "Error(Contract, #46)",
+        "Error(Contract, #46)"
+      ]
+    },
+    {
+      "step": "escrow-rejections",
+      "label": "rejected: an outside account collects",
+      "hash": "230dcca80e805946a16e3518e70829e8671aef822cd576f8cee4b654cbab61f9",
+      "ledger": 5849143,
+      "accepted": false,
+      "expected": "Error(Contract, #47)",
+      "errors": [
+        "Error(Contract, #47)",
+        "Error(Contract, #47)"
+      ]
+    },
+    {
+      "step": "escrow-rejections",
+      "label": "rejected: an outside account confirms",
+      "hash": "a3cd356e14bd612fb329c002dfdd797e52ef7b6633746fcdcba20e6d086910a2",
+      "ledger": 5849144,
+      "accepted": false,
+      "expected": "Error(Contract, #47)",
+      "errors": [
+        "Error(Contract, #47)",
+        "Error(Contract, #47)"
+      ]
+    },
+    {
+      "step": "escrow-rejections",
+      "label": "rejected: the arbiter tries to burn a right (naming its owner)",
+      "hash": "69e66295a59e7289907154137ae321132e2c0374f672304a5d6d0815f84d55ee",
+      "ledger": 5849145,
+      "accepted": false,
+      "expected": "Error(Auth, InvalidAction)",
+      "errors": [
+        "Error(Auth, InvalidAction)",
+        "Error(Auth, InvalidAction)",
+        "Error(Auth, InvalidAction)"
+      ]
+    },
+    {
+      "step": "escrow-rejections",
+      "label": "rejected: the arbiter tries to burn a right (as itself)",
+      "hash": "c79fd62cd7bb781eac57edcc42488a8cc6079359203061724fbd5f442909e346",
+      "ledger": 5849146,
+      "accepted": false,
+      "expected": "Error(Contract, #4)",
+      "errors": [
+        "Error(Contract, #4)",
+        "Error(Contract, #4)"
+      ]
+    }
+  ]
+}

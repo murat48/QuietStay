@@ -1,8 +1,8 @@
 {
-  "date": "2026-11-21T12:41:27.581Z",
+  "date": "2026-11-21T15:48:09.320Z",
   "command": "npx playwright test e2e/passkey-app.spec.ts",
-  "contract": "CA7FYVRK5JVAUGWJFCIKVVTHW2ZWQK3DK3NQILU5KWIAH7UZD5HR7IAX",
-  "wallet": "CACSTITE34DHQLMSIPJXIWXQJC3RDM47U6BFJCH5LGOAWY3KCCKPT4IU",
-  "rental_tx": "https://stellar.expert/explorer/testnet/tx/7d4796397cc35cb591d921fe0590f22870a491386257f65b3ed11dd039d775e4",
+  "contract": "CDT7O4CRRZZ26UTIZPMRX4EUT6QKMJB3DFA6HQWMGXW4FJRSYJ37NMTC",
+  "wallet": "CAPXGYJZBAG452M2CHLMZOTUJZCHYJN3DGKYKZ3PWCQZKFN6B5JRKGI5",
+  "rental_tx": "https://stellar.expert/explorer/testnet/tx/c695d0397f5f709010dc6f4f6bb7d1171ca6b3d130d181175132d30f811051a5",
   "fee_account": "throwaway (Keypair.random)"
 }

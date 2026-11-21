@@ -1,0 +1,24 @@
+== before
+ledger 5850082 escrow #1 live until 6384764 (534682 ledgers left)
+== extend_escrow(1), anyone may call (as qs-issuer)
+ledger 5850086 escrow #1 live until 6384764 (534678 ledgers left)
+== stellar contract extend --durability persistent --key-xdr AAAAEAAAAAEAAAACAAAADwAAAAZFc2Nyb3cAAAAAAAUAAAAAAAAAAQ== --ledgers-to-extend 700000
+✅ Transaction submitted successfully!
+🔗 https://stellar.expert/explorer/testnet/tx/a27094dd1d358f3afb560e5a67fce2005a9ff19e8c55265aa95f42f2c3f1467c
+New ttl ledger: 6550089
+ledger 5850089 escrow #1 live until 6550089 (700000 ledgers left)
+== extend_escrow(1) with --send=yes (the CLI calls it read-only while the escrow is already at its target)
+✅ Transaction submitted successfully!
+🔗 https://stellar.expert/explorer/testnet/tx/4f597e4d66edfe15cb85db7ab12f41f6750692f7f4c6cb000b13bfdeb0d5787b
+== restore: nothing of the final deployment is archived (all created 2026-11-21); the general form:
+stellar contract restore --id <C…> --durability persistent --key-xdr <Escrow(id) key-xdr> --network <net> --source <identity>
+== restore, shown on an archived entry: the Phase 1 contract's instance (CC3URR3U…, testnet; changes its TTL only)
+stellar contract restore --id CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M --durability persistent --key-xdr AAAAFA== --network testnet --source qs-issuer
+ℹ️  Simulating transaction…
+❌ error: Request timeout
+CC3URR3U live until 0 (latest 5850158) ARCHIVED
+(retry) 🌎 Sending transaction…
+(retry) ✅ Transaction submitted successfully!
+(retry) 🔗 https://stellar.expert/explorer/testnet/tx/38a3a0e342ad80e0eeb5c6c11356ae81dab47d460b3059e64996f97d53a83c86
+(retry) New ttl ledger: 5971133
+(retry) CC3URR3U live until 5971133 (latest 5850174) live

@@ -1262,6 +1262,7 @@ dependencies = [
  "ed25519-dalek",
  "serde_json",
  "sha2",
+ "soroban-env-host",
  "soroban-sdk",
 ]
 

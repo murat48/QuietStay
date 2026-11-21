@@ -33,7 +33,7 @@ import { proveTransfer } from "../scripts/lib/zk-prove";
 import { buildCall, issueArgs, transferArgs } from "../scripts/lib/zk-tx";
 import { startApp, type App } from "./lib/app";
 import { checkPendingPrivacy, evidenceLanded } from "./lib/privacy";
-import { deployRights, fund, server, submit } from "./lib/testnet";
+import { deployRightsStep4, fund, server, submit } from "./lib/testnet";
 
 const PORT = 4320;
 const ACCOUNT_WASM = "c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1";
@@ -112,7 +112,7 @@ async function provenRental(week: (typeof weeks)[number]) {
 test.beforeAll(async ({ browser }) => {
   test.setTimeout(10 * 60_000);
   await Promise.all([issuer, fee, renter, sep10].map(fund));
-  contract = await deployRights(issuer);
+  contract = await deployRightsStep4(issuer, Keypair.random()); // the final WASM (76d69e79…), as on the final testnet deployment
   app = await startApp({ contract, issuer, sep10, fee, port: 4322 });
 
   const js = (

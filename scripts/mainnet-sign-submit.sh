@@ -152,9 +152,30 @@ if [ "$RESUME" -eq 0 ]; then
     exit 1
   fi
 
+  # QS_RIGHTS_CONTRACT (the rights contract id) lets the review refuse a USDC
+  # transfer straight to the contract; on mainnet the review refuses without it.
   if ! npx tsx scripts/tx-review.ts --xdr-file "$XDR_FILE" --network "$NETWORK" --source "$SOURCE"; then
     echo "Refused. Nothing was signed." >&2
     exit 1
+  fi
+
+  # Before every mainnet transaction (spec §14, D7): mainnet is still on the
+  # protocol the contracts were tested for, and the pilot's accounts hold at
+  # most 5 USDC in all, each G account with a USDC trustline.
+  # QS_PILOT_ACCOUNTS is the comma-separated list of every pilot account.
+  if [ "$NETWORK" = "mainnet" ]; then
+    if ! npx tsx scripts/check-protocol.ts; then
+      echo "Refused: the protocol check failed. Nothing was signed." >&2
+      exit 1
+    fi
+    if [ -z "${QS_PILOT_ACCOUNTS:-}" ] || [ -z "${QS_RIGHTS_CONTRACT:-}" ]; then
+      echo "Refused: set QS_PILOT_ACCOUNTS (every pilot account, comma-separated) and QS_RIGHTS_CONTRACT. Nothing was signed." >&2
+      exit 1
+    fi
+    if ! npx tsx scripts/check-pilot-accounts.ts --network mainnet --accounts "$QS_PILOT_ACCOUNTS" --contract "$QS_RIGHTS_CONTRACT"; then
+      echo "Refused: the pilot account check failed (trustline or the 5 USDC total). Nothing was signed." >&2
+      exit 1
+    fi
   fi
 
   echo

@@ -16,8 +16,19 @@
  */
 
 import dc from "node:diagnostics_channel";
+import net from "node:net";
 
 import { rpc } from "@stellar/stellar-sdk";
+
+// The High issue's cause (Step 5, evidence/network/): Node's fetch races IPv6
+// and IPv4 and gives each address only 250 ms to connect. On a machine with
+// no IPv6 route, IPv6 fails at once (ENETUNREACH), and any IPv4 connect slower
+// than 250 ms fails too, so the whole request fails with ETIMEDOUT after about
+// half a second while the host is up. In two 30-minute probes run side by
+// side, 2 s per attempt removed that class (61 failures under 2 s → 0). It
+// cannot help a real outage (DNS failures, 10 s connect timeouts), which the
+// read-only retry covers and which a submission never retries.
+net.setDefaultAutoSelectFamilyAttemptTimeout(2_000);
 
 import { readOnly, setRecentNetworkError } from "./rpc-retry";
 

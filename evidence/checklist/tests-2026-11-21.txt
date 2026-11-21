@@ -1,0 +1,80 @@
+### bash -c cd contracts && cargo test --quiet 2>&1
+warning: function `built_wasm` is never used
+warning: fields `name` and `max_ttl` are never read
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+test result: ok. 158 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 4.61s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+exit 0
+
+### bash -c cd contracts && cargo clippy --all-targets 2>&1
+warning: function `built_wasm` is never used
+warning: fields `name` and `max_ttl` are never read
+warning: literal with an empty format string
+warning: `quietstay-rights` (lib test) generated 3 warnings (run `cargo clippy --fix --lib -p quietstay-rights --tests -- ` to apply 1 suggestion)
+exit 0
+
+### npm run test:app
+✔ the fee route refuses (21.479638ms)
+  ✔ reads whole and fractional amounts exactly (1.916969ms)
+  ✔ refuses rather than rounds (5.103765ms)
+✔ parseUsdc (9.296028ms)
+  ✔ prints the shortest exact form (0.654666ms)
+  ✔ round-trips (0.593576ms)
+✔ formatUsdc (1.758352ms)
+  ✔ flags a G account whose balance read found no trustline (0.665954ms)
+  ✔ does not flag a G account with a trustline, even at a zero balance (0.520407ms)
+  ✔ never flags a C account, which needs no trustline (0.939326ms)
+  ✔ claims nothing while the balance is still loading (0.499614ms)
+✔ needsUsdcTrustline (3.511456ms)
+exit 0
+
+### npm run zk:test
+  ✔ emits public signals in the order CIRCUIT.md §7 fixes (49.94661ms)
+✔ an honest prover (4479.350176ms)
+  ✔ cannot prove with the wrong secret (1556.194006ms)
+(node:254155) [DEP0137] DeprecationWarning: Closing a FileHandle object on garbage collection is deprecated. Please close FileHandle objects explicitly using FileHandle.prototype.close(). In the future, an error will be thrown if a file descriptor is closed during garbage collection.
+  ✔ cannot prove from an account the commitment does not name (697.182569ms)
+  ✔ cannot prove a record the commitment does not wrap (178.92015ms)
+  ✔ cannot reuse a nullifier for a different recipient (215.967613ms)
+  ✔ cannot reuse a nullifier for a different mode or rental length (844.531238ms)
+  ✔ cannot reuse a nullifier for a different right or deadline (468.155116ms)
+  ✔ cannot pick a nullifier freely (489.527114ms)
+  ✔ cannot hand the buyer a next commitment for a different secret hash (967.833284ms)
+✔ a dishonest prover (5421.374834ms)
+exit 0
+
+### npx tsc --noEmit
+exit 0
+
+### npm run zk:check-bundle
+  ✓ wasmcurves ("GPL-3.0"): not in the browser bundle (0/0 of its strings found)
+  ✓ @img/sharp-libvips-linux-x64 ("LGPL-3.0-or-later"): no JavaScript entry — not bundled
+  ✓ @img/sharp-libvips-linuxmusl-x64 ("LGPL-3.0-or-later"): no JavaScript entry — not bundled
+  ✓ rpc-websockets ("LGPL-3.0-only"): not in the browser bundle (2/23 of its strings found)
+  ✓ 70 files in .next/static, none containing 10 GPL-only markers
+  ✓ control: the server build does contain it (1 files under .next/server)
+  ✓ public/zk/prover.worker.js: its first line names GPL-3.0 and its source, prover-worker/
+  ✓ control: the worker does contain the GPL code (6/10 markers)
+  ✓ prover-worker/LICENSE is the GPL-3.0 text
+  ✓ public/zk/LICENSE is served with the worker
+  ✓ the in-app license notice is in the built app
+  ✓ no module under src/ imports prover-worker/ (the app loads it by URL)
+exit 0
+
+### npm run check-privacy
+exit 0
+
+### npm run check-privacy -- --phase2
+exit 0
+
+### npm run lint
+   215:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+  1022:16  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+  1049:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+  260:10  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+  264:10  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+  344:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+  292:10  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+✖ 8 problems (7 errors, 1 warning)
+exit 1
+

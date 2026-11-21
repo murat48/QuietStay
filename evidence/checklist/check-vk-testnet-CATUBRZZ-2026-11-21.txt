@@ -1,0 +1,5 @@
+network          testnet (ledger 5849696)
+contract         CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM
+on-chain VK hash 55ce858fea2e86e56917a114aba2dc3cdec17270c534ab9b3941743b01aeb1de (1824 bytes, 12 IC points)
+committed VK     55ce858fea2e86e56917a114aba2dc3cdec17270c534ab9b3941743b01aeb1de (circuits/keys/verification_key.soroban.json)
+PASS: the on-chain key equals the committed key, field by field

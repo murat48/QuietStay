@@ -53,7 +53,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useWallet } from "@/components/WalletProvider";
 import { verifyAttestation, type Check } from "@/lib/attestation";
-import { commit, digestsMatch } from "@/lib/canonical";
+import { commit } from "@/lib/canonical";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, explorer } from "@/lib/config";
 import { describeError, formatDate, shortAddress } from "@/lib/format";
 import { validateRecord, type OwnershipRecord } from "@/lib/record";

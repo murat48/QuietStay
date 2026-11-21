@@ -200,6 +200,124 @@ fn swap_cost_of_complete_swap_on_the_local_host_budget() {
     assert_eq!(f.client.holder(&1), f.buyer);
 }
 
+/// Step 5: `complete_swap` priced with **each network's own cost parameters**.
+///
+/// Mainnet cannot be simulated before the contract is deployed there, and
+/// mainnet (protocol 29) prices host work differently from testnet
+/// (protocol 30). So the built WASM runs here in the VM, through the same
+/// swap as Step 4; the host meters every cost type's iterations and inputs;
+/// and the same metered work is priced with the `contract_cost_params_*`
+/// read from each network (`stellar network settings --output json`, saved in
+/// evidence/). Each charge is `const × n + (linear × input × n) >> 7`, as in
+/// soroban-env-host's `MeteredCostComponent::evaluate`.
+///
+/// What it cannot show: a code path that differs between host versions. It
+/// prices the protocol-27 host's metered work. The testnet figure is compared
+/// with the RPC simulation, and the real mainnet `--send=no` simulation of
+/// `complete_swap` is still run right after the Step 6 deployment, before any
+/// swap transaction.
+///
+/// Needs the built WASM: `cd contracts && stellar contract build`, then
+/// `cargo test -p quietstay-rights network_priced -- --ignored --nocapture`.
+#[test]
+#[ignore = "needs the built WASM and the saved network settings; run with --ignored"]
+fn swap_cost_network_priced_from_the_wasm() {
+    use sha2::{Digest, Sha256};
+    use soroban_sdk::xdr::ContractCostType;
+
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let wasm = crate::test::built_wasm();
+    let hash: std::string::String = Sha256::digest(wasm)
+        .iter()
+        .map(|b| std::format!("{b:02x}"))
+        .collect();
+    let date = std::env::var("QS_SETTINGS_DATE").unwrap_or_else(|_| "2026-11-21".into());
+    let params = |net: &str, key: &str| -> std::vec::Vec<(u64, u64)> {
+        let file = root.join(std::format!("evidence/network-settings-{net}-{date}.json"));
+        let j: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+        let entry = j["updated_entry"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find_map(|e| e.get(key))
+            .unwrap_or_else(|| panic!("{key} missing in {}", file.display()));
+        let num = |v: &serde_json::Value| -> u64 {
+            v.as_str()
+                .map(|s| s.parse().unwrap())
+                .or_else(|| v.as_u64())
+                .unwrap()
+        };
+        entry
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|p| (num(&p["const_term"]), num(&p["linear_term"])))
+            .collect()
+    };
+
+    let f = crate::test::setup_wasm(wasm);
+    let s = accepted(&f);
+    f.env.mock_all_auths();
+    let mut budget = f.env.cost_estimate().budget();
+    budget.reset_unlimited();
+    f.client
+        .complete_swap(&f.owner, &s.id, &s.maker.proof, &s.maker.signals);
+    // Read before any other call: every top-level invocation resets the budget.
+    let budget = f.env.cost_estimate().budget();
+
+    let types = ContractCostType::variants();
+    let price = |p: &[(u64, u64)]| -> (u64, std::vec::Vec<(ContractCostType, u64)>) {
+        let mut total = 0u64;
+        let mut per = std::vec::Vec::new();
+        for ty in types.iter() {
+            let t = budget.tracker(*ty);
+            let (c, l) = p
+                .get(*ty as usize)
+                .copied()
+                .unwrap_or_else(|| panic!("no network parameter for cost type {ty:?}"));
+            let lin = match t.inputs {
+                Some(x) => ((l as u128 * x as u128) >> 7) as u64,
+                None => 0,
+            };
+            let v = c * t.iterations + lin;
+            total += v;
+            per.push((*ty, v));
+        }
+        (total, per)
+    };
+
+    let host_cpu = budget.cpu_instruction_cost();
+    let host_mem = budget.memory_bytes_cost();
+    let tracked: u64 = types.iter().map(|ty| budget.tracker(*ty).cpu).sum();
+    let (tn_cpu, tn_per) = price(&params("testnet", "contract_cost_params_cpu_instructions"));
+    let (mn_cpu, mn_per) = price(&params("mainnet", "contract_cost_params_cpu_instructions"));
+    let (tn_mem, _) = price(&params("testnet", "contract_cost_params_memory_bytes"));
+    let (mn_mem, _) = price(&params("mainnet", "contract_cost_params_memory_bytes"));
+
+    std::println!("wasm sha256 {hash} ({} bytes), settings {date}", wasm.len());
+    std::println!("complete_swap in the VM, this host's own parameters: cpu {host_cpu}, mem {host_mem} (per-type sum {tracked})");
+    std::println!("priced with testnet's parameters: cpu {tn_cpu}, mem {tn_mem}");
+    std::println!("priced with mainnet's parameters: cpu {mn_cpu}, mem {mn_mem}");
+    std::println!(
+        "mainnet / testnet: cpu {:.4}, mem {:.4}",
+        mn_cpu as f64 / tn_cpu as f64,
+        mn_mem as f64 / tn_mem as f64
+    );
+    std::println!("cost types that differ (testnet → mainnet cpu):");
+    for ((ty, a), (_, b)) in tn_per.iter().zip(mn_per.iter()) {
+        if a != b {
+            std::println!("  {ty:?}: {a} → {b}");
+        }
+    }
+    // Both must stay inside the per-transaction limits, read from the same files.
+    assert!(mn_cpu < 400_000_000 && tn_cpu < 400_000_000);
+    assert!(mn_mem < 41_943_040 && tn_mem < 41_943_040);
+    // The swap really happened (this call resets the budget, so it comes last).
+    assert_eq!(f.client.holder(&1), f.buyer);
+    assert_eq!(f.client.holder(&2), f.owner);
+}
+
 // -------------------------------------------------------------------------
 // one side expired
 // -------------------------------------------------------------------------

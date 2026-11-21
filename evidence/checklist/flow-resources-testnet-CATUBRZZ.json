@@ -1,0 +1,2022 @@
+{
+  "contract": "CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM",
+  "read_at": "2026-11-21T14:21:54.347Z",
+  "rpc": "https://soroban-testnet.stellar.org",
+  "transactions": [
+    {
+      "label": "issue week 1",
+      "hash": "792223d24e76020d6f1f2de7934fbab3e0f6c15612eb116bdc227d547e1452d8",
+      "status": "SUCCESS",
+      "ledger": 5849060,
+      "fee_charged": 91239,
+      "declared_resource_fee": 108352,
+      "charged": {
+        "non_refundable": 8408,
+        "refundable": 82731,
+        "rent": 82076
+      },
+      "resources": {
+        "instructions": 1425629,
+        "disk_read_bytes": 0,
+        "write_bytes": 3244,
+        "read_only": 1,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 1032
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2560,
+          "new_size_bytes": 2560,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 536,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970019
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970019
+        }
+      ]
+    },
+    {
+      "label": "issue week 2",
+      "hash": "cf49406b00b78262e894d6e26783900e7db4a0ac837c80a2f94c2b46319a725e",
+      "status": "SUCCESS",
+      "ledger": 5849061,
+      "fee_charged": 72765,
+      "declared_resource_fee": 87106,
+      "charged": {
+        "non_refundable": 8414,
+        "refundable": 64251,
+        "rent": 63596
+      },
+      "resources": {
+        "instructions": 1443393,
+        "disk_read_bytes": 0,
+        "write_bytes": 3244,
+        "read_only": 1,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 1032
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2560,
+          "new_size_bytes": 2560,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 536,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970020
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 148,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 5970019,
+          "new_live_until_ledger": 5970019,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "issue week 3",
+      "hash": "df1a9128d0c3af316b04f2b38e65338b23e04a4774d9da0d0af1bb3ce80ad4d7",
+      "status": "SUCCESS",
+      "ledger": 5849062,
+      "fee_charged": 72765,
+      "declared_resource_fee": 87106,
+      "charged": {
+        "non_refundable": 8414,
+        "refundable": 64251,
+        "rent": 63596
+      },
+      "resources": {
+        "instructions": 1443393,
+        "disk_read_bytes": 0,
+        "write_bytes": 3244,
+        "read_only": 1,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 1032
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2560,
+          "new_size_bytes": 2560,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 536,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970021
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 148,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 5970019,
+          "new_live_until_ledger": 5970019,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "issue week 4",
+      "hash": "679969483b270f27aa1412c2e15a7e9b21680d6d332ee1a279f49a737f0bb540",
+      "status": "SUCCESS",
+      "ledger": 5849063,
+      "fee_charged": 72765,
+      "declared_resource_fee": 87106,
+      "charged": {
+        "non_refundable": 8414,
+        "refundable": 64251,
+        "rent": 63596
+      },
+      "resources": {
+        "instructions": 1443393,
+        "disk_read_bytes": 0,
+        "write_bytes": 3244,
+        "read_only": 1,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 1032
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2560,
+          "new_size_bytes": 2560,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 536,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970022
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 148,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 5970019,
+          "new_live_until_ledger": 5970019,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "issue week 5",
+      "hash": "1db72ba3394c838723ee641a53694fd746b6c8f1685f2f59072587d9727c89a5",
+      "status": "SUCCESS",
+      "ledger": 5849064,
+      "fee_charged": 72765,
+      "declared_resource_fee": 87106,
+      "charged": {
+        "non_refundable": 8414,
+        "refundable": 64251,
+        "rent": 63596
+      },
+      "resources": {
+        "instructions": 1443393,
+        "disk_read_bytes": 0,
+        "write_bytes": 3244,
+        "read_only": 1,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 1032
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2560,
+          "new_size_bytes": 2560,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 536,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970023
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 148,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 5970019,
+          "new_live_until_ledger": 5970019,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "wait rental: rental offer",
+      "hash": "7ef308d29bc10b9facb3d7ecf53622df96f18e8a7b00a1c609f833b477877ede",
+      "status": "SUCCESS",
+      "ledger": 5849066,
+      "fee_charged": 80338,
+      "declared_resource_fee": 95492,
+      "charged": {
+        "non_refundable": 10566,
+        "refundable": 69672,
+        "rent": 67767
+      },
+      "resources": {
+        "instructions": 1790517,
+        "disk_read_bytes": 0,
+        "write_bytes": 3460,
+        "read_only": 3,
+        "read_write": 4,
+        "classic_entries": 0,
+        "tx_size_bytes": 1356
+      },
+      "rent_changes": [
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970025
+        },
+        {
+          "key": "T contract Offer",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 404,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970026
+        },
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2560,
+          "new_size_bytes": 2604,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract BuyerOffers",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 156,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970025
+        }
+      ]
+    },
+    {
+      "label": "wait rental: accept (rental right + escrow)",
+      "hash": "88c73f2e11d7cb3b89bd9d84cb9f1ebc8a5e6cef57a1d4e3421832f38b687313",
+      "status": "SUCCESS",
+      "ledger": 5849068,
+      "fee_charged": 511926,
+      "declared_resource_fee": 585626,
+      "charged": {
+        "non_refundable": 52077,
+        "refundable": 459749,
+        "rent": 457561
+      },
+      "resources": {
+        "instructions": 88522893,
+        "disk_read_bytes": 272,
+        "write_bytes": 4772,
+        "read_only": 3,
+        "read_write": 11,
+        "classic_entries": 2,
+        "tx_size_bytes": 3448
+      },
+      "rent_changes": [
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 224,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 6367468
+        },
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 296,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 5970069,
+          "new_live_until_ledger": 5970069,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Nullifier",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 136,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849787
+        },
+        {
+          "key": "P contract OpenEscrows",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 108,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970027
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 536,
+          "new_size_bytes": 640,
+          "old_live_until_ledger": 5970019,
+          "new_live_until_ledger": 5970019,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Escrow",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 604,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 6384764
+        },
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2604,
+          "new_size_bytes": 2648,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "sale: record request",
+      "hash": "0f83e9d6d4cc4266e1b9045bef0733f21f07637941382b7026b5a9fab228b4f9",
+      "status": "SUCCESS",
+      "ledger": 5849085,
+      "fee_charged": 53820,
+      "declared_resource_fee": 65357,
+      "charged": {
+        "non_refundable": 8160,
+        "refundable": 45560,
+        "rent": 44866
+      },
+      "resources": {
+        "instructions": 1492812,
+        "disk_read_bytes": 0,
+        "write_bytes": 3168,
+        "read_only": 2,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 924
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2648,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Request",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 312,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970044
+        },
+        {
+          "key": "P contract BuyerRequests",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 160,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970044
+        }
+      ]
+    },
+    {
+      "label": "sale: sale offer",
+      "hash": "094c906133a9644b83894dc13d36233b35f5dc99a4d6f5ea33c8049b562adf75",
+      "status": "SUCCESS",
+      "ledger": 5849087,
+      "fee_charged": 81530,
+      "declared_resource_fee": 96393,
+      "charged": {
+        "non_refundable": 13715,
+        "refundable": 67715,
+        "rent": 65673
+      },
+      "resources": {
+        "instructions": 2064888,
+        "disk_read_bytes": 0,
+        "write_bytes": 3604,
+        "read_only": 3,
+        "read_write": 6,
+        "classic_entries": 0,
+        "tx_size_bytes": 1588
+      },
+      "rent_changes": [
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970045
+        },
+        {
+          "key": "P contract BuyerOffers",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 156,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970046
+        },
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Offer",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 456,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970046
+        }
+      ]
+    },
+    {
+      "label": "sale: accept (right and USDC together)",
+      "hash": "f01dda8d3fcde5be3d11053c58ab42109cd64876819d986d7e029f52983feecc",
+      "status": "SUCCESS",
+      "ledger": 5849089,
+      "fee_charged": 71297,
+      "declared_resource_fee": 79309,
+      "charged": {
+        "non_refundable": 49327,
+        "refundable": 21870,
+        "rent": 19799
+      },
+      "resources": {
+        "instructions": 88328535,
+        "disk_read_bytes": 232,
+        "write_bytes": 1496,
+        "read_only": 3,
+        "read_write": 10,
+        "classic_entries": 2,
+        "tx_size_bytes": 3432
+      },
+      "rent_changes": [
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 536,
+          "new_size_bytes": 536,
+          "old_live_until_ledger": 5970020,
+          "new_live_until_ledger": 5970020,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Nullifier",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 136,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849808
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 148,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 5970019,
+          "new_live_until_ledger": 5970019,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 296,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 5970078,
+          "new_live_until_ledger": 5970078,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970048
+        }
+      ]
+    },
+    {
+      "label": "dispute: rental offer",
+      "hash": "f865d7aa334b9f6074becc32273bdb443198eed642bff2ed71f3a85140454835",
+      "status": "SUCCESS",
+      "ledger": 5849091,
+      "fee_charged": 58073,
+      "declared_resource_fee": 69879,
+      "charged": {
+        "non_refundable": 10623,
+        "refundable": 47350,
+        "rent": 45445
+      },
+      "resources": {
+        "instructions": 1850754,
+        "disk_read_bytes": 0,
+        "write_bytes": 3552,
+        "read_only": 3,
+        "read_write": 4,
+        "classic_entries": 0,
+        "tx_size_bytes": 1356
+      },
+      "rent_changes": [
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 296,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 5970025,
+          "new_live_until_ledger": 5970050
+        },
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Offer",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 404,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970051
+        },
+        {
+          "key": "P contract BuyerOffers",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 156,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970050
+        }
+      ]
+    },
+    {
+      "label": "dispute: accept (rental right + escrow)",
+      "hash": "a5b050de44bca3e03b796e4c76eabda514449818ccd2ae8dac1a7044ee87502b",
+      "status": "SUCCESS",
+      "ledger": 5849093,
+      "fee_charged": 393046,
+      "declared_resource_fee": 449036,
+      "charged": {
+        "non_refundable": 51203,
+        "refundable": 341743,
+        "rent": 339555
+      },
+      "resources": {
+        "instructions": 88547772,
+        "disk_read_bytes": 116,
+        "write_bytes": 4820,
+        "read_only": 2,
+        "read_write": 11,
+        "classic_entries": 1,
+        "tx_size_bytes": 3408
+      },
+      "rent_changes": [
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 224,
+          "new_size_bytes": 224,
+          "old_live_until_ledger": 6367468,
+          "new_live_until_ledger": 6367468,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 296,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 5970069,
+          "new_live_until_ledger": 5970069,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract OpenEscrows",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 108,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970052
+        },
+        {
+          "key": "P contract Escrow",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 604,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 6384807
+        },
+        {
+          "key": "T contract Nullifier",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 136,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849812
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 536,
+          "new_size_bytes": 640,
+          "old_live_until_ledger": 5970021,
+          "new_live_until_ledger": 5970021,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "dispute: problem report (renter)",
+      "hash": "6111325f6783999d5177c98ed262300e7a4d3017bc7cafd5d398233555571c9e",
+      "status": "SUCCESS",
+      "ledger": 5849094,
+      "fee_charged": 23186,
+      "declared_resource_fee": 30753,
+      "charged": {
+        "non_refundable": 3999,
+        "refundable": 19087,
+        "rent": 18540
+      },
+      "resources": {
+        "instructions": 1179924,
+        "disk_read_bytes": 0,
+        "write_bytes": 640,
+        "read_only": 2,
+        "read_write": 1,
+        "classic_entries": 0,
+        "tx_size_bytes": 700
+      },
+      "rent_changes": [
+        {
+          "key": "P contract Escrow",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 604,
+          "new_size_bytes": 640,
+          "old_live_until_ledger": 6384807,
+          "new_live_until_ledger": 6384807,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "dispute: evidence (renter)",
+      "hash": "0d21f5f8465db71bece25d61700408531a1d0f00abeefbf8c5c8f7b519e3409e",
+      "status": "SUCCESS",
+      "ledger": 5849095,
+      "fee_charged": 25266,
+      "declared_resource_fee": 33142,
+      "charged": {
+        "non_refundable": 4019,
+        "refundable": 21147,
+        "rent": 20600
+      },
+      "resources": {
+        "instructions": 1188733,
+        "disk_read_bytes": 0,
+        "write_bytes": 680,
+        "read_only": 2,
+        "read_write": 1,
+        "classic_entries": 0,
+        "tx_size_bytes": 700
+      },
+      "rent_changes": [
+        {
+          "key": "P contract Escrow",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 640,
+          "new_size_bytes": 680,
+          "old_live_until_ledger": 6384807,
+          "new_live_until_ledger": 6384807,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "dispute: evidence (owner)",
+      "hash": "80eda0ff9805e397df812bd0256a06c92e2bdca6b1a7b7ef7e617e5516b2178a",
+      "status": "SUCCESS",
+      "ledger": 5849096,
+      "fee_charged": 25284,
+      "declared_resource_fee": 33160,
+      "charged": {
+        "non_refundable": 4037,
+        "refundable": 21147,
+        "rent": 20600
+      },
+      "resources": {
+        "instructions": 1191398,
+        "disk_read_bytes": 0,
+        "write_bytes": 720,
+        "read_only": 2,
+        "read_write": 1,
+        "classic_entries": 0,
+        "tx_size_bytes": 700
+      },
+      "rent_changes": [
+        {
+          "key": "P contract Escrow",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 680,
+          "new_size_bytes": 720,
+          "old_live_until_ledger": 6384807,
+          "new_live_until_ledger": 6384807,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "confirm: rental offer",
+      "hash": "ba4a6cc7e096ad5ea43ccb123558cf1956ef0023723e9c683460e1faaaa3337f",
+      "status": "SUCCESS",
+      "ledger": 5849111,
+      "fee_charged": 58072,
+      "declared_resource_fee": 69878,
+      "charged": {
+        "non_refundable": 10623,
+        "refundable": 47349,
+        "rent": 45444
+      },
+      "resources": {
+        "instructions": 1850754,
+        "disk_read_bytes": 0,
+        "write_bytes": 3552,
+        "read_only": 3,
+        "read_write": 4,
+        "classic_entries": 0,
+        "tx_size_bytes": 1356
+      },
+      "rent_changes": [
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 296,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 5970050,
+          "new_live_until_ledger": 5970069
+        },
+        {
+          "key": "T contract Offer",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 404,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970070
+        },
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract BuyerOffers",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 156,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970070
+        }
+      ]
+    },
+    {
+      "label": "confirm: accept (rental right + escrow)",
+      "hash": "b1c488667e0f46f927962533672dfb48a922d28eabec745938f9c62e32d51607",
+      "status": "SUCCESS",
+      "ledger": 5849112,
+      "fee_charged": 393045,
+      "declared_resource_fee": 449035,
+      "charged": {
+        "non_refundable": 51203,
+        "refundable": 341742,
+        "rent": 339554
+      },
+      "resources": {
+        "instructions": 88547772,
+        "disk_read_bytes": 116,
+        "write_bytes": 4820,
+        "read_only": 2,
+        "read_write": 11,
+        "classic_entries": 1,
+        "tx_size_bytes": 3408
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract OpenEscrows",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 108,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970071
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 224,
+          "new_size_bytes": 224,
+          "old_live_until_ledger": 6367468,
+          "new_live_until_ledger": 6367468,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 296,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 5970069,
+          "new_live_until_ledger": 5970069,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 536,
+          "new_size_bytes": 640,
+          "old_live_until_ledger": 5970023,
+          "new_live_until_ledger": 5970023,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Nullifier",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 136,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849831
+        },
+        {
+          "key": "P contract Escrow",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 604,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 6384826
+        }
+      ]
+    },
+    {
+      "label": "confirm: the renter releases early",
+      "hash": "7efa759e5d4735104ebc8825ff75a165a85519fedcb34994d6faf70a6b6340f1",
+      "status": "SUCCESS",
+      "ledger": 5849113,
+      "fee_charged": 10555,
+      "declared_resource_fee": 15430,
+      "charged": {
+        "non_refundable": 9312,
+        "refundable": 1143,
+        "rent": 0
+      },
+      "resources": {
+        "instructions": 1551522,
+        "disk_read_bytes": 116,
+        "write_bytes": 944,
+        "read_only": 3,
+        "read_write": 4,
+        "classic_entries": 1,
+        "tx_size_bytes": 936
+      },
+      "rent_changes": [
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 224,
+          "new_size_bytes": 224,
+          "old_live_until_ledger": 6367468,
+          "new_live_until_ledger": 6367468,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Escrow",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 604,
+          "new_size_bytes": 604,
+          "old_live_until_ledger": 6384826,
+          "new_live_until_ledger": 6384826,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "sale rejections: offer A record request",
+      "hash": "4a671501478181be0939bf7e324befff8eeb4104299893d2bac58ef293dbd79d",
+      "status": "SUCCESS",
+      "ledger": 5849118,
+      "fee_charged": 48243,
+      "declared_resource_fee": 58944,
+      "charged": {
+        "non_refundable": 8163,
+        "refundable": 39980,
+        "rent": 39286
+      },
+      "resources": {
+        "instructions": 1503024,
+        "disk_read_bytes": 0,
+        "write_bytes": 3168,
+        "read_only": 2,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 924
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Request",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 312,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970077
+        },
+        {
+          "key": "P contract BuyerRequests",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 160,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970077
+        }
+      ]
+    },
+    {
+      "label": "sale rejections: offer A sale offer",
+      "hash": "122f90afd73ddf4bfbfbee51848e729a6d5dcdd42876d8db63ff29b138622dea",
+      "status": "SUCCESS",
+      "ledger": 5849119,
+      "fee_charged": 64335,
+      "declared_resource_fee": 76616,
+      "charged": {
+        "non_refundable": 13724,
+        "refundable": 50511,
+        "rent": 48469
+      },
+      "resources": {
+        "instructions": 2095204,
+        "disk_read_bytes": 0,
+        "write_bytes": 3604,
+        "read_only": 3,
+        "read_write": 6,
+        "classic_entries": 0,
+        "tx_size_bytes": 1588
+      },
+      "rent_changes": [
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 296,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 5970045,
+          "new_live_until_ledger": 5970078
+        },
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Offer",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 456,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970079
+        },
+        {
+          "key": "P contract BuyerOffers",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 156,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970078
+        }
+      ]
+    },
+    {
+      "label": "sale rejections: the buyer lowers the allowance directly",
+      "hash": "28e013cc2dc90fb596c960b8a02c6aaac9d28eb663b43e6d50d36ee61740bd20",
+      "status": "SUCCESS",
+      "ledger": 5849121,
+      "fee_charged": 4545,
+      "declared_resource_fee": 9347,
+      "charged": {
+        "non_refundable": 3790,
+        "refundable": 655,
+        "rent": 0
+      },
+      "resources": {
+        "instructions": 274316,
+        "disk_read_bytes": 0,
+        "write_bytes": 296,
+        "read_only": 1,
+        "read_write": 1,
+        "classic_entries": 0,
+        "tx_size_bytes": 796
+      },
+      "rent_changes": [
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 296,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 5970078,
+          "new_live_until_ledger": 5970078,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "sale rejections: offer B record request",
+      "hash": "97505612aa01cb834992ba7672ef47ad931489ff4d3997ac10e2c8eeef28db2e",
+      "status": "SUCCESS",
+      "ledger": 5849123,
+      "fee_charged": 48243,
+      "declared_resource_fee": 58944,
+      "charged": {
+        "non_refundable": 8163,
+        "refundable": 39980,
+        "rent": 39286
+      },
+      "resources": {
+        "instructions": 1503024,
+        "disk_read_bytes": 0,
+        "write_bytes": 3168,
+        "read_only": 2,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 924
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Request",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 312,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970083
+        },
+        {
+          "key": "P contract BuyerRequests",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 160,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970082
+        }
+      ]
+    },
+    {
+      "label": "sale rejections: offer B (expires in 12 ledgers)",
+      "hash": "8fc3ffe57313c22a63011d8b92825ad15e67f3e580da2edeb92666b9a5c4bfc6",
+      "status": "SUCCESS",
+      "ledger": 5849124,
+      "fee_charged": 18950,
+      "declared_resource_fee": 24384,
+      "charged": {
+        "non_refundable": 13983,
+        "refundable": 4867,
+        "rent": 2825
+      },
+      "resources": {
+        "instructions": 2329352,
+        "disk_read_bytes": 0,
+        "write_bytes": 3616,
+        "read_only": 4,
+        "read_write": 6,
+        "classic_entries": 0,
+        "tx_size_bytes": 1672
+      },
+      "rent_changes": [
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 296,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 5970078,
+          "new_live_until_ledger": 5970078,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract BuyerOffers",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 156,
+          "new_size_bytes": 168,
+          "old_live_until_ledger": 5849124,
+          "new_live_until_ledger": 5849124,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Offer",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 456,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849843
+        }
+      ]
+    },
+    {
+      "label": "sale rejections: the buyer moves USDC away",
+      "hash": "a669c92f85708fe1964779f2fe220ef9562de6968b64fa81f45f003bddea1e3d",
+      "status": "SUCCESS",
+      "ledger": 5849125,
+      "fee_charged": 7244,
+      "declared_resource_fee": 12040,
+      "charged": {
+        "non_refundable": 6528,
+        "refundable": 616,
+        "rent": 0
+      },
+      "resources": {
+        "instructions": 237467,
+        "disk_read_bytes": 232,
+        "write_bytes": 232,
+        "read_only": 1,
+        "read_write": 2,
+        "classic_entries": 2,
+        "tx_size_bytes": 756
+      },
+      "rent_changes": []
+    },
+    {
+      "label": "sale rejections: the USDC comes back",
+      "hash": "ac6215ca7b5fe1d2929d52796ceb00e55f39abbc10ce45f3ffc6279f6b8db7df",
+      "status": "SUCCESS",
+      "ledger": 5849127,
+      "fee_charged": 7244,
+      "declared_resource_fee": 12040,
+      "charged": {
+        "non_refundable": 6528,
+        "refundable": 616,
+        "rent": 0
+      },
+      "resources": {
+        "instructions": 236831,
+        "disk_read_bytes": 232,
+        "write_bytes": 232,
+        "read_only": 1,
+        "read_write": 2,
+        "classic_entries": 2,
+        "tx_size_bytes": 756
+      },
+      "rent_changes": []
+    },
+    {
+      "label": "sale rejections: the buyer cancels offer A",
+      "hash": "0995cf6815df6611f41309dc0443c50122b04fd28905e6517c0175067e59fa63",
+      "status": "SUCCESS",
+      "ledger": 5849138,
+      "fee_charged": 9246,
+      "declared_resource_fee": 14174,
+      "charged": {
+        "non_refundable": 7642,
+        "refundable": 1504,
+        "rent": 0
+      },
+      "resources": {
+        "instructions": 1581779,
+        "disk_read_bytes": 0,
+        "write_bytes": 296,
+        "read_only": 4,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 1236
+      },
+      "rent_changes": [
+        {
+          "key": "T contract Allowance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 296,
+          "new_size_bytes": 296,
+          "old_live_until_ledger": 5970078,
+          "new_live_until_ledger": 5970078,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "issue week 1 to the maker",
+      "hash": "e67ec7718921c98792b6044010b61cf3d14befa89a0a75c6109eb38e91d6f76d",
+      "status": "SUCCESS",
+      "ledger": 5849149,
+      "fee_charged": 72834,
+      "declared_resource_fee": 87175,
+      "charged": {
+        "non_refundable": 8483,
+        "refundable": 64251,
+        "rent": 63596
+      },
+      "resources": {
+        "instructions": 1482165,
+        "disk_read_bytes": 0,
+        "write_bytes": 3380,
+        "read_only": 1,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 1032
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 536,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970108
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 148,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 5970019,
+          "new_live_until_ledger": 5970019,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "issue week 2 to the taker",
+      "hash": "4f7025dc088d45a9510f65d5212a9b7d4b7d2b4339c2cfb5fab0f83d9caa82b1",
+      "status": "SUCCESS",
+      "ledger": 5849150,
+      "fee_charged": 72834,
+      "declared_resource_fee": 87175,
+      "charged": {
+        "non_refundable": 8483,
+        "refundable": 64251,
+        "rent": 63596
+      },
+      "resources": {
+        "instructions": 1482165,
+        "disk_read_bytes": 0,
+        "write_bytes": 3380,
+        "read_only": 1,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 1032
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 536,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970109
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 148,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 5970048,
+          "new_live_until_ledger": 5970048,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "maker's record request for right #7",
+      "hash": "d939b8066d634b50dd8eaa06691678bc00e2c8172c7eb92c4651d8e726c3980f",
+      "status": "SUCCESS",
+      "ledger": 5849151,
+      "fee_charged": 30404,
+      "declared_resource_fee": 38429,
+      "charged": {
+        "non_refundable": 8163,
+        "refundable": 22141,
+        "rent": 21447
+      },
+      "resources": {
+        "instructions": 1503024,
+        "disk_read_bytes": 0,
+        "write_bytes": 3168,
+        "read_only": 2,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 924
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Request",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 312,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5851151
+        },
+        {
+          "key": "P contract BuyerRequests",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 160,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970110
+        }
+      ]
+    },
+    {
+      "label": "taker's record request for right #6",
+      "hash": "edb320ac8feadcc21d8a24518299349c5b6a0e035528504d0c5432d5273f1d35",
+      "status": "SUCCESS",
+      "ledger": 5849153,
+      "fee_charged": 30419,
+      "declared_resource_fee": 38429,
+      "charged": {
+        "non_refundable": 8163,
+        "refundable": 22156,
+        "rent": 21462
+      },
+      "resources": {
+        "instructions": 1503024,
+        "disk_read_bytes": 0,
+        "write_bytes": 3168,
+        "read_only": 2,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 924
+      },
+      "rent_changes": [
+        {
+          "key": "T contract Request",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 312,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5851152
+        },
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2696,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract BuyerRequests",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 160,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970112
+        }
+      ]
+    },
+    {
+      "label": "offer_swap (maker)",
+      "hash": "6e870e7580fb78ced07b68bbc9222d82e422c1588abae858119b4203ac2bceb3",
+      "status": "SUCCESS",
+      "ledger": 5849154,
+      "fee_charged": 17754,
+      "declared_resource_fee": 23619,
+      "charged": {
+        "non_refundable": 9907,
+        "refundable": 7747,
+        "rent": 6789
+      },
+      "resources": {
+        "instructions": 1740807,
+        "disk_read_bytes": 0,
+        "write_bytes": 3156,
+        "read_only": 3,
+        "read_write": 4,
+        "classic_entries": 0,
+        "tx_size_bytes": 1120
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2696,
+          "new_size_bytes": 2740,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Swap",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 416,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5851154
+        }
+      ]
+    },
+    {
+      "label": "accept_swap (taker)",
+      "hash": "e7edf1e016fec233fc9451f3b442ebd1d6adaad564636af5fe452413ce444719",
+      "status": "SUCCESS",
+      "ledger": 5849156,
+      "fee_charged": 20137,
+      "declared_resource_fee": 25608,
+      "charged": {
+        "non_refundable": 14919,
+        "refundable": 5118,
+        "rent": 4336
+      },
+      "resources": {
+        "instructions": 2175309,
+        "disk_read_bytes": 0,
+        "write_bytes": 1512,
+        "read_only": 5,
+        "read_write": 5,
+        "classic_entries": 0,
+        "tx_size_bytes": 3108
+      },
+      "rent_changes": [
+        {
+          "key": "T contract SwapPending",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 124,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849875
+        },
+        {
+          "key": "T contract SwapPending",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 124,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849875
+        },
+        {
+          "key": "T contract SwapAcceptance",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 1264,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849875
+        }
+      ]
+    },
+    {
+      "label": "complete_swap (maker)",
+      "hash": "e27478f4d21d16ee10433a4b71553b14cdb224ab6554e3d397a15e611a3e612f",
+      "status": "SUCCESS",
+      "ledger": 5849158,
+      "fee_charged": 81232,
+      "declared_resource_fee": 86702,
+      "charged": {
+        "non_refundable": 76180,
+        "refundable": 4952,
+        "rent": 2637
+      },
+      "resources": {
+        "instructions": 174820830,
+        "disk_read_bytes": 0,
+        "write_bytes": 1640,
+        "read_only": 2,
+        "read_write": 12,
+        "classic_entries": 0,
+        "tx_size_bytes": 3412
+      },
+      "rent_changes": [
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 536,
+          "new_size_bytes": 536,
+          "old_live_until_ledger": 5970109,
+          "new_live_until_ledger": 5970109,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Nullifier",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 136,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849877
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 148,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 5970019,
+          "new_live_until_ledger": 5970019,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 536,
+          "new_size_bytes": 536,
+          "old_live_until_ledger": 5970108,
+          "new_live_until_ledger": 5970108,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 148,
+          "new_size_bytes": 148,
+          "old_live_until_ledger": 5970048,
+          "new_live_until_ledger": 5970048,
+          "ttl_read_now": true
+        },
+        {
+          "key": "T contract Nullifier",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 136,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849877
+        }
+      ]
+    },
+    {
+      "label": "dispute: arbiter resolves (refund renter)",
+      "hash": "45919deecb6855191fec3cec703b95a6631b3d0574dabdc14419127558c4cf73",
+      "status": "SUCCESS",
+      "ledger": 5849104,
+      "fee_charged": 30121,
+      "declared_resource_fee": 37911,
+      "charged": {
+        "non_refundable": 9685,
+        "refundable": 20336,
+        "rent": 18539
+      },
+      "resources": {
+        "instructions": 1651607,
+        "disk_read_bytes": 116,
+        "write_bytes": 1096,
+        "read_only": 3,
+        "read_write": 4,
+        "classic_entries": 1,
+        "tx_size_bytes": 1064
+      },
+      "rent_changes": [
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 224,
+          "new_size_bytes": 224,
+          "old_live_until_ledger": 6367468,
+          "new_live_until_ledger": 6367468,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Escrow",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 720,
+          "new_size_bytes": 756,
+          "old_live_until_ledger": 6384807,
+          "new_live_until_ledger": 6384807,
+          "ttl_read_now": true
+        }
+      ]
+    },
+    {
+      "label": "passkey probe: wallet deploy",
+      "hash": "6dfa709f6a32e09c7ae99ccafb882c2b96aceb4ad1162a9ea10910b795aa7961",
+      "status": "SUCCESS",
+      "ledger": 5849168,
+      "fee_charged": 132669,
+      "declared_resource_fee": 155370,
+      "charged": {
+        "non_refundable": 12585,
+        "refundable": 119984,
+        "rent": 118567
+      },
+      "resources": {
+        "instructions": 3051892,
+        "disk_read_bytes": 144,
+        "write_bytes": 1040,
+        "read_only": 4,
+        "read_write": 5,
+        "classic_entries": 1,
+        "tx_size_bytes": 1636
+      },
+      "rent_changes": [
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 220,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970127
+        },
+        {
+          "key": "P contract SignerData",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 324,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970127
+        },
+        {
+          "key": "P contract SignerLookup",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 136,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970127
+        },
+        {
+          "key": "P contract ContextRuleData",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 284,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970127
+        },
+        {
+          "key": "T account scvLedgerKeyNonce",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 76,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849887
+        }
+      ]
+    },
+    {
+      "label": "passkey probe: issue to the wallet",
+      "hash": "bb6eeb563865a296399fdae3fd78ac64b547c6acf2b766d6ad6d8efc52ba6ea4",
+      "status": "SUCCESS",
+      "ledger": 5849170,
+      "fee_charged": 90425,
+      "declared_resource_fee": 107407,
+      "charged": {
+        "non_refundable": 8469,
+        "refundable": 81856,
+        "rent": 81211
+      },
+      "resources": {
+        "instructions": 1470486,
+        "disk_read_bytes": 0,
+        "write_bytes": 3416,
+        "read_only": 1,
+        "read_write": 3,
+        "classic_entries": 0,
+        "tx_size_bytes": 1020
+      },
+      "rent_changes": [
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 532,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970129
+        },
+        {
+          "key": "P contract scvLedgerKeyContractInstance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 2740,
+          "new_size_bytes": 2740,
+          "old_live_until_ledger": 5970011,
+          "new_live_until_ledger": 5970011,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract Balance",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 144,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5970129
+        }
+      ]
+    },
+    {
+      "label": "passkey probe: passkey-authorized transfer (rental)",
+      "hash": "4a20d08664f228f66d8e12c7c8f648c44aa34d9bc957aa0ffb6b4730909cab20",
+      "status": "SUCCESS",
+      "ledger": 5849172,
+      "fee_charged": 292327,
+      "declared_resource_fee": 334683,
+      "charged": {
+        "non_refundable": 41777,
+        "refundable": 250450,
+        "rent": 249746
+      },
+      "resources": {
+        "instructions": 92579414,
+        "disk_read_bytes": 0,
+        "write_bytes": 844,
+        "read_only": 8,
+        "read_write": 4,
+        "classic_entries": 0,
+        "tx_size_bytes": 3692
+      },
+      "rent_changes": [
+        {
+          "key": "T contract scvLedgerKeyNonce",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 72,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849891
+        },
+        {
+          "key": "T contract Nullifier",
+          "is_persistent": false,
+          "is_code_entry": false,
+          "old_size_bytes": 0,
+          "new_size_bytes": 136,
+          "old_live_until_ledger": 0,
+          "new_live_until_ledger": 5849891
+        },
+        {
+          "key": "P contract Right",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 532,
+          "new_size_bytes": 636,
+          "old_live_until_ledger": 5970129,
+          "new_live_until_ledger": 5970129,
+          "ttl_read_now": true
+        },
+        {
+          "key": "P contract SignerData",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 324,
+          "new_size_bytes": 324,
+          "old_live_until_ledger": 5970127,
+          "new_live_until_ledger": 6367572,
+          "size_read_now": true
+        },
+        {
+          "key": "P contract ContextRuleData",
+          "is_persistent": true,
+          "is_code_entry": false,
+          "old_size_bytes": 284,
+          "new_size_bytes": 284,
+          "old_live_until_ledger": 5970127,
+          "new_live_until_ledger": 6367572,
+          "size_read_now": true
+        }
+      ]
+    }
+  ]
+}

@@ -128,7 +128,12 @@ struct P {
 /// fixtures prove rights 1, 2 and 3 against it). Buyer and renter hold 100
 /// USDC each. Trustlines for every fixture account.
 fn pay_setup() -> P {
-    let f = setup();
+    pay_setup_on(setup())
+}
+
+/// `pay_setup` on a given fixture (Step 5: the WASM fixture, with a network's
+/// TTL rules applied first).
+fn pay_setup_on(f: Fixture<'static>) -> P {
     f.env.mock_all_auths();
     for who in [&f.owner, &f.renter, &f.buyer, &f.stranger] {
         trust(&f.env, &f.usdc_asset, who);
@@ -1816,7 +1821,10 @@ fn assert_offer_tree_holds_the_approve(p: &P, buyer: &Address, root_fn: &str, am
     let AuthorizedFunction::Contract((contract, name, _)) = &root.function else {
         panic!("root is a contract call");
     };
-    assert_eq!((contract, name), (&f.contract_id, &Symbol::new(&f.env, root_fn)));
+    assert_eq!(
+        (contract, name),
+        (&f.contract_id, &Symbol::new(&f.env, root_fn))
+    );
     assert_eq!(root.sub_invocations.len(), 1, "exactly one sub-invocation");
     let AuthorizedFunction::Contract((token, sub, args)) = &root.sub_invocations[0].function else {
         panic!("the sub-invocation is a contract call");
@@ -1825,7 +1833,10 @@ fn assert_offer_tree_holds_the_approve(p: &P, buyer: &Address, root_fn: &str, am
     let from: Address = args.get_unchecked(0).into_val(&f.env);
     let spender: Address = args.get_unchecked(1).into_val(&f.env);
     let value: i128 = args.get_unchecked(2).into_val(&f.env);
-    assert_eq!((from, spender, value), (buyer.clone(), f.contract_id.clone(), amount));
+    assert_eq!(
+        (from, spender, value),
+        (buyer.clone(), f.contract_id.clone(), amount)
+    );
 }
 
 #[test]
@@ -1876,16 +1887,10 @@ fn an_offer_signed_at_one_ledger_still_lands_ledgers_later() {
     StellarAssetClient::new(&f.env, &f.usdc).mint(renter, &(10 * USDC));
     let expires = BASE_LEDGER + OPEN_FOR;
     let price = 3 * USDC;
-    let offer_args: Vec<Val> = (
-        renter.clone(),
-        1u64,
-        price,
-        WEEK_END,
-        CHECK_IN,
-        expires,
-    )
-        .into_val(&f.env);
-    let approve_args: Vec<Val> = (renter.clone(), f.contract_id.clone(), price, expires).into_val(&f.env);
+    let offer_args: Vec<Val> =
+        (renter.clone(), 1u64, price, WEEK_END, CHECK_IN, expires).into_val(&f.env);
+    let approve_args: Vec<Val> =
+        (renter.clone(), f.contract_id.clone(), price, expires).into_val(&f.env);
 
     f.at_ledger(BASE_LEDGER + 7);
     f.env.mock_auths(&[MockAuth {
@@ -1968,9 +1973,9 @@ mod real {
     use ed25519_dalek::{Signer, SigningKey};
     use sha2::{Digest, Sha256};
     use soroban_sdk::xdr::{
-        HashIdPreimage, HashIdPreimageSorobanAuthorization, InvokeContractArgs, Limits, ScMap, ScMapEntry, ScVal,
-        SorobanAddressCredentials, SorobanAuthorizationEntry, SorobanAuthorizedFunction, SorobanAuthorizedInvocation,
-        SorobanCredentials, WriteXdr,
+        HashIdPreimage, HashIdPreimageSorobanAuthorization, InvokeContractArgs, Limits, ScMap,
+        ScMapEntry, ScVal, SorobanAddressCredentials, SorobanAuthorizationEntry,
+        SorobanAuthorizedFunction, SorobanAuthorizedInvocation, SorobanCredentials, WriteXdr,
     };
     use soroban_sdk::TryFromVal;
 
@@ -1980,12 +1985,25 @@ mod real {
         let key = SigningKey::from_bytes(&seed);
         let id: xdr::AccountId = (&account(env, label)).try_into().unwrap();
         let xdr::PublicKey::PublicKeyTypeEd25519(xdr::Uint256(pk)) = id.0;
-        assert_eq!(pk, key.verifying_key().to_bytes(), "{label}'s key matches its fixture address");
+        assert_eq!(
+            pk,
+            key.verifying_key().to_bytes(),
+            "{label}'s key matches its fixture address"
+        );
         key
     }
 
-    pub fn call(env: &Env, contract: &Address, fn_name: &str, args: Vec<Val>, subs: std::vec::Vec<SorobanAuthorizedInvocation>) -> SorobanAuthorizedInvocation {
-        let args: std::vec::Vec<ScVal> = args.iter().map(|v| ScVal::try_from_val(env, &v).unwrap()).collect();
+    pub fn call(
+        env: &Env,
+        contract: &Address,
+        fn_name: &str,
+        args: Vec<Val>,
+        subs: std::vec::Vec<SorobanAuthorizedInvocation>,
+    ) -> SorobanAuthorizedInvocation {
+        let args: std::vec::Vec<ScVal> = args
+            .iter()
+            .map(|v| ScVal::try_from_val(env, &v).unwrap())
+            .collect();
         SorobanAuthorizedInvocation {
             function: SorobanAuthorizedFunction::ContractFn(InvokeContractArgs {
                 contract_address: contract.into(),
@@ -1997,7 +2015,13 @@ mod real {
     }
 
     /// Sign `root` as `label`, as a wallet signs an entry from simulation.
-    pub fn signed(env: &Env, label: &str, nonce: i64, valid_until: u32, root: SorobanAuthorizedInvocation) -> SorobanAuthorizationEntry {
+    pub fn signed(
+        env: &Env,
+        label: &str,
+        nonce: i64,
+        valid_until: u32,
+        root: SorobanAuthorizedInvocation,
+    ) -> SorobanAuthorizationEntry {
         let key = key(env, label);
         let preimage = HashIdPreimage::SorobanAuthorization(HashIdPreimageSorobanAuthorization {
             network_id: xdr::Hash(env.ledger().network_id().to_array()),
@@ -2013,9 +2037,12 @@ mod real {
         };
         let sig = ScVal::Vec(Some(
             std::vec![ScVal::Map(Some(ScMap(
-                std::vec![entry("public_key", &key.verifying_key().to_bytes()), entry("signature", &signature)]
-                    .try_into()
-                    .unwrap(),
+                std::vec![
+                    entry("public_key", &key.verifying_key().to_bytes()),
+                    entry("signature", &signature)
+                ]
+                .try_into()
+                .unwrap(),
             )))]
             .try_into()
             .unwrap(),
@@ -2032,9 +2059,20 @@ mod real {
     }
 
     /// `USDC.approve(from, contract, amount, expiration)`, the offer calls' one signed sub-call.
-    pub fn approve(p: &P, from: &Address, amount: i128, expiration: u32) -> SorobanAuthorizedInvocation {
+    pub fn approve(
+        p: &P,
+        from: &Address,
+        amount: i128,
+        expiration: u32,
+    ) -> SorobanAuthorizedInvocation {
         let f = &p.f;
-        call(&f.env, &f.usdc, "approve", (from.clone(), f.contract_id.clone(), amount, expiration).into_val(&f.env), std::vec![])
+        call(
+            &f.env,
+            &f.usdc,
+            "approve",
+            (from.clone(), f.contract_id.clone(), amount, expiration).into_val(&f.env),
+            std::vec![],
+        )
     }
 }
 
@@ -2054,7 +2092,8 @@ fn real_signature_create_rental_offer_lands_ledgers_after_signing() {
     let entry = real::signed(&f.env, "renter", 1, BASE_LEDGER + 100, root);
     f.at_ledger(BASE_LEDGER + 7);
     f.env.set_auths(&[entry]);
-    f.client.create_rental_offer(r, &1, &price, &WEEK_END, &CHECK_IN, &expires);
+    f.client
+        .create_rental_offer(r, &1, &price, &WEEK_END, &CHECK_IN, &expires);
     assert_eq!(p.allowance(r), price);
 }
 
@@ -2076,7 +2115,8 @@ fn real_signature_create_sale_offer_lands_ledgers_after_signing() {
     let entry = real::signed(&f.env, "buyer", 2, BASE_LEDGER + 100, root);
     f.at_ledger(BASE_LEDGER + 7);
     f.env.set_auths(&[entry]);
-    f.client.create_sale_offer(b, &request, &price, &h, &expires);
+    f.client
+        .create_sale_offer(b, &request, &price, &h, &expires);
     assert_eq!(p.allowance(b), price);
 }
 
@@ -2090,8 +2130,12 @@ fn real_signature_cancel_offer_lands_ledgers_after_signing() {
     let b = &f.buyer;
     let (early, late) = (BASE_LEDGER + 500, BASE_LEDGER + 900);
     f.env.mock_all_auths();
-    let first = f.client.create_rental_offer(b, &1, &USDC, &WEEK_END, &CHECK_IN, &late);
-    let second = f.client.create_rental_offer(b, &2, &(2 * USDC), &WEEK_END, &CHECK_IN, &early);
+    let first = f
+        .client
+        .create_rental_offer(b, &1, &USDC, &WEEK_END, &CHECK_IN, &late);
+    let second = f
+        .client
+        .create_rental_offer(b, &2, &(2 * USDC), &WEEK_END, &CHECK_IN, &early);
 
     let root = real::call(
         &f.env,
@@ -2137,7 +2181,9 @@ fn real_signature_over_different_approve_arguments_is_refused() {
     let entry = real::signed(&f.env, "renter", 5, BASE_LEDGER + 100, root);
     f.at_ledger(BASE_LEDGER + 7);
     f.env.set_auths(&[entry]);
-    assert!(host_refused(f.client.try_create_rental_offer(r, &1, &price, &WEEK_END, &CHECK_IN, &expires)));
+    assert!(host_refused(f.client.try_create_rental_offer(
+        r, &1, &price, &WEEK_END, &CHECK_IN, &expires
+    )));
     assert_eq!(p.allowance(r), 0);
     assert_eq!(f.client.next_offer_id(), 1);
 }

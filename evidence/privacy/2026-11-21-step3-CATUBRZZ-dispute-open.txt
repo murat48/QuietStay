@@ -1,0 +1,108 @@
+  run 2026-11-21T13:52:24.200Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-21-step3-CATUBRZZ-dispute-open.txt --tx dispute-rental-offer=f865d7aa334b9f6074becc32273bdb443198eed642bff2ed71f3a85140454835 --tx dispute-accept-rental-right-escrow-=a5b050de44bca3e03b796e4c76eabda514449818ccd2ae8dac1a7044ee87502b --tx dispute-problem-report-renter-=6111325f6783999d5177c98ed262300e7a4d3017bc7cafd5d398233555571c9e --tx dispute-evidence-renter-=0d21f5f8465db71bece25d61700408531a1d0f00abeefbf8c5c8f7b519e3409e --tx dispute-evidence-owner-=80eda0ff9805e397df812bd0256a06c92e2bdca6b1a7b7ef7e617e5516b2178a --tx rejected-collect-during-a-dispute=bb1b672ca3bdfb707456815103998af455fb3e43f1a49499e4d91c695f8df29b --tx rejected-an-outside-account-resolves=b2083a5340706d933ae1288ffd2416cc189d6aba820cb1488860e0a15438fdaf --tx rejected-an-outside-account-submits-evidence=3f585a02a9726ad29ed1c6e91d389d5c2bf199ef443749a51ba7be478906bd82 --record /home/murat/QuietStay/QuietStay/.secrets/CATUBRZZ/step3/week-3-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CATUBRZZ/step3/week-3-owner-secret.json --evidence pilot/evidence/problem-report.txt --evidence pilot/evidence/renter-evidence-1.txt --evidence pilot/evidence/owner-evidence-1.txt --evidence pilot/evidence/arbiter-decision.txt
+
+Checking on-chain exposure
+  8 transactions, 63 forbidden values
+  contract the contracts these testnet transactions call
+
+dispute-rental-offer — f865d7aa334b9f6074becc32273bdb443198eed642bff2ed71f3a85140454835
+  ✓ no record contents in 3 layers (12592 bytes: envelope, result, meta)
+  call        create_rental_offer(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "3",
+                "10000000",
+                "1795824000",
+                "1795269271",
+                5970050,
+              )
+  event topics ["approve","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN","CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["10000000",5970050]
+  event topics ["allow","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"amount":"10000000","expiration_ledger":5970050}
+  event topics ["rent_off","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"check_in":"1795269271","expires_at":"1795824000","expires_ledger":5970050,"offer_id":"3","price":"10000000","right_id":"3"}
+
+dispute-accept-rental-right-escrow- — a5b050de44bca3e03b796e4c76eabda514449818ccd2ae8dac1a7044ee87502b
+  ✓ no record contents in 3 layers (19460 bytes: envelope, result, meta)
+  call        accept_rental(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "3",
+                "10000000",
+                {"a":"0x0cf931775d1e97ab…c64447e8 (96 bytes)","b":"0x0078f01e348a4b49…fd9645ad (192 bytes)","c":"0x131048072d5ba530…6e0e75ae (96 bytes)"},
+                ["14885668375941601159917550001713580504083235465157053934862547040875262258898","50308512565390046570672125310635281551991239721175288168639848738071162009850","3","90770094754120608982862790096888743153","178413295460492758105019939507572692766","119936345663412135197073293566390678772","121829635756908778636933183208725995740","1795824000","5849451","0","22903755109134598703059463937444923987177013251429429148740627370883425298297"],
+              )
+  event topics ["transfer","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN","CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   "10000000"
+  event topics ["transfer","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"commitment":"0x20e8fd5ef8aaef50c6395c2d1b3c0514ea0060aee690fc107bb08507d3182ed2","expires_at":"1795824000","right_id":"3"}
+  event topics ["funded","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"amount":"10000000","check_in":"1795269271","escrow_id":"2","expires_at":"1795824000","offer_id":"3","right_id":"3"}
+
+dispute-problem-report-renter- — 6111325f6783999d5177c98ed262300e7a4d3017bc7cafd5d398233555571c9e
+  ✓ no record contents in 3 layers (4924 bytes: envelope, result, meta)
+  public by design: SHA-256 of pilot/evidence/problem-report.txt (22f5dc8c9dbb01f15ca8d851e2c63db3740c4bc870b2aa70a3adc915d4b206c7) is on chain here, as it should be
+  call        report_problem(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "2",
+                "0x22f5dc8c9dbb01f15ca8d851e2c63db3740c4bc870b2aa70a3adc915d4b206c7",
+              )
+  event topics ["dispute","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"escrow_id":"2","evidence_hash":"0x22f5dc8c9dbb01f15ca8d851e2c63db3740c4bc870b2aa70a3adc915d4b206c7"}
+
+dispute-evidence-renter- — 0d21f5f8465db71bece25d61700408531a1d0f00abeefbf8c5c8f7b519e3409e
+  ✓ no record contents in 3 layers (5000 bytes: envelope, result, meta)
+  public by design: SHA-256 of pilot/evidence/problem-report.txt (22f5dc8c9dbb01f15ca8d851e2c63db3740c4bc870b2aa70a3adc915d4b206c7) is on chain here, as it should be
+  public by design: SHA-256 of pilot/evidence/renter-evidence-1.txt (c2085d8c9dd554a2421ee724800c3ab943745e2264427054d528b0f2eaa6f980) is on chain here, as it should be
+  call        submit_evidence(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "2",
+                "0xc2085d8c9dd554a2421ee724800c3ab943745e2264427054d528b0f2eaa6f980",
+              )
+  event topics ["evidence","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"escrow_id":"2","evidence_hash":"0xc2085d8c9dd554a2421ee724800c3ab943745e2264427054d528b0f2eaa6f980"}
+
+dispute-evidence-owner- — 80eda0ff9805e397df812bd0256a06c92e2bdca6b1a7b7ef7e617e5516b2178a
+  ✓ no record contents in 3 layers (5080 bytes: envelope, result, meta)
+  public by design: SHA-256 of pilot/evidence/problem-report.txt (22f5dc8c9dbb01f15ca8d851e2c63db3740c4bc870b2aa70a3adc915d4b206c7) is on chain here, as it should be
+  public by design: SHA-256 of pilot/evidence/renter-evidence-1.txt (c2085d8c9dd554a2421ee724800c3ab943745e2264427054d528b0f2eaa6f980) is on chain here, as it should be
+  public by design: SHA-256 of pilot/evidence/owner-evidence-1.txt (f41e4437b42d0bb7682e72f344356a530690c8e7716c5c539094e9f62accad95) is on chain here, as it should be
+  call        submit_evidence(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "2",
+                "0xf41e4437b42d0bb7682e72f344356a530690c8e7716c5c539094e9f62accad95",
+              )
+  event topics ["evidence","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"escrow_id":"2","evidence_hash":"0xf41e4437b42d0bb7682e72f344356a530690c8e7716c5c539094e9f62accad95"}
+
+rejected-collect-during-a-dispute — bb1b672ca3bdfb707456815103998af455fb3e43f1a49499e4d91c695f8df29b
+  ✓ no record contents in 3 layers (3144 bytes: envelope, result, meta)
+  call        collect(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "2",
+              )
+
+rejected-an-outside-account-resolves — b2083a5340706d933ae1288ffd2416cc189d6aba820cb1488860e0a15438fdaf
+  ✓ no record contents in 3 layers (3308 bytes: envelope, result, meta)
+  public by design: SHA-256 of pilot/evidence/arbiter-decision.txt (d55f0ef56e81b07f3ee919cfe7371738303b3f594933cdb14d7586a8583a4009) is on chain here, as it should be
+  call        resolve(
+                "GAZ7VGBATPZUV4FMP5ECEQQ7RIHQVBXDIFGEBTRLTW2TIF6ZLWP3EJ7G",
+                "2",
+                ["RefundRenter"],
+                "0xd55f0ef56e81b07f3ee919cfe7371738303b3f594933cdb14d7586a8583a4009",
+              )
+
+rejected-an-outside-account-submits-evidence — 3f585a02a9726ad29ed1c6e91d389d5c2bf199ef443749a51ba7be478906bd82
+  ✓ no record contents in 3 layers (3288 bytes: envelope, result, meta)
+  public by design: SHA-256 of pilot/evidence/arbiter-decision.txt (d55f0ef56e81b07f3ee919cfe7371738303b3f594933cdb14d7586a8583a4009) is on chain here, as it should be
+  call        submit_evidence(
+                "GAZ7VGBATPZUV4FMP5ECEQQ7RIHQVBXDIFGEBTRLTW2TIF6ZLWP3EJ7G",
+                "2",
+                "0xd55f0ef56e81b07f3ee919cfe7371738303b3f594933cdb14d7586a8583a4009",
+              )
+
+Result
+  ✓ No inventory record value appears in any of these 8 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 holder secret(s) given, or s' of 0 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CATUBRZZ/step3/week-3-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CATUBRZZ/step3/week-3-owner-secret.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

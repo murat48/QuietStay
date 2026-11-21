@@ -265,6 +265,277 @@ pub(crate) fn setup() -> Fixture<'static> {
     }
 }
 
+/// `setup()`, with the contract running from WASM bytes in the VM instead of
+/// natively, so VM instantiation and execution are metered as on a network
+/// (Step 5: the mainnet cost estimate, test_swap.rs).
+pub(crate) fn setup_wasm(wasm: &'static [u8]) -> Fixture<'static> {
+    let env = Env::default();
+    env.cost_estimate().budget().reset_unlimited();
+    env.ledger().set_timestamp(YEAR_START + DAY);
+    env.ledger().set_sequence_number(BASE_LEDGER);
+    let issuer = Address::generate(&env);
+    let arbiter = Address::generate(&env);
+    let sac = env.register_stellar_asset_contract_v2(Address::generate(&env));
+    let (usdc, usdc_asset) = (sac.address(), sac.asset());
+    let contract_id = env.register(
+        wasm,
+        constructor_args(&env, &issuer, &arbiter, &usdc, vk(&env), TEST_MAX_PAYMENT),
+    );
+    let client = QuietStayRightsClient::new(&env, &contract_id);
+    Fixture {
+        arbiter,
+        usdc,
+        usdc_asset,
+        owner: account(&env, "owner"),
+        renter: account(&env, "renter"),
+        buyer: account(&env, "buyer"),
+        stranger: account(&env, "stranger"),
+        env,
+        contract_id,
+        client,
+        issuer,
+    }
+}
+
+/// The built WASM (`stellar contract build`), for the `--ignored` cost tests.
+pub(crate) fn built_wasm() -> &'static [u8] {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../target/wasm32v1-none/release/quietstay_rights.wasm");
+    std::boxed::Box::leak(
+        std::fs::read(&path)
+            .expect("build the WASM first: cd contracts && stellar contract build")
+            .into_boxed_slice(),
+    )
+}
+
+/// One network's fee and TTL settings, from `stellar network settings
+/// --output json` (evidence/network-settings-<net>-<date>.json) and the live
+/// Soroban state size (evidence/checklist/soroban-state-size-<date>.json,
+/// RPC `getLedgerEntries` of the state-size window), so the rent rate is the
+/// network's own.
+pub(crate) struct NetFees {
+    pub fee: soroban_env_host::fees::FeeConfiguration,
+    pub rent_1kb: i64,
+    pub persistent_den: i64,
+    pub temporary_den: i64,
+    pub min_persistent_ttl: u32,
+    pub min_temporary_ttl: u32,
+}
+
+pub(crate) fn net_fees(name: &'static str) -> NetFees {
+    use soroban_env_host::fees::{
+        compute_rent_write_fee_per_1kb, FeeConfiguration, RentWriteFeeConfiguration,
+    };
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let date = std::env::var("QS_SETTINGS_DATE").unwrap_or_else(|_| "2026-11-21".into());
+    let read = |p: std::path::PathBuf| -> serde_json::Value {
+        serde_json::from_str(
+            &std::fs::read_to_string(&p).unwrap_or_else(|_| panic!("{}", p.display())),
+        )
+        .unwrap()
+    };
+    let s = read(root.join(std::format!("evidence/network-settings-{name}-{date}.json")));
+    let entry = |k: &str| -> serde_json::Value {
+        s["updated_entry"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find_map(|e| e.get(k).cloned())
+            .unwrap_or_else(|| panic!("{k} missing"))
+    };
+    let n = |v: &serde_json::Value| -> i64 {
+        v.as_str()
+            .map(|x| x.parse().unwrap())
+            .or_else(|| v.as_i64())
+            .unwrap_or_else(|| panic!("not a number: {v}"))
+    };
+    let compute = entry("contract_compute_v0");
+    let ledger = entry("contract_ledger_cost_v0");
+    let ledger_ext = entry("contract_ledger_cost_ext_v0");
+    let hist = entry("contract_historical_data_v0");
+    let events = entry("contract_events_v0");
+    let bandwidth = entry("contract_bandwidth_v0");
+    let archival = entry("state_archival");
+    let size = read(root.join(std::format!(
+        "evidence/checklist/soroban-state-size-{date}.json"
+    )));
+    let state_size = n(&size[name]["average_bytes"]);
+    let rent_1kb = compute_rent_write_fee_per_1kb(
+        state_size,
+        &RentWriteFeeConfiguration {
+            state_target_size_bytes: n(&ledger["soroban_state_target_size_bytes"]),
+            rent_fee_1kb_state_size_low: n(&ledger["rent_fee1_kb_soroban_state_size_low"]),
+            rent_fee_1kb_state_size_high: n(&ledger["rent_fee1_kb_soroban_state_size_high"]),
+            state_size_rent_fee_growth_factor: n(&ledger["soroban_state_rent_fee_growth_factor"])
+                as u32,
+        },
+    );
+    NetFees {
+        fee: FeeConfiguration {
+            fee_per_instruction_increment: n(&compute["fee_rate_per_instructions_increment"]),
+            fee_per_disk_read_entry: n(&ledger["fee_disk_read_ledger_entry"]),
+            fee_per_write_entry: n(&ledger["fee_write_ledger_entry"]),
+            fee_per_disk_read_1kb: n(&ledger["fee_disk_read1_kb"]),
+            fee_per_write_1kb: n(&ledger_ext["fee_write1_kb"]),
+            fee_per_historical_1kb: n(&hist["fee_historical1_kb"]),
+            fee_per_contract_event_1kb: n(&events["fee_contract_events1_kb"]),
+            fee_per_transaction_size_1kb: n(&bandwidth["fee_tx_size1_kb"]),
+        },
+        rent_1kb,
+        persistent_den: n(&archival["persistent_rent_rate_denominator"]),
+        temporary_den: n(&archival["temp_rent_rate_denominator"]),
+        min_persistent_ttl: n(&archival["min_persistent_ttl"]) as u32,
+        min_temporary_ttl: n(&archival["min_temporary_ttl"]) as u32,
+    }
+}
+
+/// Step 5 checklist, "Transaction costs": the rent of every real testnet
+/// transaction on the final deployment, priced by the host's own
+/// `compute_rent_fee` with each network's settings.
+///
+/// Input: `npx tsx scripts/flow-costs.ts --contract <C…>`, which reads each
+/// transaction's rent changes (entry sizes and live-until, before and after)
+/// from its meta. With testnet's settings the result must equal the rent the
+/// meta says testnet charged, which checks the reconstruction. With mainnet's:
+/// a new entry lives at least mainnet's minimum TTL (2,073,600 ledgers
+/// persistent, 17,280 temporary), and the rent rate is mainnet's, from its
+/// live state size. An existing entry keeps testnet's extension (on mainnet
+/// it would already hold the longer minimum, so this errs high).
+///
+/// Every other part of the fee (instructions, reads, writes, transaction
+/// size, history, events) uses rates identical on both networks, and the
+/// instruction count is the same (`swap_cost_network_priced_from_the_wasm`),
+/// so mainnet's fee = testnet's charged fee − testnet's rent + mainnet's rent.
+///
+/// `cargo test -p quietstay-rights mainnet_fees -- --ignored --nocapture`
+#[test]
+#[ignore = "needs evidence/checklist/flow-resources-testnet-<C8>.json; run with --ignored"]
+fn mainnet_fees_of_the_final_testnet_transactions() {
+    use soroban_env_host::fees::{compute_rent_fee, LedgerEntryRentChange, RentFeeConfiguration};
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let c8 = std::env::var("QS_CONTRACT8").unwrap_or_else(|_| "CATUBRZZ".into());
+    let input = root.join(std::format!(
+        "evidence/checklist/flow-resources-testnet-{c8}.json"
+    ));
+    let j: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&input).unwrap()).unwrap();
+    let (tn, mn) = (net_fees("testnet"), net_fees("mainnet"));
+    let config = |n: &NetFees| RentFeeConfiguration {
+        fee_per_write_1kb: n.fee.fee_per_write_1kb,
+        fee_per_rent_1kb: n.rent_1kb,
+        fee_per_write_entry: n.fee.fee_per_write_entry,
+        persistent_rent_rate_denominator: n.persistent_den,
+        temporary_rent_rate_denominator: n.temporary_den,
+    };
+    std::println!(
+        "rent fee per 1 KB: testnet {}, mainnet {}; min TTL persistent {} / {}, temporary {} / {}",
+        tn.rent_1kb,
+        mn.rent_1kb,
+        tn.min_persistent_ttl,
+        mn.min_persistent_ttl,
+        tn.min_temporary_ttl,
+        mn.min_temporary_ttl
+    );
+    std::println!(
+        "{:58} {:>9} {:>9} {:>9} {:>9} {:>11}  model vs charged rent",
+        "transaction",
+        "charged",
+        "rent tn",
+        "model tn",
+        "rent mn",
+        "mainnet fee"
+    );
+    let mut rows = std::vec::Vec::new();
+    let mut mismatches = 0;
+    for t in j["transactions"].as_array().unwrap() {
+        let ledger = t["ledger"].as_u64().unwrap() as u32;
+        let changes = |n: &NetFees, mainnet: bool| -> std::vec::Vec<LedgerEntryRentChange> {
+            t["rent_changes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|c| {
+                    let is_persistent = c["is_persistent"].as_bool().unwrap();
+                    let old_size = c["old_size_bytes"].as_u64().unwrap() as u32;
+                    let mut new_live = c["new_live_until_ledger"].as_u64().unwrap() as u32;
+                    let mut old_live = c["old_live_until_ledger"].as_u64().unwrap() as u32;
+                    if mainnet {
+                        // At least mainnet's minimum after the call. An existing
+                        // entry keeps its testnet live-until before the call, so
+                        // its extension (and any growth) is priced over the
+                        // longer time: this errs high.
+                        let min = if is_persistent {
+                            n.min_persistent_ttl
+                        } else {
+                            n.min_temporary_ttl
+                        };
+                        new_live = new_live.max(ledger + min - 1);
+                        if old_size != 0
+                            && old_live == c["new_live_until_ledger"].as_u64().unwrap() as u32
+                        {
+                            // TTL unchanged on testnet: on mainnet it is the same
+                            // long-lived entry, so only its growth is priced.
+                            old_live = new_live;
+                        }
+                    }
+                    LedgerEntryRentChange {
+                        is_persistent,
+                        is_code_entry: c["is_code_entry"].as_bool().unwrap(),
+                        old_size_bytes: old_size,
+                        new_size_bytes: c["new_size_bytes"].as_u64().unwrap() as u32,
+                        old_live_until_ledger: old_live,
+                        new_live_until_ledger: new_live,
+                    }
+                })
+                .collect()
+        };
+        let charged = t["fee_charged"].as_i64().unwrap();
+        let charged_rent = t["charged"]["rent"].as_i64().unwrap();
+        let model_tn = compute_rent_fee(&changes(&tn, false), &config(&tn), ledger);
+        let model_mn = compute_rent_fee(&changes(&mn, true), &config(&mn), ledger);
+        let mainnet_fee = charged - charged_rent + model_mn;
+        // The rent rate here is today's (the live state size moves a little
+        // between ledgers), so the model may differ from the charged rent by
+        // a fraction of a percent. More than 1% is reported as a mismatch.
+        let off = if charged_rent == 0 {
+            0.0
+        } else {
+            (model_tn - charged_rent) as f64 * 100.0 / charged_rent as f64
+        };
+        if off.abs() > 1.0 || (charged_rent == 0) != (model_tn == 0) {
+            mismatches += 1;
+        }
+        let label = t["label"].as_str().unwrap();
+        std::println!(
+            "{label:58} {charged:>9} {charged_rent:>9} {model_tn:>9} {model_mn:>9} {mainnet_fee:>11}  {off:+.2}%{}",
+            if off.abs() > 1.0 { "  MISMATCH" } else { "" }
+        );
+        rows.push(serde_json::json!({
+            "label": label, "hash": t["hash"], "ledger": ledger,
+            "instructions_declared": t["resources"]["instructions"],
+            "testnet_fee_charged": charged, "testnet_rent_charged": charged_rent,
+            "testnet_rent_model": model_tn, "mainnet_rent_model": model_mn,
+            "mainnet_fee_estimate": mainnet_fee,
+        }));
+    }
+    let out = root.join(std::format!(
+        "evidence/checklist/flow-fees-mainnet-estimate-{c8}.json"
+    ));
+    std::fs::write(
+        &out,
+        serde_json::to_string_pretty(&serde_json::json!({
+            "source": std::format!("evidence/checklist/flow-resources-testnet-{c8}.json"),
+            "rent_fee_per_1kb": { "testnet": tn.rent_1kb, "mainnet": mn.rent_1kb },
+            "transactions_where_the_model_misses_testnet_rent_by_more_than_1_percent": mismatches,
+            "transactions": rows,
+        }))
+        .unwrap()
+            + "\n",
+    )
+    .unwrap();
+    std::println!("wrote {}; {mismatches} transaction(s) where the model misses testnet's charged rent by more than 1%", out.display());
+}
+
 /// The testnet cap: 100 USDC in 7-decimal units (D7).
 pub(crate) const TEST_MAX_PAYMENT: i128 = 1_000_000_000;
 
