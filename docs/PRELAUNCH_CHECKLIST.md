@@ -614,9 +614,9 @@ closed, and the deploy cost is accepted in principle.
      drop the spec's doc strings to save about 3.5 XLM and redo the Step 5
      testnet run;
    - the code extension after about 119 days: about 14.6 XLM charged (§4).
-3. **Step 3 still open:** the escrow #1 collect on `CA4B3MIZ…`, which you run
-   after 2026-11-21T20:28:30Z with `npx tsx scripts/step3-evidence.ts
-   collect-wait`. Paste me the output and I close Step 3.
+3. **Step 3 closed (2026-11-21):** escrow #1 on `CA4B3MIZ…` was collected,
+   tx `b40f55b6…695e`, 88,951 s after check-in. The late problem report was
+   refused with #49, tx `806d8a78…cdf`.
    - Separately, the final deployment's wait rental (escrow #1 on `CATUBRZZ…`)
      can be collected from **2026-11-22T13:50:56Z** with `npx tsx
      scripts/step3-evidence.ts collect-wait --contract
