@@ -9,8 +9,12 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: **Step 4 closed 2026-11-21 (approved). Step 3 is still open:
-  the escrow #1 collect is not possible yet.** At 2026-11-21T13:00:06Z (ledger
+- Current step: **Step 5: the checklist is complete
+  (`docs/PRELAUNCH_CHECKLIST.md`, 2026-11-21). Waiting for your written GO.
+  Nothing was sent to mainnet.** Step 3 is still open, waiting for the escrow
+  #1 collect on `CA4B3MIZ…`, which you run after 2026-11-21T20:28:30Z.
+  Earlier: Step 4 closed 2026-11-21 (approved). Step 3 was open because the
+  escrow #1 collect was not possible yet. At 2026-11-21T13:00:06Z (ledger
   5,848,473) escrow #1 was Funded, and collect opens at ledger time
   2026-11-21T20:28:30Z. The step is ready:
   `npx tsx scripts/step3-evidence.ts collect-wait --contract CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73`
@@ -39,25 +43,29 @@ actually run.
 | Medium | Passkeys were tested with Chromium's virtual authenticator only. One approval on your own device was still to do | 2 | resolved 2026-11-19: Windows Hello (PIN) on a MONSTER ABRA A7 V11.3, Windows 10 Enterprise 10.0.19045, Chrome 157.0.8103.79, authorized `list` from wallet `CAMTPQ3B…44YLT`, tx `059bc1b3…` |
 | Medium | Stellar CLI 27.0.0 warns on testnet protocol 30; upgrade to 30.0.1 before Step 2 | 1 | resolved 2026-11-19: 30.0.1 installed (Step 2) |
 | Low | This machine lacked the system libraries Playwright's browsers need | 2 | resolved 2026-11-19: you ran the install with sudo; the unpacked workaround is removed, and both browsers start on the system libraries |
-| **High** | Intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 review (2026-11-20):** read-only RPC calls now retry a dropped connection, up to 3 attempts, and log the network code; `sendTransaction` is never retried. In the first run after that, the server logged `[rpc-retry] simulate next_id: attempt 1 of 3 failed (fetch failed)`, the retry succeeded, and no failed `/api` response was saved. The code was not readable: the SDK's HTTP layer (`feaxios`) drops the error's cause. The retry log now also reads undici's diagnostics channels, which carry the code. The next run had no drop, so the code is still to be confirmed at the next one. **2026-11-20, later:** a one-off `Account not found` for `qs-issuer` (`GBNBWXSC…YUBE`) from the testnet RPC's `getAccount`, while Horizon returned 200 for that account and the same read had worked two minutes earlier. The immediate rerun passed. So the RPC can also answer wrongly, not only drop the connection; `getAccount` is a read and could join the retry, but a "not found" can also be true, so it is recorded here rather than retried blindly. **2026-11-21, Step 4 close:** a regression run of `passkey-app` got two 502s `{"error":"fetch failed"}` (`/api/me`, `/api/requests/issuance`), and its rerun failed in the test process itself (`TypeError: fetch failed`) before any page. Horizon, RPC and Friendbot answered a moment later, and the next rerun passed 2/2. The server log of the failing run was overwritten by the next spec, which uses the same port, so the code was lost again. The harness should keep one log per run before Step 5 (done 2026-11-21, see the Step 5 items below). **Earlier Step 3 evidence:** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | open: High until the cause is found. The no-leak rerun after this change had 0 failed responses |
-| Medium | SEP-45 and the fee route need the deployment's store (Upstash) on Vercel, for single-use nonces and rate limits. Without it they refuse, by design. The SIGNING_KEY account must exist on each network | 2 (review) | open: Step 5 checklist item (spec §14) |
+| **High** | **Step 5 (2026-11-21): cause found; proposed for closing** (checklist §9, `evidence/network/`). (1) Node's fetch gives each address 250 ms to connect, and this machine has no IPv6 route, so a slow IPv4 connect fails as `ETIMEDOUT` after about 0.5 s. Fixed in `src/lib/rpc-server.ts` with 2 s per attempt: in two parallel 30-minute probes, 61 failures → 0. (2) This machine's connection itself drops at times (DNS `EAI_AGAIN`, 10 s connect timeouts) on every host: the reads retry, and the sends recover by hash. Earlier record: intermittent errors in e2e runs: a 500 from `/api/issue` and a 502 from `/api/me`. **Step 3 review (2026-11-20):** read-only RPC calls now retry a dropped connection, up to 3 attempts, and log the network code; `sendTransaction` is never retried. In the first run after that, the server logged `[rpc-retry] simulate next_id: attempt 1 of 3 failed (fetch failed)`, the retry succeeded, and no failed `/api` response was saved. The code was not readable: the SDK's HTTP layer (`feaxios`) drops the error's cause. The retry log now also reads undici's diagnostics channels, which carry the code. The next run had no drop, so the code is still to be confirmed at the next one. **2026-11-20, later:** a one-off `Account not found` for `qs-issuer` (`GBNBWXSC…YUBE`) from the testnet RPC's `getAccount`, while Horizon returned 200 for that account and the same read had worked two minutes earlier. The immediate rerun passed. So the RPC can also answer wrongly, not only drop the connection; `getAccount` is a read and could join the retry, but a "not found" can also be true, so it is recorded here rather than retried blindly. **2026-11-21, Step 4 close:** a regression run of `passkey-app` got two 502s `{"error":"fetch failed"}` (`/api/me`, `/api/requests/issuance`), and its rerun failed in the test process itself (`TypeError: fetch failed`) before any page. Horizon, RPC and Friendbot answered a moment later, and the next rerun passed 2/2. The server log of the failing run was overwritten by the next spec, which uses the same port, so the code was lost again. The harness should keep one log per run before Step 5 (done 2026-11-21, see the Step 5 items below). **Earlier Step 3 evidence:** the capture saved a 502 from `/api/inventory`, body `{"error":"fetch failed"}`, and the same call returned 200 a moment later. In the same session the test process itself got `fetch failed` (cause `AggregateError`) three times reaching testnet. Leading hypothesis, not yet confirmed: transient connection failures from this machine to the testnet RPC/Horizon, which the routes turn into 500/502. `/api/inventory` now logs the error with its `cause`, as `/api/issue` and `/api/me` do. Neither the `/api/issue` 500 nor the `/api/me` 502 appeared in Step 3. Neither recurred on a rerun; their bodies were not kept then. Now the browser specs capture the body of every failed `/api` response (`e2e/lib/failures.ts`). Both routes log the error they catch, and the test server's log is kept. The cause must be found **before Step 5** | 2 (review) | **proposed: close** (your decision), replaced by a Low for (2) |
+| Medium | SEP-45 and the fee route need the deployment's store (Upstash) on Vercel, for single-use nonces and rate limits. Without it they refuse, by design. The SIGNING_KEY account must exist on each network | 2 (review) | Step 6 gate (checklist §8): configured per deployment |
 | Low | `next build` (Turbopack) fails locally to resolve `next/font/google` files. It also fails on the untouched `96bbb5f`, so it predates Step 2. `next build --webpack` succeeds | 2 | open |
-| Low | `npm run lint`: 7 findings remain, all in code from before Step 2 (it was 13 on `96bbb5f`) | 2 | open |
+| Low | `npm run lint`: 7 findings remain, all in code from before Step 2 (it was 13 on `96bbb5f`) | 2 | open: 7 errors, all from before Step 2. The unused import, counted with them, was removed in Step 5 |
 | ~~High~~ | **Resolved 2026-11-20:** fix approved (spec note 10) and deployed as `CA4B3MIZ…PV73`; every signed call on it succeeded. Was: **every offer call on `CDC6XD3W…KMZO` fails on chain.** The allowance expiration was `now + 120,960`, a value inside the arguments the buyer signs at simulation, so it no longer matches once the transaction lands. The unit tests mocked every signature and could not see it. The fix (expire with the buyer's latest live offer) is built and tested, but not deployed. It needs your approval, then a fresh deployment. Then the runs start again, the wait rental first | 3 (deployment) | open: spec note 10 |
 | Medium | Still to run (needs the 24 h wait): collect on escrow #1, from 2026-11-21T20:28:30Z, and the rejected problem report after the window on that escrow | 3 | open: next session |
 | Low | `approve`'s *amount* is the sum of the buyer's live offers, so if another of their offers expires between simulation and inclusion, the call fails like `32ee3532` (nothing moves; resend). It cannot be removed without an interface change (the buyer passing the total). Reported at the audit | 3 | accepted 2026-11-20 (your decision): stays Low, no interface change; DESIGN.md known limitation 18 |
 | ~~Low~~ | `docs/EVIDENCE.md` is generated by `npm run evidence-doc`, which rewrote the whole file and would have dropped the hand-added Phase 3 sections | 3 | resolved 2026-11-20: Phase 3 entries live in `docs/evidence-phase3.md`, which the generator copies in; it refuses to write if any current heading would be lost (tested) |
-| Medium | **Pre-launch checklist item:** every G account that will receive USDC in the mainnet pilot has a USDC trustline first (sellers, owners, renters for refunds, and any account USDC is moved to). The app tells a seller or owner without one before they accept, and blocks the acceptance | 3 | open: Step 5 checklist item, spec §14 |
+| Medium | **Pre-launch checklist item:** every G account that will receive USDC in the mainnet pilot has a USDC trustline first (sellers, owners, renters for refunds, and any account USDC is moved to). The app tells a seller or owner without one before they accept, and blocks the acceptance | 3 | checklist §8: OPEN, yours (the mainnet pilot accounts do not exist yet). New `scripts/check-pilot-accounts.ts` checks each trustline and the 5 USDC total; `mainnet-sign-submit.sh` runs it before every mainnet signature |
 | Low | The first deployment `CDC6XD3W…KMZO` stays on testnet as is, with weeks #1–#5 issued to `qs-owner`. Nothing moved on it. It will not be used once the fix is deployed | 3 | open (record only) |
-| Medium | **Pre-launch checklist item (Step 3 review):** pilot funds are never sent to the contract address directly. USDC sent there with the token is stuck forever (DESIGN.md known limitation 17). Checked on chain on both networks | 3 | open: Step 5 checklist item, spec §14 |
-| Medium | **Pre-launch checklist item:** the mainnet sign-in key `mainnet-test` (`GCEF3BTQ…TDAR`) currently holds XLM. It is a separate account from `GALA3K…HE3M`. You reduce it to the minimum balance before its secret goes to the server (Step 6); the checklist records the balance read back from mainnet. Kept as it is (Step 3 review) | 3 | open: Step 5 checklist item, spec §14 |
-| Low | The payment screens are checked by typecheck, `next build --webpack`, lint and unit tests only. Their end-to-end run needs the Step 3 WASM on testnet and USDC in throwaway accounts, so it comes after the deployment | 3 | open |
-| Medium | **Swap cost on mainnet.** `complete_swap` measured 174.8 M instructions (43.7%) on testnet (protocol 30). Mainnet (protocol 29) has different CPU/memory cost parameters (`stellar network settings`, 2026-11-20), so its count can differ. 56% headroom, but it is measured, not assumed: the mainnet `--send=no` simulation of each flow (spec §14) | 4 | open: Step 5 checklist item |
+| Medium | **Pre-launch checklist item (Step 3 review):** pilot funds are never sent to the contract address directly. USDC sent there with the token is stuck forever (DESIGN.md known limitation 17). Checked on chain on both networks | 3 | testnet PASS (invariant on 3 contracts); `tx-review.ts` now refuses a USDC transfer to the rights contract. Mainnet: Step 6, after each pilot transaction |
+| Medium | **Pre-launch checklist item:** the mainnet sign-in key `mainnet-test` (`GCEF3BTQ…TDAR`) currently holds XLM. It is a separate account from `GALA3K…HE3M`. You reduce it to the minimum balance before its secret goes to the server (Step 6); the checklist records the balance read back from mainnet. Kept as it is (Step 3 review) | 3 | checklist §8: OPEN, yours. It holds 9.0001000 XLM on 2026-11-21 (Horizon); the minimum for 0 subentries is 1 XLM |
+| Low | The payment screens are checked by typecheck, `next build --webpack`, lint and unit tests only. Their end-to-end run needs the Step 3 WASM on testnet and USDC in throwaway accounts, so it comes after the deployment | 3 | partly covered: the browser suite now runs on the final WASM; `/stays` sale and rental acceptance in a browser are still covered only by swap.spec's rental and collect notice. Low |
+| Medium | **Swap cost on mainnet.** `complete_swap` measured 174.8 M instructions (43.7%) on testnet (protocol 30). Mainnet (protocol 29) has different CPU/memory cost parameters (`stellar network settings`, 2026-11-20), so its count can differ. 56% headroom, but it is measured, not assumed: the mainnet `--send=no` simulation of each flow (spec §14) | 4 | **proposed: close** (checklist §5.2): the 86 cost parameters a protocol-27 build can use are byte-identical on both networks; the WASM-priced swap gives the same count with both (ratio 1.0000); the upload simulated on mainnet. One Step 6 gate stays: `--send=no` of `complete_swap` right after the deploy |
 | ~~Medium~~ | **Found by the Step 4 browser test:** for a G account with no USDC trustline, `/api/payments` returned 502, so Step 3's "no trustline" notice never showed. The token's `balance` fails with only `Error(Contract, #13)`, without the "trustline entry is missing" text the app matched on | 3 (found in 4) | resolved 2026-11-20: `readUsdcBalance` reads the trustline ledger entry for a G account (`null` if absent); checked on a throwaway account without one and on `qs-buyer` (200,000,000) |
 | ~~Low~~ | A USDC token failure was shown as QuietStay's error of the same number (the token's #13 TrustlineMissingError as QuietStay's #13 "AlreadyListed"), and `collect` was not blocked for an owner without a trustline | 4 | resolved 2026-11-21 (Step 4 close): failures are explained by the contract they started in, on all four paths; collect is blocked with the same notice; unit and browser tests |
-| Medium | **Pre-launch checklist item (recorded 2026-11-21):** one server log per test run, never overwritten (`e2e/results/logs/`, opened with `wx`, streamed). Done and checked: `passkey.spec.ts` twice on port 4322 left two logs, both 8/8 | 4 (close) | open: Step 5 checklist item, spec §14 |
-| Medium | **Pre-launch checklist item (recorded 2026-11-21):** submission recovery. Look the transaction up by hash; if it is not on chain, resend the same signed envelope; never build and sign a new transaction for the same action. `scripts/mainnet-sign-submit.sh` enforces it; every path rehearsed on testnet | 4 (close) | open: Step 5 checklist item, spec §14 |
-| Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open |
+| Medium | **Pre-launch checklist item (recorded 2026-11-21):** one server log per test run, never overwritten (`e2e/results/logs/`, opened with `wx`, streamed). Done and checked: `passkey.spec.ts` twice on port 4322 left two logs, both 8/8 | 4 (close) | PASS (checklist §8) |
+| Medium | **Pre-launch checklist item (recorded 2026-11-21):** submission recovery. Look the transaction up by hash; if it is not on chain, resend the same signed envelope; never build and sign a new transaction for the same action. `scripts/mainnet-sign-submit.sh` enforces it; every path rehearsed on testnet | 4 (close) | PASS (checklist §8): the "not found" path repeated before GO, `d4369423…ec5d` |
+| Low | Mainnet RPC is not configured in the CLI (`stellar network ls -l`: "Bring Your Own"); Step 1 read settings via `--rpc-url https://mainnet.sorobanrpc.com` | 1 | open; every mainnet script names `https://mainnet.sorobanrpc.com` |
+| Low | This machine's connection drops at times (DNS `EAI_AGAIN`, 10 s connect timeouts, 30 s hangs) on every host, Horizon included (`evidence/network/`). The reads retry; the sends recover by hash | 5 | open (environment) |
+| Medium | **Mainnet deploy cost:** uploading the rights WASM simulates at 694,336,359 stroops (69.43 XLM) of minimum resource fee, almost all rent for 2,073,600 ledgers; the web-auth upload at 3.44 XLM (`scripts/mainnet-simulate-upload.ts`). The deployer needs at least about 75 XLM | 5 | OPEN, yours: fund it, and accept the cost at GO |
+| Low | After about 119 days on mainnet, the call that finds the instance below 17,280 ledgers extends the code entry to 518,400 ledgers and pays its rent, about 17 XLM (scaled from the upload simulation). After the pilot; can be done ahead with `stellar contract extend` | 5 | open (record) |
+| Medium | The final deployment's wait rental (escrow #1 on `CATUBRZZ…`) can be collected from 2026-11-22T13:50:56Z: the only flow on the final WASM still to land | 5 | open: `npx tsx scripts/step3-evidence.ts collect-wait --contract CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM` |
 
 Severity: Critical (blocks mainnet), High, Medium, Low.
 
@@ -143,6 +151,7 @@ of the spec, the rest at the second review of `def5eb6`.
 | Arbiter account | `GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC` (`qs-arbiter`, created by you) | | `stellar keys public-key qs-arbiter` (2026-11-20) |
 | **Step 3 rights contract (fixed)** | `CA4B3MIZLWO6NLDOBOZGGXLFTERQN6A76CCYZYGAR7FHJ56I74APPV73` | | `scripts/deploy.sh` (2026-11-20): upload `837df69a0adbbb01119967e8a5bcdda494c7c050238c5d7159a4a5de2bbd7ecd`, deploy `36aaabf9d7a2dae7e9e2bec3d4156c7714626e3827868afa049a44fb23544773`. Read back: arbiter `GACLONYV…EEZC`, usdc `CBIELTK6…DAMA`, max_payment 1000000000, issuer `GBNBWXSC…YUBE`, on-chain WASM `c7473e8e…6b6b` |
 | **Step 4 rights contract (swap; measurement)** | `CCSL6J5X6ZAZETYNFDJK47W7Z6KEGDTSVWMKEO6GSN227UEC4C5FITK7` | | `scripts/deploy.sh` (2026-11-20, from `dedad4b`): upload `1b9ac00ac8f9f3563ffa5286776e3061979547b46304f0fda598e549e29a22e7`, deploy `adda9b3fd7cfe0f10bd2136c1d22b51fe4cfcc96c2669cb6f6a18a85b0259d82`. Read back: arbiter `GACLONYV…EEZC`, usdc `CBIELTK6…DAMA`, max_payment 1000000000, issuer `GBNBWXSC…YUBE`, on-chain WASM `76d69e79…dddde`, 50 functions |
+| **Final testnet deployment (Step 5; the mainnet WASM, swap included)** | `CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM` | Step 6 | `scripts/deploy.sh` (2026-11-21): deploy `12d4baaf277be6d55f67f5616e95ea06bb3ceb41c36a4cd8ae705afb2d1bdcb7`, with no upload (the WASM was already on testnet). Read back: issuer `GBNBWXSC…YUBE`, arbiter `GACLONYV…EEZC`, usdc `CBIELTK6…DAMA`, max_payment 1000000000, on-chain WASM `76d69e79…dddde`, VK hash `55ce858f…b1de` |
 | Step 3 rights contract, first deployment (offer calls fail; superseded) | `CDC6XD3WK4GZSJWNBJELDBHAHNPHLS7WL6RZG2KEACC2RGJWCRTGKMZO` | | `scripts/deploy.sh` (2026-11-20): upload `dd7a0153fd19263a890b7ab3c2a6c2f5ad3db4013b03c5e8642cb95fd5963e86`, deploy `c05ada7aacdc3fd98c2e6ef9809c05c7a0d8f8794ab9f14b4a0aa1cf4a4e9194`. Read back: arbiter `GACLONYV…EEZC`, usdc `CBIELTK6…DAMA`, max_payment 1000000000, issuer `GBNBWXSC…YUBE`, on-chain WASM `db92ae3e…b38f` |
 | Testnet owner (USDC trustline, added for the sale payout) | `qs-owner` `GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR` | | trustline `6443bdb5ecf88c0429f96481903d939afac89a67edf9b3de93eb55b20f413025` |
 | Testnet buyer / renter (USDC trustlines) | `qs-buyer` `GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ`, `qs-renter` `GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN` | | trustlines `de0444b6…1bcb`, `bc671422…0a79`; 20 USDC each from Circle's faucet (Horizon, 2026-11-20) |
@@ -1341,10 +1350,86 @@ of the spec, the rest at the second review of `def5eb6`.
   tonight (from 2026-11-21T20:28:30Z).
 
 ### Step 5 — Pre-launch checklist
-- Date:
-- Branch / commit:
-- Result:
-- GO / NO-GO (mine):
+- Date: 2026-11-21 (UTC).
+- Branch / commit: `phase3` @ `cb4e220` (code and evidence); the checklist
+  commit follows it.
+- Result: `docs/PRELAUNCH_CHECKLIST.md` is complete. Every item is PASS,
+  OPEN (yours), or a Step 6 gate. Nothing was sent to mainnet; the only
+  mainnet calls were reads and two simulations.
+- **Final testnet deployment** `CATUBRZZ…FVLM`: the mainnet WASM
+  `76d69e79…dddde`, swap included (see Addresses). Every flow was run on it
+  once, each with its privacy record
+  (`evidence/privacy/2026-11-21-{step3-CATUBRZZ-*,step4-CATUBRZZ-swap-measure,final-passkey-probe-4a20d086}.txt`,
+  all pass):
+  - issue: weeks #1–#5;
+  - wait rental: escrow #1, check-in 2026-11-21T13:50:56Z, **collect from
+    2026-11-22T13:50:56Z**;
+  - sale: `f01dda8d…eecc`;
+  - dispute and arbiter: report `6111325f…`, both sides' evidence, `resolve`
+    `45919dee…cf73` through `scripts/arbiter-resolve.sh`;
+  - early confirm: `7efa759e…`;
+  - the sale rejections: #32, #53, #54, #34;
+  - the escrow rejections: #48, #46, #47 twice, Auth, #4;
+  - the dispute-close rejections: #46 three times;
+  - swap: `complete_swap` `e27478f4…612f`, 174,820,830 instructions (43.7%);
+  - passkey-authorized `transfer`: `4a20d086…cab20` (wallet `CCQUIQXR…2NXD`).
+  - Logs: `evidence/step3-testnet-CATUBRZZ.json` and
+    `evidence/step4-testnet-CATUBRZZ.json`. 37 accepted and 19 refused, each
+    refusal with exactly the expected error.
+- Measured (details in the checklist):
+  - Every flow's fee and resources read from the ledger. The largest share of
+    any limit is 43.7% of the instructions (`complete_swap`).
+  - Mainnet fees estimated with the host's `compute_rent_fee` at mainnet's
+    TTLs and rent rate: under 0.001 to 0.19 XLM per flow. With testnet's
+    settings the same method reproduces testnet's charged rent within 0.2%
+    for 36 of 37 transactions.
+  - Swap on mainnet: the 86 cost parameters a protocol-27 build can use are
+    byte-identical on both networks, and the WASM-priced swap gives
+    167,615,462 instructions with both.
+  - Mainnet `simulateTransaction` of the upload: rights WASM 69.43 XLM,
+    web-auth 3.44 XLM, almost all rent.
+- Fixed or added because the checklist found them missing:
+  - `scripts/check-protocol.ts`, `check-vk.ts`, `check-fee-account.ts` (spec
+    §13 named it), `check-pilot-accounts.ts` (D7: trustlines and the 5 USDC
+    total), `mainnet-simulate-upload.ts` and `flow-costs.ts`;
+  - `tx-review.ts` refuses a USDC transfer to the rights contract, and an
+    envelope without resources;
+  - `mainnet-sign-submit.sh` runs the protocol and pilot-account checks
+    before every mainnet signature;
+  - the no-leak, passkey and passkey-app specs deploy the final WASM, where
+    they deployed Step 2's;
+  - the network fix in `rpc-server.ts`;
+  - the unused import in `verify/page.tsx`;
+  - two `--ignored` cost tests, `swap_cost_network_priced_from_the_wasm` and
+    `mainnet_fees_of_the_final_testnet_transactions`.
+  - `soroban-env-host` 27.0.1 is a new dev-dependency, already in
+    Cargo.lock.
+- Tests (2026-11-21):
+  - rights 158/158 (+2 ignored, both pass), verifier 6/6, measure 1/1;
+    clippy 0;
+  - app 40/40; zk 29/29; tsc, zk:check-bundle and check-privacy (both) pass;
+    `next build --webpack` passes; lint shows the 7 old errors;
+  - browser 16/16 on the final WASM, first run. The rerun after the network
+    fix: 14 passed; no-leak failed in set-up on the test process's own
+    Friendbot `fetch` (a dropped connection, cause 2), and one spec did not
+    run. `fund()` now retries a dropped connection after checking whether the
+    account was funded; then no-leak 2/2. The server logs of that rerun show
+    3 read retries (`ETIMEDOUT`), all recovered.
+- Rehearsed on testnet:
+  - the submission recovery "not found" path, `d4369423…ec5d`;
+  - `tx-review.ts` refusing a USDC transfer to the contract;
+  - `extend_escrow` `4f597e4d…`, `stellar contract extend` `a27094dd…` and
+    `stellar contract restore` `38a3a0e3…` (the Phase 1 instance, which was
+    archived).
+- Proposed, for your decision: close the High network issue (checklist §9),
+  and close the swap-cost Medium with a Step 6 gate (§5.2).
+- My mistake, reported: to check that `.env.local`'s issuer key is
+  `qs-issuer`, I loaded the secrets in `.env.local` in a one-off Node command
+  to derive their public keys. Only public keys were printed or kept. It
+  should not have read them at all. A public-key comparison from the CLI
+  keystore is enough, and I will not do it again.
+- Open: checklist §10.
+- GO / NO-GO (yours):
 
 ### Step 6 — Mainnet deployment
 - Date:

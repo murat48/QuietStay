@@ -1213,6 +1213,19 @@ and its output.
 - **Privacy evidence** (Step 2 review): every evidence transaction has its
   `check-privacy` output in `evidence/privacy/`, made right after the
   transaction, with its events.
+- **Step 5 (2026-11-21): the checks above as scripts.** All read-only:
+  - `scripts/check-protocol.ts`;
+  - `scripts/check-vk.ts --network <net> --contract <C…>`, the on-chain key
+    against the committed one, and its hash;
+  - `scripts/check-fee-account.ts`, named in §13;
+  - `scripts/check-pilot-accounts.ts --network mainnet --accounts …`: each G
+    account's trustline, and the D7 total ≤ 5 USDC;
+  - `scripts/mainnet-simulate-upload.ts`, a simulation only.
+
+  `scripts/mainnet-sign-submit.sh` runs `check-protocol` and
+  `check-pilot-accounts` before every mainnet signature (`QS_PILOT_ACCOUNTS`,
+  `QS_RIGHTS_CONTRACT`). `tx-review.ts` refuses a USDC `transfer` to the
+  rights contract. Results: docs/PRELAUNCH_CHECKLIST.md.
 
 ## Step 3 implementation notes (for review at the Step 3 checkpoint)
 
