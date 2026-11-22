@@ -9,7 +9,10 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: **Step 5, runbook review done (2026-11-22); not GO yet.**
+- Current step: **Step 5, second runbook review done (2026-11-22); not GO
+  yet.** Next is yours: run Part 0.0 (the `qsmain` user), then the
+  rehearsal as `qsmain`, pasting each check. Earlier the same day: Step 5,
+  runbook review done (2026-11-22); not GO yet.
   The verifier is our own instance (testnet done; mainnet in Step 6). The
   testnet demo is extended to ~2027-05-21. Next is yours: rehearse with
   `docs/MAINNET_REHEARSAL.md` on testnet and paste each check, then
@@ -83,7 +86,7 @@ actually run.
 
 | Medium | **The testnet demo must stay usable through the Instawards review** (your item 4, 2026-11-22). Code and instances are extended to ~2027-05-21. Data entries lapse on their own TTLs, and an SDF testnet reset would wipe everything | 5 (runbook review) | standing (checklist §4.2): `check-ttl --network testnet --until <review end>` before and weekly during the review; watch for reset announcements; redeploy with the rehearsal's Part 5 if one falls in the review |
 | Low | `check-privacy.ts` called `loadEnv()`, which reads `.env.local` (keys included) into its own process. It used nothing from it. My two collects and the passkey specs ran it on 2026-11-21/22, after your rule | 5 (runbook review) | **fixed 2026-11-22:** the call is removed; both modes pass without it. Found and reported, see the log |
-| Low | Other places still load `.env.local`: `scripts/attest.ts`, `describe.ts`, `verify-record.ts` and `e2e.ts` call `loadEnv()`. The browser specs start `next dev`, which reads `.env.local`; the app needs its testnet fee key (`passkey-app` used it on 2026-11-22). I read none of it, but the files are loaded | 5 (runbook review) | **your decision:** I no longer run those four scripts. For the browser specs, either you accept that the app reads its own env file, or the specs get a separate env with only what they need |
+| ~~Low~~ | Other places still loaded `.env.local`: `scripts/attest.ts`, `describe.ts`, `verify-record.ts`, `e2e.ts`, and, found while fixing them, six Phase 2 tools in `scripts/zk/`. The browser specs start `next dev`, which reads `.env.local` | 5 (runbook review) | **resolved 2026-11-22 (your decision):** the app may read it in testnet browser tests, under the new rule that repo files hold testnet values only. The ten scripts read only their named variables (`loadEnvVars`, tested); `loadEnv` is gone. None of them was run |
 
 Severity: Critical (blocks mainnet), High, Medium, Low.
 
@@ -1670,6 +1673,76 @@ of the spec, the rest at the second review of `def5eb6`.
 - Open:
   - your rehearsal, then MAINNET_SETUP.md Parts 0–4, then GO;
   - the `.env.local` decision above.
+
+#### Step 5, the second runbook review (2026-11-22): testnet-only files, the `qsmain` user
+- **Your decisions:**
+  - the app may read `.env.local` in testnet browser tests, under a new rule:
+    `.env.local` and every file in the repo hold testnet values only, and the
+    mainnet sign-in key goes only into Vercel's mainnet environment, set by
+    you;
+  - scripts read only the variables they need;
+  - the mainnet and rehearsal keys live under a separate Linux user,
+    `qsmain`.
+  - Both rules are in PHASE3_PROMPT.md, hard constraints.
+- **Scripts.** `loadEnv()` is replaced by `loadEnvVars(names)`
+  (`scripts/lib/cli.ts`).
+  - It parses only the lines that assign a named variable. A variable
+    already set wins, and nothing else from the file reaches the process.
+  - New unit test `scripts/lib/cli.test.ts`, on a fake file in a temp
+    directory; app tests 43/43.
+  - Changed: `attest` and `describe` (issuer key only); `verify-record`
+    (nothing: it needs no secret); `e2e.ts` (the issuer and three demo keys,
+    two URLs).
+  - Found while fixing them: six Phase 2 tools in `scripts/zk/` loaded the
+    whole file too (`submit-transfer`, `secret`, `issue-week`, `measure`,
+    `produce-evidence`, `reissue-inventory`). They are changed the same way.
+  - Why the URL and contract variables are not listed: they are read when
+    `src/lib/config.ts` loads, before any of this runs, so the file never
+    supplied them.
+  - None of the ten scripts was run.
+- **The `qsmain` user.** Part 0.0, the same text in both runbooks, has the
+  exact commands for you to run. I ran none of them, and nothing as `qsmain`
+  or with `sudo`.
+  - **Three things on this machine would have defeated a second user**
+    (`id`, `/var/run/docker.sock`, `/proc/sys/fs/binfmt_misc/`):
+    - `murat` is in the `docker` group, Docker is active, and the group is
+      root-equivalent;
+    - WSL interop is on, so any `murat` process can start `wsl.exe -u root`;
+    - whether sudo asks for a password, I did not test (that is a sudo
+      command).
+  - 0.0.1 removes `murat` from `docker`, turns interop off, and sets
+    `timestamp_timeout=0` for `murat`. It also checks for passwordless sudo.
+  - **`qsmain` runs a root-owned read-only snapshot,
+    `/opt/quietstay`, at a commit you check with `git rev-parse`.** It never
+    runs the working tree, which I can edit: an edited
+    `mainnet-sign-submit.sh` could sign something else or copy the keystore.
+  - Its tools come from the official releases, checked by digest:
+    - Stellar CLI 30.0.1 `48c70074…658f`, from GitHub's release API;
+    - Node 24.17.0 `ab343a1b…a917`, from nodejs.org's SHASUMS256.
+    - I downloaded the CLI archive once to confirm the digest and that it
+      holds the single `stellar` binary.
+  - `npm ci --ignore-scripts` from the lockfile. The two built WASMs are
+    copied in, and Part 5 checks their sha256.
+  - The key store: as `qsmain`, the secure-store test decides `QS_KEY_STORE`.
+    If it fails, the file store under `qsmain`'s 700 home is acceptable,
+    which it was not under `murat`.
+- **Changes so the scripts run from a read-only repo:**
+  - `pilot-envelope.ts` keeps its state in `$QS_PILOT_STATE_DIR` and writes
+    its privacy record to `--out`;
+  - `mainnet-sign-submit.sh` makes the envelope path absolute before it
+    changes to the repo.
+- **Tested from a read-only copy** (`chmod -R a-w`, no `.env.local`, no
+  `.secrets`):
+  - `check-deployment` on the demo: all pass;
+  - `check-mainnet-setup --network testnet --part 1`: all pass;
+  - `mainnet-sign-submit.sh` on a fresh testnet upload envelope, answered
+    `no`: review, protocol and pilot checks ran, then "Not sent";
+  - `pilot-envelope status` with its state outside the repo: privacy record
+    written to `--out`.
+  - Not tested: the real `/opt` snapshot, `npm ci --ignore-scripts`, and the
+    secure store under `sudo -iu`. Those need sudo, so 0.0.5 checks them on
+    your machine.
+- Open: your Part 0.0, then the rehearsal.
 
 ### Step 6 — Mainnet deployment
 - Date:

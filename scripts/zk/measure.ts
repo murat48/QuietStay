@@ -25,12 +25,13 @@ import {
 } from "@stellar/stellar-sdk";
 import { explorer, issuerSecret, NETWORK_PASSPHRASE } from "../../src/lib/config";
 import { server } from "../../src/lib/contract";
-import { fatal, loadEnv, log, requireArg } from "../lib/cli";
+import { fatal, loadEnvVars, log, requireArg } from "../lib/cli";
 
 const bytes = (hex: string) => nativeToScVal(Buffer.from(hex, "hex"));
 
 async function main() {
-  loadEnv();
+  // Only the variables this tool uses (testnet values; PHASE3_PROMPT.md).
+  loadEnvVars(["QUIETSTAY_ISSUER_SECRET"]);
   const contractId = requireArg(0, "npm run zk:measure -- <contract id> <proof dir> [--send]");
   const dir = requireArg(1, "npm run zk:measure -- <contract id> <proof dir> [--send]");
   const send = process.argv.includes("--send");

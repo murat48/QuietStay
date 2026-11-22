@@ -31,7 +31,7 @@ import { groth16 } from "snarkjs";
 import { explorer, issuerSecret } from "../../src/lib/config";
 import { server } from "../../src/lib/contract";
 import type { JsonValue } from "../../src/lib/canonical";
-import { fatal, loadEnv, log, requireArg, writeJson } from "../lib/cli";
+import { fatal, loadEnvVars, log, requireArg, writeJson } from "../lib/cli";
 import { circuitInput, randomSecret, secretHash, splitRecordDigest, type TransferContext } from "../lib/zk";
 import { encodeProof } from "../lib/zk-encode";
 import {
@@ -107,7 +107,8 @@ interface Item {
 }
 
 async function main() {
-  loadEnv();
+  // Only the variables this tool uses (testnet values; PHASE3_PROMPT.md).
+  loadEnvVars(["QUIETSTAY_ISSUER_SECRET", "DEMO_OWNER_SECRET", "DEMO_RENTER_SECRET", "DEMO_BUYER_SECRET"]);
   const contractId = requireArg(0, USAGE);
   const deployTx = requireArg(1, USAGE);
   const issued = JSON.parse(readFileSync("inventory/phase2/issued.json", "utf8")) as Issued;

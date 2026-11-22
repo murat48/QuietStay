@@ -31,10 +31,11 @@ funding source differ.
 - Amounts in the commands are in stroops: 1 XLM = 10,000,000, and 1 USDC =
   10,000,000 (7 decimals).
 
-Run everything from the repository root:
+**Run everything as `qsmain`, from the read-only snapshot** (Part 0.0):
 
 ```sh
-cd ~/QuietStay/QuietStay
+sudo -iu qsmain
+cd /opt/quietstay
 ```
 
 ## Budget
@@ -46,7 +47,7 @@ Mainnet, 2026-11-21: base reserve 0.5 XLM, so the minimum balance is
 
 | Account | Minimum balance | One-time costs | Pilot fees | Fund it with | Balance after the pilot (about) |
 | --- | ---: | --- | --- | ---: | ---: |
-| `qs-main-issuer`: issuer and deployer | 1 | rights upload: **69.4336 declared**, 60.3800 charged, 9.0536 refunded. Web-auth upload: 3.4403 declared, 2.9917 charged. Rights deploy: ~0.49 declared, ~0.43 charged. Web-auth deploy: ~0.03. Our own WebAuthn verifier instance, if you approve it (§5.4): ~0.03 | about 6 `issue` calls at ≤ 0.12 each: ~0.6. 5 `create-account`s: 0.0005 | **75** | ~10.5 |
+| `qs-main-issuer`: issuer and deployer | 1 | rights upload: **69.4336 declared**, 60.3800 charged, 9.0536 refunded. Web-auth upload: 3.4403 declared, 2.9917 charged. Rights deploy: ~0.49 declared, ~0.43 charged. Web-auth deploy: ~0.03. Our own WebAuthn verifier instance (approved; §5.4): ~0.03 | about 6 `issue` calls at ≤ 0.12 each: ~0.6. 5 `create-account`s: 0.0005 | **75** | ~10.5 |
 | `qs-main-arbiter` | 1 | — | `resolve` ~0.007 | **2** | ~2.0 |
 | `qs-main-fee`: fee identity for the passkey wallet's transactions (spec §13) | 1 | **the mainnet smart wallet's creation: 0.163** (the wallet is a contract and has no reserve of its own) | up to ~5 passkey-approved calls at ≤ 0.19: ≤ 1 | **3** | ≥ 1.8 |
 | `qs-main-owner` | 1 + **0.5 trustline** | — | offers, record requests, evidence, swap, collect: ~0.3 | **3** | ~2.7 |
@@ -70,7 +71,147 @@ Mainnet, 2026-11-21: base reserve 0.5 XLM, so the minimum balance is
 
 ## Part 0 — Before you start
 
-**0.1 Give the CLI a mainnet RPC.** The built-in `mainnet` network has none,
+If you did 0.0 for the rehearsal, it is already in place: check 0.0.5, and
+if the commit has changed since, refresh the snapshot with 0.0.4. Then do 0.1
+and 0.2 for the mainnet keys.
+
+### 0.0 A separate Linux user, `qsmain`, for every mainnet and rehearsal key
+
+All `qs-main-` keys, and in the rehearsal all `qs-rehearsal-` keys, live only
+in the keystore of a separate Linux user, `qsmain`. You use them only from a
+`sudo -iu qsmain` shell.
+
+Claude's session runs as `murat` and can type into anything `murat` runs,
+SEND included. So the keys must be in a place `murat` cannot read. That place
+must also run only code `murat` cannot change: `qsmain` runs a root-owned,
+read-only snapshot of the repo at a commit you have checked, and tools from
+the official releases.
+
+**You run every command in this part yourself. Claude never runs anything as
+`qsmain` or with `sudo`.** Steps 0.0.1–0.0.4 run as `murat`, in your terminal;
+`sudo` asks for your password.
+
+**0.0.1 Close the three ways around a second user.** Without these, a
+process running as `murat`, Claude's included, could still reach
+`qsmain`'s files.
+
+```sh
+# (a) sudo must ask for murat's password, every time.
+sudo -k; if sudo -n true 2>/dev/null; then echo "PASSWORDLESS sudo: stop, and fix it before going on"; else echo "sudo asks for a password: good"; fi
+echo 'Defaults:murat timestamp_timeout=0' | sudo tee /etc/sudoers.d/90-murat-no-sudo-cache > /dev/null
+sudo chmod 0440 /etc/sudoers.d/90-murat-no-sudo-cache && sudo visudo -c
+
+# (b) The docker group is root-equivalent: murat is in it and Docker is running.
+sudo gpasswd -d murat docker
+
+# (c) WSL interop lets any WSL process start wsl.exe -u root.
+printf '\n[interop]\nenabled=false\nappendWindowsPath=false\n' | sudo tee -a /etc/wsl.conf > /dev/null
+cat /etc/wsl.conf
+```
+
+Then, in **Windows PowerShell**: `wsl --shutdown`, and open a new WSL terminal.
+Check, as `murat`:
+
+```sh
+id                                                    # no "docker" in the list
+ls /proc/sys/fs/binfmt_misc/ | grep -c WSLInterop     # 0
+sudo -n true 2>/dev/null && echo "PASSWORDLESS" || echo "password required: good"
+```
+
+- Docker still works with `sudo docker …`.
+- With interop off, WSL can no longer start Windows programs: `code .`,
+  `explorer.exe`, and the Windows tools on your PATH. VS Code still
+  connects to WSL from the Windows side.
+- If you need interop back, turn it back on. While it is on, the keys are
+  reachable from `murat` again.
+- If (a) printed PASSWORDLESS: give `murat` a password (`sudo passwd
+  murat`), and remove any `NOPASSWD` line for it (`sudo visudo`, and the files
+  in `/etc/sudoers.d/`). Then check again.
+
+**0.0.2 Create `qsmain`.** It has no password, so it cannot log in; you
+reach it only through `sudo -iu qsmain`. Its home is closed to every other
+user.
+
+```sh
+sudo adduser --disabled-password --gecos "" qsmain
+sudo chmod 700 /home/qsmain
+ls /home/qsmain     # as murat: "Permission denied"
+```
+
+**0.0.3 The tools, from the official releases** (not the copies in
+`murat`'s home, which `murat` could change):
+
+```sh
+sudo install -d -m 0755 /opt/qs-dl
+sudo curl -fsSL -o /opt/qs-dl/stellar-cli-30.0.1.tar.gz \
+  https://github.com/stellar/stellar-cli/releases/download/v30.0.1/stellar-cli-30.0.1-x86_64-unknown-linux-gnu.tar.gz
+echo "48c70074020e09af0a3ebbd2bf62d53c9aec47935e49a112d3cd90fb4e37658f  /opt/qs-dl/stellar-cli-30.0.1.tar.gz" | sha256sum -c
+sudo tar -xzf /opt/qs-dl/stellar-cli-30.0.1.tar.gz -C /opt/qs-dl stellar
+sudo install -m 0755 -o root -g root /opt/qs-dl/stellar /usr/local/bin/stellar
+
+sudo curl -fsSL -o /opt/qs-dl/node-v24.17.0-linux-x64.tar.xz https://nodejs.org/dist/v24.17.0/node-v24.17.0-linux-x64.tar.xz
+curl -fsSL https://nodejs.org/dist/v24.17.0/SHASUMS256.txt | grep " node-v24.17.0-linux-x64.tar.xz$"
+echo "ab343a1b747c7cbf3630dfd7dbf818c5423fab2eb4f5ad1afc896f6bd121a917  /opt/qs-dl/node-v24.17.0-linux-x64.tar.xz" | sha256sum -c
+sudo tar -xJf /opt/qs-dl/node-v24.17.0-linux-x64.tar.xz -C /opt
+for b in node npm npx; do sudo ln -sf /opt/node-v24.17.0-linux-x64/bin/$b /usr/local/bin/$b; done
+```
+
+- The Stellar CLI digest is the one GitHub publishes for that asset. It is
+  shown on the release page, and in `api.github.com/repos/stellar/stellar-cli/releases/tags/v30.0.1`,
+  read 2026-11-22.
+- The Node line printed by `grep` must show the same hash as the `echo`.
+- Your own `murat` shell keeps using its nvm Node and `~/.cargo/bin/stellar`.
+
+**0.0.4 The repo, as a root-owned read-only snapshot at a commit you have
+checked.**
+- `qsmain` never runs the working tree in `/home/murat`, which Claude edits.
+- The snapshot holds no `.env.local` and no `.secrets/`.
+- `COMMIT` is the commit Claude reports for the runbook. Compare it with `git
+  log` before you go on.
+
+```sh
+COMMIT=<the commit hash Claude reported>
+git -C ~/QuietStay/QuietStay log --oneline -1 "$COMMIT"
+git -C ~/QuietStay/QuietStay bundle create /tmp/quietstay.bundle phase3
+sudo rm -rf /opt/quietstay
+sudo git clone --branch phase3 /tmp/quietstay.bundle /opt/quietstay
+sudo git -C /opt/quietstay checkout --detach "$COMMIT"
+sudo git -C /opt/quietstay rev-parse HEAD        # must print $COMMIT exactly
+cd /opt/quietstay && sudo env PATH=/usr/local/bin:/usr/bin:/bin npm ci --ignore-scripts && cd -
+# The two built WASMs are not in git; Part 5 checks their sha256 before any upload.
+sudo install -D -m 0644 ~/QuietStay/QuietStay/contracts/target/wasm32v1-none/release/quietstay_rights.wasm \
+  /opt/quietstay/contracts/target/wasm32v1-none/release/quietstay_rights.wasm
+sudo install -D -m 0644 ~/QuietStay/QuietStay/contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm \
+  /opt/quietstay/contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm
+sudo chown -R root:root /opt/quietstay && sudo chmod -R go-w /opt/quietstay
+```
+
+- The bundle comes from `murat`'s repo. That is fine, because `rev-parse`
+  proves the snapshot is exactly the commit you checked.
+- `--ignore-scripts` keeps package install scripts from running as root.
+- If a later step fails because a package needs its install script, run
+  `sudo env PATH=/usr/local/bin:/usr/bin:/bin npm ci` in `/opt/quietstay`, and
+  tell Claude which package it was.
+- **To update the snapshot** after a fix, run 0.0.4 again with the new
+  commit.
+
+**0.0.5 Switch to `qsmain` and check that the setup holds.** From here on,
+every command in this runbook runs in this shell:
+
+```sh
+sudo -iu qsmain
+cd /opt/quietstay
+stellar --version        # stellar 30.0.1 (f2a7b74175c34585f3b30a1abf42a2d41cbcc390)
+node --version           # v24.17.0
+touch /opt/quietstay/x   # must fail: Permission denied (read-only)
+ls /home/murat           # must fail: Permission denied
+npx tsx scripts/check-ttl.ts --network testnet   # all entries live
+```
+
+Paste the output of 0.0.1's checks and of 0.0.5. To leave the `qsmain`
+shell, type `exit`.
+
+**0.1 Give `qsmain`'s CLI a mainnet RPC** (as `qsmain`). The built-in `mainnet` network has none,
 which was the Low issue. This is a local setting and sends nothing:
 
 ```sh
@@ -80,27 +221,34 @@ stellar network add mainnet \
 stellar ledger latest --network mainnet     # expect: Protocol Version: 29
 ```
 
-**0.2 Check that the secure store keeps keys on this machine.** On WSL, the OS
-secure store is the kernel keyring and the DBus Secret Service. A key that is
-lost on a restart means lost funds, so test it before any key holds XLM:
+**0.2 Choose where `qsmain` keeps its keys.** As `qsmain`, test whether the
+OS secure store keeps a key across a WSL restart. A `sudo -iu` shell may have
+no Secret Service, in which case the test fails:
 
 ```sh
 stellar keys generate qs-main-storetest --secure-store
 stellar keys address qs-main-storetest
 ```
 
-Then restart WSL. In Windows PowerShell run `wsl --shutdown`, then open a new
-terminal:
+Then `exit`, and in Windows PowerShell `wsl --shutdown`. Open a new terminal,
+and `sudo -iu qsmain` again:
 
 ```sh
-stellar keys address qs-main-storetest     # must print the same G… address
+stellar keys address qs-main-storetest     # the same G… address?
 stellar keys rm qs-main-storetest
 ```
 
-- **If the second `address` fails or prints a different key, stop and tell
-  me.** Without `--secure-store`, the CLI writes the seed phrase in plain
-  text to `~/.config/stellar/identity/<name>.toml`, which any process running
-  as you can read. That is your decision to make, not a default.
+- **If it printed the same address**, use the secure store:
+  `export QS_KEY_STORE=--secure-store`.
+- **If it failed**, use the CLI's file store: `export QS_KEY_STORE=`. The
+  seed phrase is then in `/home/qsmain/.config/stellar/identity/<name>.toml`.
+  - Only `qsmain` and root can read it: the home is mode 700, and 0.0.1 took
+    away `murat`'s ways around that.
+  - That is why the separate user makes the file store acceptable here,
+    which it was not under `murat`.
+- Either way, put the choice in `qsmain`'s profile, so every later shell has
+  it:
+  `echo "export QS_KEY_STORE=$QS_KEY_STORE" >> ~/.profile`.
 
 ## Part 1 — Create the mainnet identities
 
@@ -108,12 +256,12 @@ Six new keys, each used for one role. The arbiter is separate from the issuer,
 as the constructor requires. No `--fund` (that is Friendbot, testnet only).
 
 ```sh
-stellar keys generate qs-main-issuer  --secure-store   # issuer and deployer
-stellar keys generate qs-main-arbiter --secure-store   # resolves disputes only
-stellar keys generate qs-main-fee     --secure-store   # pays the passkey wallet's transactions
-stellar keys generate qs-main-owner   --secure-store   # pilot owner (receives USDC)
-stellar keys generate qs-main-buyer   --secure-store   # pilot buyer (pays USDC)
-stellar keys generate qs-main-renter  --secure-store   # pilot renter (pays USDC, gets refunds)
+stellar keys generate qs-main-issuer  $QS_KEY_STORE   # issuer and deployer
+stellar keys generate qs-main-arbiter $QS_KEY_STORE   # resolves disputes only
+stellar keys generate qs-main-fee     $QS_KEY_STORE   # pays the passkey wallet's transactions
+stellar keys generate qs-main-owner   $QS_KEY_STORE   # pilot owner (receives USDC)
+stellar keys generate qs-main-buyer   $QS_KEY_STORE   # pilot buyer (pays USDC)
+stellar keys generate qs-main-renter  $QS_KEY_STORE   # pilot renter (pays USDC, gets refunds)
 ```
 
 **Back up each key offline** before funding it, for example on paper or in a

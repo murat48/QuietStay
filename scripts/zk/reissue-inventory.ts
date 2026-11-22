@@ -20,7 +20,7 @@ import { join } from "node:path";
 import { Keypair, scValToNative } from "@stellar/stellar-sdk";
 import { explorer, issuerSecret } from "../../src/lib/config";
 import type { JsonValue } from "../../src/lib/canonical";
-import { fatal, loadEnv, log, requireArg, writeJson } from "../lib/cli";
+import { fatal, loadEnvVars, log, requireArg, writeJson } from "../lib/cli";
 import { commitment, randomSecret, secretHash, splitRecordDigest } from "../lib/zk";
 import { fr } from "../lib/zk-encode";
 import { buildCall, issueArgs, sendAndWait, simulate } from "../lib/zk-tx";
@@ -34,7 +34,8 @@ interface RecordFile {
 }
 
 async function main() {
-  loadEnv();
+  // Only the variables this tool uses (testnet values; PHASE3_PROMPT.md).
+  loadEnvVars(["QUIETSTAY_ISSUER_SECRET"]);
   const contractId = requireArg(0, "npm run zk:reissue -- <contract id> [--out <issued.json>]");
   const outAt = process.argv.indexOf("--out");
   const outFile = outAt === -1 ? "inventory/phase2/issued.json" : process.argv[outAt + 1]!;

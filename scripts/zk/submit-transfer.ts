@@ -31,7 +31,7 @@ import {
 } from "@stellar/stellar-sdk";
 import { explorer, NETWORK_PASSPHRASE } from "../../src/lib/config";
 import { server } from "../../src/lib/contract";
-import { fatal, loadEnv, log, requireArg } from "../lib/cli";
+import { fatal, loadEnvVars, log, requireArg } from "../lib/cli";
 
 const USAGE = "npm run zk:submit -- <contract id> <proof dir> [--send=no]";
 
@@ -81,7 +81,8 @@ export function transferArgs(t: TransferFile, signals: string[]): xdr.ScVal[] {
 }
 
 async function main() {
-  loadEnv();
+  // Only the variables this tool uses (testnet values; PHASE3_PROMPT.md).
+  loadEnvVars(["QUIETSTAY_ISSUER_SECRET", "DEMO_OWNER_SECRET", "DEMO_RENTER_SECRET", "DEMO_BUYER_SECRET"]);
   const contractId = requireArg(0, USAGE);
   const dir = requireArg(1, USAGE);
   const send = !process.argv.includes("--send=no");

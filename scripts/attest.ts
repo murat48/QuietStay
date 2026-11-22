@@ -71,10 +71,11 @@ import { readRight } from "../src/lib/contract";
 import { feesAreCurrent, propertyFacts, recordCommitment, validateRecord } from "../src/lib/record";
 import { commitment as poseidonCommitment, splitRecordDigest } from "./lib/zk";
 import { fr } from "./lib/zk-encode";
-import { fatal, loadEnv, log, readJson } from "./lib/cli";
+import { fatal, loadEnvVars, log, readJson } from "./lib/cli";
 import { Keypair } from "@stellar/stellar-sdk";
 
-loadEnv();
+// Only the issuer key, which signs the attestation (testnet; PHASE3_PROMPT.md).
+loadEnvVars(["QUIETSTAY_ISSUER_SECRET"]);
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);

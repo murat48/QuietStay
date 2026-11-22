@@ -40,11 +40,12 @@ import {
   validateRecord,
   type OwnershipRecord,
 } from "../src/lib/record";
-import { fatal, loadEnv, log, readJson } from "./lib/cli";
+import { fatal, log, readJson } from "./lib/cli";
 import { commitment as poseidonCommitment, splitRecordDigest } from "./lib/zk";
 import { fr } from "./lib/zk-encode";
 
-loadEnv();
+// No env file: verifying needs no secret, and the contract id comes from
+// src/lib/config.ts at import time.
 
 /** Tell an attestation from a record by what is inside it, not by argument order. */
 function classify(paths: string[]): { attestation?: string; record?: string } {

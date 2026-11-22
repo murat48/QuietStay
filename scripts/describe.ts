@@ -37,10 +37,11 @@ import { loadAttestation, saveAttestation } from "../src/lib/attestation-store";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, issuerSecret } from "../src/lib/config";
 import { readRight } from "../src/lib/contract";
 import type { PropertyFacts } from "../src/lib/record";
-import { fatal, loadEnv, log } from "./lib/cli";
+import { fatal, loadEnvVars, log } from "./lib/cli";
 import { Keypair } from "@stellar/stellar-sdk";
 
-loadEnv();
+// Only the issuer key, which signs the description (testnet; PHASE3_PROMPT.md).
+loadEnvVars(["QUIETSTAY_ISSUER_SECRET"]);
 
 const USAGE =
   'usage: npm run describe -- <right_id> --region "Town, Country" --bedrooms <n> ' +

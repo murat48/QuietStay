@@ -33,31 +33,175 @@ testnet.
   runbook apply. If a command errors after it may have sent something, run
   the check before running it again.
 
+Everything from Part 1 on runs as `qsmain`, from the read-only snapshot,
+exactly as on mainnet:
+
 ```sh
-cd ~/QuietStay/QuietStay
+sudo -iu qsmain
+cd /opt/quietstay
 mkdir -p ~/qs-rehearsal
 ```
 
 ## Part 0 — Before you start
 
-The mainnet runbook's Part 0 applies as is:
+Part 0.0 sets up the `qsmain` user, once for both the rehearsal and mainnet.
+It is the same text as in MAINNET_SETUP.md. Then, as `qsmain`, do the mainnet
+runbook's 0.1 and 0.2:
 - 0.1, the CLI's mainnet RPC: the protocol check that `mainnet-sign-submit.sh`
-  runs reads mainnet, so do it now if you haven't.
-- 0.2, the secure-store test.
+  runs reads mainnet;
+- 0.2, which sets `QS_KEY_STORE` (use `qs-rehearsal-storetest` as the test
+  name).
+
+### 0.0 A separate Linux user, `qsmain`, for every mainnet and rehearsal key
+
+All `qs-main-` keys, and in the rehearsal all `qs-rehearsal-` keys, live only
+in the keystore of a separate Linux user, `qsmain`. You use them only from a
+`sudo -iu qsmain` shell.
+
+Claude's session runs as `murat` and can type into anything `murat` runs,
+SEND included. So the keys must be in a place `murat` cannot read. That place
+must also run only code `murat` cannot change: `qsmain` runs a root-owned,
+read-only snapshot of the repo at a commit you have checked, and tools from
+the official releases.
+
+**You run every command in this part yourself. Claude never runs anything as
+`qsmain` or with `sudo`.** Steps 0.0.1–0.0.4 run as `murat`, in your terminal;
+`sudo` asks for your password.
+
+**0.0.1 Close the three ways around a second user.** Without these, a
+process running as `murat`, Claude's included, could still reach
+`qsmain`'s files.
+
+```sh
+# (a) sudo must ask for murat's password, every time.
+sudo -k; if sudo -n true 2>/dev/null; then echo "PASSWORDLESS sudo: stop, and fix it before going on"; else echo "sudo asks for a password: good"; fi
+echo 'Defaults:murat timestamp_timeout=0' | sudo tee /etc/sudoers.d/90-murat-no-sudo-cache > /dev/null
+sudo chmod 0440 /etc/sudoers.d/90-murat-no-sudo-cache && sudo visudo -c
+
+# (b) The docker group is root-equivalent: murat is in it and Docker is running.
+sudo gpasswd -d murat docker
+
+# (c) WSL interop lets any WSL process start wsl.exe -u root.
+printf '\n[interop]\nenabled=false\nappendWindowsPath=false\n' | sudo tee -a /etc/wsl.conf > /dev/null
+cat /etc/wsl.conf
+```
+
+Then, in **Windows PowerShell**: `wsl --shutdown`, and open a new WSL terminal.
+Check, as `murat`:
+
+```sh
+id                                                    # no "docker" in the list
+ls /proc/sys/fs/binfmt_misc/ | grep -c WSLInterop     # 0
+sudo -n true 2>/dev/null && echo "PASSWORDLESS" || echo "password required: good"
+```
+
+- Docker still works with `sudo docker …`.
+- With interop off, WSL can no longer start Windows programs: `code .`,
+  `explorer.exe`, and the Windows tools on your PATH. VS Code still
+  connects to WSL from the Windows side.
+- If you need interop back, turn it back on. While it is on, the keys are
+  reachable from `murat` again.
+- If (a) printed PASSWORDLESS: give `murat` a password (`sudo passwd
+  murat`), and remove any `NOPASSWD` line for it (`sudo visudo`, and the files
+  in `/etc/sudoers.d/`). Then check again.
+
+**0.0.2 Create `qsmain`.** It has no password, so it cannot log in; you
+reach it only through `sudo -iu qsmain`. Its home is closed to every other
+user.
+
+```sh
+sudo adduser --disabled-password --gecos "" qsmain
+sudo chmod 700 /home/qsmain
+ls /home/qsmain     # as murat: "Permission denied"
+```
+
+**0.0.3 The tools, from the official releases** (not the copies in
+`murat`'s home, which `murat` could change):
+
+```sh
+sudo install -d -m 0755 /opt/qs-dl
+sudo curl -fsSL -o /opt/qs-dl/stellar-cli-30.0.1.tar.gz \
+  https://github.com/stellar/stellar-cli/releases/download/v30.0.1/stellar-cli-30.0.1-x86_64-unknown-linux-gnu.tar.gz
+echo "48c70074020e09af0a3ebbd2bf62d53c9aec47935e49a112d3cd90fb4e37658f  /opt/qs-dl/stellar-cli-30.0.1.tar.gz" | sha256sum -c
+sudo tar -xzf /opt/qs-dl/stellar-cli-30.0.1.tar.gz -C /opt/qs-dl stellar
+sudo install -m 0755 -o root -g root /opt/qs-dl/stellar /usr/local/bin/stellar
+
+sudo curl -fsSL -o /opt/qs-dl/node-v24.17.0-linux-x64.tar.xz https://nodejs.org/dist/v24.17.0/node-v24.17.0-linux-x64.tar.xz
+curl -fsSL https://nodejs.org/dist/v24.17.0/SHASUMS256.txt | grep " node-v24.17.0-linux-x64.tar.xz$"
+echo "ab343a1b747c7cbf3630dfd7dbf818c5423fab2eb4f5ad1afc896f6bd121a917  /opt/qs-dl/node-v24.17.0-linux-x64.tar.xz" | sha256sum -c
+sudo tar -xJf /opt/qs-dl/node-v24.17.0-linux-x64.tar.xz -C /opt
+for b in node npm npx; do sudo ln -sf /opt/node-v24.17.0-linux-x64/bin/$b /usr/local/bin/$b; done
+```
+
+- The Stellar CLI digest is the one GitHub publishes for that asset. It is
+  shown on the release page, and in `api.github.com/repos/stellar/stellar-cli/releases/tags/v30.0.1`,
+  read 2026-11-22.
+- The Node line printed by `grep` must show the same hash as the `echo`.
+- Your own `murat` shell keeps using its nvm Node and `~/.cargo/bin/stellar`.
+
+**0.0.4 The repo, as a root-owned read-only snapshot at a commit you have
+checked.**
+- `qsmain` never runs the working tree in `/home/murat`, which Claude edits.
+- The snapshot holds no `.env.local` and no `.secrets/`.
+- `COMMIT` is the commit Claude reports for the runbook. Compare it with `git
+  log` before you go on.
+
+```sh
+COMMIT=<the commit hash Claude reported>
+git -C ~/QuietStay/QuietStay log --oneline -1 "$COMMIT"
+git -C ~/QuietStay/QuietStay bundle create /tmp/quietstay.bundle phase3
+sudo rm -rf /opt/quietstay
+sudo git clone --branch phase3 /tmp/quietstay.bundle /opt/quietstay
+sudo git -C /opt/quietstay checkout --detach "$COMMIT"
+sudo git -C /opt/quietstay rev-parse HEAD        # must print $COMMIT exactly
+cd /opt/quietstay && sudo env PATH=/usr/local/bin:/usr/bin:/bin npm ci --ignore-scripts && cd -
+# The two built WASMs are not in git; Part 5 checks their sha256 before any upload.
+sudo install -D -m 0644 ~/QuietStay/QuietStay/contracts/target/wasm32v1-none/release/quietstay_rights.wasm \
+  /opt/quietstay/contracts/target/wasm32v1-none/release/quietstay_rights.wasm
+sudo install -D -m 0644 ~/QuietStay/QuietStay/contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm \
+  /opt/quietstay/contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm
+sudo chown -R root:root /opt/quietstay && sudo chmod -R go-w /opt/quietstay
+```
+
+- The bundle comes from `murat`'s repo. That is fine, because `rev-parse`
+  proves the snapshot is exactly the commit you checked.
+- `--ignore-scripts` keeps package install scripts from running as root.
+- If a later step fails because a package needs its install script, run
+  `sudo env PATH=/usr/local/bin:/usr/bin:/bin npm ci` in `/opt/quietstay`, and
+  tell Claude which package it was.
+- **To update the snapshot** after a fix, run 0.0.4 again with the new
+  commit.
+
+**0.0.5 Switch to `qsmain` and check that the setup holds.** From here on,
+every command in this runbook runs in this shell:
+
+```sh
+sudo -iu qsmain
+cd /opt/quietstay
+stellar --version        # stellar 30.0.1 (f2a7b74175c34585f3b30a1abf42a2d41cbcc390)
+node --version           # v24.17.0
+touch /opt/quietstay/x   # must fail: Permission denied (read-only)
+ls /home/murat           # must fail: Permission denied
+npx tsx scripts/check-ttl.ts --network testnet   # all entries live
+```
+
+Paste the output of 0.0.1's checks and of 0.0.5. To leave the `qsmain`
+shell, type `exit`.
+
 
 ## Part 1 — Identities
 
 The six roles, as on mainnet, plus the two stand-ins:
 
 ```sh
-stellar keys generate qs-rehearsal-issuer  --secure-store   # issuer and deployer
-stellar keys generate qs-rehearsal-arbiter --secure-store   # resolves disputes only
-stellar keys generate qs-rehearsal-fee     --secure-store   # fee identity (not used until a passkey flow)
-stellar keys generate qs-rehearsal-owner   --secure-store
-stellar keys generate qs-rehearsal-buyer   --secure-store
-stellar keys generate qs-rehearsal-renter  --secure-store
-stellar keys generate qs-rehearsal-signin  --secure-store   # plays mainnet-test
-stellar keys generate qs-rehearsal-funder  --secure-store   # holds the faucet USDC
+stellar keys generate qs-rehearsal-issuer  $QS_KEY_STORE   # issuer and deployer
+stellar keys generate qs-rehearsal-arbiter $QS_KEY_STORE   # resolves disputes only
+stellar keys generate qs-rehearsal-fee     $QS_KEY_STORE   # fee identity (not used until a passkey flow)
+stellar keys generate qs-rehearsal-owner   $QS_KEY_STORE
+stellar keys generate qs-rehearsal-buyer   $QS_KEY_STORE
+stellar keys generate qs-rehearsal-renter  $QS_KEY_STORE
+stellar keys generate qs-rehearsal-signin  $QS_KEY_STORE   # plays mainnet-test
+stellar keys generate qs-rehearsal-funder  $QS_KEY_STORE   # holds the faucet USDC
 ```
 
 ```sh
@@ -302,9 +446,11 @@ npx tsx scripts/check-deployment.ts --network testnet --rights "$QS_RIGHTS_CONTR
 ## Part 6 — One sale and one rental offer, signed the same way
 
 `scripts/pilot-envelope.ts` builds each step's unsigned envelope:
+- It runs as `qsmain`, like everything else. The snapshot is read-only, so
+  `QS_PILOT_STATE_DIR` puts its state in `qsmain`'s home.
 - It uses your public keys and signs nothing.
 - It keeps the ownership records and secrets it creates in
-  `.secrets/<contract>/pilot-testnet/`, never printed.
+  `$QS_PILOT_STATE_DIR/<contract>/pilot-testnet/`, never printed.
 - It prints the exact signing command, which you run.
 - From the second step on, it first reads the previous step's outcome from
   the chain.
@@ -314,7 +460,7 @@ Each envelope stays valid for 25 minutes. The sale's proof is valid for about
 1 USDC, the pilot cap.
 
 ```sh
-export FLOWS=~/qs-rehearsal/flows
+export FLOWS=~/qs-rehearsal/flows QS_PILOT_STATE_DIR=~/qs-rehearsal/state
 npx tsx scripts/pilot-envelope.ts issue-a      --network testnet --contract "$QS_RIGHTS_CONTRACT" --out "$FLOWS"
 scripts/mainnet-sign-submit.sh "$FLOWS/01-issue-a.xdr" qs-rehearsal-issuer --network testnet
 
@@ -344,7 +490,8 @@ scripts/mainnet-sign-submit.sh "$FLOWS/06-rental-offer.xdr" qs-rehearsal-renter 
 - each step's status on chain;
 - who holds each week: week A should be the buyer's, week B still the owner's;
 - the USDC: owner 1, buyer 1, renter 2, contract 0;
-- the privacy check over every landed step.
+- the privacy check over every landed step, with its record written to
+  `$FLOWS/privacy-….txt`.
 
 ```sh
 npx tsx scripts/pilot-envelope.ts status --network testnet --contract "$QS_RIGHTS_CONTRACT" --out "$FLOWS"

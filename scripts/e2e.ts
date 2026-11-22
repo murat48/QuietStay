@@ -60,12 +60,15 @@ import type { OwnershipRecord } from "../src/lib/record";
 import type { IssuanceRequest } from "../src/lib/requests";
 import { issueScreenView, type AccountStanding } from "../src/lib/roles";
 import { issuanceRequestLink, issuanceRequestPrefill } from "../src/lib/secret-hash";
-import { fatal, loadEnv, log } from "./lib/cli";
+import { fatal, loadEnvVars, log } from "./lib/cli";
 import { R, commitment as poseidonCommitment, randomSecret, secretHash, splitRecordDigest } from "./lib/zk";
 import { fr } from "./lib/zk-encode";
 import { proveTransfer, type TransferFile } from "./lib/zk-prove";
 
-loadEnv();
+// Only what this run uses: the testnet issuer and demo keys, and the URLs
+// (PHASE3_PROMPT.md: .env.local holds testnet values only). The tools it
+// starts inherit just these.
+loadEnvVars(["QUIETSTAY_ISSUER_SECRET", "DEMO_OWNER_SECRET", "DEMO_RENTER_SECRET", "DEMO_BUYER_SECRET", "E2E_BASE_URL", "E2E_EVIDENCE_BASE_URL"]);
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 

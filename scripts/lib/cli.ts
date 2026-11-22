@@ -8,11 +8,35 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { parseEnv } from "node:util";
 
-/** Load `.env.local` if present. Secrets live there and nowhere in the repo. */
-export function loadEnv(): void {
+/**
+ * Set only the named variables from `.env.local` (Step 5 review: no script
+ * loads the whole file). A variable already in the environment wins.
+ *
+ * - Only lines that assign one of `names` are parsed. Every other line is
+ *   skipped unparsed, and no other value enters `process.env` or this
+ *   process's variables.
+ * - Nothing is printed.
+ * - The rule (PHASE3_PROMPT.md): `.env.local` holds testnet values only.
+ *   Mainnet secrets are never written to a file in the repo.
+ *
+ * Returns the names it found, for a script to report which are missing.
+ */
+export function loadEnvVars(names: readonly string[]): string[] {
   const envFile = resolve(process.cwd(), ".env.local");
-  if (existsSync(envFile)) process.loadEnvFile(envFile);
+  if (!existsSync(envFile)) return [];
+  const wanted = new Set(names);
+  const found: string[] = [];
+  for (const line of readFileSync(envFile, "utf8").split(/\r?\n/)) {
+    const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line);
+    if (!m || !wanted.has(m[1]!)) continue;
+    const name = m[1]!;
+    const value = parseEnv(line.replace(/^\s*export\s+/, ""))[name];
+    if (value !== undefined && process.env[name] === undefined) process.env[name] = value;
+    found.push(name);
+  }
+  return found;
 }
 
 export function readJson<T = unknown>(path: string): T {

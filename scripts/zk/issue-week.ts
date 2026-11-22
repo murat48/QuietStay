@@ -46,7 +46,7 @@ import {
   validateRecord,
   type OwnershipRecord,
 } from "../../src/lib/record";
-import { fatal, loadEnv, log, writeJson } from "../lib/cli";
+import { fatal, loadEnvVars, log, writeJson } from "../lib/cli";
 import { commitment, randomSecret, secretHash, splitRecordDigest } from "../lib/zk";
 import { fr } from "../lib/zk-encode";
 import { buildCall, issueArgs, sendAndWait, simulate } from "../lib/zk-tx";
@@ -56,7 +56,8 @@ const USAGE =
   "[--like <sample record>] [--record <existing record>] [--secret <file>] [--dir <folder>]";
 
 async function main() {
-  loadEnv();
+  // Only the variables this tool uses (testnet values; PHASE3_PROMPT.md).
+  loadEnvVars(["QUIETSTAY_ISSUER_SECRET"]);
   const { values: a } = parseArgs({
     options: {
       contract: { type: "string" },

@@ -26,7 +26,9 @@
  * account that acts, so its own signature authorizes the call.
  *
  * The ownership records, the owner's secrets and the buyer's s' it creates
- * stay in `.secrets/<contract 8>/pilot-<network>/` (gitignored, 0700). They
+ * stay in `$QS_PILOT_STATE_DIR` if set (the `qsmain` user's home: the repo
+ * snapshot it runs is read-only), else `.secrets/<contract 8>/pilot-<network>/`
+ * (gitignored, 0700). The privacy record goes to `--out`. They
  * are never printed; the proof and the privacy check read them.
  *
  * Each envelope is simulated twice, so its declared resources include the
@@ -97,7 +99,9 @@ if (!StrKey.isValidContract(C)) throw new Error("--contract <C…> is required")
 const OUT = resolve(a.out ?? "");
 if (!a.out) throw new Error("--out <dir> is required (where the envelopes go)");
 mkdirSync(OUT, { recursive: true });
-const DIR = resolve(".secrets", C.slice(0, 8), `pilot-${netName}`);
+const DIR = process.env.QS_PILOT_STATE_DIR
+  ? resolve(process.env.QS_PILOT_STATE_DIR, C.slice(0, 8), `pilot-${netName}`)
+  : resolve(".secrets", C.slice(0, 8), `pilot-${netName}`);
 mkdirSync(DIR, { recursive: true, mode: 0o700 });
 const server = new rpc.Server(NET.rpc);
 
@@ -357,7 +361,7 @@ async function status() {
   }
   console.log(`  USDC rights contract ${String(await view("balance", [addr(C)], NET.usdc))}`);
   if (txs.length === 0) return;
-  const out = `evidence/privacy/${new Date().toISOString().slice(0, 10)}-pilot-${netName}-${C.slice(0, 8)}.txt`;
+  const out = join(OUT, `privacy-${new Date().toISOString().slice(0, 10)}-pilot-${netName}-${C.slice(0, 8)}.txt`);
   const args = ["tsx", "scripts/check-privacy.ts", "--network", netName, "--out", out];
   for (const t of txs) args.push("--tx", t);
   for (const w of Object.values(state.weeks)) args.push("--record", w.record_file, "--secret", w.secret_file);

@@ -20,11 +20,12 @@
 
 import { existsSync, writeFileSync } from "node:fs";
 import { issuanceRequestLink } from "../../src/lib/secret-hash";
-import { fatal, loadEnv, log, requireArg } from "../lib/cli";
+import { fatal, loadEnvVars, log, requireArg } from "../lib/cli";
 import { randomSecret, secretHash } from "../lib/zk";
 
 async function main() {
-  loadEnv();
+  // Only the variables this tool uses (testnet values; PHASE3_PROMPT.md).
+  loadEnvVars(["QUIETSTAY_APP_URL"]);
   const out = requireArg(0, "npm run zk:secret -- <out-file>");
   if (existsSync(out)) throw new Error(`${out} exists; refusing to overwrite a secret`);
   const s = randomSecret();

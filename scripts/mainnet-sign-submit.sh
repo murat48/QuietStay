@@ -71,6 +71,9 @@ case "$NETWORK" in
   *) echo "the network must be given explicitly: mainnet or testnet" >&2; exit 64 ;;
 esac
 [ -f "$XDR_FILE" ] || { echo "no such file: $XDR_FILE" >&2; exit 66; }
+# Absolute, because the script changes to the repo below (which may be a
+# read-only snapshot, run as another user: MAINNET_SETUP.md Part 0).
+XDR_FILE="$(realpath "$XDR_FILE")"
 if [ "${QS_TEST_FAIL_FIRST_SEND:-}" = "1" ] && [ "$NETWORK" != "testnet" ]; then
   echo "QS_TEST_FAIL_FIRST_SEND is for the testnet rehearsal only" >&2
   exit 64

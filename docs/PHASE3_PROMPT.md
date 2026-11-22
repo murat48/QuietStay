@@ -83,6 +83,24 @@ Network and money
   - On testnet, signing through the CLI keystore with a testnet identity
     (`--source qs-owner`, and the like) stays as before: the CLI signs and
     you never see the key.
+- **Testnet values only in files** (added 2026-11-22, runbook review).
+  - `.env.local`, and every file in the repo, only ever hold testnet values.
+  - No mainnet secret is ever written to a file in the repo.
+  - The mainnet sign-in key goes only into Vercel's mainnet environment, set
+    by me.
+  - The app may read `.env.local` during testnet browser tests. Scripts read
+    only the variables they name (`loadEnvVars` in `scripts/lib/cli.ts`),
+    never the whole file.
+- **Mainnet keys live under a separate Linux user** (added 2026-11-22,
+  runbook review).
+  - Every `qs-main-` identity, and in the rehearsal every `qs-rehearsal-`
+    identity, is created and used only as `qsmain`, from a `sudo -iu qsmain`
+    shell.
+  - `qsmain` runs a root-owned, read-only snapshot of the repo at a commit I
+    checked, and the official Stellar CLI and Node releases
+    (MAINNET_SETUP.md Part 0.0).
+  - You never run anything as `qsmain` or with `sudo`. I run every `sudo`
+    command myself.
 - Pilot limits on mainnet: no single payment above 1 USDC, and no more than
   5 USDC held across all pilot accounts at any time, unless I raise these
   limits in writing. All pilot accounts are mine, so this USDC circulates

@@ -14,9 +14,10 @@ export const FRIENDBOT_URL = "https://friendbot.stellar.org";
  * The deployed QuietStay rights registry.
  *
  * The literal is the live deployment, not a placeholder, and it has to stay in
- * step with `.env.local`: the CLI scripts call `loadEnv()` in their own file
- * body, which runs *after* their imports have already evaluated this module, so
- * a script reads whatever this default says rather than what the env file holds.
+ * step with `.env.local`. The CLI scripts read only named variables
+ * (`loadEnvVars`), and they do it *after* their imports have already evaluated
+ * this module, so a script reads whatever this default says rather than what
+ * the env file holds.
  * Changing the deployment means changing both.
  */
 export const CONTRACT_ID =
