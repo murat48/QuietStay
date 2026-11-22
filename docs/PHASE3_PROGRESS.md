@@ -9,7 +9,12 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: **Step 5 review done (2026-11-21); not GO yet.** You
+- Current step: **Step 5, runbook review done (2026-11-22); not GO yet.**
+  The verifier is our own instance (testnet done; mainnet in Step 6). The
+  testnet demo is extended to ~2027-05-21. Next is yours: rehearse with
+  `docs/MAINNET_REHEARSAL.md` on testnet and paste each check, then
+  `docs/MAINNET_SETUP.md` Parts 0–4. Earlier: Step 5 review done
+  (2026-11-21). You
   decided: the High network issue is closed, the swap Medium is closed with a
   Step 6 gate, and the deploy cost is accepted in principle. Next is yours:
   run `docs/MAINNET_SETUP.md` and paste each check. I verify it, then you
@@ -71,10 +76,14 @@ actually run.
 | Medium | **Mainnet deploy cost:** uploading the rights WASM simulates at 694,336,359 stroops (69.43 XLM) of minimum resource fee; the web-auth upload at 3.44 XLM (`scripts/mainnet-simulate-upload.ts`). **Step 5 review:** reproduced exactly by `tools/upload-fee` (soroban-env-host 30.0.0). It is 0.0226 XLM of write fees, 60.3574 XLM of rent, and 9.0536 XLM of 15% simulation margin, which is refunded, so 60.38 XLM is charged. Budget: 121 XLM in all, 113 from you (`docs/MAINNET_SETUP.md`) | 5 | accepted in principle (your decision, Step 5 review); funding is in the runbook |
 | Low | After about 119 days on mainnet, the call that finds the instance below 17,280 ledgers extends the code entry to 518,400 ledgers and pays its rent: **about 14.6 XLM charged** (16.8 XLM declared; Step 5 review, from the 1,086,431-byte rent size). The Step 5 "about 17 XLM" included the 15% margin. After the pilot; can be done ahead with `stellar contract extend` | 5 | open (record) |
 | ~~Medium~~ | The final deployment's wait rental (escrow #1 on `CATUBRZZ…`) can be collected from 2026-11-22T13:50:56Z: the only flow on the final WASM still to land | 5 | **resolved 2026-11-22:** report refused #49 `a29d267e…fce1`, collect `67533a18…d295`, 102,275 s after check-in (Step 5 log). Every flow on the final WASM has now landed |
-| Medium | **The WebAuthn verifier is someone else's contract instance** (found applying your Step 5 review rule "only reuse an uploaded WASM, never someone else's contract instance"). The app passes the kit's manifest instance to every passkey wallet: testnet `CC7EKIHQ…OM3F`, mainnet `CB7HENHJ…Q5YR`. Its code (`e63a030d…`) has no constructor, admin or `upgrade`, but its TTL is not ours | 5 (review) | **OPEN, yours.** Proposal (checklist §5.4): deploy our own instance from the uploaded `e63a030d…` (about 0.03 XLM on mainnet; it saves the 16.80 XLM of uploading the code), and set `WEBAUTHN_VERIFIER_ID` per network. It is an app setting, not a change to the rights WASM; one testnet passkey rerun follows |
-| Low | The OZ code our passkey wallets need lives on mainnet for about 93 days (account `c514d35e…`, live until ledger 67,205,504) and about 71 days (verifier `e63a030d…`, until 66,824,189), from 2026-11-21 (`scripts/check-mainnet-wasm.ts`). Anyone can extend it. Reusing both saves about 60.2 XLM of uploads | 5 (review) | open: decide in Step 6 whether to extend them over the pilot (not needed for 30 days) |
-| Low | The final WASM's code entry on **testnet** is live until ledger 5,959,276, about 2026-11-27 (`scripts/check-mainnet-wasm.ts --network testnet`). The 2026-11-22 collect comes first; a later testnet rehearsal needs a `stellar contract extend` of it (a testnet transaction) | 5 (review) | open |
-| Low | **WASM size** (checklist §5.4): without behaviour changes, the most is about 3.5 XLM (6%), by dropping the interface spec's 21,128 bytes of doc strings. That changes the hash, so the Step 5 testnet run would be redone. The build is already at its smallest compiler setting | 5 (review) | **your decision**; my recommendation: keep the tested WASM |
+| ~~Medium~~ | **The WebAuthn verifier is someone else's contract instance** (found applying your Step 5 review rule "only reuse an uploaded WASM, never someone else's contract instance"). The app passes the kit's manifest instance to every passkey wallet: testnet `CC7EKIHQ…OM3F`, mainnet `CB7HENHJ…Q5YR`. Its code (`e63a030d…`) has no constructor, admin or `upgrade`, but its TTL is not ours | 5 (review) | **approved 2026-11-22; done on testnet:** our own instance `CBK3H55V…WEEL` (tx `38bbd549…`), `WEBAUTHN_VERIFIER_ID` per deployment, passkey specs 10/10 on it, with a new footprint assertion. Mainnet: Step 6 (MAINNET_SETUP.md Part 5) |
+| Low | The OZ code our passkey wallets need lives on mainnet for about 93 days (account `c514d35e…`, live until ledger 67,205,504) and about 71 days (verifier `e63a030d…`, until 66,824,189), from 2026-11-21 (`scripts/check-mainnet-wasm.ts`). Anyone can extend it. Reusing both saves about 60.2 XLM of uploads | 5 (review) | open: Step 6 runs `scripts/check-ttl.ts --network mainnet --until <pilot end>` after the deploy (checklist §4.1). On testnet both are extended to ~2027-05-21 |
+| ~~Low~~ | The final WASM's code entry on **testnet** is live until ledger 5,959,276, about 2026-11-27 (`scripts/check-mainnet-wasm.ts --network testnet`). The 2026-11-22 collect comes first; a later testnet rehearsal needs a `stellar contract extend` of it (a testnet transaction) | 5 (review) | **resolved 2026-11-22:** every code entry and instance of the testnet demo extended to testnet's maximum, live until ~2027-05-21 (checklist §4.2) |
+| ~~Low~~ | **WASM size** (checklist §5.4): without behaviour changes, the most is about 3.5 XLM (6%), by dropping the interface spec's 21,128 bytes of doc strings. That changes the hash, so the Step 5 testnet run would be redone. The build is already at its smallest compiler setting | 5 (review) | **decided 2026-11-22: keep the tested WASM** |
+
+| Medium | **The testnet demo must stay usable through the Instawards review** (your item 4, 2026-11-22). Code and instances are extended to ~2027-05-21. Data entries lapse on their own TTLs, and an SDF testnet reset would wipe everything | 5 (runbook review) | standing (checklist §4.2): `check-ttl --network testnet --until <review end>` before and weekly during the review; watch for reset announcements; redeploy with the rehearsal's Part 5 if one falls in the review |
+| Low | `check-privacy.ts` called `loadEnv()`, which reads `.env.local` (keys included) into its own process. It used nothing from it. My two collects and the passkey specs ran it on 2026-11-21/22, after your rule | 5 (runbook review) | **fixed 2026-11-22:** the call is removed; both modes pass without it. Found and reported, see the log |
+| Low | Other places still load `.env.local`: `scripts/attest.ts`, `describe.ts`, `verify-record.ts` and `e2e.ts` call `loadEnv()`. The browser specs start `next dev`, which reads `.env.local`; the app needs its testnet fee key (`passkey-app` used it on 2026-11-22). I read none of it, but the files are loaded | 5 (runbook review) | **your decision:** I no longer run those four scripts. For the browser specs, either you accept that the app reads its own env file, or the specs get a separate env with only what they need |
 
 Severity: Critical (blocks mainnet), High, Medium, Low.
 
@@ -165,7 +174,9 @@ of the spec, the rest at the second review of `def5eb6`.
 | Testnet owner (USDC trustline, added for the sale payout) | `qs-owner` `GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR` | | trustline `6443bdb5ecf88c0429f96481903d939afac89a67edf9b3de93eb55b20f413025` |
 | Testnet buyer / renter (USDC trustlines) | `qs-buyer` `GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ`, `qs-renter` `GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN` | | trustlines `de0444b6…1bcb`, `bc671422…0a79`; 20 USDC each from Circle's faucet (Horizon, 2026-11-20) |
 | Smart wallet (passkey) | `CDSI6FMLEA5LRMCTFU2RBMVBMFHWH4TJN7PEMEWSK477S4KP2KAKOKWY` (Step 2 probe) | | `npm run passkey:probe` |
-| WebAuthn verifier (OZ, via kit) | `CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F` | `CB7HENHJ7NF34I5FFXQK7D5I3WWQRGB5O5XO77D3NXMT7LM7LOKRQ5YR` | smart-account-kit deployment manifests. Checked on chain in Step 2: both run WASM `e63a030d…6b72b76` (`stellar contract fetch --id …`, then `sha256sum`) |
+| **WebAuthn verifier, our own instance** (Step 5 review) | `CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL` | Step 6 | `stellar contract deploy --wasm-hash e63a030d… --source qs-issuer --network testnet` (2026-11-22), tx `38bbd5492bd9bb38a0bd5e4aed10704f2c41c8bb32d6955bbc6f891b454328e6`; runs `e63a030d…` (`stellar contract fetch` + `sha256sum`) |
+| Rehearsal dry run (Claude's testnet identities; not the demo) | rights `CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP`, web-auth `CDJJSKRIS2CUKSPNO37Q56SY7QJBEOYOLTLLSKDUWGEF4EPR5BTIF5SN`, verifier `CBZKYQIQ335HWKC55NFKOUKDIGDR6MHFWSLM6IITIXHQL2Z4GLXPSEHS` | — | MAINNET_REHEARSAL.md Parts 5–6 through `mainnet-sign-submit.sh --network testnet` (2026-11-22); see the Step 5 log |
+| ~~WebAuthn verifier (OZ, via kit)~~ (no longer used) | `CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F` | `CB7HENHJ7NF34I5FFXQK7D5I3WWQRGB5O5XO77D3NXMT7LM7LOKRQ5YR` | smart-account-kit deployment manifests. Checked on chain in Step 2: both run WASM `e63a030d…6b72b76` (`stellar contract fetch --id …`, then `sha256sum`) |
 | Step 2 staging rights contract | `CCR2Z4IQNKXO2YCTQI2JBU5YLQTFXCXWVY6HV6H6TWNFWL5RAQ3IMAX5` | — | `stellar contract deploy` (Step 2). Step 3 redeploys with USDC/arbiter |
 | Testnet fee payer (D6) | `GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z` (`qs-fee-testnet`) | — (no server key on mainnet) | approved as the fee key at the Step 2 review |
 | SEP-45 web-auth contract | `CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM` | later, deployed by us | `npx tsx scripts/deploy-web-auth.ts --network testnet --source qs-issuer` (tx `31f480413f355f51a545a2817ccdb1a8e163eab5a49d6f59a92debda5b825ff1`) |
@@ -1549,6 +1560,116 @@ of the spec, the rest at the second review of `def5eb6`.
   with no findings. Log: `evidence/step3-testnet-CATUBRZZ.json`.
 - **Every flow has now landed on the final WASM** `76d69e79…dddde`, the
   24-hour collect included.
+
+#### Step 5, the runbook review (2026-11-22): verifier, demo lifetime, rehearsal
+- **Your decisions:**
+  - our own verifier instance on each network;
+  - keep the tested WASM;
+  - the rule as I read it, with testnet ownership-record secrets readable,
+    unprinted, by the privacy check;
+  - extend the testnet demo as far as testnet allows;
+  - USDC from the DEX.
+- **1. Verifier (done on testnet):**
+  - deployed our own instance `CBK3H55V…WEEL` from the uploaded `e63a030d…`,
+    as `qs-issuer`, tx `38bbd549…28e6`, 16,234 stroops. It runs `e63a030d…`.
+  - `src/lib/config.ts`: `WEBAUTHN_VERIFIER_ID` now defaults to it, and is
+    set per deployment with `NEXT_PUBLIC_QUIETSTAY_WEBAUTHN_VERIFIER_ID`.
+    `e2e/passkey.spec.ts` and the probe use the config value.
+  - New assertion in `passkey.spec.ts`: the passkey-approved transaction's
+    footprint holds `CBK3H55V…` and not the kit's `CC7EKIHQ…`.
+  - Passkey specs 10/10 (`passkey.spec.ts` 8, `passkey-app.spec.ts` 2):
+    - rental `e89883fb…`;
+    - in-app rental `d9b8d17b…`; both use `CBK3H55V…`;
+    - `evidence/checklist/passkey-own-verifier-2026-11-22.txt`.
+  - Its TTL is in checklist §4.1, and `scripts/check-ttl.ts` (new) reads it.
+- **4. Testnet demo lifetime:**
+  - Seven `stellar contract extend … --ledgers-to-extend 3110399` (testnet's
+    `max_entry_ttl` − 1) as `qs-issuer`, about 181.5 testnet XLM in all.
+  - Rights, web-auth, OZ account and OZ verifier code; instances
+    `CATUBRZZ…`, `CBCDSOZP…`, `CBK3H55V…`.
+  - All are live until ledgers 8,980,356–8,980,362, ~2027-05-21. The hashes
+    are in checklist §4.2, with the standing items for the review period.
+  - `scripts/check-deployment.ts` (new) passes on the demo
+    (`evidence/checklist/check-deployment-testnet-demo-2026-11-22.txt`).
+- **The rehearsal, `docs/MAINNET_REHEARSAL.md`.** It mirrors
+  `MAINNET_SETUP.md`; only the network, the names and the funding differ.
+  `MAINNET_SETUP.md` gains Part 5, the Step 6 deploy, marked "only after
+  GO". Its commands match the rehearsal's except for the network, the prefix
+  and the USDC id. New or changed for it:
+  - `scripts/tx-review.ts`:
+    - an upload shows its size and hash, and must be one of the two pinned
+      builds;
+    - a deploy shows its deployer, salt, WASM, the id it creates and each
+      constructor argument.
+    - A rights deploy is refused unless:
+      - the issuer is the deployer, and the arbiter is not the issuer;
+      - the USDC is the network's, and the key hash is the committed one;
+      - the id equals `QS_RIGHTS_CONTRACT`.
+    - Web-auth must have the unauthorizable admin; the verifier takes no
+      arguments.
+  - `scripts/mainnet-sign-submit.sh` runs its protocol and pilot-account
+    checks on testnet too.
+  - `scripts/check-mainnet-setup.ts --network testnet`.
+  - `scripts/pilot-envelope.ts` (new) builds each sale and rental-offer
+    envelope unsigned, from public keys, for `mainnet-sign-submit.sh`.
+  - Envelopes are simulated twice. The first simulation records the
+    authorization, which then costs a little more to check. One simulation
+    made the review refuse by about 0.25% of instructions; two match it
+    exactly.
+  - CLI 30.0.1: a `--build-only` deploy needs `--wasm`, not `--wasm-hash`, so
+    the verifier's WASM is fetched by hash first. In build-only mode `--wasm`
+    adds no upload.
+- **Dry run of the rehearsal, by me, on testnet, 2026-11-22.** It used my
+  identities in place of `qs-rehearsal-`, with `SEND` piped in.
+  - Part 5, all through `mainnet-sign-submit.sh`, each with the protocol and
+    pilot checks:
+    - upload rights `a2f3ed42…`;
+    - upload web-auth `6536776b…`;
+    - deploy rights `c05e3f92…` → `CC7W4OGP…`, equal to the predicted id;
+    - deploy web-auth `94ba6fc5…` → `CDJJSKRI…`;
+    - deploy verifier `e0ea6b5d…` → `CBZKYQIQ…`;
+    - `check-deployment`: all pass.
+  - Part 6, all SUCCESS:
+    - issue A `36a5f550…`, issue B `098a1077…`;
+    - request `a4665e15…`, sale offer `d2481ea2…`;
+    - accept `80911c72…`: week A to the buyer, 1 USDC to the owner;
+    - rental offer `0e100018…`.
+  - Privacy record `evidence/privacy/2026-11-22-pilot-testnet-CC7W4OGP.txt`:
+    no findings.
+  - **Not a real rehearsal of the pilot check.** My testnet owner, buyer and
+    renter hold 7, 18 and 12 USDC, so `QS_PILOT_ACCOUNTS` was a contract
+    holding none (`CBK3H55V…`). The 5 USDC check itself was rehearsed in
+    Step 5; yours runs on the rehearsal accounts.
+  - Found by the dry run and fixed:
+    - the builder did not exit after a proof (snarkjs worker threads);
+    - an accepted offer showed as `null`.
+  - Logs: `evidence/checklist/rehearsal-dryrun-*-2026-11-22.*`.
+- Tests: app 40/40; tsc clean; check-privacy passes in both modes; lint on
+  the changed files shows one old warning.
+- **Reported:**
+  - **`check-privacy.ts` loaded `.env.local`.** Its `loadEnv()` reads
+    `.env.local` into its own process, keys included, and it used none of it.
+    It ran inside my two collects (2026-11-21/22) and the passkey specs, after
+    your rule. I found it today and removed the call. Other scripts that load
+    the file, and the browser specs' `next dev`, are listed in the open issues
+    for your decision.
+  - **A command of mine went wrong.**
+    - While inserting Part 5 into MAINNET_SETUP.md, the text's own `<<EOF`
+      ended my heredoc early. Bash then ran part of the runbook text as
+      commands.
+    - What ran: three `stellar contract id wasm … --network mainnet`, with
+      an empty source. They failed on the key argument, before any network
+      call; the command only computes an id locally anyway.
+    - Then a stray quote stopped the parse, so no upload, deploy or
+      `mainnet-sign-submit.sh` line ran.
+    - Nothing was signed or sent, and no file was created. To confirm that no
+      `qs-main-` identity exists, I ran `stellar keys ls`, which lists names
+      only; it shows none.
+    - Since then, text containing heredocs goes through files, not nested
+      heredocs.
+- Open:
+  - your rehearsal, then MAINNET_SETUP.md Parts 0–4, then GO;
+  - the `.env.local` decision above.
 
 ### Step 6 — Mainnet deployment
 - Date:

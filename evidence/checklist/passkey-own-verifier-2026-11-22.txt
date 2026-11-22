@@ -1,0 +1,29 @@
+npm notice run quietstay@0.1.0 npx
+npm notice run 'playwright' test e2e/passkey.spec.ts e2e/passkey-app.spec.ts
+
+Running 10 tests using 1 worker
+
+e2e contract CBSSUQAKHY7Z7S5I7GWGGPE57IJNX5XKELNBYAA6TNG2QDUEKIZXOGH2
+next dev log: e2e/results/logs/next-dev-2026-11-22T18-49-42-792Z-port4323-03f5e4.log
+passkey wallet CD2X3O6XPKKDYYFMQSF6YKLHFZ4EQ6JIFHRAWQ2XRMEXYX2GOPXKCJNA
+passkey-approved rental https://stellar.expert/explorer/testnet/tx/d9b8d17b86654fcf1ef77fe7ff0bcfc91cca9925779c134471c4dde008fff05d
+  ✓   1 [chromium] › e2e/passkey-app.spec.ts:86:1 › a passkey owner gets a week, offers it, and rents it out, approving with the passkey (2.0m)
+  ✓   2 [chromium] › e2e/passkey-app.spec.ts:202:1 › a browser without WebAuthn is told to use a regular wallet (2.9s)
+next dev log: e2e/results/logs/next-dev-2026-11-22T18-52-07-754Z-port4322-9e6e6e.log
+passkey rental e89883fbc2414e2f0440b55bf7508d9de716be9dcefd43cbe33f0f26e615978a
+contract instances in the footprint: CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL, CBRQCY3RAI7GGWH2QFQWDJKKC3VAQGWGVZ3GVR7G7EEOBSF6GXPP3RAZ, CCAXNC23BHSV464MZNSDPT6WLD2A7E6EAQQ2OSI5QX2GV3NLWMNDBAYM
+  ✓   3 [chromium] › e2e/passkey.spec.ts:184:1 › a passkey-signed, proven rental from the smart wallet goes through (17.0s)
+tampered signature refused: HostError: Error(Auth, InvalidAction)
+  ✓   4 [chromium] › e2e/passkey.spec.ts:215:1 › a signature that does not verify is refused on chain, and nothing moves (3.6s)
+cancelled prompt: NotAllowedError: The operation either timed out or was not allowed. See: https://www.w3.org/TR/webauthn-2/#sctn-privacy-considerations-client.
+  ✓   5 [chromium] › e2e/passkey.spec.ts:233:1 › a cancelled or failed passkey prompt signs nothing, and nothing moves (2.1s)
+  ✓   6 [chromium] › e2e/passkey.spec.ts:250:1 › the app's check: supported with a platform passkey, unsupported without WebAuthn, and it names the fallback (635ms)
+  ✓   7 [chromium] › e2e/passkey.spec.ts:291:1 › SEP-45: the smart wallet signs in with its passkey, and the session names the wallet (4.8s)
+unsigned: the account did not authorize this sign-in: HostError: Error(Auth, InvalidAction)
+  ✓   8 [chromium] › e2e/passkey.spec.ts:302:1 › SEP-45: a challenge the passkey did not sign is refused (773ms)
+  ✓   9 [chromium] › e2e/passkey.spec.ts:310:1 › SEP-45: a signed challenge works once and is refused the second time (2.0s)
+tampered: the challenge's home_domain is not this server's
+  ✓  10 [chromium] › e2e/passkey.spec.ts:318:1 › SEP-45: a challenge whose arguments were changed is refused (1.0s)
+
+  10 passed (3.6m)
+exit 0

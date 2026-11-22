@@ -1,0 +1,38 @@
+check-deployment on testnet, 2026-11-22T19:09:57.447Z (read only; nothing signed or sent)
+  PASS  rights CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM runs 76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde
+  PASS  verifier CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL runs e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76 (OZ WebAuthn verifier, our own instance)
+  PASS  issuer() = GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+  PASS  arbiter() = GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC (not the issuer)
+  PASS  usdc() = CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (testnet's Circle USDC)
+  PASS  max_payment() = 1000000000 (expected 1000000000)
+
+verification key: npx tsx scripts/check-vk.ts --network testnet --contract CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM
+network          testnet (ledger 5870191)
+contract         CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM
+on-chain VK hash 55ce858fea2e86e56917a114aba2dc3cdec17270c534ab9b3941743b01aeb1de (1824 bytes, 12 IC points)
+committed VK     55ce858fea2e86e56917a114aba2dc3cdec17270c534ab9b3941743b01aeb1de (circuits/keys/verification_key.soroban.json)
+PASS: the on-chain key equals the committed key, field by field
+  PASS  verification key
+
+web-auth cannot be upgraded: npx tsx scripts/check-web-auth.ts --network testnet --id CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM
+testnet web-auth contract CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM (2026-11-22T19:10:01.024Z)
+  ✓ WASM 708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1 = the pinned build
+  ✓ stored Admin CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2 = the unauthorizable CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2
+  ✓ no contract instance at CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2
+upgrade() can never be authorized.
+  PASS  web-auth cannot be upgraded
+
+every entry live: npx tsx scripts/check-ttl.ts --network testnet --rights CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM --web-auth CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM --verifier CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL
+testnet, latest ledger 5870192, read 2026-11-22T19:10:02.876Z (read only; nothing signed or sent)
+  PASS  rights WASM 76d69e79…              live until 8980356 (3110164 ledgers, ~2027-05-21)
+  PASS  web-auth WASM 708cacdc…            live until 8980357 (3110165 ledgers, ~2027-05-21)
+  PASS  OZ account WASM c514d35e…          live until 8980358 (3110166 ledgers, ~2027-05-21)
+  PASS  OZ verifier WASM e63a030d…         live until 8980359 (3110167 ledgers, ~2027-05-21)
+  PASS  rights instance CATUBRZZ…          live until 8980360 (3110168 ledgers, ~2027-05-21)
+  PASS  web-auth instance CBCDSOZP…        live until 8980361 (3110169 ledgers, ~2027-05-21)
+  PASS  verifier instance CBK3H55V…        live until 8980362 (3110170 ledgers, ~2027-05-21)
+
+all entries live
+  PASS  every entry live
+
+all checks passed

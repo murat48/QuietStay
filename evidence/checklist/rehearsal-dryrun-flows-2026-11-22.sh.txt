@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd /home/murat/QuietStay/QuietStay
+OUT="$1"; C=CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+export QS_REHEARSAL_ISSUER=$(stellar keys address qs-issuer) QS_REHEARSAL_OWNER=$(stellar keys address qs-owner) QS_REHEARSAL_BUYER=$(stellar keys address qs-buyer) QS_REHEARSAL_RENTER=$(stellar keys address qs-renter)
+export QS_RIGHTS_CONTRACT=$C QS_PILOT_ACCOUNTS=CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL
+declare -A WHO=([issue-a]=qs-issuer [issue-b]=qs-issuer [sale-request]=qs-buyer [sale-offer]=qs-buyer [sale-accept]=qs-owner [rental-offer]=qs-renter)
+n=0
+for step in ${STEPS:-issue-a issue-b sale-request sale-offer sale-accept rental-offer}; do
+  f=$(ls "$OUT"/*-"$step".xdr 2>/dev/null || true); [ -n "$f" ] || f="$OUT/$(printf %02d $(( $(ls "$OUT"/*.xdr 2>/dev/null | wc -l) + 1 )))-$step.xdr"
+  npx tsx scripts/pilot-envelope.ts "$step" --network testnet --contract "$C" --out "$OUT"
+  printf 'SEND\n' | scripts/mainnet-sign-submit.sh "$f" "${WHO[$step]}" --network testnet
+done
+npx tsx scripts/pilot-envelope.ts status --network testnet --contract "$C" --out "$OUT"
+#!/usr/bin/env bash
+set -euo pipefail
+cd /home/murat/QuietStay/QuietStay
+OUT="$1"; C=CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+export QS_REHEARSAL_ISSUER=$(stellar keys address qs-issuer) QS_REHEARSAL_OWNER=$(stellar keys address qs-owner) QS_REHEARSAL_BUYER=$(stellar keys address qs-buyer) QS_REHEARSAL_RENTER=$(stellar keys address qs-renter)
+export QS_RIGHTS_CONTRACT=$C QS_PILOT_ACCOUNTS=CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL
+npx tsx scripts/pilot-envelope.ts sale-accept --network testnet --contract "$C" --out "$OUT"
+printf 'SEND\n' | scripts/mainnet-sign-submit.sh "$OUT/05-sale-accept.xdr" qs-owner --network testnet
+npx tsx scripts/pilot-envelope.ts rental-offer --network testnet --contract "$C" --out "$OUT"
+printf 'SEND\n' | scripts/mainnet-sign-submit.sh "$OUT/06-rental-offer.xdr" qs-renter --network testnet
+npx tsx scripts/pilot-envelope.ts status --network testnet --contract "$C" --out "$OUT"

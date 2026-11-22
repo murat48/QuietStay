@@ -1,0 +1,248 @@
+contracts/target/wasm32v1-none/release/quietstay_rights.wasm: OK
+contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm: OK
+dry/step6/oz-verifier.wasm: OK
+predicted: rights CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP web-auth CDJJSKRIS2CUKSPNO37Q56SY7QJBEOYOLTLLSKDUWGEF4EPR5BTIF5SN verifier CBZKYQIQ335HWKC55NFKOUKDIGDR6MHFWSLM6IITIXHQL2Z4GLXPSEHS
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          195365 stroops (declared, including resources)
+Sequence     17686881483358431
+Latest ledger 5870205
+Operation 1: invokeHostFunction
+  upload     71244 bytes, sha256 76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde
+             = QuietStay rights (the tested final WASM)
+Re-simulating with the signed authorization entries in place…
+  resource fee 195265 stroops
+  instructions 63531345, read 0 bytes, write 0 bytes
+  declared     resource fee 195265 stroops, 63531345 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:11:09.107Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:11:12.970Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: a2f3ed42712a339450741a2213dfbd69587ea93308c4b8286f894049bb4d1aed
+
+Signed: a2f3ed42712a339450741a2213dfbd69587ea93308c4b8286f894049bb4d1aed (kept in dry/step6/01-upload-rights.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: a2f3ed42712a339450741a2213dfbd69587ea93308c4b8286f894049bb4d1aed
+      https://stellar.expert/explorer/testnet/tx/a2f3ed42712a339450741a2213dfbd69587ea93308c4b8286f894049bb4d1aed
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          10265 stroops (declared, including resources)
+Sequence     17686881483358432
+Latest ledger 5870207
+Operation 1: invokeHostFunction
+  upload     1547 bytes, sha256 708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1
+             = SEP-45 web-auth (Anchor Platform @ dc5817fb, pinned build)
+Re-simulating with the signed authorization entries in place…
+  resource fee 10165 stroops
+  instructions 2461568, read 0 bytes, write 0 bytes
+  declared     resource fee 10165 stroops, 2461568 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:11:21.416Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:11:24.772Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: 6536776b5cd20a8ef820f65b5f51e955151b8827f345043e1c9fbf0dbe3c95b8
+
+Signed: 6536776b5cd20a8ef820f65b5f51e955151b8827f345043e1c9fbf0dbe3c95b8 (kept in dry/step6/02-upload-web-auth.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: 6536776b5cd20a8ef820f65b5f51e955151b8827f345043e1c9fbf0dbe3c95b8
+      https://stellar.expert/explorer/testnet/tx/6536776b5cd20a8ef820f65b5f51e955151b8827f345043e1c9fbf0dbe3c95b8
+ℹ️  Deploying contract using wasm hash 76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde
+✅ Transaction built!
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          345578 stroops (declared, including resources)
+Sequence     17686881483358433
+Latest ledger 5870209
+Operation 1: invokeHostFunction
+  deployer   GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE, salt dd159089c714209ebe0d5ca8834430209ed3a1f75d4f09d06b6b8dff04f88aad
+  creates    CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+  from WASM  76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde = QuietStay rights (the tested final WASM)
+  ctor 0     "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE"
+  ctor 1     "GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC"
+  ctor 2     "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+  ctor 3     "QuietStay Usage Rights"
+  ctor 4     "QSTAY"
+  ctor 5     {"alpha":"0x0005f4690b19028a844c1fcf5b0d558e360b165e0ac2bafe34d9cb0f1a7854781ab2bc605470fc38195dd43fc079c01a0a437b7c8fa3a7487d6d79f1805d7d47d1a2ccbd817b0ae758020851dba52ed4f4284b0d42213b490eb1cd964f7db531","beta":"0x04effea83febb10a3ae055f2100ceaf67b8ee4455eaa5b9b642e36789b527f24b18b5959e3fd87474b3ea1a0f843647112f9fd1cf67a72d4997a07d788562afe05b34d32d0e3c49dad83167d8ec169f3841f237937219fac9913720c
+  ctor 6     "10000000"
+  VK hash    55ce858fea2e86e56917a114aba2dc3cdec17270c534ab9b3941743b01aeb1de = the committed key
+  max_payment 10000000 (cap 1000000000)
+  auth       the source account's own signature
+    sorobanAuthorizedFunctionTypeCreateContractV2HostFn
+Re-simulating with the signed authorization entries in place…
+  resource fee 345478 stroops
+  instructions 1814836, read 0 bytes, write 2560 bytes
+  declared     resource fee 345478 stroops, 1814836 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:11:31.512Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:11:33.518Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: c05e3f920491286bc36699ef40ef582ec7357fa4fd9c031cb4068fc27c5f9366
+
+Signed: c05e3f920491286bc36699ef40ef582ec7357fa4fd9c031cb4068fc27c5f9366 (kept in dry/step6/03-deploy-rights.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: c05e3f920491286bc36699ef40ef582ec7357fa4fd9c031cb4068fc27c5f9366
+      https://stellar.expert/explorer/testnet/tx/c05e3f920491286bc36699ef40ef582ec7357fa4fd9c031cb4068fc27c5f9366
+ℹ️  Deploying contract using wasm hash 708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1
+✅ Transaction built!
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          32252 stroops (declared, including resources)
+Sequence     17686881483358434
+Latest ledger 5870211
+Operation 1: invokeHostFunction
+  deployer   GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE, salt 5f9cb9da8e3c64b004b5b721bd98dfa7ec46c0aa772d02109085776f86b36687
+  creates    CDJJSKRIS2CUKSPNO37Q56SY7QJBEOYOLTLLSKDUWGEF4EPR5BTIF5SN
+  from WASM  708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1 = SEP-45 web-auth (Anchor Platform @ dc5817fb, pinned build)
+  ctor 0     "CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2"
+  admin      the unauthorizable CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2 (no upgrade possible)
+  auth       the source account's own signature
+    sorobanAuthorizedFunctionTypeCreateContractV2HostFn
+Re-simulating with the signed authorization entries in place…
+  resource fee 32152 stroops
+  instructions 710403, read 0 bytes, write 176 bytes
+  declared     resource fee 32152 stroops, 710403 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:11:42.057Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:11:44.615Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: 94ba6fc5190727f0ace5fc225a2e262791748af9a385b1bd35fd2ceb63b69429
+
+Signed: 94ba6fc5190727f0ace5fc225a2e262791748af9a385b1bd35fd2ceb63b69429 (kept in dry/step6/04-deploy-web-auth.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: 94ba6fc5190727f0ace5fc225a2e262791748af9a385b1bd35fd2ceb63b69429
+      https://stellar.expert/explorer/testnet/tx/94ba6fc5190727f0ace5fc225a2e262791748af9a385b1bd35fd2ceb63b69429
+ℹ️  Deploying contract using wasm hash e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76
+✅ Transaction built!
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          22935 stroops (declared, including resources)
+Sequence     17686881483358435
+Latest ledger 5870213
+Operation 1: invokeHostFunction
+  deployer   GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE, salt 7b462f5c022a0715d794ea399aaf9aa872ead8f65e835fc76cd65c9bace23986
+  creates    CBZKYQIQ335HWKC55NFKOUKDIGDR6MHFWSLM6IITIXHQL2Z4GLXPSEHS
+  from WASM  e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76 = OpenZeppelin WebAuthn verifier (uploaded by OpenZeppelin; our own instance)
+  auth       the source account's own signature
+    sorobanAuthorizedFunctionTypeCreateContractV2HostFn
+Re-simulating with the signed authorization entries in place…
+  resource fee 22835 stroops
+  instructions 776129, read 0 bytes, write 104 bytes
+  declared     resource fee 22835 stroops, 776129 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:11:51.689Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:11:53.524Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: e0ea6b5d4b4465091868a3b16496fa7b6bcc33383d1f31bac5db1267bf8a2e02
+
+Signed: e0ea6b5d4b4465091868a3b16496fa7b6bcc33383d1f31bac5db1267bf8a2e02 (kept in dry/step6/05-deploy-verifier.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: e0ea6b5d4b4465091868a3b16496fa7b6bcc33383d1f31bac5db1267bf8a2e02
+      https://stellar.expert/explorer/testnet/tx/e0ea6b5d4b4465091868a3b16496fa7b6bcc33383d1f31bac5db1267bf8a2e02
+check-deployment on testnet, 2026-11-22T19:11:59.173Z (read only; nothing signed or sent)
+  PASS  rights CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP runs 76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde
+  PASS  verifier CBZKYQIQ335HWKC55NFKOUKDIGDR6MHFWSLM6IITIXHQL2Z4GLXPSEHS runs e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76 (OZ WebAuthn verifier, our own instance)
+  PASS  issuer() = GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+  PASS  arbiter() = GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC (not the issuer)
+  PASS  usdc() = CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (testnet's Circle USDC)
+  PASS  max_payment() = 10000000 (expected 10000000)
+
+verification key: npx tsx scripts/check-vk.ts --network testnet --contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+network          testnet (ledger 5870215)
+contract         CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+on-chain VK hash 55ce858fea2e86e56917a114aba2dc3cdec17270c534ab9b3941743b01aeb1de (1824 bytes, 12 IC points)
+committed VK     55ce858fea2e86e56917a114aba2dc3cdec17270c534ab9b3941743b01aeb1de (circuits/keys/verification_key.soroban.json)
+PASS: the on-chain key equals the committed key, field by field
+  PASS  verification key
+
+web-auth cannot be upgraded: npx tsx scripts/check-web-auth.ts --network testnet --id CDJJSKRIS2CUKSPNO37Q56SY7QJBEOYOLTLLSKDUWGEF4EPR5BTIF5SN
+testnet web-auth contract CDJJSKRIS2CUKSPNO37Q56SY7QJBEOYOLTLLSKDUWGEF4EPR5BTIF5SN (2026-11-22T19:12:02.296Z)
+  ✓ WASM 708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1 = the pinned build
+  ✓ stored Admin CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2 = the unauthorizable CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2
+  ✓ no contract instance at CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2
+upgrade() can never be authorized.
+  PASS  web-auth cannot be upgraded
+
+every entry live: npx tsx scripts/check-ttl.ts --network testnet --rights CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP --web-auth CDJJSKRIS2CUKSPNO37Q56SY7QJBEOYOLTLLSKDUWGEF4EPR5BTIF5SN --verifier CBZKYQIQ335HWKC55NFKOUKDIGDR6MHFWSLM6IITIXHQL2Z4GLXPSEHS
+testnet, latest ledger 5870216, read 2026-11-22T19:12:04.465Z (read only; nothing signed or sent)
+  PASS  rights WASM 76d69e79…              live until 8980356 (3110140 ledgers, ~2027-05-21)
+  PASS  web-auth WASM 708cacdc…            live until 8980357 (3110141 ledgers, ~2027-05-21)
+  PASS  OZ account WASM c514d35e…          live until 8980358 (3110142 ledgers, ~2027-05-21)
+  PASS  OZ verifier WASM e63a030d…         live until 8980359 (3110143 ledgers, ~2027-05-21)
+  PASS  rights instance CC7W4OGP…          live until 5991170 (120954 ledgers, ~2026-11-29)
+  PASS  web-auth instance CDJJSKRI…        live until 5991172 (120956 ledgers, ~2026-11-29)
+  PASS  verifier instance CBZKYQIQ…        live until 5991174 (120958 ledgers, ~2026-11-29)
+
+all entries live
+  PASS  every entry live
+
+all checks passed

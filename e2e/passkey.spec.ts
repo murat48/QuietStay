@@ -26,7 +26,7 @@ import { expect, test, type CDPSession, type Page } from "@playwright/test";
 import { Address, Keypair, Operation, rpc, TransactionBuilder, xdr, scValToNative } from "@stellar/stellar-sdk";
 
 import type { JsonValue } from "../src/lib/canonical";
-import { NETWORK_PASSPHRASE, RPC_URL } from "../src/lib/config";
+import { NETWORK_PASSPHRASE, RPC_URL, WEBAUTHN_VERIFIER_ID } from "../src/lib/config";
 import { commitment, randomSecret, secretHash, splitRecordDigest } from "../scripts/lib/zk";
 import { fr } from "../scripts/lib/zk-encode";
 import { proveTransfer } from "../scripts/lib/zk-prove";
@@ -37,7 +37,7 @@ import { deployRightsStep4, fund, server, submit } from "./lib/testnet";
 
 const PORT = 4320;
 const ACCOUNT_WASM = "c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1";
-const WEBAUTHN_VERIFIER = "CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F";
+const WEBAUTHN_VERIFIER = WEBAUTHN_VERIFIER_ID; // our own instance of e63a030d… (src/lib/config.ts)
 const CHECK_IN = "2026-12-05";
 const CHECK_OUT = "2026-12-12";
 const UNTIL = BigInt(Date.parse(`${CHECK_OUT}T00:00:00Z`) / 1000);
@@ -198,6 +198,17 @@ test("a passkey-signed, proven rental from the smart wallet goes through", async
   });
   console.log(`passkey rental ${hash}`);
   expect(await holder(week.rightId)).toBe(renter.publicKey());
+  // The wallet checked the passkey signature with QuietStay's own verifier
+  // instance (Step 5 review): its instance entry is in the landed transaction's
+  // footprint. The kit's manifest instance is not.
+  const landed = (await server.getTransaction(hash)) as rpc.Api.GetSuccessfulTransactionResponse;
+  const fp = landed.envelopeXdr.v1().tx().ext().sorobanData().resources().footprint();
+  const instances = [...fp.readOnly(), ...fp.readWrite()]
+    .filter((k) => k.switch().name === "contractData" && k.contractData().key().switch().name === "scvLedgerKeyContractInstance")
+    .map((k) => Address.fromScAddress(k.contractData().contract()).toString());
+  console.log(`contract instances in the footprint: ${instances.join(", ")}`);
+  expect(instances).toContain(WEBAUTHN_VERIFIER);
+  expect(instances).not.toContain("CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F");
   checkPendingPrivacy();
 });
 

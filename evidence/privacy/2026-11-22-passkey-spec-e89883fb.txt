@@ -1,0 +1,26 @@
+  run 2026-11-22T18:52:55.660Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-22-passkey-spec-e89883fb.txt --tx passkey-spec-rental=e89883fbc2414e2f0440b55bf7508d9de716be9dcefd43cbe33f0f26e615978a --record /tmp/qs-privacy-xUSmbt/record-0.json --secret /tmp/qs-privacy-xUSmbt/secret-0.json
+
+Checking on-chain exposure
+  1 transactions, 55 forbidden values
+  contract the contracts these testnet transactions call
+
+passkey-spec-rental — e89883fbc2414e2f0440b55bf7508d9de716be9dcefd43cbe33f0f26e615978a
+  ✓ no record contents in 3 layers (12128 bytes: envelope, result, meta)
+  call        transfer(
+                "CCAXNC23BHSV464MZNSDPT6WLD2A7E6EAQQ2OSI5QX2GV3NLWMNDBAYM",
+                "GDQ532QAMVYIG4UGJFB37T6JH2ZAFXRG42RCZ37SYPCHLYGUEEK34TWO",
+                "1",
+                "1797033600",
+                {"a":"0x126fc406dd8000d1…46924907 (96 bytes)","b":"0x06469b8e6a94fd21…e579f90e (192 bytes)","c":"0x0df764d6e6bb7984…7124a427 (96 bytes)"},
+                ["18857050077375666405509631737598606705272377100893071163156878979785209422169","17564025097167077779856096974785749231532083482274495335548538182769711064785","1","512368295874260072391004045744119634164","20705663254588564752752848332181936688","300228542772583529226508142409304063666","3811934898397777974544086857647461822","1797033600","5870343","0","46264235174357364904648773191733719108192759721349128269851609078913272210275"],
+              )
+  event topics ["transfer","CCAXNC23BHSV464MZNSDPT6WLD2A7E6EAQQ2OSI5QX2GV3NLWMNDBAYM","GDQ532QAMVYIG4UGJFB37T6JH2ZAFXRG42RCZ37SYPCHLYGUEEK34TWO"]
+  event data   {"commitment":"0x29b0b64d4ee7dba3f6fc4c05641e883e69d1fa42ae28296076f29903d5f82159","expires_at":"1797033600","right_id":"1"}
+
+Result
+  ✓ No inventory record value appears in any of these 1 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 holder secret(s) given, or s' of 0 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /tmp/qs-privacy-xUSmbt/record-0.json
+    • /tmp/qs-privacy-xUSmbt/secret-0.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

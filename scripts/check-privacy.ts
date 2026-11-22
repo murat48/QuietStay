@@ -79,10 +79,13 @@ import { server } from "../src/lib/contract";
 import { readOnly } from "../src/lib/rpc-retry";
 import { RetryingServer } from "../src/lib/rpc-server";
 import type { OwnershipRecord } from "../src/lib/record";
-import { fatal, loadEnv, log, readJson } from "./lib/cli";
+import { fatal, log, readJson } from "./lib/cli";
 import { secretHash } from "./lib/zk";
 
-loadEnv();
+// No loadEnv(): this check needs no secret, and `.env.local` holds keys
+// (Step 5 review rule: never load it). The contract id comes from
+// src/lib/config.ts, evaluated at import time; the only variable read is
+// STELLAR_MAINNET_RPC_URL, optional.
 
 const PHASE2 = process.argv.includes("--phase2");
 

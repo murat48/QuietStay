@@ -1,0 +1,212 @@
+pilot-envelope issue-a on testnet, contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (builds only; signs and sends nothing)
+week A: 2026-11-22 → 2026-11-29 (record and secret kept in /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet, not printed)
+
+Wrote dry/flows/01-issue-a.xdr
+  issue, source GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE (issuer), valid until 2026-11-22T19:37:23.000Z
+Review, sign and send it with:
+  scripts/mainnet-sign-submit.sh dry/flows/01-issue-a.xdr qs-rehearsal-issuer --network testnet
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          103635 stroops (declared, including resources)
+Sequence     17686881483358436
+Valid until  2026-11-22T19:37:23.000Z
+Latest ledger 5870220
+Operation 1: invokeHostFunction
+  contract   CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+  function   issue
+  arg 0      "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"
+  arg 1      {"end":"1795910400","start":"1795305600"}
+  arg 2      {"from":"1767225600","until":"1798761600"}
+  arg 3      "0x54e1d1077c2c614b20e4ca75f8df69c0add941d05d4ff55d6ae90028ce23a89c"
+  auth       the source account's own signature
+    CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP issue("GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR", {"end":"1795910400","start":"1795305600"}, {"from":"1767225600","until":"1798761600"}, "0x54e1d1077c2c614b20e4ca75f8df69c0add941d05d4ff55d6ae90028ce23a89c")
+Re-simulating with the signed authorization entries in place…
+  resource fee 103535 stroops
+  instructions 1429695, read 0 bytes, write 3244 bytes
+  declared     resource fee 103535 stroops, 1429695 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:12:26.563Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:12:29.370Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: 36a5f5507d671c1cf74d2fca36231e9f03e885f7090afd6cea7129692a39302a
+
+Signed: 36a5f5507d671c1cf74d2fca36231e9f03e885f7090afd6cea7129692a39302a (kept in dry/flows/01-issue-a.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: 36a5f5507d671c1cf74d2fca36231e9f03e885f7090afd6cea7129692a39302a
+      https://stellar.expert/explorer/testnet/tx/36a5f5507d671c1cf74d2fca36231e9f03e885f7090afd6cea7129692a39302a
+pilot-envelope issue-b on testnet, contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (builds only; signs and sends nothing)
+  issue-a landed: 36a5f5507d671c1cf74d2fca36231e9f03e885f7090afd6cea7129692a39302a (ledger 5870222)
+week B: 2026-11-22 → 2026-11-29 (record and secret kept in /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet, not printed)
+
+Wrote dry/flows/02-issue-b.xdr
+  issue, source GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE (issuer), valid until 2026-11-22T19:37:36.000Z
+Review, sign and send it with:
+  scripts/mainnet-sign-submit.sh dry/flows/02-issue-b.xdr qs-rehearsal-issuer --network testnet
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          83432 stroops (declared, including resources)
+Sequence     17686881483358437
+Valid until  2026-11-22T19:37:36.000Z
+Latest ledger 5870223
+Operation 1: invokeHostFunction
+  contract   CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+  function   issue
+  arg 0      "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"
+  arg 1      {"end":"1795910400","start":"1795305600"}
+  arg 2      {"from":"1767225600","until":"1798761600"}
+  arg 3      "0x66d2ee973526c7bd6104231f94c00fe5721a62de0009408a01ed9b369ac82f3c"
+  auth       the source account's own signature
+    CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP issue("GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR", {"end":"1795910400","start":"1795305600"}, {"from":"1767225600","until":"1798761600"}, "0x66d2ee973526c7bd6104231f94c00fe5721a62de0009408a01ed9b369ac82f3c")
+Re-simulating with the signed authorization entries in place…
+  resource fee 83332 stroops
+  instructions 1447458, read 0 bytes, write 3244 bytes
+  declared     resource fee 83332 stroops, 1447458 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:12:40.129Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:12:42.609Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: 098a1077370d8862667304597bac8906486e84147f512fba61bd54657fb25c5d
+
+Signed: 098a1077370d8862667304597bac8906486e84147f512fba61bd54657fb25c5d (kept in dry/flows/02-issue-b.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: 098a1077370d8862667304597bac8906486e84147f512fba61bd54657fb25c5d
+      https://stellar.expert/explorer/testnet/tx/098a1077370d8862667304597bac8906486e84147f512fba61bd54657fb25c5d
+pilot-envelope sale-request on testnet, contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (builds only; signs and sends nothing)
+  issue-b landed: 098a1077370d8862667304597bac8906486e84147f512fba61bd54657fb25c5d (ledger 5870225)
+  issue-a landed: 36a5f5507d671c1cf74d2fca36231e9f03e885f7090afd6cea7129692a39302a (ledger 5870222)
+
+Wrote dry/flows/03-sale-request.xdr
+  request_record, source GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ (buyer), valid until 2026-11-22T19:37:51.000Z
+Review, sign and send it with:
+  scripts/mainnet-sign-submit.sh dry/flows/03-sale-request.xdr qs-rehearsal-buyer --network testnet
+Identity     qs-buyer (GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ
+Fee          62852 stroops (declared, including resources)
+Sequence     17686902958194741
+Valid until  2026-11-22T19:37:51.000Z
+Latest ledger 5870226
+Operation 1: invokeHostFunction
+  contract   CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+  function   request_record
+  arg 0      "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"
+  arg 1      "1"
+  arg 2      "0xd4a5146b5207aa8f3c95983645c93295fbc8b2204a790e57e10ccc66658c9c5d"
+  arg 3      5991185
+  auth       the source account's own signature
+    CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP request_record("GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ", "1", "0xd4a5146b5207aa8f3c95983645c93295fbc8b2204a790e57e10ccc66658c9c5d", 5991185)
+Re-simulating with the signed authorization entries in place…
+  resource fee 62752 stroops
+  instructions 1474689, read 0 bytes, write 3080 bytes
+  declared     resource fee 62752 stroops, 1474689 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:12:53.834Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:12:55.800Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: a4665e15b7a9fe216df95c6d8eb245601089c5adbdda88c86c3735a7f895a7b6
+
+Signed: a4665e15b7a9fe216df95c6d8eb245601089c5adbdda88c86c3735a7f895a7b6 (kept in dry/flows/03-sale-request.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: a4665e15b7a9fe216df95c6d8eb245601089c5adbdda88c86c3735a7f895a7b6
+      https://stellar.expert/explorer/testnet/tx/a4665e15b7a9fe216df95c6d8eb245601089c5adbdda88c86c3735a7f895a7b6
+pilot-envelope sale-offer on testnet, contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (builds only; signs and sends nothing)
+  sale-request landed: a4665e15b7a9fe216df95c6d8eb245601089c5adbdda88c86c3735a7f895a7b6 (ledger 5870228)
+
+Wrote dry/flows/04-sale-offer.xdr
+  create_sale_offer, source GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ (buyer), valid until 2026-11-22T19:38:05.000Z
+Review, sign and send it with:
+  scripts/mainnet-sign-submit.sh dry/flows/04-sale-offer.xdr qs-rehearsal-buyer --network testnet
+Identity     qs-buyer (GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ
+Fee          98296 stroops (declared, including resources)
+Sequence     17686902958194742
+Valid until  2026-11-22T19:38:05.000Z
+Latest ledger 5870229
+Operation 1: invokeHostFunction
+  contract   CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+  function   create_sale_offer
+  arg 0      "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"
+  arg 1      "1"
+  arg 2      "10000000"
+  arg 3      "16221628555100906925740837360148300561708013772092718340311870107282400051234"
+  arg 4      5991188
+  auth       the source account's own signature
+    CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP create_sale_offer("GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ", "1", "10000000", "16221628555100906925740837360148300561708013772092718340311870107282400051234", 5991188)
+        CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA approve("GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ", "CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP", "10000000", 5991188)
+Re-simulating with the signed authorization entries in place…
+  resource fee 98196 stroops
+  instructions 2050890, read 0 bytes, write 3560 bytes
+  declared     resource fee 98196 stroops, 2050890 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:13:08.069Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:13:10.075Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: d2481ea2385c81fb46e2b399688c3cd8bfbc411712553350c3207d1564786e34
+
+Signed: d2481ea2385c81fb46e2b399688c3cd8bfbc411712553350c3207d1564786e34 (kept in dry/flows/04-sale-offer.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: d2481ea2385c81fb46e2b399688c3cd8bfbc411712553350c3207d1564786e34
+      https://stellar.expert/explorer/testnet/tx/d2481ea2385c81fb46e2b399688c3cd8bfbc411712553350c3207d1564786e34
+pilot-envelope sale-accept on testnet, contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (builds only; signs and sends nothing)
+  sale-offer landed: d2481ea2385c81fb46e2b399688c3cd8bfbc411712553350c3207d1564786e34 (ledger 5870230)
+proved in 1.4 s; the proof is valid through ledger 5870590 (~30 min)
+
+Wrote dry/flows/05-sale-accept.xdr
+  accept_sale, source GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR (owner), valid until 2026-11-22T19:38:16.000Z
+Review, sign and send it with:
+  scripts/mainnet-sign-submit.sh dry/flows/05-sale-accept.xdr qs-rehearsal-owner --network testnet

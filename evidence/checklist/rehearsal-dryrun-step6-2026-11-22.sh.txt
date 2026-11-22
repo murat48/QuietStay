@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Dry run of MAINNET_REHEARSAL.md Part 5 with Claude's testnet identities.
+set -euo pipefail
+cd /home/murat/QuietStay/QuietStay
+export STEP6="$1"; mkdir -p "$STEP6"
+ISS=$(stellar keys address qs-issuer); ARB=$(stellar keys address qs-arbiter)
+USDC=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
+RIGHTS_WASM=contracts/target/wasm32v1-none/release/quietstay_rights.wasm
+WEB_AUTH_WASM=contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm
+echo "76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde  $RIGHTS_WASM" | sha256sum -c
+echo "708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1  $WEB_AUTH_WASM" | sha256sum -c
+stellar contract fetch --wasm-hash e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76 --network testnet -o "$STEP6/oz-verifier.wasm"
+echo "e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76  $STEP6/oz-verifier.wasm" | sha256sum -c
+SALT_RIGHTS=$(openssl rand -hex 32); SALT_WEB_AUTH=$(openssl rand -hex 32); SALT_VERIFIER=$(openssl rand -hex 32)
+export QS_RIGHTS_CONTRACT=$(stellar contract id wasm --salt "$SALT_RIGHTS" --source-account "$ISS" --network testnet)
+WEB_AUTH_ID=$(stellar contract id wasm --salt "$SALT_WEB_AUTH" --source-account "$ISS" --network testnet)
+VERIFIER_ID=$(stellar contract id wasm --salt "$SALT_VERIFIER" --source-account "$ISS" --network testnet)
+echo "predicted: rights $QS_RIGHTS_CONTRACT web-auth $WEB_AUTH_ID verifier $VERIFIER_ID"
+# Dry run only: Claude's testnet identities hold more than 5 USDC, so the pilot
+# list is a contract holding none (see the progress log).
+export QS_PILOT_ACCOUNTS=CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL
+sim() { stellar tx simulate --source-account "$ISS" --network testnet | stellar tx simulate --source-account "$ISS" --network testnet; }
+send() { printf 'SEND\n' | scripts/mainnet-sign-submit.sh "$1" qs-issuer --network testnet; }
+VK="$(node -e 'process.stdout.write(JSON.stringify(require("./circuits/keys/verification_key.soroban.json")))')"
+
+stellar contract upload --wasm "$RIGHTS_WASM" --source-account "$ISS" --network testnet --build-only | sim > "$STEP6/01-upload-rights.xdr"; send "$STEP6/01-upload-rights.xdr"
+stellar contract upload --wasm "$WEB_AUTH_WASM" --source-account "$ISS" --network testnet --build-only | sim > "$STEP6/02-upload-web-auth.xdr"; send "$STEP6/02-upload-web-auth.xdr"
+stellar contract deploy --wasm "$RIGHTS_WASM" --salt "$SALT_RIGHTS" --source-account "$ISS" --network testnet --build-only -- \
+  --issuer "$ISS" --arbiter "$ARB" --usdc "$USDC" --name "QuietStay Usage Rights" --symbol QSTAY --verification_key "$VK" --max_payment 10000000 \
+  | sim > "$STEP6/03-deploy-rights.xdr"; send "$STEP6/03-deploy-rights.xdr"
+stellar contract deploy --wasm "$WEB_AUTH_WASM" --salt "$SALT_WEB_AUTH" --source-account "$ISS" --network testnet --build-only -- \
+  --admin "$(npx tsx scripts/deploy-web-auth.ts --print-admin)" | sim > "$STEP6/04-deploy-web-auth.xdr"; send "$STEP6/04-deploy-web-auth.xdr"
+stellar contract deploy --wasm "$STEP6/oz-verifier.wasm" --salt "$SALT_VERIFIER" --source-account "$ISS" --network testnet --build-only \
+  | sim > "$STEP6/05-deploy-verifier.xdr"; send "$STEP6/05-deploy-verifier.xdr"
+npx tsx scripts/check-deployment.ts --network testnet --rights "$QS_RIGHTS_CONTRACT" --web-auth "$WEB_AUTH_ID" --verifier "$VERIFIER_ID" --issuer "$ISS" --arbiter "$ARB"
+echo "RIGHTS=$QS_RIGHTS_CONTRACT WEB_AUTH=$WEB_AUTH_ID VERIFIER=$VERIFIER_ID" > "$STEP6/ids"

@@ -1,0 +1,219 @@
+pilot-envelope sale-accept on testnet, contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (builds only; signs and sends nothing)
+  sale-offer landed: d2481ea2385c81fb46e2b399688c3cd8bfbc411712553350c3207d1564786e34 (ledger 5870230)
+proved in 1.9 s; the proof is valid through ledger 5870975 (~30 min)
+
+Wrote dry/flows/05-sale-accept.xdr
+  accept_sale, source GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR (owner), valid until 2026-11-22T20:10:19.000Z
+Review, sign and send it with:
+  scripts/mainnet-sign-submit.sh dry/flows/05-sale-accept.xdr qs-rehearsal-owner --network testnet
+Identity     qs-owner (GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR
+Fee          78298 stroops (declared, including resources)
+Sequence     17686894368260371
+Valid until  2026-11-22T20:10:19.000Z
+Latest ledger 5870616
+Operation 1: invokeHostFunction
+  contract   CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+  function   accept_sale
+  arg 0      "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"
+  arg 1      "1"
+  arg 2      "10000000"
+  arg 3      {"a":"0x195ba53ceaab5852dec511f9bdba7fbd0bcf2fe00430f026824d3fc594914727080a58134b4759a3f217f87ba81b8be70f5c5862baac6a2e596b9f0ac98447e339c9318ee2d744e8b8f1be4bf6f278b39877179f62f4e976d5700761d9db7ea1","b":"0x02ee94b20d52ba56b4bb7d997dd963507daf30663da5fc348fca4b6d6ecbad84a42865040eaaa87c288c884df0b107e60b1358c9067eb6dcef41dbfb69bed6cf6121bc664eaddb3e7be743a2d7ba2262f2fc485dabb1570b901c8b12eb3cc4d
+  arg 4      ["38393262537352600057012623041320370114440136911880310096303074639015357687964","5358780621729544804879890825380582830743556950815713357077859834696504221672","1","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","0","5870975","162216285551009069257408373601483005617080137720927183
+  auth       the source account's own signature
+    CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP accept_sale("GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR", "1", "10000000", {"a":"0x195ba53ceaab5852dec511f9bdba7fbd0bcf2fe00430f026824d3fc594914727080a58134b4759a3f217f87ba81b8be70f5c5862baac6a2e596b9f0ac98447e339c9318ee2d744e8b8f1be4bf6f278b39877179f62f4e976d5700761d9db7ea1","b":"0x02ee94b20d52ba56b4bb7d997dd963507daf30663da5fc348fca4b6d6ecbad84a42865040eaaa87c288c884df0b107e60b1358c9067eb6dcef41dbfb69bed6cf6121bc664eaddb3e7be743a2d7ba2262f2fc485dabb1570b901c8b12eb3cc4d40d74c900b825053a27193224fbd0608bb7ea9d30af80be6cd6bcecbeafba7785cf8d11a15c9dfa0e63b060d440f6ad5b09a81710e1a4e50103e58bc3c545852e9dc7fa6c22c64ff09c694140e3a59209f7c77e0923923c8325ae4bf8d877182d","c":"0x09a7bda68bc96f19abbc5d9b3930c0bf2aa4f71de4efebb4029267fd11db10a1fb7fd63a9b9be015f053bc96f37366971508fce15876136a295e74ab659f8b4ed9e53275fde39226382899271a7949d2ca35d0bd2cfbb7fd0ba97d25952e34d7"}, ["38393262537352600057012623041320370114440136911880310096303074639015357687964","5358780621729544804879890825380582830743556950815713357077859834696504221672","1","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","0","5870975","16221628555100906925740837360148300561708013772092718340311870107282400051234","21284143191275364834152676780445492644161058879342929773067968701702422936798"])
+Re-simulating with the signed authorization entries in place…
+  resource fee 78198 stroops
+  instructions 88331187, read 232 bytes, write 1496 bytes
+  declared     resource fee 78198 stroops, 88331187 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:45:23.609Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:45:25.815Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: 80911c722de6a3035a330ba6100e6400fb6440415de941a245016efe8bb71576
+
+Signed: 80911c722de6a3035a330ba6100e6400fb6440415de941a245016efe8bb71576 (kept in dry/flows/05-sale-accept.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: 80911c722de6a3035a330ba6100e6400fb6440415de941a245016efe8bb71576
+      https://stellar.expert/explorer/testnet/tx/80911c722de6a3035a330ba6100e6400fb6440415de941a245016efe8bb71576
+pilot-envelope rental-offer on testnet, contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (builds only; signs and sends nothing)
+  sale-accept landed: 80911c722de6a3035a330ba6100e6400fb6440415de941a245016efe8bb71576 (ledger 5870618)
+  issue-b landed: 098a1077370d8862667304597bac8906486e84147f512fba61bd54657fb25c5d (ledger 5870225)
+
+Wrote dry/flows/06-rental-offer.xdr
+  create_rental_offer, source GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN (renter), valid until 2026-11-22T20:10:35.000Z
+Review, sign and send it with:
+  scripts/mainnet-sign-submit.sh dry/flows/06-rental-offer.xdr qs-rehearsal-renter --network testnet
+Identity     qs-renter (GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN)
+
+Rights       CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN
+Fee          85947 stroops (declared, including resources)
+Sequence     17686898663227463
+Valid until  2026-11-22T20:10:35.000Z
+Latest ledger 5870618
+Operation 1: invokeHostFunction
+  contract   CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP
+  function   create_rental_offer
+  arg 0      "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"
+  arg 1      "2"
+  arg 2      "10000000"
+  arg 3      "1795910400"
+  arg 4      "1795380331"
+  arg 5      5991578
+  auth       the source account's own signature
+    CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP create_rental_offer("GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN", "2", "10000000", "1795910400", "1795380331", 5991578)
+        CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA approve("GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN", "CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP", "10000000", 5991578)
+Re-simulating with the signed authorization entries in place…
+  resource fee 85847 stroops
+  instructions 1814970, read 0 bytes, write 3508 bytes
+  declared     resource fee 85847 stroops, 1814970 instructions
+
+No reason to refuse.
+checked at 2026-11-22T19:45:37.417Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 29  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 29
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-22T19:45:39.321Z
+  ✓ CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL: contract account (no trustline needed), balance 0.0000000
+  · rights contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP: 0.0000000 USDC held in escrow
+  ✓ total 0.0000000 USDC (0 units), limit 5.0000000 (50000000)
+PASS
+
+ℹ️  Signing transaction: 0e100018cc0b338ddb30b88671c355bbeae5b842a1f0391ae90546aa09c4f6d8
+
+Signed: 0e100018cc0b338ddb30b88671c355bbeae5b842a1f0391ae90546aa09c4f6d8 (kept in dry/flows/06-rental-offer.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: 0e100018cc0b338ddb30b88671c355bbeae5b842a1f0391ae90546aa09c4f6d8
+      https://stellar.expert/explorer/testnet/tx/0e100018cc0b338ddb30b88671c355bbeae5b842a1f0391ae90546aa09c4f6d8
+pilot-envelope status on testnet, contract CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP (builds only; signs and sends nothing)
+  issue-a       SUCCESS 36a5f5507d671c1cf74d2fca36231e9f03e885f7090afd6cea7129692a39302a
+  issue-b       SUCCESS 098a1077370d8862667304597bac8906486e84147f512fba61bd54657fb25c5d
+  sale-request  SUCCESS a4665e15b7a9fe216df95c6d8eb245601089c5adbdda88c86c3735a7f895a7b6
+  sale-offer    SUCCESS d2481ea2385c81fb46e2b399688c3cd8bfbc411712553350c3207d1564786e34
+  sale-accept   SUCCESS 80911c722de6a3035a330ba6100e6400fb6440415de941a245016efe8bb71576
+  rental-offer  SUCCESS 0e100018cc0b338ddb30b88671c355bbeae5b842a1f0391ae90546aa09c4f6d8
+  week A = right #1, held by GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ (buyer)
+  week B = right #2, held by GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR (owner)
+  sale offer #1: null
+  USDC owner  70000000
+  USDC buyer  180000000
+  USDC renter 120000000
+  USDC rights contract 0
+  run 2026-11-22T19:45:48.928Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-22-pilot-testnet-CC7W4OGP.txt --tx issue-a=36a5f5507d671c1cf74d2fca36231e9f03e885f7090afd6cea7129692a39302a --tx issue-b=098a1077370d8862667304597bac8906486e84147f512fba61bd54657fb25c5d --tx sale-request=a4665e15b7a9fe216df95c6d8eb245601089c5adbdda88c86c3735a7f895a7b6 --tx sale-offer=d2481ea2385c81fb46e2b399688c3cd8bfbc411712553350c3207d1564786e34 --tx sale-accept=80911c722de6a3035a330ba6100e6400fb6440415de941a245016efe8bb71576 --tx rental-offer=0e100018cc0b338ddb30b88671c355bbeae5b842a1f0391ae90546aa09c4f6d8 --record /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet/week-a-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet/week-a-owner-secret.json --record /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet/week-b-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet/week-b-owner-secret.json --next-secret /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet/buyer-next-secret-66db9658.json
+
+[1mChecking on-chain exposure[0m
+  6 transactions, 69 forbidden values
+  contract the contracts these testnet transactions call
+
+[1missue-a — 36a5f5507d671c1cf74d2fca36231e9f03e885f7090afd6cea7129692a39302a[0m
+  [32m✓[0m no record contents in 3 layers (10116 bytes: envelope, result, meta)
+  call        issue(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                {"end":"1795910400","start":"1795305600"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x54e1d1077c2c614b20e4ca75f8df69c0add941d05d4ff55d6ae90028ce23a89c",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"commitment":"0x54e1d1077c2c614b20e4ca75f8df69c0add941d05d4ff55d6ae90028ce23a89c","right_id":"1"}
+
+[1missue-b — 098a1077370d8862667304597bac8906486e84147f512fba61bd54657fb25c5d[0m
+  [32m✓[0m no record contents in 3 layers (10216 bytes: envelope, result, meta)
+  call        issue(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                {"end":"1795910400","start":"1795305600"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x66d2ee973526c7bd6104231f94c00fe5721a62de0009408a01ed9b369ac82f3c",
+              )
+  event topics ["issue","GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"commitment":"0x66d2ee973526c7bd6104231f94c00fe5721a62de0009408a01ed9b369ac82f3c","right_id":"2"}
+
+[1msale-request — a4665e15b7a9fe216df95c6d8eb245601089c5adbdda88c86c3735a7f895a7b6[0m
+  [32m✓[0m no record contents in 3 layers (9784 bytes: envelope, result, meta)
+  call        request_record(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "1",
+                "0xd4a5146b5207aa8f3c95983645c93295fbc8b2204a790e57e10ccc66658c9c5d",
+                5991185,
+              )
+  event topics ["rec_req","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5991185,"key_hash":"0xd4a5146b5207aa8f3c95983645c93295fbc8b2204a790e57e10ccc66658c9c5d","request_id":"1","right_id":"1"}
+
+[1msale-offer — d2481ea2385c81fb46e2b399688c3cd8bfbc411712553350c3207d1564786e34[0m
+  [32m✓[0m no record contents in 3 layers (13396 bytes: envelope, result, meta)
+  call        create_sale_offer(
+                "GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ",
+                "1",
+                "10000000",
+                "16221628555100906925740837360148300561708013772092718340311870107282400051234",
+                5991188,
+              )
+  event topics ["approve","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["10000000",5991188]
+  event topics ["allow","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"amount":"10000000","expiration_ledger":5991188}
+  event topics ["sale_off","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"expires_ledger":5991188,"key_hash":"0xd4a5146b5207aa8f3c95983645c93295fbc8b2204a790e57e10ccc66658c9c5d","next_secret_hash":"16221628555100906925740837360148300561708013772092718340311870107282400051234","offer_id":"1","price":"10000000","right_id":"1"}
+
+[1msale-accept — 80911c722de6a3035a330ba6100e6400fb6440415de941a245016efe8bb71576[0m
+  [32m✓[0m no record contents in 3 layers (13400 bytes: envelope, result, meta)
+  call        accept_sale(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "1",
+                "10000000",
+                {"a":"0x195ba53ceaab5852…d9db7ea1 (96 bytes)","b":"0x02ee94b20d52ba56…d877182d (192 bytes)","c":"0x09a7bda68bc96f19…952e34d7 (96 bytes)"},
+                ["38393262537352600057012623041320370114440136911880310096303074639015357687964","5358780621729544804879890825380582830743556950815713357077859834696504221672","1","90770094754120608982862790096888743153","178413295460492758105019939507572692766","158601910193474826750547412602999551399","170114564257537319500281297001123147738","0","5870975","16221628555100906925740837360148300561708013772092718340311870107282400051234","21284143191275364834152676780445492644161058879342929773067968701702422936798"],
+              )
+  event topics ["transfer","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   "10000000"
+  event topics ["transfer","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"commitment":"0x2f0e65ec5f3517301d95a95db41e1c1a536f7f0a2e91509f06a282e7db883cde","expires_at":null,"right_id":"1"}
+  event topics ["sale","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ"]
+  event data   {"commitment":"0x2f0e65ec5f3517301d95a95db41e1c1a536f7f0a2e91509f06a282e7db883cde","offer_id":"1","price":"10000000","right_id":"1"}
+
+[1mrental-offer — 0e100018cc0b338ddb30b88671c355bbeae5b842a1f0391ae90546aa09c4f6d8[0m
+  [32m✓[0m no record contents in 3 layers (12152 bytes: envelope, result, meta)
+  call        create_rental_offer(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "2",
+                "10000000",
+                "1795910400",
+                "1795380331",
+                5991578,
+              )
+  event topics ["approve","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN","CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["10000000",5991578]
+  event topics ["allow","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"amount":"10000000","expiration_ledger":5991578}
+  event topics ["rent_off","GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN"]
+  event data   {"check_in":"1795380331","expires_at":"1795910400","expires_ledger":5991578,"offer_id":"2","price":"10000000","right_id":"2"}
+
+[1mResult[0m
+  [32m✓[0m No inventory record value appears in any of these 6 testnet transactions, at any layer scanned.
+  [32m✓[0m Nor does the digest d (hex, bytes, d_hi, d_lo) of 2 record(s) given, or s and h of 2 holder secret(s) given, or s' of 1 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet/week-a-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet/week-b-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet/week-a-owner-secret.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet/week-b-owner-secret.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CC7W4OGP/pilot-testnet/buyer-next-secret-66db9658.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.
+privacy record: evidence/privacy/2026-11-22-pilot-testnet-CC7W4OGP.txt

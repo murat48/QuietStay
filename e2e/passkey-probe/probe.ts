@@ -34,13 +34,13 @@ import { chromium } from "@playwright/test";
 import { Operation, rpc, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
 
 import type { JsonValue } from "../../src/lib/canonical";
-import { NETWORK_PASSPHRASE, RPC_URL } from "../../src/lib/config";
+import { NETWORK_PASSPHRASE, RPC_URL, WEBAUTHN_VERIFIER_ID } from "../../src/lib/config";
 import { proveTransfer } from "../../scripts/lib/zk-prove";
 import { buildCall, transferArgs } from "../../scripts/lib/zk-tx";
 import { assembleWithMargin, feeAccount, payAndSubmit, server } from "../../scripts/lib/fee-payer";
 
 const ACCOUNT_WASM = "c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1";
-const WEBAUTHN_VERIFIER = "CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F";
+const WEBAUTHN_VERIFIER = WEBAUTHN_VERIFIER_ID; // our own instance of e63a030d… (src/lib/config.ts)
 const FEE = "qs-fee-testnet";
 const CHECK_IN = "2026-12-05";
 const CHECK_OUT = "2026-12-12";

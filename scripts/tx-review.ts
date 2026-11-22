@@ -26,12 +26,25 @@
  *   stuck forever, DESIGN.md known limitation 17). The rights contract id
  *   comes from `QS_RIGHTS_CONTRACT`; on mainnet the review refuses without it.
  *
+ * - an upload's WASM is not one of the pinned builds (the rights WASM and the
+ *   web-auth WASM), or a contract is created from any WASM other than those
+ *   two, the OZ WebAuthn verifier `e63a030d…` or the OZ smart account
+ *   `c514d35e…`;
+ * - creating the rights contract: the issuer is not the deployer, the arbiter
+ *   is the issuer, the USDC is not the network's, the verification key is not
+ *   the committed one, or the id it creates is not `QS_RIGHTS_CONTRACT`;
+ * - creating the web-auth contract with any admin but the unauthorizable one,
+ *   or the verifier with any constructor argument.
+ *
  * It reads no key and signs nothing.
  */
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { Address, FeeBumpTransaction, rpc, scValToNative, Transaction, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
+import { Address, FeeBumpTransaction, hash, rpc, scValToNative, StrKey, Transaction, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
+
+import { noAdminAddress, WEB_AUTH_WASM_SHA256 } from "./deploy-web-auth";
 
 const NETWORKS = {
   mainnet: {
@@ -104,6 +117,102 @@ function isTransferToRights(contract: string, fn: string, args: xdr.ScVal[], usd
   }
 }
 
+/**
+ * The only WASMs an envelope reviewed here may upload, and the only ones it
+ * may create a contract from (Step 5 review: the Step 6 deploy goes through
+ * this review too). Anything else is refused.
+ */
+const UPLOADABLE: Record<string, string> = {
+  "76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde": "QuietStay rights (the tested final WASM)",
+  [WEB_AUTH_WASM_SHA256]: "SEP-45 web-auth (Anchor Platform @ dc5817fb, pinned build)",
+};
+const CREATABLE: Record<string, string> = {
+  ...UPLOADABLE,
+  e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76: "OpenZeppelin WebAuthn verifier (uploaded by OpenZeppelin; our own instance)",
+  c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1: "OpenZeppelin smart account (a passkey wallet)",
+};
+const RIGHTS_WASM = "76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde";
+const VERIFIER_WASM = "e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76";
+
+type Vk = { alpha: string; beta: string; gamma: string; delta: string; ic: string[] };
+const vkHash = (v: Vk) =>
+  createHash("sha256")
+    .update(Buffer.concat([v.alpha, v.beta, v.gamma, v.delta, ...v.ic].map((h) => Buffer.from(h, "hex"))))
+    .digest("hex");
+
+/** The contract id a CreateContract(V2) preimage gives on this network. */
+function contractIdOf(preimage: xdr.ContractIdPreimage, passphrase: string): string {
+  const full = xdr.HashIdPreimage.envelopeTypeContractId(
+    new xdr.HashIdPreimageContractId({ networkId: hash(Buffer.from(passphrase)), contractIdPreimage: preimage }),
+  );
+  return StrKey.encodeContract(hash(full.toXDR()));
+}
+
+/** An upload: the WASM's size and hash, which must be one of UPLOADABLE. */
+function describeUpload(wasm: Buffer) {
+  const h = createHash("sha256").update(wasm).digest("hex");
+  console.log(`  upload     ${wasm.length} bytes, sha256 ${h}`);
+  if (UPLOADABLE[h]) console.log(`             = ${UPLOADABLE[h]}`);
+  else refuse(`uploads a WASM that is not one of the pinned builds (${h})`);
+}
+
+/**
+ * A contract creation: who deploys, from which WASM, the id it will have,
+ * and each constructor argument, with checks for each pinned WASM.
+ */
+function describeCreate(fn: xdr.HostFunction, net: (typeof NETWORKS)[keyof typeof NETWORKS], network: string) {
+  const v2 = fn.switch().name === "hostFunctionTypeCreateContractV2";
+  const c = v2 ? fn.createContractV2() : fn.createContract();
+  const args = v2 ? (fn.createContractV2().constructorArgs() ?? []) : [];
+  const pre = c.contractIdPreimage();
+  const exe = c.executable();
+  const id = contractIdOf(pre, net.passphrase);
+  if (pre.switch().name === "contractIdPreimageFromAddress") {
+    const p = pre.fromAddress();
+    console.log(`  deployer   ${Address.fromScAddress(p.address()).toString()}, salt ${Buffer.from(p.salt()).toString("hex")}`);
+  } else {
+    console.log("  deployer   (a Stellar asset contract)");
+  }
+  console.log(`  creates    ${id}`);
+  if (exe.switch().name !== "contractExecutableWasm") {
+    refuse("creates a Stellar asset contract, which this pilot never does");
+    return;
+  }
+  const h = Buffer.from(exe.wasmHash()).toString("hex");
+  console.log(`  from WASM  ${h}${CREATABLE[h] ? ` = ${CREATABLE[h]}` : ""}`);
+  if (!CREATABLE[h]) refuse(`creates a contract from a WASM that is not pinned (${h})`);
+  args.forEach((arg, j) => console.log(`  ctor ${j}     ${show(arg).slice(0, 400)}`));
+  for (const arg of args) for (const amount of i128s(arg)) if (amount > net.cap) refuse(`an amount of ${amount} exceeds the cap of ${net.cap}`);
+
+  if (h === RIGHTS_WASM) {
+    // issuer, arbiter, usdc, name, symbol, verification_key, max_payment
+    if (args.length !== 7) {
+      refuse(`the rights constructor takes 7 arguments, not ${args.length}`);
+      return;
+    }
+    const [issuer, arbiter, usdc] = [0, 1, 2].map((i) => Address.fromScVal(args[i]!).toString());
+    const deployer = pre.switch().name === "contractIdPreimageFromAddress" ? Address.fromScAddress(pre.fromAddress().address()).toString() : "";
+    if (issuer !== deployer) refuse(`the issuer ${issuer} is not the deployer ${deployer}`);
+    if (arbiter === issuer) refuse("the arbiter is the issuer");
+    if (usdc !== net.usdc) refuse(`the USDC argument ${usdc} is not ${network}'s USDC ${net.usdc}`);
+    const v = scValToNative(args[5]!) as { alpha: Buffer; beta: Buffer; gamma: Buffer; delta: Buffer; ic: Buffer[] };
+    const hex = (b: Buffer) => Buffer.from(b).toString("hex");
+    const got = vkHash({ alpha: hex(v.alpha), beta: hex(v.beta), gamma: hex(v.gamma), delta: hex(v.delta), ic: v.ic.map(hex) });
+    const want = vkHash(JSON.parse(readFileSync("circuits/keys/verification_key.soroban.json", "utf8")) as Vk);
+    console.log(`  VK hash    ${got}${got === want ? " = the committed key" : ""}`);
+    if (got !== want) refuse(`the verification key is not the committed one (${want})`);
+    const maxPayment = BigInt(scValToNative(args[6]!) as bigint);
+    console.log(`  max_payment ${maxPayment} (cap ${net.cap})`);
+    if (RIGHTS && RIGHTS !== id) refuse(`this creates ${id}, but QS_RIGHTS_CONTRACT is ${RIGHTS}`);
+  }
+  if (h === WEB_AUTH_WASM_SHA256) {
+    const admin = args.length === 1 ? Address.fromScVal(args[0]!).toString() : "";
+    if (admin !== noAdminAddress()) refuse(`the web-auth admin must be the unauthorizable ${noAdminAddress()}, not ${admin || "(missing)"}`);
+    else console.log(`  admin      the unauthorizable ${admin} (no upgrade possible)`);
+  }
+  if (h === VERIFIER_WASM && args.length !== 0) refuse("the verifier takes no constructor arguments");
+}
+
 function describeInvocation(inv: xdr.SorobanAuthorizedInvocation, depth: number, cap: bigint, usdc: string) {
   const pad = "    ".repeat(depth);
   const f = inv.function();
@@ -170,6 +279,10 @@ async function main() {
       if (isTransferToRights(Address.fromScAddress(c.contractAddress()).toString(), c.functionName().toString(), c.args(), net.usdc)) {
         refuse("a USDC transfer straight to the rights contract: it would be stuck there forever (DESIGN.md limitation 17)");
       }
+    } else if (fn.switch().name === "hostFunctionTypeUploadContractWasm") {
+      describeUpload(Buffer.from(fn.wasm()));
+    } else if (fn.switch().name === "hostFunctionTypeCreateContractV2" || fn.switch().name === "hostFunctionTypeCreateContract") {
+      describeCreate(fn, net, a.network!);
     } else {
       console.log(`  ${fn.switch().name}`);
     }

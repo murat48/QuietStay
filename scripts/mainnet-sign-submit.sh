@@ -162,20 +162,22 @@ if [ "$RESUME" -eq 0 ]; then
   # Before every mainnet transaction (spec §14, D7): mainnet is still on the
   # protocol the contracts were tested for, and the pilot's accounts hold at
   # most 5 USDC in all, each G account with a USDC trustline.
-  # QS_PILOT_ACCOUNTS is the comma-separated list of every pilot account.
-  if [ "$NETWORK" = "mainnet" ]; then
-    if ! npx tsx scripts/check-protocol.ts; then
-      echo "Refused: the protocol check failed. Nothing was signed." >&2
-      exit 1
-    fi
-    if [ -z "${QS_PILOT_ACCOUNTS:-}" ] || [ -z "${QS_RIGHTS_CONTRACT:-}" ]; then
-      echo "Refused: set QS_PILOT_ACCOUNTS (every pilot account, comma-separated) and QS_RIGHTS_CONTRACT. Nothing was signed." >&2
-      exit 1
-    fi
-    if ! npx tsx scripts/check-pilot-accounts.ts --network mainnet --accounts "$QS_PILOT_ACCOUNTS" --contract "$QS_RIGHTS_CONTRACT"; then
-      echo "Refused: the pilot account check failed (trustline or the 5 USDC total). Nothing was signed." >&2
-      exit 1
-    fi
+  # QS_PILOT_ACCOUNTS is the comma-separated list of every pilot account
+  # that holds USDC; QS_RIGHTS_CONTRACT is the rights contract, or, before it
+  # is deployed, the id its deploy will create (`stellar contract id wasm`).
+  # Since the Step 5 review the same checks run on testnet too, so the
+  # testnet rehearsal (docs/MAINNET_REHEARSAL.md) goes through them.
+  if ! npx tsx scripts/check-protocol.ts; then
+    echo "Refused: the protocol check failed. Nothing was signed." >&2
+    exit 1
+  fi
+  if [ -z "${QS_PILOT_ACCOUNTS:-}" ] || [ -z "${QS_RIGHTS_CONTRACT:-}" ]; then
+    echo "Refused: set QS_PILOT_ACCOUNTS (every pilot account holding USDC, comma-separated) and QS_RIGHTS_CONTRACT. Nothing was signed." >&2
+    exit 1
+  fi
+  if ! npx tsx scripts/check-pilot-accounts.ts --network "$NETWORK" --accounts "$QS_PILOT_ACCOUNTS" --contract "$QS_RIGHTS_CONTRACT"; then
+    echo "Refused: the pilot account check failed (trustline or the 5 USDC total). Nothing was signed." >&2
+    exit 1
   fi
 
   echo

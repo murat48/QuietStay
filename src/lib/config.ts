@@ -192,8 +192,19 @@ export const WEB_AUTH_CONTRACT_ID =
 
 /** The OpenZeppelin smart-account build new wallets use (spec §12). */
 export const SMART_ACCOUNT_WASM_HASH = "c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1";
-/** The OpenZeppelin WebAuthn verifier on testnet (checked on chain in Step 2). */
-export const WEBAUTHN_VERIFIER_ID = "CC7EKIHQP3TN4CARQDND6CEOY2UXLWWC2X5GHTD5NLAT7BG5GPZIOM3F";
+/**
+ * The WebAuthn verifier every new passkey wallet calls: QuietStay's own
+ * instance of OpenZeppelin's uploaded verifier WASM `e63a030d…` (no
+ * constructor, no admin, no `upgrade`). It was deployed by `qs-issuer` on
+ * 2026-11-22, tx 38bbd549…. Before that the app used the kit's manifest
+ * instance `CC7EKIHQ…OM3F`, which is someone else's instance (Step 5 review,
+ * checklist §5.4). The mainnet instance is deployed in Step 6 and set per
+ * deployment with NEXT_PUBLIC_QUIETSTAY_WEBAUTHN_VERIFIER_ID.
+ */
+export const WEBAUTHN_VERIFIER_ID =
+  process.env.NEXT_PUBLIC_QUIETSTAY_WEBAUTHN_VERIFIER_ID ?? "CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL";
+/** The verifier WASM it must run, checked on chain (scripts/check-deployment.ts). */
+export const WEBAUTHN_VERIFIER_WASM_HASH = "e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76";
 
 /**
  * The testnet fee account's public address (`qs-fee-testnet`, decision D6).

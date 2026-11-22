@@ -3,10 +3,17 @@
  * your own terminal and paste its output back.
  *
  *   npx tsx scripts/check-mainnet-setup.ts --part 1|2|3|4 [--quote]
+ *   npx tsx scripts/check-mainnet-setup.ts --network testnet --part 1|2|3|4   (the rehearsal)
  *
  * It reads only public data from mainnet Horizon (https://horizon.stellar.org)
  * and the public keys you exported in the runbook (QS_MAIN_ISSUER,
  * QS_MAIN_ARBITER, QS_MAIN_FEE, QS_MAIN_OWNER, QS_MAIN_BUYER, QS_MAIN_RENTER).
+ * With `--network testnet` (docs/MAINNET_REHEARSAL.md) it reads testnet
+ * Horizon, Circle's testnet USDC issuer and the QS_REHEARSAL_* keys, and the
+ * sign-in key is QS_REHEARSAL_SIGNIN instead of `mainnet-test`. The checks are
+ * the same, except that the deployer's Part 2 minimum does not wait for the
+ * sign-in key's surplus (Friendbot gives it 10,000 XLM), and there is no DEX
+ * quote.
  * It uses no key, signs nothing and sends nothing.
  *
  * - Part 1 (identities): six valid, distinct public keys, none of them a
@@ -28,10 +35,18 @@ import { parseArgs } from "node:util";
 
 import { StrKey } from "@stellar/stellar-sdk";
 
-const HORIZON = "https://horizon.stellar.org";
-const MAINNET_PASSPHRASE = "Public Global Stellar Network ; September 2015";
-const USDC_ISSUER = "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
-const SIGN_IN = "GCEF3BTQVDJ473URMW4556VG67YAPS2J5OP77FBXT7T47M2DOIZ7TDAR";
+const NETWORK = (() => {
+  const i = process.argv.indexOf("--network");
+  return i >= 0 ? process.argv[i + 1] : "mainnet";
+})();
+if (NETWORK !== "mainnet" && NETWORK !== "testnet") throw new Error("--network mainnet|testnet");
+const TESTNET = NETWORK === "testnet";
+const HORIZON = TESTNET ? "https://horizon-testnet.stellar.org" : "https://horizon.stellar.org";
+const PASSPHRASE = TESTNET ? "Test SDF Network ; September 2015" : "Public Global Stellar Network ; September 2015";
+const USDC_ISSUER = TESTNET ? "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5" : "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
+const PREFIX = TESTNET ? "QS_REHEARSAL" : "QS_MAIN";
+const SIGN_IN = TESTNET ? (process.env.QS_REHEARSAL_SIGNIN ?? "").trim() : "GCEF3BTQVDJ473URMW4556VG67YAPS2J5OP77FBXT7T47M2DOIZ7TDAR";
+const SIGN_IN_NAME = TESTNET ? "the rehearsal sign-in key" : "mainnet-test";
 const STROOPS = 10_000_000n;
 
 /** Testnet identities from docs/PHASE3_PROGRESS.md (Addresses); mainnet keys must be new. */
@@ -145,7 +160,7 @@ function plainAccount(role: string, a: Account) {
 function keys(): Record<Role, string> {
   const out = {} as Record<Role, string>;
   for (const r of ROLES) {
-    const name = `QS_MAIN_${r.toUpperCase()}`;
+    const name = `${PREFIX}_${r.toUpperCase()}`;
     const v = (process.env[name] ?? "").trim();
     out[r] = v;
     check(StrKey.isValidEd25519PublicKey(v), `${name} is a public key (G…): ${v || "(not set)"}`);
@@ -155,7 +170,7 @@ function keys(): Record<Role, string> {
 
 async function main() {
   const { values: a } = parseArgs({
-    options: { part: { type: "string" }, quote: { type: "boolean", default: false }, usdc: { type: "string", default: "dex" } },
+    options: { part: { type: "string" }, quote: { type: "boolean", default: false }, usdc: { type: "string", default: "dex" }, network: { type: "string", default: "mainnet" } },
   });
   const part = Number(a.part);
   if (![1, 2, 3, 4].includes(part)) throw new Error("--part 1|2|3|4");
@@ -163,8 +178,9 @@ async function main() {
   const plan = route === "dex" ? PLAN_DEX : PLAN_EXCHANGE_USDC;
 
   const root = await get<{ network_passphrase: string }>("/");
-  if (root.body?.network_passphrase !== MAINNET_PASSPHRASE) throw new Error("Horizon is not mainnet");
-  console.log(`check-mainnet-setup part ${part}, mainnet Horizon, read-only, ${new Date().toISOString()}`);
+  if (root.body?.network_passphrase !== PASSPHRASE) throw new Error(`Horizon is not ${NETWORK}`);
+  if (TESTNET) check(StrKey.isValidEd25519PublicKey(SIGN_IN), `QS_REHEARSAL_SIGNIN is a public key (G…): ${SIGN_IN || "(not set)"}`);
+  console.log(`check-mainnet-setup part ${part}, ${NETWORK} Horizon, read-only, ${new Date().toISOString()}`);
   console.log(`USDC route: ${route} (--usdc dex|exchange)`);
   const k = keys();
   if (failures) process.exit(1);
@@ -177,7 +193,7 @@ async function main() {
     for (const r of ROLES) {
       check(!TESTNET_KEYS[k[r]], `${r}: not a testnet identity${TESTNET_KEYS[k[r]] ? ` (it is ${TESTNET_KEYS[k[r]]})` : ""}`);
       const acc = await account(k[r]);
-      check(acc.status === 404, `${r}: not on mainnet yet (a new key)${acc.status !== 404 ? " — it already exists: is this key new?" : ""}`);
+      check(acc.status === 404, `${r}: not on ${NETWORK} yet (a new key)${acc.status !== 404 ? " — it already exists: is this key new?" : ""}`);
     }
   }
 
@@ -191,7 +207,7 @@ async function main() {
       const bal = xlm(acc.body);
       // 0.01 XLM allowance for the runbook's own transaction fees (100 stroops each).
       let want = plan[r] - 100_000n;
-      if (r === "issuer" && part === 2) want -= SURPLUS;
+      if (r === "issuer" && part === 2 && !TESTNET) want -= SURPLUS;
       // After Part 4 the buyer and renter have spent XLM on USDC.
       if (part === 4 && (r === "buyer" || r === "renter")) want = PLAN_EXCHANGE_USDC[r] - 5_000_000n;
       const min = (2n + BigInt(acc.body.subentry_count)) * reserve;
@@ -206,19 +222,19 @@ async function main() {
   if (part === 3) {
     const acc = await account(SIGN_IN);
     if (!acc.body) {
-      check(false, "mainnet-test exists");
+      check(false, `${SIGN_IN_NAME} exists`);
     } else {
       const bal = xlm(acc.body);
       const min = (2n + BigInt(acc.body.subentry_count)) * reserve;
-      check(acc.body.subentry_count === 0, `mainnet-test: 0 subentries (${acc.body.subentry_count})`);
-      check(bal === min, `mainnet-test: ${fmt(bal)} XLM = the minimum balance ${fmt(min)}`);
-      plainAccount("mainnet-test", acc.body);
+      check(acc.body.subentry_count === 0, `${SIGN_IN_NAME}: 0 subentries (${acc.body.subentry_count})`);
+      check(bal === min, `${SIGN_IN_NAME}: ${fmt(bal)} XLM = the minimum balance ${fmt(min)}`);
+      plainAccount(SIGN_IN_NAME, acc.body);
       const pays = await get<{ _embedded: { records: { type: string; from?: string; to?: string; account?: string; amount?: string; starting_balance?: string; transaction_hash: string; created_at: string }[] } }>(
         `/accounts/${SIGN_IN}/payments?order=desc&limit=1`,
       );
       const p = pays.body?._embedded.records[0];
       const to = p?.to ?? p?.account;
-      check(!!p && p.from === SIGN_IN && to === k.issuer, `mainnet-test's last payment went to the deployer: ${p ? `${p.type} ${p.amount ?? p.starting_balance} XLM, tx ${p.transaction_hash}, ${p.created_at}` : "none"}`);
+      check(!!p && p.from === SIGN_IN && to === k.issuer, `${SIGN_IN_NAME}'s last payment went to the deployer: ${p ? `${p.type} ${p.amount ?? p.starting_balance} XLM, tx ${p.transaction_hash}, ${p.created_at}` : "none"}`);
     }
   }
 
@@ -245,11 +261,12 @@ async function main() {
       check(other.length === 0, `${r}: no other asset or trustline`);
     }
     const signIn = (await account(SIGN_IN)).body;
-    if (signIn) check(!usdcLine(signIn), "mainnet-test: no USDC trustline");
+    if (signIn) check(!usdcLine(signIn), `${SIGN_IN_NAME}: no USDC trustline`);
     check(total <= USDC_CAP, `total USDC across the pilot accounts: ${fmt(total)} ≤ 5.0000000 (D7)`);
   }
 
-  if (part === 4 && a.quote) {
+  if (part === 4 && a.quote && TESTNET) console.log("\n--quote is for mainnet only: the rehearsal takes its USDC from Circle's faucet");
+  if (part === 4 && a.quote && !TESTNET) {
     console.log("\nLive DEX quote (Horizon strict-receive paths, XLM → USDC):");
     for (const r of ["buyer", "renter"] as const) {
       const amount = fmt(USDC_PLAN[r]!);

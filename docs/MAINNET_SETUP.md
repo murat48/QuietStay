@@ -5,9 +5,14 @@ terminal.** Claude prepared the commands and checks the results by reading the
 chain; it runs nothing on mainnet that signs or sends, and no command on a
 `qs-main-` identity (PHASE3_PROMPT.md, hard constraints).
 
-This runbook covers only the accounts: identities, XLM, the sign-in key's
-balance, trustlines and USDC. **No contract is uploaded or deployed here;**
-that is Step 6, after your GO.
+Parts 0–4 cover only the accounts: identities, XLM, the sign-in key's
+balance, trustlines and USDC. **Part 5, the Step 6 deploy, is here so that the
+commands you rehearse are the ones you will run, but it waits for your
+GO.**
+
+**Rehearse it first on testnet:** [MAINNET_REHEARSAL.md](MAINNET_REHEARSAL.md)
+has the same commands. Only the network, the `qs-rehearsal-` names and the
+funding source differ.
 
 - Prepared 2026-11-21. Every amount comes from a command run that day (see the
   budget's sources). The DEX price moves, so Part 4 re-quotes it live.
@@ -283,13 +288,84 @@ npx tsx scripts/check-mainnet-setup.ts --part 4
 npx tsx scripts/check-pilot-accounts.ts --network mainnet --accounts "$QS_MAIN_OWNER,$QS_MAIN_BUYER,$QS_MAIN_RENTER"
 ```
 
+## Part 5 — The Step 6 deploy (only after your written GO)
+
+**Do not run this part before GO.** It is the rehearsal's Part 5 with
+`mainnet`, `qs-main-`, `QS_MAIN_*` and mainnet USDC.
+- Each of the five transactions goes through `scripts/mainnet-sign-submit.sh
+  --network mainnet`. It runs the protocol check and the pilot-account check,
+  shows the review, and signs only when you type SEND.
+- **5.1 declares 69.43 XLM** (60.38 charged, 9.05 refunded; checklist §5.4).
+
+**5.0 Set up:**
+
+```sh
+export STEP6=~/qs-main/step6 && mkdir -p "$STEP6"
+RIGHTS_WASM=contracts/target/wasm32v1-none/release/quietstay_rights.wasm
+WEB_AUTH_WASM=contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm
+echo "76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde  $RIGHTS_WASM"   | sha256sum -c
+echo "708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1  $WEB_AUTH_WASM" | sha256sum -c
+stellar contract fetch --wasm-hash e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76 --network mainnet -o "$STEP6/oz-verifier.wasm"
+echo "e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76  $STEP6/oz-verifier.wasm" | sha256sum -c
+
+cat > "$STEP6/salts.env" <<EOF
+export SALT_RIGHTS=$(openssl rand -hex 32)
+export SALT_WEB_AUTH=$(openssl rand -hex 32)
+export SALT_VERIFIER=$(openssl rand -hex 32)
+EOF
+source "$STEP6/salts.env"
+export QS_RIGHTS_CONTRACT=$(stellar contract id wasm --salt "$SALT_RIGHTS"   --source-account "$QS_MAIN_ISSUER" --network mainnet)
+export WEB_AUTH_ID=$(stellar contract id wasm --salt "$SALT_WEB_AUTH"       --source-account "$QS_MAIN_ISSUER" --network mainnet)
+export VERIFIER_ID=$(stellar contract id wasm --salt "$SALT_VERIFIER"       --source-account "$QS_MAIN_ISSUER" --network mainnet)
+export QS_PILOT_ACCOUNTS="$QS_MAIN_OWNER,$QS_MAIN_BUYER,$QS_MAIN_RENTER"
+echo "rights $QS_RIGHTS_CONTRACT  web-auth $WEB_AUTH_ID  verifier $VERIFIER_ID"
+VK="$(node -e 'process.stdout.write(JSON.stringify(require("./circuits/keys/verification_key.soroban.json")))')"
+sim() { stellar tx simulate --source-account "$QS_MAIN_ISSUER" --network mainnet | stellar tx simulate --source-account "$QS_MAIN_ISSUER" --network mainnet; }
+```
+
+**5.1–5.5.** Build one, sign it, then build the next. The review must show
+what the rehearsal's Part 5 lists for each.
+
+```sh
+stellar contract upload --wasm "$RIGHTS_WASM" --source-account "$QS_MAIN_ISSUER" --network mainnet --build-only | sim > "$STEP6/01-upload-rights.xdr"
+scripts/mainnet-sign-submit.sh "$STEP6/01-upload-rights.xdr" qs-main-issuer --network mainnet
+
+stellar contract upload --wasm "$WEB_AUTH_WASM" --source-account "$QS_MAIN_ISSUER" --network mainnet --build-only | sim > "$STEP6/02-upload-web-auth.xdr"
+scripts/mainnet-sign-submit.sh "$STEP6/02-upload-web-auth.xdr" qs-main-issuer --network mainnet
+
+stellar contract deploy --wasm "$RIGHTS_WASM" --salt "$SALT_RIGHTS" --source-account "$QS_MAIN_ISSUER" --network mainnet --build-only -- \
+  --issuer "$QS_MAIN_ISSUER" --arbiter "$QS_MAIN_ARBITER" --usdc CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75 \
+  --name "QuietStay Usage Rights" --symbol QSTAY --verification_key "$VK" --max_payment 10000000 \
+  | sim > "$STEP6/03-deploy-rights.xdr"
+scripts/mainnet-sign-submit.sh "$STEP6/03-deploy-rights.xdr" qs-main-issuer --network mainnet
+
+stellar contract deploy --wasm "$WEB_AUTH_WASM" --salt "$SALT_WEB_AUTH" --source-account "$QS_MAIN_ISSUER" --network mainnet --build-only -- \
+  --admin "$(npx tsx scripts/deploy-web-auth.ts --print-admin)" | sim > "$STEP6/04-deploy-web-auth.xdr"
+scripts/mainnet-sign-submit.sh "$STEP6/04-deploy-web-auth.xdr" qs-main-issuer --network mainnet
+
+stellar contract deploy --wasm "$STEP6/oz-verifier.wasm" --salt "$SALT_VERIFIER" --source-account "$QS_MAIN_ISSUER" --network mainnet --build-only \
+  | sim > "$STEP6/05-deploy-verifier.xdr"
+scripts/mainnet-sign-submit.sh "$STEP6/05-deploy-verifier.xdr" qs-main-issuer --network mainnet
+```
+
+**Check 5** (paste it):
+
+```sh
+npx tsx scripts/check-deployment.ts --network mainnet --rights "$QS_RIGHTS_CONTRACT" --web-auth "$WEB_AUTH_ID" \
+  --verifier "$VERIFIER_ID" --issuer "$QS_MAIN_ISSUER" --arbiter "$QS_MAIN_ARBITER"
+npx tsx scripts/check-ttl.ts --network mainnet --rights "$QS_RIGHTS_CONTRACT" --web-auth "$WEB_AUTH_ID" --verifier "$VERIFIER_ID"
+```
+
+After that, the remaining Step 6 gates (checklist §10) are prepared from the
+deployed ids. Among them is the `complete_swap` simulation before any swap
+transaction.
+
 ## After the runbook
 
 - I check each pasted output against the chain myself, with the same reads.
   I also record every account and transaction in PHASE3_PROGRESS.md
   (Addresses).
-- **Then you give GO.** Step 6 starts with the upload simulation from
-  `$QS_MAIN_ISSUER`, and each Step 6 command is prepared by me and run by
-  you, like these.
+- **Then you give GO.** Step 6 starts with Part 5, run by you, like the
+  other parts.
 - The mainnet smart wallet (passkey) is created in Step 6, from the app on
   your device. The fee identity pays for it, which is in its budget.

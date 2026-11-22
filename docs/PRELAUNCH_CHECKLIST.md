@@ -49,7 +49,8 @@ flow).
 | 4 | Storage: the TTL plan, and every extend/restore command run on testnet | **PASS** |
 | 5 | Transaction costs: each flow on testnet, against mainnet limits and fees | **PASS**; deploy cost accepted in principle, budget in §5.4 |
 | 5a | Swap cost on mainnet (the Medium) | **Closed** (your decision); the live `--send=no` is a Step 6 gate (§5.2) |
-| 5b | The WebAuthn verifier the passkey wallets use is someone else's contract instance (found in the review) | **OPEN — yours**: proposal in §5.4 |
+| 5b | The WebAuthn verifier the passkey wallets use is someone else's contract instance (found in the review) | **Approved and done on testnet** (2026-11-22): our own instance `CBK3H55V…`, passkey specs 10/10 on it. Mainnet: **Step 6** (§4.1, §5.4) |
+| 4a | The testnet demo stays usable through the Instawards review | **PASS until ~2027-05-21**, with the watch in §4.2 |
 | 6 | Configuration, testnet and mainnet side by side | **PASS** for every value that exists; mainnet ids are **OPEN — yours** / **Step 6** (§6) |
 | 7 | Tests: every suite passes, no known serious bug | **PASS** (§7) |
 | 8 | Spec §14 additions | see §8, item by item |
@@ -203,6 +204,72 @@ instance start with 2,073,600 ledgers on mainnet, about 120 days at 5 s.
 - This falls after the 30-day pilot. You can avoid it landing on a pilot
   account by running `stellar contract extend` on the code entry yourself
   beforehand.
+
+### 4.1 The WebAuthn verifier instance and the OZ code (Step 5 review, 2026-11-22)
+
+Every passkey wallet calls the verifier **instance** in its signer to check
+each signature, and runs the OZ account **code**. If either entry is
+archived, every passkey wallet stops working until someone restores it.
+- The verifier is now our own instance (§5.4), so its TTL is ours to keep.
+- `npx tsx scripts/check-ttl.ts --network <net> [--until <date>]` reads all
+  seven entries a deployment needs: four code entries and three instances.
+  It fails on any entry that ends before `--until`.
+
+| Entry | Testnet (read 2026-11-22, `evidence/checklist/testnet-demo-ttl-2026-11-22.txt`) | Mainnet |
+| --- | --- | --- |
+| Verifier instance (ours) | `CBK3H55V…WEEL`, live until ledger 8,980,362, ~2027-05-21 | **Step 6**: deployed through `mainnet-sign-submit.sh` (MAINNET_SETUP.md Part 5). It starts at mainnet's minimum, 2,073,600 ledgers (~120 days). Read it with `check-ttl` right after the deploy |
+| OZ verifier code `e63a030d…` | live until 8,980,359, ~2027-05-21 | live until 66,824,189, ~71 days from 2026-11-21 |
+| OZ account code `c514d35e…` | live until 8,980,358, ~2027-05-21 | live until 67,205,504, ~93 days from 2026-11-21 |
+
+- **Step 6 item:** after the deploy, `check-ttl --network mainnet --until
+  <pilot end>`. For any entry that ends too soon, run the `stellar contract
+  extend` command in `check-ttl`'s header, run by you.
+
+### 4.2 The testnet demo stays usable through the review (Step 5 review, 2026-11-22)
+
+The final testnet WASM's code was live only until about 2026-11-27. On
+2026-11-22 every code entry and instance the testnet demo needs was extended
+to testnet's maximum, 3,110,399 ledgers (`max_entry_ttl` − 1):
+- run by `qs-issuer`;
+- `stellar contract extend --durability persistent --ledgers-to-extend 3110399 …`;
+- about 181.5 testnet XLM in all.
+
+| Entry | Extend tx | Live until |
+| --- | --- | --- |
+| rights code `76d69e79…` | [`583a1054…`](https://stellar.expert/explorer/testnet/tx/583a10541e101a2eb3d1860b093dc6dfb13c437f4c90bd99904529b170ce0f6a) | 8,980,356 |
+| web-auth code `708cacdc…` | [`d173b1f1…`](https://stellar.expert/explorer/testnet/tx/d173b1f15e510c2c69cae177f5a21ffdaa8f0a42b33d37f82774ccd2b0a1c184) | 8,980,357 |
+| OZ account code `c514d35e…` | [`f00237b9…`](https://stellar.expert/explorer/testnet/tx/f00237b9781ea29877bfa1c5d4911190f48273d38f35745593daf5b3b2457245) | 8,980,358 |
+| OZ verifier code `e63a030d…` | [`59cace58…`](https://stellar.expert/explorer/testnet/tx/59cace581ff36aed93d933c3883272a60dabb33d18db809fdffc60445b904e5f) | 8,980,359 |
+| rights instance `CATUBRZZ…` | [`bf74504a…`](https://stellar.expert/explorer/testnet/tx/bf74504aad58504ca26d0dfdbb5f03ee7fad9b4ee36a7271630d03b94c87b21d) | 8,980,360 |
+| web-auth instance `CBCDSOZP…` | [`09ae3519…`](https://stellar.expert/explorer/testnet/tx/09ae35192ccf1c4b08d9ec5bbbac9c8d758f2584aa282c02810cbeddbbcd6233) | 8,980,361 |
+| verifier instance `CBK3H55V…` | [`a66c4a7b…`](https://stellar.expert/explorer/testnet/tx/a66c4a7b934b6a6aad256b6c8314390f36961654c466d0c3676b746dff6616cb) | 8,980,362 |
+
+That is about 2027-05-21 at 5 s per ledger. All seven succeeded on Horizon.
+
+**To keep it alive during the review**, these are standing items until the
+review ends:
+1. **Before the review starts, and weekly during it**, run `npx tsx
+   scripts/check-ttl.ts --network testnet --until <review end date>`. It must
+   pass; if not, re-extend with the commands in its header. Anyone may
+   extend, and on testnet I can run it.
+2. **The demo's data entries** have their own TTLs: the sample weeks, offers
+   and escrows. The contract extends what a call touches. Entries nobody
+   touches can lapse. Those can be restored with `stellar contract restore`,
+   rehearsed in §4 (`38a3a0e3…`).
+   - The "Try it on testnet" guide (Step 6) issues fresh weeks to each
+     visitor, so it does not depend on old entries.
+   - Step 6 checks the sample entries' TTLs once the demo's contract is fixed.
+3. **A testnet reset wipes everything, whatever the TTLs.** SDF resets testnet
+   from time to time and announces each reset beforehand.
+   - If one is announced inside the review period, the demo is redeployed
+     after it, before reviewers are pointed to it again.
+   - The redeploy is the rehearsal's Part 5 commands, run on testnet, then
+     the app's testnet contract ids.
+   - Watch the announcements until the review ends.
+4. The app's testnet configuration must point at these instances (rights,
+   web-auth, verifier). The deployed demo's values are in its environment,
+   which I do not read. Step 6 shows them on the app's network screen and
+   compares them with this table.
 
 ## 5. Transaction costs — PASS
 
@@ -371,8 +438,25 @@ rule, "only reuse an uploaded WASM, never someone else's contract instance".
 - But its instance's TTL is not ours. If it were archived, our wallets would
   stop working until someone restored it.
 
-**Proposal:** deploy our own verifier instance from the uploaded WASM
-`e63a030d…`, on mainnet in Step 6 and on testnet before it.
+**Approved (2026-11-22) and done on testnet.** Our own instance
+`CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL`:
+- deployed by `qs-issuer`, tx
+  [`38bbd549…28e6`](https://stellar.expert/explorer/testnet/tx/38bbd5492bd9bb38a0bd5e4aed10704f2c41c8bb32d6955bbc6f891b454328e6),
+  16,234 stroops;
+- it runs `e63a030d…` (`stellar contract fetch --id …` + `sha256sum`);
+- it is the app's `WEBAUTHN_VERIFIER_ID`, now set per deployment with
+  `NEXT_PUBLIC_QUIETSTAY_WEBAUTHN_VERIFIER_ID`.
+
+The passkey specs passed 10/10 on it
+(`evidence/checklist/passkey-own-verifier-2026-11-22.txt`):
+- `passkey.spec.ts` now asserts that the passkey-approved transaction's
+  footprint holds `CBK3H55V…` and not the kit's `CC7EKIHQ…`;
+- the in-app rental `d9b8d17b…` uses it too.
+
+Mainnet: Step 6, the same deploy through `mainnet-sign-submit.sh`
+(MAINNET_SETUP.md Part 5). Its TTL is in §4.1. The proposal was:
+deploy our own verifier instance from the uploaded WASM `e63a030d…`, on
+mainnet in Step 6 and on testnet before it.
 - It runs identical code; the change is only to which instance the wallets
   call.
 - Cost: an instance entry and no storage, about 0.03 XLM (scaled from the
@@ -381,7 +465,7 @@ rule, "only reuse an uploaded WASM, never someone else's contract instance".
   rights WASM. Then one testnet rerun of the passkey specs.
 - Wallets made before the change keep the old address. The pilot's mainnet
   wallet does not exist yet.
-- **Your decision.**
+- **Decision:** approved.
 
 The shared "default deployer" the kit uses is not a contract instance. It is
 a G key with a published seed, used only to derive wallet addresses; the fee
@@ -457,7 +541,7 @@ were built into a scratch target directory. All were priced by the same tool:
   the code each).
 - **My recommendation:** keep the tested WASM. The saving is about 6% of the
   deploy cost, and it would cost a new testnet run and a reproducibility step
-  after the build. **Your decision.**
+  after the build. **Decision (2026-11-22): keep the tested WASM.**
 
 **4. XLM budget per account.** The table is in
 [MAINNET_SETUP.md](MAINNET_SETUP.md#budget) with each part's source.
@@ -486,7 +570,8 @@ were built into a scratch target directory. All were priced by the same tool:
 | Rights contract | `CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM` | Step 6 | |
 | SEP-45 web-auth | `CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM`, WASM `708cacdc…cbc1` | Step 6 (upload simulated, §5.3) | `npx tsx scripts/check-web-auth.ts --network testnet`: 3/3 |
 | Sign-in key | `GDC2YUKYIPDETC6M7QVOL4222SJF6MVYCW5ZOOVFQEZQQPYIENPLRRGQ` (exists, HTTP 200) | `GCEF3BTQVDJ473URMW4556VG67YAPS2J5OP77FBXT7T47M2DOIZ7TDAR` (`mainnet-test`, exists, **9.0001000 XLM**, 0 subentries) | Horizon `accounts/<G…>` |
-| WebAuthn verifier (OZ) | `CC7EKIHQ…OM3F`, WASM `e63a030d…6b72b76` (v26) | `CB7HENHJ…Q5YR`, WASM `e63a030d…6b72b76` (v26) | `stellar contract fetch` + `sha256sum` (`evidence/checklist/oz-contracts-2026-11-21.txt`) |
+| WebAuthn verifier: **our own instance** (since 2026-11-22) of OZ's WASM `e63a030d…6b72b76` | `CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL` | **Step 6** (deployed from the same uploaded WASM) | `npx tsx scripts/check-deployment.ts`: runs `e63a030d…` (PASS on testnet, `evidence/checklist/check-deployment-testnet-demo-2026-11-22.txt`) |
+| ~~WebAuthn verifier (the kit's instance; no longer used)~~ | `CC7EKIHQ…OM3F` | `CB7HENHJ…Q5YR` | someone else's instance; replaced at the Step 5 review (§5.4) |
 | OZ account WASM | `c514d35e…4b9e1`, installed (v28) | `c514d35e…4b9e1`, installed (v28) | same |
 | Fee account | `GCGDZWCL…L77Z` (`qs-fee-testnet`): no USDC, no right, not the issuer, arbiter or sign-in key | none: the route is compiled out off testnet | `npx tsx scripts/check-fee-account.ts --contract CATUBRZZ…`: PASS (new script; spec §13 named it) |
 | App configuration | `src/lib/config.ts` (testnet only, by design) | Step 6 writes the mainnet build's configuration from this table | |
@@ -606,14 +691,18 @@ closed, and the deploy cost is accepted in principle.
      total into the buyer and renter.
 
    I check each pasted output against the chain. GO comes after that.
-2. **Decisions still open:**
-   - **the WebAuthn verifier** (§5.4): our own instance from the uploaded WASM
-     `e63a030d…` (my proposal, following your rule), or the kit's instance
-     `CB7HENHJ…`;
-   - **the WASM size** (§5.4): keep the tested WASM (my recommendation), or
-     drop the spec's doc strings to save about 3.5 XLM and redo the Step 5
-     testnet run;
-   - the code extension after about 119 days: about 14.6 XLM charged (§4).
+2. **Decisions taken (2026-11-22):**
+   - the verifier: our own instance, done on testnet (§5.4);
+   - the WASM size: keep the tested WASM;
+   - USDC from the DEX, as in the runbook;
+   - the rule as I read it.
+
+   Still to note: the code extension after about 119 days, about 14.6 XLM
+   charged (§4).
+2a. **Rehearse first:** [MAINNET_REHEARSAL.md](MAINNET_REHEARSAL.md) runs the
+   same steps on testnet: Parts 0–4, the Step 6 deploy, and one sale and one
+   rental offer, all signed through `mainnet-sign-submit.sh`. I dry-ran it
+   end to end with my testnet identities on 2026-11-22 (PHASE3_PROGRESS.md).
 3. **Step 3 closed (2026-11-21):** escrow #1 on `CA4B3MIZ…` was collected,
    tx `b40f55b6…695e`, 88,951 s after check-in. The late problem report was
    refused with #49, tx `806d8a78…cdf`.
