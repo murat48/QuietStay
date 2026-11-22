@@ -9,9 +9,14 @@ actually run.
 
 - SOW approved on: _(date)_
 - Sprint ends on: _(approval date + 30 days)_
-- Current step: **Step 5, second runbook review done (2026-11-22); not GO
-  yet.** Next is yours: run Part 0.0 (the `qsmain` user), then the
-  rehearsal as `qsmain`, pasting each check. Earlier the same day: Step 5,
+- Current step: **Step 5, pilot-plan change (2026-11-23): the 8-day app
+  work, in progress.** The pilot flows move to the browser with Freighter,
+  and the `qsmain` user is dropped (decision 6). The plan is items 1–6 below
+  (Step 5 log), with two stops: after item 2 (the second Vercel project) and
+  after items 3–4 (your Freighter try). The contract and its WASM stay
+  unchanged. Not GO yet. Before that, 2026-11-22: Step 5, second runbook
+  review done; not GO yet. The rehearsal as `qsmain` was then next; it is
+  superseded. Earlier the same day: Step 5,
   runbook review done (2026-11-22); not GO yet.
   The verifier is our own instance (testnet done; mainnet in Step 6). The
   testnet demo is extended to ~2027-05-21. Next is yours: rehearse with
@@ -1742,7 +1747,46 @@ of the spec, the rest at the second review of `def5eb6`.
   - Not tested: the real `/opt` snapshot, `npm ci --ignore-scripts`, and the
     secure store under `sudo -iu`. Those need sudo, so 0.0.5 checks them on
     your machine.
-- Open: your Part 0.0, then the rehearsal.
+- Open: your Part 0.0, then the rehearsal. **Superseded on 2026-11-23**:
+  there is no `qsmain` user.
+
+#### Step 5, the pilot-plan change (2026-11-23): browser flows, no `qsmain`
+- **Your decisions:**
+  1. The pilot flows run by hand in the browser with Freighter, on the
+     mainnet app. They are listing, the sale offer and acceptance, the rental
+     offer and acceptance, collect, the problem report, evidence and the
+     swap. This fits Deliverable 1, proofs made in the browser.
+  2. No attestation on mainnet; `/verify` says so plainly. The testnet demo
+     keeps it.
+  3. Trustlines and USDC come from Freighter's own screens, without the 5 USDC
+     trustline limit. You run `check-pilot-accounts` by hand before each
+     flow. The contract's 1 USDC cap per payment stays.
+  4. Passkey: it approves creating the wallet and the renter's offer in the
+     wait rental. Those are the only two passkey fee envelopes you sign with
+     the CLI.
+  5. `arbiter-resolve.sh` goes through `mainnet-sign-submit.sh`.
+  6. **No `qsmain` user.**
+     - The CLI keys `qs-main-issuer`, `-arbiter`, `-fee` and `mainnet-test`
+       stay in your own keystore.
+     - My session is closed whenever you run a mainnet command.
+     - The rules stay: I never run anything with a `qs-main-` identity, and
+       nothing that signs or sends on mainnet. I never run `sudo`.
+  7. The rehearsal is a second Vercel project on the free plan: testnet,
+     configured exactly like mainnet, with no issuer key and no fee key on the
+     server.
+  - Recorded in PHASE3_PROMPT.md (hard constraints), and in my memory notes.
+- **The plan (go-ahead 2026-11-23), about 8 days, in this order:**
+  1. the network setting;
+  2. the mainnet-like testnet deployment. **Stop 1**: the environment list
+     for the second Vercel project, and the Upstash plan, with one key prefix
+     per deployment if the plan allows only one database;
+  3. issuing through unsigned envelopes;
+  4. the two passkey fee envelopes. **Stop 2**: you try 3 and 4 with real
+     Freighter on the mainnet-like app, and I fix what you find;
+  5. the arbiter routing;
+  6. tests, docs and a dry run. Stop.
+  - The contract and its WASM stay unchanged. If anything seems to need a
+    contract change, I stop and tell you.
 
 ### Step 6 — Mainnet deployment
 - Date:

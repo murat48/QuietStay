@@ -91,16 +91,35 @@ Network and money
   - The app may read `.env.local` during testnet browser tests. Scripts read
     only the variables they name (`loadEnvVars` in `scripts/lib/cli.ts`),
     never the whole file.
-- **Mainnet keys live under a separate Linux user** (added 2026-11-22,
-  runbook review).
-  - Every `qs-main-` identity, and in the rehearsal every `qs-rehearsal-`
-    identity, is created and used only as `qsmain`, from a `sudo -iu qsmain`
-    shell.
-  - `qsmain` runs a root-owned, read-only snapshot of the repo at a commit I
-    checked, and the official Stellar CLI and Node releases
-    (MAINNET_SETUP.md Part 0.0).
-  - You never run anything as `qsmain` or with `sudo`. I run every `sudo`
-    command myself.
+- **Where the mainnet keys live** (decision 6, 2026-11-23; it replaces the
+  `qsmain` user of 2026-11-22).
+  - There is no separate Linux user. The CLI keys `qs-main-issuer`,
+    `qs-main-arbiter`, `qs-main-fee` and `mainnet-test` are in my own CLI
+    keystore.
+  - Your session is closed whenever I run a mainnet command.
+  - The pilot's owner, buyer and renter are browser wallets (Freighter, or a
+    passkey wallet), not CLI identities.
+  - The rules stay: you never run anything with a `qs-main-` identity, and
+    nothing that signs or sends on mainnet.
+  - You never run anything with `sudo`.
+- **The pilot flows are done by hand in the browser** (decisions 1–5,
+  2026-11-23), on the mainnet app with Freighter:
+  - listing a week, the sale offer and its acceptance, the rental offer and
+    its acceptance, collect, the problem report, evidence and the swap.
+  - The CLI is only for:
+    - the contract upload and deploy;
+    - issuing the weeks, through an unsigned envelope the app builds;
+    - the arbiter's decision, through `mainnet-sign-submit.sh`;
+    - the two passkey fee envelopes (D6): creating the wallet, and the
+      renter's offer in the wait rental.
+  - No attestation on mainnet; `/verify` says so plainly. The testnet demo
+    keeps it.
+  - USDC trustlines and the USDC itself come from Freighter's own screens,
+    without the 5 USDC trustline limit. I run `check-pilot-accounts` by hand
+    before each flow. The contract's 1 USDC cap per payment stays.
+  - The rehearsal is a second Vercel project (free plan): a testnet app
+    configured exactly like mainnet, with no issuer key and no fee key on the
+    server.
 - Pilot limits on mainnet: no single payment above 1 USDC, and no more than
   5 USDC held across all pilot accounts at any time, unless I raise these
   limits in writing. All pilot accounts are mine, so this USDC circulates
