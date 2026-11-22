@@ -11,7 +11,8 @@
  * neither the source nor the fee nor the time bounds.
  *
  * Refused, unless every rule holds:
- * - testnet only: on any other network passphrase the route does not run;
+ * - testnet only: on any other network passphrase the route does not run,
+ *   and not in a `cli` deployment (NEXT_PUBLIC_QUIETSTAY_SIGNING=cli);
  * - the host function is either
  *   - a call to the QuietStay rights contract (any function: the contract
  *     does its own authorization), or
@@ -37,7 +38,7 @@
 
 import { Address, hash, StrKey, xdr } from "@stellar/stellar-sdk";
 
-import { CONTRACT_ID, NETWORK_PASSPHRASE, SMART_ACCOUNT_WASM_HASH, USDC_CONTRACT_ID } from "./config";
+import { CLI_SIGNING, CONTRACT_ID, NETWORK_PASSPHRASE, SMART_ACCOUNT_WASM_HASH, USDC_CONTRACT_ID } from "./config";
 
 export const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 export const MAX_FEE_STROOPS = 10_000_000n;
@@ -153,6 +154,9 @@ export function checkSponsored(
   networkPassphrase: string = NETWORK_PASSPHRASE,
 ): Checked {
   if (networkPassphrase !== TESTNET_PASSPHRASE) throw new SponsorRefusal("the fee route runs on testnet only", 404);
+  // A `cli` deployment (the mainnet-like rehearsal) has no fee key: the passkey
+  // fee is an envelope signed with the CLI fee identity instead.
+  if (CLI_SIGNING) throw new SponsorRefusal("this deployment has no fee route: the passkey fee is signed with the CLI", 404);
 
   let kind: SponsoredKind;
   let wallet: string | null = null;

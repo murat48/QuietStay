@@ -5,6 +5,7 @@ import { WalletButton, WalletProvider } from "@/components/WalletProvider";
 import { ProverNotice } from "@/components/ProverNotice";
 
 import "../(site)/globals.css";
+import { NetworkBadge } from "@/components/NetworkBadge";
 
 /**
  * The root layout for sealed-link pages (/receive), and nothing else
@@ -36,7 +37,7 @@ export default function SealedLayout({ children }: { children: React.ReactNode }
                   <span className="wordmark-quiet">Quiet</span>
                   <span className="wordmark-stay">Stay</span>
                 </span>
-                <span className="network-label">testnet</span>
+                <NetworkBadge />
               </Link>
               <WalletButton />
             </div>

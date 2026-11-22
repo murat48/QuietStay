@@ -40,6 +40,25 @@ function credentials(): { url: string; token: string } | null {
 }
 
 /** Whether this deployment has a store to write to at all. */
+/**
+ * The first part of every key this deployment writes (Step 5, Stop 1).
+ *
+ * Keys already carry the contract id, so deployments with different contracts
+ * never collide. This prefix also separates two deployments that share one
+ * Upstash database: the free plan may allow only one, and the testnet demo and
+ * the mainnet-like rehearsal could otherwise read each other's requests and
+ * nonces if they ever pointed at the same contract.
+ *
+ * `QUIETSTAY_KV_PREFIX`, server-only. It defaults to `quietstay`, the prefix
+ * every existing key has, so the testnet demo keeps its data.
+ */
+export function kvPrefix(): string {
+  const p = (process.env.QUIETSTAY_KV_PREFIX ?? "").trim();
+  if (p === "") return "quietstay";
+  if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(p)) throw new Error(`QUIETSTAY_KV_PREFIX must be lowercase letters, digits and dashes, not "${p}"`);
+  return p;
+}
+
 export function kvIsConfigured(): boolean {
   return credentials() !== null;
 }

@@ -1,14 +1,101 @@
 /**
  * Network and deployment configuration.
  *
- * Everything here is testnet. Phase 1 does not deploy to mainnet, and there is
- * deliberately no switch that would let it.
+ * Phase 3, Step 5 (pilot-plan change, 2026-11-23): one build serves both
+ * networks, and two settings choose what a deployment is.
+ *
+ * - `NEXT_PUBLIC_QUIETSTAY_NETWORK`: `testnet` (the default) or `mainnet`.
+ *   It picks the passphrase, RPC, Horizon, USDC, explorer links and Friendbot.
+ *   Any other value fails the build.
+ * - `NEXT_PUBLIC_QUIETSTAY_SIGNING`: `server` (the default on testnet) or
+ *   `cli`.
+ *   - With `server`, the deployment may hold the testnet issuer and fee keys,
+ *     as the testnet demo does.
+ *   - With `cli`, it holds neither. Issuing and the passkey fee are envelopes
+ *     the owner signs with the CLI (`scripts/mainnet-sign-submit.sh`), and
+ *     there is no attestation.
+ *   - **Mainnet is always `cli`**: a mainnet build with `server` fails. The
+ *     mainnet-like testnet rehearsal sets `cli` on testnet.
+ *
+ * Both are `NEXT_PUBLIC_` because the browser needs them, and Next.js inlines
+ * them at build time. Changing one means a new build.
  */
 
-export const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
-export const RPC_URL = process.env.STELLAR_RPC_URL ?? "https://soroban-testnet.stellar.org";
-export const HORIZON_URL = process.env.STELLAR_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
-export const FRIENDBOT_URL = "https://friendbot.stellar.org";
+export type NetworkName = "testnet" | "mainnet";
+export type SigningMode = "server" | "cli";
+
+function readNetwork(): NetworkName {
+  const v = process.env.NEXT_PUBLIC_QUIETSTAY_NETWORK;
+  if (v === undefined || v === "" || v === "testnet") return "testnet";
+  if (v === "mainnet") return "mainnet";
+  throw new Error(`NEXT_PUBLIC_QUIETSTAY_NETWORK must be "testnet" or "mainnet", not "${v}"`);
+}
+
+/** The network this deployment runs on. */
+export const NETWORK: NetworkName = readNetwork();
+export const IS_MAINNET = NETWORK === "mainnet";
+
+function readSigning(): SigningMode {
+  const v = process.env.NEXT_PUBLIC_QUIETSTAY_SIGNING;
+  if (v !== undefined && v !== "" && v !== "server" && v !== "cli") {
+    throw new Error(`NEXT_PUBLIC_QUIETSTAY_SIGNING must be "server" or "cli", not "${v}"`);
+  }
+  if (IS_MAINNET) {
+    if (v === "server") throw new Error("NEXT_PUBLIC_QUIETSTAY_SIGNING=server is not allowed on mainnet: mainnet signs with the CLI");
+    return "cli";
+  }
+  return v === "cli" ? "cli" : "server";
+}
+
+/**
+ * How this deployment signs what only the issuer or the fee account can sign.
+ * `cli`: the server holds no such key, and `hasIssuerSecret()` is false
+ * whatever the environment says.
+ */
+export const SIGNING: SigningMode = readSigning();
+export const CLI_SIGNING = SIGNING === "cli";
+
+/** Attestations are signed by the issuer key on the server, so only in `server` mode (decision 2: none on mainnet). */
+export const ATTESTATIONS = SIGNING === "server";
+
+const NETWORKS = {
+  testnet: {
+    passphrase: "Test SDF Network ; September 2015",
+    rpc: "https://soroban-testnet.stellar.org",
+    horizon: "https://horizon-testnet.stellar.org",
+    explorer: "https://stellar.expert/explorer/testnet",
+    friendbot: "https://friendbot.stellar.org",
+    label: "testnet",
+  },
+  mainnet: {
+    passphrase: "Public Global Stellar Network ; September 2015",
+    rpc: "https://mainnet.sorobanrpc.com",
+    horizon: "https://horizon.stellar.org",
+    explorer: "https://stellar.expert/explorer/public",
+    friendbot: null,
+    label: "mainnet",
+  },
+} as const;
+const NET = NETWORKS[NETWORK];
+
+export const NETWORK_PASSPHRASE: string = NET.passphrase;
+export const RPC_URL = process.env.STELLAR_RPC_URL ?? NET.rpc;
+export const HORIZON_URL = process.env.STELLAR_HORIZON_URL ?? NET.horizon;
+/** Friendbot funds testnet accounts only; `null` on mainnet. */
+export const FRIENDBOT_URL: string | null = NET.friendbot;
+/** The network's name as every screen shows it. */
+export const NETWORK_LABEL: string = NET.label;
+
+/**
+ * A value this deployment must be given. The testnet demo (testnet, `server`)
+ * has defaults. Mainnet, and the mainnet-like rehearsal (`cli`), have none:
+ * each id is set explicitly, so a rehearsal never quietly uses the demo's
+ * contracts or its fee account.
+ */
+function perNetwork(value: string | undefined, testnetDefault: string): string {
+  if (value) return value;
+  return IS_MAINNET || CLI_SIGNING ? "" : testnetDefault;
+}
 
 /**
  * The deployed QuietStay rights registry.
@@ -20,10 +107,10 @@ export const FRIENDBOT_URL = "https://friendbot.stellar.org";
  * the env file holds.
  * Changing the deployment means changing both.
  */
-export const CONTRACT_ID =
-  process.env.NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID ??
-  process.env.QUIETSTAY_CONTRACT_ID ??
-  "CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD";
+export const CONTRACT_ID = perNetwork(
+  process.env.NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID ?? process.env.QUIETSTAY_CONTRACT_ID,
+  "CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD",
+);
 
 /**
  * The Phase 1 deployment: issuer-approved transfers. Delivered and closed; its
@@ -32,12 +119,11 @@ export const CONTRACT_ID =
  */
 export const PHASE1_CONTRACT_ID = "CC3URR3UXTKYPJVU7HWEUTKXPHFEPLZ6X6EXMLYLXY2QDRMQTKMLMF7M";
 
-/** Explorer links, for evidence a reviewer can open without tooling. */
+/** Explorer links on this deployment's network, for evidence a reviewer can open without tooling. */
 export const explorer = {
-  contract: (id: string = CONTRACT_ID) =>
-    `https://stellar.expert/explorer/testnet/contract/${id}`,
-  tx: (hash: string) => `https://stellar.expert/explorer/testnet/tx/${hash}`,
-  account: (address: string) => `https://stellar.expert/explorer/testnet/account/${address}`,
+  contract: (id: string = CONTRACT_ID) => `${NET.explorer}/contract/${id}`,
+  tx: (hash: string) => `${NET.explorer}/tx/${hash}`,
+  account: (address: string) => `${NET.explorer}/account/${address}`,
 };
 
 /**
@@ -77,6 +163,9 @@ export const DATA_ROOT = process.env.QUIETSTAY_DATA_DIR ?? process.cwd();
  * environment variable, and the interface stops offering them.
  */
 export function hasIssuerSecret(): boolean {
+  // In `cli` mode (always on mainnet) the server never uses an issuer key, even
+  // if one were set by mistake.
+  if (CLI_SIGNING) return false;
   return (process.env.QUIETSTAY_ISSUER_SECRET ?? "").length > 0;
 }
 
@@ -102,6 +191,9 @@ function missing(name: string, note: string): ConfigurationError {
 
 /** Server-only. Absent in the browser bundle, and absent from the repository. */
 export function issuerSecret(): string {
+  if (CLI_SIGNING) {
+    throw new ConfigurationError("this deployment signs with the CLI (NEXT_PUBLIC_QUIETSTAY_SIGNING=cli, or mainnet): the server holds no issuer key.");
+  }
   const secret = process.env.QUIETSTAY_ISSUER_SECRET;
   if (!secret) {
     throw missing("QUIETSTAY_ISSUER_SECRET", "the issuer's signing key.");
@@ -188,8 +280,10 @@ export const SURVEY_URL = "https://forms.gle/X3ismSnCbhAjkAu1A";
  * unmodified), deployed on testnet in Step 2 with an admin nobody can
  * authorize. It holds nothing and the rights contract never calls it.
  */
-export const WEB_AUTH_CONTRACT_ID =
-  process.env.NEXT_PUBLIC_QUIETSTAY_WEB_AUTH_CONTRACT_ID ?? "CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM";
+export const WEB_AUTH_CONTRACT_ID = perNetwork(
+  process.env.NEXT_PUBLIC_QUIETSTAY_WEB_AUTH_CONTRACT_ID,
+  "CBCDSOZPADHMM742JKTM7RBEYJQ7ZPDP6AZ4TU4LFHJ5WHMGCMWF5KGM",
+);
 
 /** The OpenZeppelin smart-account build new wallets use (spec §12). */
 export const SMART_ACCOUNT_WASM_HASH = "c514d35ea67eaea9bfc1fb3327854c0c06111bc1ddebd4fe217c504c1004b9e1";
@@ -202,20 +296,30 @@ export const SMART_ACCOUNT_WASM_HASH = "c514d35ea67eaea9bfc1fb3327854c0c06111bc1
  * checklist §5.4). The mainnet instance is deployed in Step 6 and set per
  * deployment with NEXT_PUBLIC_QUIETSTAY_WEBAUTHN_VERIFIER_ID.
  */
-export const WEBAUTHN_VERIFIER_ID =
-  process.env.NEXT_PUBLIC_QUIETSTAY_WEBAUTHN_VERIFIER_ID ?? "CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL";
+export const WEBAUTHN_VERIFIER_ID = perNetwork(
+  process.env.NEXT_PUBLIC_QUIETSTAY_WEBAUTHN_VERIFIER_ID,
+  "CBK3H55VKCKZ4LRIZSETP3ZYP4OI4IIBN3SCCCFNYI5WDFC45PSWWEEL",
+);
 /** The verifier WASM it must run, checked on chain (scripts/check-deployment.ts). */
 export const WEBAUTHN_VERIFIER_WASM_HASH = "e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76";
 
 /**
- * The testnet fee account's public address (`qs-fee-testnet`, decision D6).
- * Public: a passkey transaction names it as source. Its secret is server-only.
+ * The fee account's public address (decision D6). Public: a passkey
+ * transaction names it as source.
+ * - In `server` mode it is `qs-fee-testnet`, and its secret is server-only.
+ * - In `cli` mode it is the CLI fee identity (`qs-main-fee` on mainnet), which
+ *   the owner signs with; the server holds no fee key.
  */
-export const FEE_ACCOUNT =
-  process.env.NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT ?? "GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z";
+export const FEE_ACCOUNT = perNetwork(
+  process.env.NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT,
+  "GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z",
+);
 
-/** Server-only: the testnet fee key, for /api/tx/sponsor and nothing else. */
+/** Server-only: the testnet fee key, for /api/tx/sponsor and nothing else (`server` mode on testnet only). */
 export function testnetFeeSecret(): string {
+  if (CLI_SIGNING || IS_MAINNET) {
+    throw new ConfigurationError("this deployment pays fees with the CLI fee identity: the server holds no fee key.");
+  }
   const secret = process.env.QUIETSTAY_TESTNET_FEE_SECRET;
   if (!secret) throw missing("QUIETSTAY_TESTNET_FEE_SECRET", "the testnet fee key (qs-fee-testnet).");
   return secret;
@@ -232,10 +336,28 @@ export function testnetFeeSecret(): string {
  * constructor and `usdc()` reads it back. The fee route uses this constant to
  * recognise the one USDC call it lets a smart wallet authorize (§13).
  */
-export const USDC_CONTRACT_ID = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
+export const USDC_CONTRACT_ID = IS_MAINNET
+  ? // Circle's mainnet issuer GA5ZSEJY…KZVN, same source; `stellar contract id asset --asset USDC:GA5Z…KZVN` (Addresses).
+    "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75"
+  : "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
 
 /** The same issuer, as a wallet asks for it when adding a USDC trustline. Same source. */
-export const USDC_ISSUER = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+export const USDC_ISSUER = IS_MAINNET
+  ? "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN"
+  : "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+
+/**
+ * What this deployment still needs before it can run, for the network screen
+ * and the health check: mainnet has no defaults for its contract ids.
+ */
+export function missingConfiguration(): string[] {
+  const out: string[] = [];
+  if (!CONTRACT_ID) out.push("NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID");
+  if (!WEB_AUTH_CONTRACT_ID) out.push("NEXT_PUBLIC_QUIETSTAY_WEB_AUTH_CONTRACT_ID");
+  if (!WEBAUTHN_VERIFIER_ID) out.push("NEXT_PUBLIC_QUIETSTAY_WEBAUTHN_VERIFIER_ID");
+  if (!FEE_ACCOUNT) out.push("NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT");
+  return out;
+}
 
 /** USDC has 7 decimals on Stellar: amounts are i128 counts of 10^-7 USDC. */
 export const USDC_DECIMALS = 7;

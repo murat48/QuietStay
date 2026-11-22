@@ -34,7 +34,7 @@ import {
 } from "@stellar/stellar-sdk";
 
 import { toHex } from "./canonical";
-import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, RPC_URL, USDC_CONTRACT_ID, USDC_ISSUER } from "./config";
+import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, RPC_URL, USDC_CONTRACT_ID, USDC_ISSUER, explorer } from "./config";
 import { explainFailure, isRightNotFound, type FailureEvent } from "./errors";
 import { RetryingServer } from "./rpc-server";
 
@@ -1064,7 +1064,7 @@ export async function submit(tx: Transaction): Promise<SubmitResult> {
   // Never retried: a submission that may have reached the network is not sent twice.
   const sent = await server.sendTransaction(tx);
   const hash = sent.hash;
-  const explorerLink = `https://stellar.expert/explorer/testnet/tx/${hash}`;
+  const explorerLink = explorer.tx(hash);
 
   if (sent.status === "ERROR") {
     const code = sent.errorResult?.result().switch().name ?? "unknown";

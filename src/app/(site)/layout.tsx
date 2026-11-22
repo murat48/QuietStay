@@ -7,7 +7,8 @@ import { Nav } from "@/components/Nav";
 import { ProverNotice } from "@/components/ProverNotice";
 import { SiteAnalytics } from "@/components/SiteAnalytics";
 import { WalletButton, WalletProvider } from "@/components/WalletProvider";
-import { CONTRACT_ID, SURVEY_URL, explorer } from "@/lib/config";
+import { NetworkBadge, networkDisclosure } from "@/components/NetworkBadge";
+import { CONTRACT_ID, NETWORK_LABEL, SURVEY_URL, explorer } from "@/lib/config";
 
 import mark from "../../../public/brand/quietstay-mark.png";
 import "./globals.css";
@@ -19,7 +20,7 @@ const brand = Montserrat({ subsets: ["latin"], weight: ["600", "700"], variable:
 export const metadata: Metadata = {
   title: "QuietStay — Timeshare Rights Marketplace",
   description:
-    "Verify, list, rent or sell your timeshare rights with privacy and trust. Explore the QuietStay testnet MVP, built on Stellar.",
+    `Verify, list, rent or sell your timeshare rights with privacy and trust. Explore the QuietStay ${NETWORK_LABEL} app, built on Stellar.`,
   openGraph: { images: ["/brand/quietstay-logo.png"] },
 };
 
@@ -43,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/" className="brand" aria-label="QuietStay home">
                 <Image className="brand-mark" src={mark} alt="" width={38} height={38} preload />
                 <Wordmark />
-                <span className="network-label">testnet</span>
+                <NetworkBadge />
               </Link>
               <Nav />
               <WalletButton />
@@ -64,7 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <a href={explorer.contract()} target="_blank" rel="noreferrer">View on Stellar ↗</a>
               </div>
               <p className="footer-disclosure">
-                Stellar testnet demo · Usage rights only — no payments, and no legal title transfer.
+                {networkDisclosure()}
                 Contract{" "}
                 <a href={explorer.contract()} target="_blank" rel="noreferrer">
                   <code>{CONTRACT_ID}</code> ↗

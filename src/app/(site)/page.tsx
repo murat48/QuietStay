@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import { Reveal } from "@/components/Reveal";
-import { SURVEY_URL } from "@/lib/config";
+import { ATTESTATIONS, IS_MAINNET, NETWORK_LABEL, SURVEY_URL } from "@/lib/config";
 import mark from "../../../public/brand/quietstay-mark.png";
 import resort from "../../../public/images/mediterranean-resort.jpg";
 import styles from "./page.module.css";
@@ -41,7 +41,7 @@ export default function Home() {
           <ul className={styles.technology} aria-label="Built with">
             <li><Icon name="transfer" /> Built on Stellar</li>
             <li><Icon name="shield" /> Usage rights proved with ZK</li>
-            <li className={styles.testnet}>Testnet MVP · In development</li>
+            <li className={styles.testnet}>{IS_MAINNET ? "Mainnet pilot · Real USDC, small limits" : "Testnet MVP · In development"}</li>
           </ul>
         </div>
       </section>
@@ -131,7 +131,7 @@ export default function Home() {
             <Link className="btn" href="/verify">Verify a right</Link>
           </div>
           <p className={styles.closingNote}>
-            Stellar testnet only. QuietStay transfers usage rights; no payment moves through it yet.
+            Stellar {NETWORK_LABEL}. QuietStay transfers usage rights; sales and rentals are paid in {NETWORK_LABEL} USDC.
           </p>
         </section>
       </Reveal>
@@ -150,7 +150,9 @@ const STEPS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: "listing",
     title: "List it",
-    text: "Offer it for rent or for sale. Renters and buyers see the town, the dates and the fee status the issuer attests.",
+    text: ATTESTATIONS
+      ? "Offer it for rent or for sale. Renters and buyers see the town, the dates and the fee status the issuer attests."
+      : "Offer it for rent or for sale. Renters and buyers see the town and the dates, read from the chain.",
   },
   {
     icon: "shield",
@@ -179,7 +181,7 @@ const SIDES = [
     title: "Know what you're getting before you commit.",
     points: [
       "See that the seller really holds the week",
-      "See the maintenance-fee status the issuer attests",
+      ATTESTATIONS ? "See the maintenance-fee status the issuer attests" : "See that the week exists on the chain, and for which dates",
       "Check any right yourself, with no account needed",
     ],
   },

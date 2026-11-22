@@ -32,15 +32,15 @@
 import { accessSync, constants, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
-import { CONTRACT_ID, DATA_ROOT } from "./config";
-import { kvGet, kvIsConfigured, kvIsReachable, kvSet } from "./kv";
+import { ATTESTATIONS, CONTRACT_ID, DATA_ROOT } from "./config";
+import { kvGet, kvIsConfigured, kvIsReachable, kvPrefix, kvSet } from "./kv";
 import type { Attestation } from "./attestation";
 
 /**
  * The overlay's key for a right: namespaced, since requests share the store, and
  * per contract, since every deployment numbers its rights from 1.
  */
-const kvKey = (rightId: number) => `quietstay:${CONTRACT_ID}:attestation:${rightId}`;
+const kvKey = (rightId: number) => `${kvPrefix()}:${CONTRACT_ID}:attestation:${rightId}`;
 
 /** Written by the web app and by `npm run attest`. */
 const PRIMARY_DIR = "inventory/phase2/attestations";
@@ -67,6 +67,11 @@ const PRIMARY_DIR = "inventory/phase2/attestations";
  * instead, which costs nothing — there is nothing there at build time to find.
  */
 export async function loadAttestation(rightId: number): Promise<Attestation | null> {
+  // No attestations on mainnet or in the mainnet-like rehearsal (decision 2).
+  // Without this, the files shipped for the Phase 2 contract, named by right
+  // number alone, would be offered for another contract's right of the same
+  // number.
+  if (!ATTESTATIONS) return null;
   const name = `right-${rightId}.attestation.json`;
 
   // Written since the build, if this deployment has anywhere to write.
@@ -161,6 +166,7 @@ export async function saveAttestation(
   rightId: number,
   attestation: Attestation,
 ): Promise<string> {
+  if (!ATTESTATIONS) throw new Error("this deployment issues no attestations (mainnet, or NEXT_PUBLIC_QUIETSTAY_SIGNING=cli)");
   const body = `${JSON.stringify(attestation, null, 2)}\n`;
 
   if (kvIsConfigured()) {

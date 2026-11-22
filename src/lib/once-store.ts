@@ -13,10 +13,10 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 import { CONTRACT_ID, DATA_ROOT } from "./config";
-import { kvCount, kvIsConfigured, kvSetOnce } from "./kv";
+import { kvCount, kvIsConfigured, kvPrefix, kvSetOnce } from "./kv";
 
 const FILE = resolve(DATA_ROOT, "inventory/phase3/once-store.json");
-const ns = (key: string) => `quietstay:${CONTRACT_ID}:${key}`;
+const ns = (key: string) => `${kvPrefix()}:${CONTRACT_ID}:${key}`;
 
 type FileState = Record<string, { n: number; until: number }>;
 

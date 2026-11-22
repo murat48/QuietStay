@@ -155,6 +155,13 @@ header.top::after {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+/* Mainnet: unmistakable, and never hidden (Step 6: the network on every screen). */
+.brand .network-label.network-mainnet {
+  color: #ffffff;
+  background: #b4232a;
+  border-color: #b4232a;
+  font-weight: 700;
+}
 nav.screens {
   display: flex;
   gap: 0.1rem;
@@ -796,7 +803,7 @@ header.top .wallet button:not(.primary) {
 
 /* The testnet badge returns on wide screens; the footer and hero say it anyway. */
 @media (max-width: 1360px) {
-  header.top .network-label { display: none; }
+  header.top .network-label:not(.network-mainnet) { display: none; }
 }
 
 footer.foot {

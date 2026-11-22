@@ -47,7 +47,7 @@ import { accessSync, constants, mkdirSync, readFileSync, writeFileSync } from "n
 import { dirname, join, resolve } from "node:path";
 
 import { CONTRACT_ID, DATA_ROOT } from "./config";
-import { kvGet, kvIsConfigured, kvIsReachable, kvSet } from "./kv";
+import { kvGet, kvIsConfigured, kvIsReachable, kvPrefix, kvSet } from "./kv";
 
 /** Per deployment, like attestations: every contract numbers its rights from 1. */
 export const REQUESTS_DIR = "inventory/phase2/requests";
@@ -59,7 +59,7 @@ export const REQUESTS_DIR = "inventory/phase2/requests";
 type Slot = number | "issuance";
 
 /** The store's key for a list. Namespaced, since attestations share it. */
-const kvKey = (slot: Slot) => `quietstay:${CONTRACT_ID}:requests:${slot}`;
+const kvKey = (slot: Slot) => `${kvPrefix()}:${CONTRACT_ID}:requests:${slot}`;
 
 export type RequestStatus = "open" | "accepted" | "declined" | "withdrawn";
 

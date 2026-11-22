@@ -29,7 +29,7 @@ import { createPortal } from "react-dom";
 
 import { photosFor, StayCover, StayGallery } from "@/components/StayPhotos";
 import { useWallet } from "@/components/WalletProvider";
-import { explorer } from "@/lib/config";
+import { ATTESTATIONS, NETWORK_LABEL, explorer } from "@/lib/config";
 import { describeError, formatDate, formatDays, shortAddress, weekIsOver } from "@/lib/format";
 import { unixToIsoDate } from "@/lib/record";
 import { requestLink } from "@/lib/sealed";
@@ -529,7 +529,7 @@ export default function ListScreen() {
       <p className="eyebrow">EXPLORE QUIETSTAY</p>
       <h1>Find your next week away</h1>
       <p className="lede">
-        The shop window and the public record in one, read live from testnet. A week&apos;s date
+        The shop window and the public record in one, read live from {NETWORK_LABEL}. A week&apos;s date
         range and its use year are public, because an offer has to say what it is offering. Who owns
         it, which resort it is, and the deed behind it are not on the ledger at all — only the hash
         is.
@@ -936,7 +936,9 @@ export default function ListScreen() {
 
                   {owesFees ? (
                     <div className="note warn">
-                      {right.fees === null
+                      {right.fees === null && !ATTESTATIONS
+                        ? `QuietStay signs no attestations on ${NETWORK_LABEL}, so nothing here vouches for this week's maintenance fees.`
+                        : right.fees === null
                         ? "The issuer has signed no attestation for this week, so nothing vouches for its maintenance fees."
                         : "The issuer attests this week carries unpaid maintenance fees."}{" "}
                       Worth knowing before taking it on — but it does not stop a transfer: no
@@ -1149,7 +1151,7 @@ export default function ListScreen() {
                     it did, by re-signing its attestation. Nothing is written to
                     the ledger and the commitment is untouched.
                   */}
-                  {isIssuer && !answering && !readOnly ? (
+                  {isIssuer && !answering && !readOnly && ATTESTATIONS ? (
                     <fieldset style={{ marginTop: "0.85rem", marginBottom: 0 }}>
                       <legend>Issuer — fee status</legend>
                       <div className="row" style={{ alignItems: "flex-end" }}>

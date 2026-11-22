@@ -33,7 +33,7 @@
  * built once.
  */
 
-import { NETWORK_PASSPHRASE } from "./config";
+import { IS_MAINNET, NETWORK_LABEL, NETWORK_PASSPHRASE } from "./config";
 
 /** The subset of the kit this app calls. Keeps the dynamic import honest. */
 interface Kit {
@@ -84,7 +84,7 @@ export function walletKit(): Promise<Kit> {
         getAddress: async () => ({ address: await bridge.address() }),
         signTransaction: async (xdr) => ({ signedTxXdr: await bridge.signTransaction(xdr) }),
         signAuthEntry: async (preimage) => ({ signedAuthEntry: await bridge.signAuthEntry(preimage) }),
-        getNetwork: async () => ({ network: "TESTNET", networkPassphrase: NETWORK_PASSPHRASE }),
+        getNetwork: async () => ({ network: IS_MAINNET ? "PUBLIC" : "TESTNET", networkPassphrase: NETWORK_PASSPHRASE }),
         disconnect: async () => {},
       });
       return kitPromise;
@@ -109,8 +109,8 @@ export function walletKit(): Promise<Kit> {
     ]);
 
     StellarWalletsKit.init({
-      // Testnet only. This phase does not deploy to mainnet and has no switch for it.
-      network: Networks.TESTNET,
+      // The deployment's network (NEXT_PUBLIC_QUIETSTAY_NETWORK, src/lib/config.ts).
+      network: IS_MAINNET ? Networks.PUBLIC : Networks.TESTNET,
       modules: [
         new FreighterModule(),
         new xBullModule(),
@@ -146,11 +146,11 @@ export async function connectedAddress(): Promise<string | null> {
 }
 
 /**
- * Confirm the wallet is on testnet.
+ * Confirm the wallet is on this deployment's network.
  *
  * Returns the wallet's network name when it can report one. Some wallets (Albedo,
  * for instance) do not expose a network at all, in which case this returns `null`
- * rather than inventing a mismatch — the transaction itself carries the testnet
+ * rather than inventing a mismatch — the transaction itself carries the network's
  * passphrase, so a wallet on the wrong network will refuse or produce a signature
  * the network rejects. Better an honest `null` than a false assurance.
  */
@@ -172,8 +172,8 @@ export async function walletNetwork(): Promise<string | null> {
 export class NetworkMismatch extends Error {
   constructor(readonly walletNetworkName: string) {
     super(
-      `Your wallet is on ${walletNetworkName}. QuietStay is testnet only — ` +
-        "switch networks and reconnect.",
+      `Your wallet is on ${walletNetworkName}. This QuietStay app runs on ${NETWORK_LABEL} — ` +
+        `switch your wallet to ${NETWORK_LABEL} and reconnect.`,
     );
     this.name = "NetworkMismatch";
   }

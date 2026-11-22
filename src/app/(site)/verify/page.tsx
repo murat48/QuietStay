@@ -54,7 +54,15 @@ import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@/components/WalletProvider";
 import { verifyAttestation, type Check } from "@/lib/attestation";
 import { commit } from "@/lib/canonical";
-import { CONTRACT_ID, NETWORK_PASSPHRASE, explorer } from "@/lib/config";
+import { ATTESTATIONS, CONTRACT_ID, NETWORK_LABEL, NETWORK_PASSPHRASE, explorer } from "@/lib/config";
+
+/**
+ * Decision 2 (2026-11-23): QuietStay signs no attestations on mainnet, nor in
+ * the mainnet-like rehearsal. /verify says so plainly instead of reporting a
+ * missing one as if the issuer had simply not signed.
+ */
+const NO_ATTESTATIONS_DETAIL =
+  `this ${NETWORK_LABEL} deployment issues no attestations: QuietStay signs none here, so nothing on this page vouches for maintenance fees. The on-chain checks are all there is`;
 import { describeError, formatDate, shortAddress } from "@/lib/format";
 import { validateRecord, type OwnershipRecord } from "@/lib/record";
 
@@ -182,7 +190,9 @@ export default function VerifyScreen() {
             id: "record-digest",
             label: "Record is well formed — its SHA-256 is computed here",
             ok: true,
-            detail: `d = 0x${recomputed}; the attestation check below compares it with what the issuer signed`,
+            detail: ATTESTATIONS
+              ? `d = 0x${recomputed}; the attestation check below compares it with what the issuer signed`
+              : `d = 0x${recomputed}. With no attestation on ${NETWORK_LABEL}, this page cannot tie the record to the chain; npm run verify-record with the holder's secret hash checks it against the on-chain commitment`,
           });
         } catch (caught) {
           collected.push({
@@ -195,14 +205,22 @@ export default function VerifyScreen() {
       }
 
       // --- leg 2: the attestation ------------------------------------------
-      if (input.attestationText.trim() === "") {
+      if (input.attestationText.trim() === "" && !ATTESTATIONS) {
+        // Decision 2: none on this network, by design. Reported, not failed.
+        collected.push({
+          id: "attestation-none",
+          label: `No issuer attestation on ${NETWORK_LABEL} (by design)`,
+          ok: true,
+          detail: NO_ATTESTATIONS_DETAIL,
+        });
+      } else if (input.attestationText.trim() === "") {
         collected.push({
           id: "attestation-absent",
           label: "Issuer attestation supplied",
           ok: false,
           detail:
             input.attestationAbsentDetail ??
-            "no attestation supplied — nothing vouches that this week is free of unpaid fees",
+            (ATTESTATIONS ? "no attestation supplied — nothing vouches that this week is free of unpaid fees" : NO_ATTESTATIONS_DETAIL),
         });
       } else {
         try {
@@ -314,8 +332,9 @@ export default function VerifyScreen() {
           attestationText: fetched ?? "",
           recordText: "",
           claimedHolder: "",
-          attestationAbsentDetail:
-            "the issuer has signed no attestation for this right — nothing vouches that this week is free of unpaid fees",
+          attestationAbsentDetail: ATTESTATIONS
+            ? "the issuer has signed no attestation for this right — nothing vouches that this week is free of unpaid fees"
+            : NO_ATTESTATIONS_DETAIL,
         }),
       );
     } catch (caught) {
@@ -479,7 +498,7 @@ export default function VerifyScreen() {
           ) : transfers.length === 0 ? (
             <div data-testid="evidence-fallback">
               <p className="muted">
-                The network keeps a contract&apos;s events only briefly — about a day on testnet — so
+                The network keeps a contract&apos;s events only briefly (about a day on the public RPC), so
                 this week&apos;s own transfers are not listed here once they are older than that — instead, these are
                 the contract&apos;s evidence transactions, permanent and each openable in the
                 explorer, showing what it accepts and what it refuses.
@@ -550,8 +569,16 @@ export default function VerifyScreen() {
         <div className="card" role="tabpanel" id="panel-json" aria-labelledby="tab-json">
           <div className="field">
             <label htmlFor="attestation">
-              Issuer attestation (JSON) — <span style={{ color: "var(--accent)" }}>required</span>
+              Issuer attestation (JSON) —{" "}
+              {ATTESTATIONS ? <span style={{ color: "var(--accent)" }}>required</span> : <span className="muted">none on {NETWORK_LABEL}</span>}
             </label>
+            {ATTESTATIONS ? null : (
+              <p className="note warn" data-testid="no-attestations">
+                QuietStay signs no attestations on this {NETWORK_LABEL} deployment. The checks below come from the
+                contract alone: whether the week exists, who holds it, and whether a record matches its commitment.
+                Nothing here vouches for maintenance fees.
+              </p>
+            )}
             <textarea
               id="attestation"
               style={{ minHeight: "11rem" }}
@@ -622,8 +649,18 @@ export default function VerifyScreen() {
           <div className={`note ${allOk ? "accent" : "bad"}`}>
             {allOk ? (
               <>
-                <strong>Every check passed.</strong> The issuer attests this week is valid and free
-                of unpaid maintenance fees, and it is inside its use year.{" "}
+                {ATTESTATIONS ? (
+                  <>
+                    <strong>Every check passed.</strong> The issuer attests this week is valid and free
+                    of unpaid maintenance fees, and it is inside its use year.{" "}
+                  </>
+                ) : (
+                  <>
+                    <strong>Every on-chain check passed.</strong> This week exists on the {NETWORK_LABEL}{" "}
+                    contract and is inside its use year. There is no attestation on {NETWORK_LABEL}, so
+                    nothing here vouches for maintenance fees.{" "}
+                  </>
+                )}
                 {checkedAHolder ? (
                   <>The account offering it is the holder the contract names. </>
                 ) : (
@@ -633,7 +670,13 @@ export default function VerifyScreen() {
                     <code>{shortAddress(right?.effective_holder ?? null)}</code>.{" "}
                   </>
                 )}
-                {checkedARecord ? (
+                {checkedARecord && !ATTESTATIONS ? (
+                  <>
+                    The record you were shown is well formed. Without an attestation it is not tied
+                    to the chain here: <code>npm run verify-record</code> with the holder&apos;s secret
+                    hash checks it against the on-chain commitment.
+                  </>
+                ) : checkedARecord ? (
                   <>
                     The record you were shown is the exact document the issuer attested, unaltered
                     since — <code>npm run verify-record</code> ties it to the ledger&apos;s commitment.

@@ -3,7 +3,7 @@
  * SEP-45 for C… smart wallets) and the contracts this deployment uses.
  */
 
-import { CONTRACT_ID, HOME_DOMAIN, NETWORK_PASSPHRASE, WEB_AUTH_CONTRACT_ID } from "@/lib/config";
+import { CONTRACT_ID, HOME_DOMAIN, NETWORK_LABEL, NETWORK_PASSPHRASE, WEB_AUTH_CONTRACT_ID } from "@/lib/config";
 import { serverAccount } from "@/lib/sep10";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export function GET(): Response {
     "[[CURRENCIES]]",
     `code = "QSTAY"`,
     `issuer = "${CONTRACT_ID}"`,
-    `desc = "QuietStay usage rights (testnet pilot; non-fungible, decimals 0)"`,
+    `desc = "QuietStay usage rights (${NETWORK_LABEL} pilot; non-fungible, decimals 0)"`,
     "",
   ];
   return new Response(lines.join("\n"), {

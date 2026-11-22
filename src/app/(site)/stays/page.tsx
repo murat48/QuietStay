@@ -27,7 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProverNotice } from "@/components/ProverNotice";
 import { useWallet } from "@/components/WalletProvider";
 import type { Escrow, Offer, RecordRequest } from "@/lib/contract";
-import { OFFER_LEDGERS, RPC_URL, USDC_ISSUER, explorer } from "@/lib/config";
+import { IS_MAINNET, OFFER_LEDGERS, RPC_URL, USDC_ISSUER, explorer } from "@/lib/config";
 import { escrowStatus } from "@/lib/escrow-status";
 import { describeError, formatDate, formatDateTime, shortAddress } from "@/lib/format";
 import { prover } from "@/lib/prover-client";
@@ -125,7 +125,8 @@ export default function StaysScreen() {
         hours after check-in.
       </p>
       <div className="note accent phase-note">
-        <span className="tag ok">Testnet</span> Payments use testnet USDC. Amounts, addresses and
+        <span className={`tag ${IS_MAINNET ? "warn" : "ok"}`}>{IS_MAINNET ? "Mainnet" : "Testnet"}</span>{" "}
+        {IS_MAINNET ? "Payments use real USDC, at most 1 USDC each." : "Payments use testnet USDC."} Amounts, addresses and
         evidence hashes are public on chain; the week&apos;s record and your secret are not.
       </div>
       <Stays />
