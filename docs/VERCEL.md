@@ -266,3 +266,82 @@ and no store that produced exactly that — right #36 exists on chain, has no
 attestation, and is stuck. The check now runs first, and it actually pings the
 store rather than trusting that credentials which are present are credentials
 that work.
+
+## The mainnet-like rehearsal project (Phase 3, Step 5)
+
+A second Vercel project, on the free plan, from the same repository.
+- It is testnet, configured exactly as mainnet will be: `cli` signing, so
+  **no issuer key and no fee key on the server**, and no attestations.
+- Issuing and the two passkey fee envelopes are built by the app and signed
+  by you with `scripts/mainnet-sign-submit.sh`.
+- It points at the rehearsal dry-run deployment, created 2026-11-22. Every
+  entry is extended to about 2027-05-21
+  (`evidence/checklist/rehearsal-app-ttl-2026-11-23.txt`):
+  - rights `CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP`, the
+    tested WASM, issuer `qs-issuer`, arbiter `qs-arbiter`, 1 USDC cap;
+  - web-auth `CDJJSKRIS2CUKSPNO37Q56SY7QJBEOYOLTLLSKDUWGEF4EPR5BTIF5SN`;
+  - WebAuthn verifier `CBZKYQIQ335HWKC55NFKOUKDIGDR6MHFWSLM6IITIXHQL2Z4GLXPSEHS`.
+
+**The store: one Upstash database, shared, with its own prefix.**
+- Upstash's free plan allows one database per account ("A free account can
+  have 1 database", upstash.com/pricing/redis, read 2026-11-23).
+- Connect the **existing** database to this project too (Vercel → Storage →
+  the database → Connect Project).
+- Set `QUIETSTAY_KV_PREFIX=qs-rehearsal`. The demo keeps the default prefix,
+  `quietstay`, so its data is untouched.
+- Every key also carries the contract id, so the two apps cannot read each
+  other's requests, nonces or rate limits.
+- Both apps count against the same free daily command quota.
+
+### Steps
+
+1. Push the branch, because Vercel builds from GitHub: `git push origin phase3`.
+   - The demo project may also build a *preview* of `phase3`. That preview
+     uses the demo's Preview variables, so it is not the rehearsal.
+2. Vercel → Add New → Project. Import the same repository, and name it, for
+   example, `quietstay-rehearsal`.
+   - Framework: Next.js; the defaults are fine.
+   - Settings → Git → **Production Branch: `phase3`**.
+3. Set the variables below for **Production**, then deploy.
+4. Once the first deploy gives you its host, set `QUIETSTAY_HOME_DOMAIN` to it.
+   It is read at runtime, so a redeploy without rebuilding is enough.
+5. Check it, and paste me the output:
+
+   ```sh
+   npx tsx scripts/check-app-config.ts --url https://<the rehearsal host> --network testnet --signing cli \
+     --rights CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP \
+     --web-auth CDJJSKRIS2CUKSPNO37Q56SY7QJBEOYOLTLLSKDUWGEF4EPR5BTIF5SN \
+     --verifier CBZKYQIQ335HWKC55NFKOUKDIGDR6MHFWSLM6IITIXHQL2Z4GLXPSEHS \
+     --fee-account GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z \
+     --issuer GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE \
+     --arbiter GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC
+   ```
+
+   The script only reads the app's public `/api/network` and `stellar.toml`,
+   and the chain. It sends nothing.
+
+### Variables
+
+| Variable | Value | Why |
+| --- | --- | --- |
+| `NEXT_PUBLIC_QUIETSTAY_NETWORK` | `testnet` | the network. On the mainnet project it will be `mainnet` |
+| `NEXT_PUBLIC_QUIETSTAY_SIGNING` | `cli` | no issuer or fee key on the server; issuing and passkey fees are CLI envelopes; no attestations. Mainnet is always `cli` |
+| `NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID` | `CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP` | in `cli` mode there are no defaults: every id is set |
+| `QUIETSTAY_CONTRACT_ID` | the same | the server-side name; kept equal |
+| `NEXT_PUBLIC_QUIETSTAY_WEB_AUTH_CONTRACT_ID` | `CDJJSKRIS2CUKSPNO37Q56SY7QJBEOYOLTLLSKDUWGEF4EPR5BTIF5SN` | SEP-45 sign-in for passkey wallets |
+| `NEXT_PUBLIC_QUIETSTAY_WEBAUTHN_VERIFIER_ID` | `CBZKYQIQ335HWKC55NFKOUKDIGDR6MHFWSLM6IITIXHQL2Z4GLXPSEHS` | our own verifier instance |
+| `NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT` | `GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z` | `qs-fee-testnet`'s **public** key. A passkey envelope names it as source, and you sign with `qs-fee-testnet` in the CLI. On mainnet: `qs-main-fee`'s public key |
+| `QUIETSTAY_SEP10_SERVER_SECRET` | a testnet sign-in key's `S…` | signs the sign-in challenges. Use the demo's testnet sign-in key (`GDC2YUKY…`, already on testnet), or a new testnet key you fund with Friendbot. On mainnet this is `mainnet-test`'s secret, set only in Vercel |
+| `QUIETSTAY_SESSION_SECRET` | 32+ random characters, e.g. `openssl rand -base64 48` | signs session cookies. Make a new one; don't copy the demo's |
+| `QUIETSTAY_HOME_DOMAIN` | the rehearsal host, e.g. `quietstay-rehearsal.vercel.app` | the SEP-10/SEP-45 home domain. Set it after the first deploy (step 4) |
+| `QUIETSTAY_KV_PREFIX` | `qs-rehearsal` | its own keys in the shared Upstash database |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL`, `KV_REST_API_TOKEN`) | set by connecting the existing database | the store: requests, single-use nonces |
+
+**Do not set** these on the rehearsal or the mainnet project:
+- `QUIETSTAY_ISSUER_SECRET` and `QUIETSTAY_TESTNET_FEE_SECRET`. A `cli` build
+  ignores them anyway, and `/api/network` shows `issuer_key_on_server: false`;
+- `NEXT_PUBLIC_QS_E2E_WALLET` (test builds only);
+- `QUIETSTAY_DATA_DIR`.
+
+The `NEXT_PUBLIC_` values are built into the app, so changing one needs a new
+build. The others take effect on the next request.

@@ -1787,6 +1787,46 @@ of the spec, the rest at the second review of `def5eb6`.
   6. tests, docs and a dry run. Stop.
   - The contract and its WASM stay unchanged. If anything seems to need a
     contract change, I stop and tell you.
+- **Item 1 done (2026-11-23), commit `5603983`: one network setting.**
+  - `NEXT_PUBLIC_QUIETSTAY_NETWORK` (`testnet`/`mainnet`) picks the
+    passphrase, RPC, Horizon, USDC, explorer and Friendbot.
+  - `NEXT_PUBLIC_QUIETSTAY_SIGNING=cli` means no issuer key and no fee key on
+    the server, even if one is set, and no attestations.
+  - Mainnet is always `cli`; a mainnet build asking for `server` fails.
+    Mainnet and `cli` builds take no testnet defaults for ids or the fee
+    account.
+  - Freighter connects on the deployment's network. The fee route refuses in
+    `cli` mode.
+  - `/verify` reports the attestation as absent by design ("Every on-chain
+    check passed… nothing here vouches for maintenance fees"), instead of
+    failing.
+  - Found while doing it: the attestation files shipped with the build are
+    keyed by right number only. They are no longer read without
+    attestations, so a mainnet right #1 cannot pick up a Phase 2 file.
+  - The network badge stays visible on every screen, red on mainnet; the
+    wording follows the network.
+  - `QUIETSTAY_KV_PREFIX` gives each deployment its own keys. The default,
+    `quietstay`, keeps the demo's data.
+  - `/api/network` reports the configuration, public values only.
+  - Unit tests 49/49, each mode in a fresh process. Mainnet and `cli` builds
+    pass, built and served from a copy without `.env.local`. Lint: the 7 old
+    errors.
+- **Item 2 prepared (2026-11-23) — Stop 1.**
+  - The environment list and steps are in `docs/VERCEL.md`, "The mainnet-like
+    rehearsal project".
+  - **Upstash: the free plan allows one database** ("A free account can have
+    1 database", upstash.com/pricing/redis). So the existing database is
+    shared, with `QUIETSTAY_KV_PREFIX=qs-rehearsal`.
+  - The app points at the dry-run deployment (`CC7W4OGP…`, `CDJJSKRI…`,
+    `CBZKYQIQ…`), whose instances I extended to ~2027-05-21:
+    - `3167874f…`, `8af52672…`, `2ee06797…`, as `qs-issuer` on testnet;
+    - `evidence/checklist/rehearsal-app-ttl-2026-11-23.txt`.
+  - New `scripts/check-app-config.ts` checks a deployed app from outside,
+    against its public `/api/network` and `stellar.toml`, plus the chain. It
+    was tested against a local `cli` build: all pass.
+  - **`phase3` is not on GitHub yet** (`git ls-remote`: only `main`). You
+    push it before creating the project.
+  - Waiting for you to create the project.
 
 ### Step 6 — Mainnet deployment
 - Date:

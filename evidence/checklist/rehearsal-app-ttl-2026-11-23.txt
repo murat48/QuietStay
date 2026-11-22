@@ -1,0 +1,10 @@
+testnet, latest ledger 5872016, read 2026-11-22T21:42:04.091Z (read only; nothing signed or sent)
+  PASS  rights WASM 76d69e79…              live until 8980356 (3108340 ledgers, ~2027-05-21)
+  PASS  web-auth WASM 708cacdc…            live until 8980357 (3108341 ledgers, ~2027-05-21)
+  PASS  OZ account WASM c514d35e…          live until 8980358 (3108342 ledgers, ~2027-05-21)
+  PASS  OZ verifier WASM e63a030d…         live until 8980359 (3108343 ledgers, ~2027-05-21)
+  PASS  rights instance CC7W4OGP…          live until 8982413 (3110397 ledgers, ~2027-05-21)
+  PASS  web-auth instance CDJJSKRI…        live until 8982414 (3110398 ledgers, ~2027-05-21)
+  PASS  verifier instance CBZKYQIQ…        live until 8982415 (3110399 ledgers, ~2027-05-21)
+
+all entries live
