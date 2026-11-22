@@ -617,12 +617,11 @@ closed, and the deploy cost is accepted in principle.
 3. **Step 3 closed (2026-11-21):** escrow #1 on `CA4B3MIZ…` was collected,
    tx `b40f55b6…695e`, 88,951 s after check-in. The late problem report was
    refused with #49, tx `806d8a78…cdf`.
-   - Separately, the final deployment's wait rental (escrow #1 on `CATUBRZZ…`)
-     can be collected from **2026-11-22T13:50:56Z** with `npx tsx
-     scripts/step3-evidence.ts collect-wait --contract
-     CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM`.
-   - That is the one flow on the final WASM that needs the 24 h wait. Its
-     refusal before the window is already on chain: #48, `396deb7b…`.
+   - **The final deployment's wait rental is collected too (2026-11-22):**
+     escrow #1 on `CATUBRZZ…`, tx `67533a18…d295`, 102,275 s after check-in.
+     The late problem report was refused with #49, tx `a29d267e…fce1`. The
+     refusal before the window was #48, `396deb7b…`. Every flow has now
+     landed on the final WASM.
    - **Testnet note:** the final WASM's code entry on testnet is live until
      ledger 5,959,276, about 2026-11-27 (`scripts/check-mainnet-wasm.ts
      --network testnet`). The collect is well before that. A testnet

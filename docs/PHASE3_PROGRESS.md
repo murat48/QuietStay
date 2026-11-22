@@ -70,7 +70,7 @@ actually run.
 | Low | This machine's connection drops at times (DNS `EAI_AGAIN`, 10 s connect timeouts, 30 s hangs) on every host, Horizon included (`evidence/network/`). The reads retry; the sends recover by hash | 5 | open (environment) |
 | Medium | **Mainnet deploy cost:** uploading the rights WASM simulates at 694,336,359 stroops (69.43 XLM) of minimum resource fee; the web-auth upload at 3.44 XLM (`scripts/mainnet-simulate-upload.ts`). **Step 5 review:** reproduced exactly by `tools/upload-fee` (soroban-env-host 30.0.0). It is 0.0226 XLM of write fees, 60.3574 XLM of rent, and 9.0536 XLM of 15% simulation margin, which is refunded, so 60.38 XLM is charged. Budget: 121 XLM in all, 113 from you (`docs/MAINNET_SETUP.md`) | 5 | accepted in principle (your decision, Step 5 review); funding is in the runbook |
 | Low | After about 119 days on mainnet, the call that finds the instance below 17,280 ledgers extends the code entry to 518,400 ledgers and pays its rent: **about 14.6 XLM charged** (16.8 XLM declared; Step 5 review, from the 1,086,431-byte rent size). The Step 5 "about 17 XLM" included the 15% margin. After the pilot; can be done ahead with `stellar contract extend` | 5 | open (record) |
-| Medium | The final deployment's wait rental (escrow #1 on `CATUBRZZ…`) can be collected from 2026-11-22T13:50:56Z: the only flow on the final WASM still to land | 5 | open: `npx tsx scripts/step3-evidence.ts collect-wait --contract CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM` |
+| ~~Medium~~ | The final deployment's wait rental (escrow #1 on `CATUBRZZ…`) can be collected from 2026-11-22T13:50:56Z: the only flow on the final WASM still to land | 5 | **resolved 2026-11-22:** report refused #49 `a29d267e…fce1`, collect `67533a18…d295`, 102,275 s after check-in (Step 5 log). Every flow on the final WASM has now landed |
 | Medium | **The WebAuthn verifier is someone else's contract instance** (found applying your Step 5 review rule "only reuse an uploaded WASM, never someone else's contract instance"). The app passes the kit's manifest instance to every passkey wallet: testnet `CC7EKIHQ…OM3F`, mainnet `CB7HENHJ…Q5YR`. Its code (`e63a030d…`) has no constructor, admin or `upgrade`, but its TTL is not ours | 5 (review) | **OPEN, yours.** Proposal (checklist §5.4): deploy our own instance from the uploaded `e63a030d…` (about 0.03 XLM on mainnet; it saves the 16.80 XLM of uploading the code), and set `WEBAUTHN_VERIFIER_ID` per network. It is an app setting, not a change to the rights WASM; one testnet passkey rerun follows |
 | Low | The OZ code our passkey wallets need lives on mainnet for about 93 days (account `c514d35e…`, live until ledger 67,205,504) and about 71 days (verifier `e63a030d…`, until 66,824,189), from 2026-11-21 (`scripts/check-mainnet-wasm.ts`). Anyone can extend it. Reusing both saves about 60.2 XLM of uploads | 5 (review) | open: decide in Step 6 whether to extend them over the pilot (not needed for 30 days) |
 | Low | The final WASM's code entry on **testnet** is live until ledger 5,959,276, about 2026-11-27 (`scripts/check-mainnet-wasm.ts --network testnet`). The 2026-11-22 collect comes first; a later testnet rehearsal needs a `stellar contract extend` of it (a testnet transaction) | 5 (review) | open |
@@ -1022,8 +1022,8 @@ of the spec, the rest at the second review of `def5eb6`.
   secret given.
 - The log, with the side-by-side times, is `evidence/step3-testnet-CA4B3MIZ.json`.
   Step 7's rental timing check in EVIDENCE.md can use these two hashes.
-- **Step 3 is closed.** Still separate: the final deployment's wait rental on
-  `CATUBRZZ…`, collectable from 2026-11-22T13:50:56Z.
+- **Step 3 is closed.** The final deployment's wait rental on `CATUBRZZ…` was
+  collected separately, on 2026-11-22 (Step 5 log).
 
 ### Step 4 — Swap and two-proof cost measurement
 - Date: 2026-11-20 (ledger time). **Stopped at the measurement, with the
@@ -1522,8 +1522,33 @@ of the spec, the rest at the second review of `def5eb6`.
     - `mainnet-upload-fee-breakdown-2026-11-21.{txt,json}`;
     - `mainnet-upload-fee-breakdown-web-auth-2026-11-21.{txt,json}`;
     - `wasm-size-variants-2026-11-21.txt`.
-- Open: the runbook (yours), the verifier decision, the WASM size decision,
-  and the Step 3 collect.
+- Open: the runbook (yours), the verifier decision and the WASM size decision.
+  The Step 3 collect was done on 2026-11-21 (Step 3 close).
+
+#### Step 5: the final deployment's wait-rental collect (2026-11-22, ledger time)
+- Run by me on testnet, with the command you gave:
+  `npx tsx scripts/step3-evidence.ts collect-wait --contract CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM`.
+  It signs with `qs-renter` and `qs-owner` through the CLI keystore.
+- Escrow #1 was Funded; check-in 2026-11-21T13:50:56Z, collect from
+  2026-11-22T13:50:56Z. The latest ledger was 5,869,536, closed
+  2026-11-22T18:15:21Z.
+- **Rejected as expected:** the renter's problem report after the window,
+  `Error(Contract, #49)`, tx
+  [`a29d267e…fce1`](https://stellar.expert/explorer/testnet/tx/a29d267eba812026b254ca0b68e9ec170fdb9ab77f25a7aa722c561686c3fce1).
+  It was in ledger 5,869,537 at 2026-11-22T18:15:26Z, 15,870 s after the
+  window closed. On Horizon `successful: false`, source `GBNDVZTD…`
+  (`qs-renter`).
+- **Collect:** the owner, tx
+  [`67533a18…d295`](https://stellar.expert/explorer/testnet/tx/67533a18e3ea2c15fb5bfbde68f4608c08a409e9857bb1fa8b458bbe775fd295).
+  - It was in ledger 5,869,538 at 2026-11-22T18:15:31Z, **102,275 s after
+    check-in** (the window opens at 86,400 s).
+  - On Horizon `successful: true`, source `GBCETLZR…` (`qs-owner`).
+  - Escrow #1 is now PaidOut. The owner's USDC went 50,000,000 →
+    60,000,000; the contract's went 10,000,000 → 0.
+- Privacy record: `evidence/privacy/2026-11-22-step3-CATUBRZZ-collect-wait.txt`,
+  with no findings. Log: `evidence/step3-testnet-CATUBRZZ.json`.
+- **Every flow has now landed on the final WASM** `76d69e79…dddde`, the
+  24-hour collect included.
 
 ### Step 6 — Mainnet deployment
 - Date:

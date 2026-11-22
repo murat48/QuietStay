@@ -464,6 +464,42 @@
         "Error(Contract, #4)",
         "Error(Contract, #4)"
       ]
+    },
+    {
+      "step": "collect-wait",
+      "label": "rejected: problem report after the window (check-in + 24 h)",
+      "hash": "a29d267eba812026b254ca0b68e9ec170fdb9ab77f25a7aa722c561686c3fce1",
+      "ledger": 5869537,
+      "accepted": false,
+      "expected": "Error(Contract, #49)",
+      "errors": [
+        "Error(Contract, #49)",
+        "Error(Contract, #49)"
+      ]
+    },
+    {
+      "step": "collect-wait",
+      "label": "wait rental: collect (owner, after check-in + 24 h)",
+      "hash": "67533a18e3ea2c15fb5bfbde68f4608c08a409e9857bb1fa8b458bbe775fd295",
+      "ledger": 5869538,
+      "accepted": true,
+      "expected": null,
+      "errors": []
+    }
+  ],
+  "readings": [
+    {
+      "step": "collect-wait",
+      "label": "wait rental closed",
+      "value": {
+        "check_in": "2026-11-21T13:50:56.000Z",
+        "collect_opens": "2026-11-22T13:50:56.000Z",
+        "problem_report_refused_at": "2026-11-22T18:15:26.000Z (ledger 5869537), 15870 s after the window closed",
+        "collected_at": "2026-11-22T18:15:31.000Z (ledger 5869538), 102275 s after check-in",
+        "escrow_state_after": "PaidOut",
+        "owner_usdc": "50000000 → 60000000",
+        "contract_usdc": "10000000 → 0"
+      }
     }
   ]
 }

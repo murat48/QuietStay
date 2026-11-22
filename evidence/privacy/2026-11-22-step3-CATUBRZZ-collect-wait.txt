@@ -1,0 +1,33 @@
+  run 2026-11-22T18:15:36.743Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-22-step3-CATUBRZZ-collect-wait.txt --tx rejected-problem-report-after-the-window-check-in-24-h-=a29d267eba812026b254ca0b68e9ec170fdb9ab77f25a7aa722c561686c3fce1 --tx wait-rental-collect-owner-after-check-in-24-h-=67533a18e3ea2c15fb5bfbde68f4608c08a409e9857bb1fa8b458bbe775fd295 --record /home/murat/QuietStay/QuietStay/.secrets/CATUBRZZ/step3/week-1-record.json --secret /home/murat/QuietStay/QuietStay/.secrets/CATUBRZZ/step3/week-1-owner-secret.json --evidence pilot/evidence/problem-report.txt
+
+Checking on-chain exposure
+  2 transactions, 57 forbidden values
+  contract the contracts these testnet transactions call
+
+rejected-problem-report-after-the-window-check-in-24-h- — a29d267eba812026b254ca0b68e9ec170fdb9ab77f25a7aa722c561686c3fce1
+  ✓ no record contents in 3 layers (3288 bytes: envelope, result, meta)
+  public by design: SHA-256 of pilot/evidence/problem-report.txt (22f5dc8c9dbb01f15ca8d851e2c63db3740c4bc870b2aa70a3adc915d4b206c7) is on chain here, as it should be
+  call        report_problem(
+                "GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN",
+                "1",
+                "0x22f5dc8c9dbb01f15ca8d851e2c63db3740c4bc870b2aa70a3adc915d4b206c7",
+              )
+
+wait-rental-collect-owner-after-check-in-24-h- — 67533a18e3ea2c15fb5bfbde68f4608c08a409e9857bb1fa8b458bbe775fd295
+  ✓ no record contents in 3 layers (6996 bytes: envelope, result, meta)
+  call        collect(
+                "GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR",
+                "1",
+              )
+  event topics ["transfer","CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   "10000000"
+  event topics ["paid_out","GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR"]
+  event data   {"amount":"10000000","escrow_id":"1","via":"collect"}
+
+Result
+  ✓ No inventory record value appears in any of these 2 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 holder secret(s) given, or s' of 0 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /home/murat/QuietStay/QuietStay/.secrets/CATUBRZZ/step3/week-1-record.json
+    • /home/murat/QuietStay/QuietStay/.secrets/CATUBRZZ/step3/week-1-owner-secret.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.
