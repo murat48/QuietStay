@@ -1850,6 +1850,40 @@ of the spec, the rest at the second review of `def5eb6`.
       owner is the fee account, the issuer or the sign-in key, before
       anything is submitted. The form says why and keeps Issue disabled.
       Unit test; app tests 51/51.
+  - **Testing the Phase 3 testnet demo in the browser (2026-11-24/25,
+    `CATUBRZZ…`, server mode).** What you found, and what was fixed:
+    - **Passkey offers were refused with #3014** (`ContextRuleIdsLengthMismatch`,
+      from the renter's smart account `CCMTVZ…`). The app always signed with
+      one context rule id, `[0]`. An offer authorizes two calls, the offer
+      and the USDC `approve` beneath it, and the OZ account wants one id per
+      call. Fixed in `0a770c4` (`src/lib/auth-contexts.ts`, unit test). After
+      the fix, offer #11 (1 USDC, from `CCMTVZ…`) went through.
+    - **"This browser holds no record and secret" did not say why.** It now
+      tells three cases apart: no reply link opened yet; this is the issuer's
+      browser; or a record with no matching secret (`c252a77`).
+    - **`/receive` ignored a link pasted into a tab already on it** (only
+      the fragment changed, so the page did not reload). It now listens for
+      `hashchange` (`47c1f69`).
+    - **Weeks #9, #10 and #11 can never be proven for.** They were issued
+      with the owner typed in, not picked from the owner's ask. So no browser
+      holds their secrets, and the ask for #10/#11 stayed open. #12 was then
+      issued from that ask to `CCMTVZ…` and its reply link was made. The
+      three weeks stay on chain, unusable; nothing can take them back.
+    - **Your decision (2026-11-25): option A, one link instead of two, plus
+      issuing only from an ask.** It stays within the SOW and D3: the record
+      and the secret still never leave the owner's browser in a request,
+      and the reply link still travels only after `#`.
+      - The ask now carries the owner's public key, checked against
+        `key_hash`.
+      - The issuer's browser seals at once and shows the reply link.
+      - The issuer's `/issue` screen issues only from an ask.
+      - The spec (§2, "One link instead of two") explains why the server
+        learns nothing new: it already sees the record at issuance.
+      - The no-leak test allows the owner's key in the ask's own body only.
+      - Rejected: option B, a sealed mailbox on the server. It would change
+        D3's "no server storage".
+      - Rejected: instant booking. It needs a contract change.
+      - Tests: unit test `src/lib/sealed.test.ts`; app tests 58/58.
 
 ### Step 6 — Mainnet deployment
 - Date:

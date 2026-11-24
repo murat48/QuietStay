@@ -92,6 +92,28 @@ export async function seal(recipientRaw: Uint8Array, expectedKeyHash: string, pa
   return b64u(out);
 }
 
+/**
+ * The owner's sealed-link public key, carried by an issuance ask (Step 5,
+ * 2026-11-25: the issuer's browser seals the moment it issues, so no request
+ * link has to travel). Accepted only as 65 raw P-256 bytes, base64url, whose
+ * SHA-256 is the ask's `key_hash`. Returns it unchanged, or `undefined` if
+ * absent. Runs in the browser and on the server (WebCrypto both).
+ *
+ * A public key, not the record or the secret: what it lets anyone do is seal a
+ * message that only the owner's browser can open. The server that stores it
+ * already sees the record at issuance (it computes `d` and `C`), so it gains
+ * nothing it did not have.
+ */
+export async function checkedAskPublicKey(value: unknown, keyHash: string | undefined): Promise<string | undefined> {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") throw new Error("public_key must be a base64url string");
+  if (!keyHash) throw new Error("public_key needs the key_hash it hashes to");
+  const raw = unb64u(value);
+  if (raw.length !== 65 || raw[0] !== 4) throw new Error("public_key is not a raw P-256 public key");
+  if ((await sha256Hex(raw)) !== keyHash) throw new Error("public_key does not hash to key_hash");
+  return value;
+}
+
 /** Open a reply link's blob with the recipient's private key. */
 export async function open(privateKey: CryptoKey, keyHash: string, blob: string): Promise<unknown> {
   const bytes = unb64u(blob);

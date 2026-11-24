@@ -8,8 +8,9 @@
  *
  *   1. the owner asks for a week: the secret s and a sealed-link key are made
  *      in the owner's browser;
- *   2. the issuer issues it and seals the record to the owner's request link
- *      (/receive); the owner opens the reply and checks it against the chain;
+ *   2. the issuer issues it from the owner's ask, and the issuer's browser
+ *      seals the record at once to the owner's key carried by the ask; the
+ *      owner opens the reply and checks it against the chain;
  *   3. the owner offers it for sale; the buyer asks to buy (s' made in the
  *      buyer's browser, consent signed), and the owner seals the record to the
  *      buyer's request link; the buyer opens and checks it;
@@ -19,8 +20,8 @@
  *
  * Every request the owner's, buyer's and renter's browsers make is recorded:
  * pages and the prover worker, with URL, headers and body. The issuer's
- * browser is recorded while it seals. Its issuance request is not recorded,
- * because the issuer writes the record and sends it to /api/issue by design.
+ * browser is not recorded: its issuance request carries the record to
+ * /api/issue by design, and the sealing that follows makes no request.
  *
  * Afterwards the secrets and records are read back out of each browser's
  * vault, and the test fails if any recorded request contains:
@@ -29,7 +30,9 @@
  *   - the record, as canonical JSON or as sent, or its salt, id, owner name,
  *     owner email or deed reference;
  *   - d, d_hi or d_lo, in decimal or hex;
- *   - any part of a link fragment (a request key or a sealed reply).
+ *   - any part of a link fragment (a request key or a sealed reply), except
+ *     that an owner's issuance ask carries its own public key since
+ *     2026-11-25, in that one request and no other.
  *
  * It also fails if /receive makes any request to an analytics endpoint, or
  * if its HTML references one. As controls, it checks that the worker's fetch
@@ -65,6 +68,8 @@ interface Logged {
 const log: Logged[] = [];
 const failures: FailedResponse[] = [];
 const links: string[] = [];
+/** Owners' sealed-link public keys: allowed only in the body of their own ask. */
+const askKeys: string[] = [];
 
 function record(who: string, context: BrowserContext) {
   const take = (req: Request) => {
@@ -166,8 +171,13 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   // --- 1. the owner asks for a week -------------------------------------------
   await signIn(O.page, "/issue");
   await O.page.getByRole("button", { name: "Request issuance", exact: true }).click();
+  // Since 2026-11-25 the ask carries the owner's public key, so the issuer
+  // seals at once and the request link is only a fallback. The key is public
+  // and goes to the server in exactly one request, the ask itself; it is
+  // checked below to appear in no other.
+  await expect(O.page.getByTestId("issue-reply-wait")).toBeVisible({ timeout: 60_000 });
   const ownerLink = await O.page.getByTestId("issue-request-link").inputValue({ timeout: 60_000 });
-  links.push(ownerLink);
+  askKeys.push(ownerLink.slice(ownerLink.lastIndexOf(".") + 1));
 
   // --- 2. the issuer issues and seals; the owner opens -------------------------
   await signIn(I.page, "/issue");
@@ -186,14 +196,11 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   await I.page.getByRole("button", { name: "Issue on testnet" }).click();
   await expect(I.page.getByText(/Right #\d+/).first()).toBeVisible({ timeout: 120_000 });
 
-  const stopIssuer = record("issuer (sealing)", I.c);
-  // A navigation across root layouts is a full page load, so sign in again there.
-  await I.page.goto(ownerLink.replace(/^https?:\/\/[^/]+/, ""));
-  await I.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
-  await I.page.getByRole("button", { name: "Seal the record" }).click({ timeout: 60_000 });
-  const issuerReply = await I.page.getByTestId("reply-link").inputValue();
+  // Sealed in the issuer's browser right after issuing; sealing itself makes
+  // no request. (The issuance request carries the record by design, so the
+  // issuer's browser is not recorded here.)
+  const issuerReply = await I.page.getByTestId("issue-reply-link").inputValue({ timeout: 60_000 });
   links.push(issuerReply);
-  stopIssuer();
 
   await O.page.goto(issuerReply.replace(/^https?:\/\/[^/]+/, ""));
   await expect(O.page.getByTestId("record-received")).toBeVisible({ timeout: 60_000 });
@@ -289,6 +296,13 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   }
 
   const leaks: string[] = [];
+  const isAsk = (e: Logged) => e.method === "POST" && new URL(e.url).pathname === "/api/requests/issuance";
+  for (const key of askKeys) {
+    const carriers = log.filter((e) => e.body.includes(key) || e.url.includes(key));
+    const elsewhere = carriers.filter((e) => !isAsk(e));
+    for (const e of elsewhere) leaks.push(`${e.who}: ${e.method} ${e.url.slice(0, 120)} contains an owner's ask key outside the ask`);
+    if (!carriers.some(isAsk)) leaks.push("control: the owner's ask did not carry its public key; the check above saw nothing");
+  }
   for (const entry of log) {
     const haystacks = [entry.url, decodeURIComponent(entry.url), JSON.stringify(entry.headers), entry.body];
     for (const [needle, what] of forbidden) {

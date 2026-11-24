@@ -7,7 +7,9 @@
  *
  * Phase 3: the ask may carry `key_hash`, the hash of the owner's sealed-link
  * key, so the issuer's browser can send the week's record back sealed
- * (docs/PHASE3_SPEC.md §2, D3).
+ * (docs/PHASE3_SPEC.md §2, D3). Since 2026-11-25 it may also carry
+ * `public_key`, that key itself, checked to hash to `key_hash`, so the
+ * issuer's browser seals the record the moment it issues.
  *
  * The owner's side of issuance, built like an ask for a week (../route.ts). The
  * first holder is taken **from the SEP-10 session**, never from the body: a body
@@ -32,6 +34,7 @@ import {
   saveIssuanceRequests,
   type IssuanceRequest,
 } from "@/lib/requests";
+import { checkedAskPublicKey } from "@/lib/sealed";
 import { authenticatedAccount } from "@/lib/sep10";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +48,7 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let body: { secret_hash?: unknown; owner?: unknown; key_hash?: unknown };
+  let body: { secret_hash?: unknown; owner?: unknown; key_hash?: unknown; public_key?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -66,9 +69,11 @@ export async function POST(request: Request): Promise<Response> {
 
   let h: bigint;
   let keyHash: string | undefined;
+  let publicKey: string | undefined;
   try {
     h = parseSecretHash(body.secret_hash);
     keyHash = parseKeyHash(body.key_hash);
+    publicKey = await checkedAskPublicKey(body.public_key, keyHash);
   } catch (error) {
     return Response.json({ error: (error as Error).message }, { status: 400 });
   }
@@ -99,6 +104,7 @@ export async function POST(request: Request): Promise<Response> {
       by: caller,
       secret_hash: h.toString(),
       ...(keyHash ? { key_hash: keyHash } : {}),
+      ...(publicKey ? { public_key: publicKey } : {}),
       requested_at: new Date().toISOString(),
       status: "open",
     };

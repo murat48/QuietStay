@@ -46,14 +46,14 @@ import { RoleGate } from "@/components/RoleGate";
 import { SignInChoice } from "@/components/SignInChoice";
 import { useWallet } from "@/components/WalletProvider";
 import { canonicalText, commit, type JsonValue } from "@/lib/canonical";
-import { FEE_ACCOUNT, NETWORK_LABEL, explorer } from "@/lib/config";
+import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_LABEL, explorer } from "@/lib/config";
 import { reservedOwnerReason } from "@/lib/issue-guard";
 import { describeError, formatDate } from "@/lib/format";
 import type { IssuanceRequest } from "@/lib/requests";
 import { issueScreenView } from "@/lib/roles";
 import { useProverSupported } from "@/lib/use-prover-supported";
 import { issuanceRequestPrefill, parseSecretHash } from "@/lib/secret-hash";
-import { requestLink } from "@/lib/sealed";
+import { b64u, replyLink, requestLink, seal, unb64u, type SealedRecord } from "@/lib/sealed";
 import { newSealKey, newSecret, putIssued, sealKey } from "@/lib/vault";
 import {
   isoWeekNumber,
@@ -183,6 +183,14 @@ interface IssueResult {
   right_id: number;
   /** The record text exactly as it was issued — what "Save record" downloads. */
   issuedText: string;
+  /**
+   * The owner's reply link, sealed in this browser the moment the week was
+   * issued, when the ask carried its public key. Null when it did not (an older
+   * ask): then the owner's request link, opened here, makes it.
+   */
+  reply: string | null;
+  /** Why sealing failed, if it did; the week is issued either way. */
+  replyError?: string;
   record_digest: string;
   commitment: string;
   tx: string;
@@ -331,28 +339,55 @@ export default function IssueScreen() {
     setError(null);
     setResult(null);
     try {
+      // Only from an owner's request (Step 5, 2026-11-25). A week issued with
+      // an h typed in has its secret nowhere this app can reach, so it can never
+      // be proven for from a browser: on the testnet demo, weeks #9–#11 were
+      // issued that way and could not be rented. Direct issuance with an h stays
+      // a command-line path (npm run zk:issue), for someone who keeps the secret
+      // file themselves.
+      if (!selected) throw new Error("pick the owner's request from the list first; a week is issued here only from a request");
       const record: unknown = JSON.parse(recordText);
       const response = await authFetch("/api/issue", {
         method: "POST",
-        body: JSON.stringify(
-          selected ? { record, request_id: selected.id } : { record, secret_hash: secretHash.trim() },
-        ),
+        body: JSON.stringify({ record, request_id: selected.id }),
       });
-      const body = (await response.json()) as Omit<IssueResult, "issuedText"> & { error?: string };
+      const body = (await response.json()) as Omit<IssueResult, "issuedText" | "reply"> & { error?: string };
       if (!response.ok) throw new Error(body.error ?? "issuance failed");
-      // Kept as sent: an edit made after issuing must not change what is saved.
-      setResult({ ...body, issuedText: recordText });
-      // Phase 3 (D3): keep this browser's copy of the record, so the issuer can
-      // seal it to the owner from /receive when the owner sends a request link.
-      if (selected?.key_hash && body.right_id !== undefined) {
+      // Phase 3 (D3): keep this browser's copy of the record, so it can be
+      // sealed to the owner, now or later from /receive.
+      let reply: string | null = null;
+      let replyError: string | undefined;
+      if (selected.key_hash && body.right_id !== undefined) {
+        const owner = (record as { owner: { stellar_account: string } }).owner.stellar_account;
         await putIssued({
           right_id: body.right_id,
           record: record as JsonValue,
-          owner: (record as { owner: { stellar_account: string } }).owner.stellar_account,
+          owner,
           h: selected.secret_hash,
           ask_id: selected.id,
         });
+        // Seal at once when the ask carries the owner's public key: no request
+        // link has to travel. `seal` refuses a key that does not hash to the
+        // ask's key_hash.
+        if (selected.public_key) {
+          try {
+            const payload: SealedRecord = {
+              v: 1,
+              record,
+              h: selected.secret_hash,
+              holder: owner,
+              right_id: body.right_id,
+              contract: CONTRACT_ID,
+              request: { kind: "issue", id: selected.id },
+            };
+            reply = replyLink(window.location.origin, await seal(unb64u(selected.public_key), selected.key_hash, payload));
+          } catch (caught) {
+            replyError = describeError(caught);
+          }
+        }
       }
+      // Kept as sent: an edit made after issuing must not change what is saved.
+      setResult({ ...body, issuedText: recordText, reply, ...(replyError ? { replyError } : {}) });
       // An issued request drops off the list.
       if (selected) {
         setAsks((current) => current.filter((ask) => ask.id !== selected.id));
@@ -364,7 +399,7 @@ export default function IssueScreen() {
     } finally {
       setBusy(false);
     }
-  }, [authFetch, recordText, secretHash, selected]);
+  }, [authFetch, recordText, selected]);
 
   // Taken from the registry rather than compared against configuration, so the
   // button agrees with what the contract would actually accept.
@@ -909,15 +944,21 @@ export default function IssueScreen() {
             <input
               id="secret-hash"
               value={secretHash}
-              readOnly={selected !== null}
-              onChange={(event) => setSecretHash(event.target.value)}
-              placeholder="the number npm run zk:secret printed — decimal or hex"
+              readOnly
+              placeholder="filled in from the owner's request"
               spellCheck={false}
             />
           </div>
           {selected ? (
             <p className="muted">From the owner&apos;s request — it cannot be edited.</p>
-          ) : null}
+          ) : (
+            <div className="note warn" data-testid="issue-needs-request">
+              <strong>Pick the owner&apos;s request first.</strong> A week is issued here only from
+              a request in the list above: that is how the owner&apos;s browser comes to hold the
+              week&apos;s secret, and how this screen can hand you their reply link. A week issued
+              to an account typed in by hand could never be rented out or sold from a browser.
+            </div>
+          )}
           {!ownerMatchesAsk ? (
             <div className="note warn">
               The record&apos;s first holder is no longer the account that asked,{" "}
@@ -925,11 +966,11 @@ export default function IssueScreen() {
             </div>
           ) : null}
           <p className="muted" style={{ marginBottom: 0 }}>
-            The owner makes a secret on their own machine with <code>npm run zk:secret</code> and
-            sends you only its hash <code>h</code> — by asking on this screen, or directly. When you issue, the server computes the
-            commitment <code>C = Poseidon(d, owner, h)</code> from this record and that{" "}
-            <code>h</code>. The secret itself never reaches you or this server, so you can never
-            prove a transfer of the week.
+            The owner&apos;s browser made a secret when they asked, and sent you only its hash{" "}
+            <code>h</code>. When you issue, the server computes the commitment{" "}
+            <code>C = Poseidon(d, owner, h)</code> from this record and that <code>h</code>. The
+            secret itself never reaches you or this server, so you can never prove a transfer of
+            the week.
           </p>
         </div>
         {readOnly ? (
@@ -943,7 +984,7 @@ export default function IssueScreen() {
           <button
             className="primary"
             onClick={() => void issue()}
-            disabled={busy || !preview || !isIssuer || secretHash.trim() === "" || !ownerMatchesAsk || reservedReason !== null}
+            disabled={busy || !preview || !isIssuer || selected === null || !ownerMatchesAsk || reservedReason !== null}
           >
             {busy ? "issuing…" : `Issue on ${NETWORK_LABEL}`}
           </button>
@@ -959,6 +1000,24 @@ export default function IssueScreen() {
             <strong>Right #{result.right_id}</strong> — {result.note}
           </div>
           <div className="card">
+            <h3 style={{ marginTop: 0 }}>Send the owner their reply link</h3>
+            {result.reply ? (
+              <>
+                <p className="muted" style={{ marginTop: 0 }}>
+                  The week&apos;s record, sealed to the owner&apos;s browser. Send it through the channel
+                  you already use. The owner opens it in the browser they asked from, and can then
+                  rent the week out or sell it. It is useless to anyone else.
+                </p>
+                <textarea readOnly value={result.reply} style={{ minHeight: "6rem" }} data-testid="issue-reply-link" />
+              </>
+            ) : (
+              <p className="muted" style={{ marginTop: 0 }} data-testid="issue-reply-later">
+                {result.replyError ? <>Sealing here failed ({result.replyError}). </> : null}
+                This request was made before requests carried the owner&apos;s key. Ask the owner for
+                the request link on their /issue screen, and open it here, in this browser: it makes
+                the reply link.
+              </p>
+            )}
             <dl className="facts">
               <dt>Record digest d</dt>
               <dd className="hash">0x{result.record_digest}</dd>
@@ -982,8 +1041,9 @@ export default function IssueScreen() {
             */}
             <h3>Keep the record</h3>
             <p className="muted" style={{ marginTop: 0 }}>
-              This is the only copy. It is not stored anywhere and no endpoint serves it — that is
-              what keeps it off the public ledger, and it means losing it is permanent.
+              This browser keeps a copy, to seal it to the owner again if the reply link is lost.
+              No server stores it and no endpoint serves it — that is what keeps it off the public
+              ledger. Save a copy for your own files too.
             </p>
             <p>
               <a
@@ -994,13 +1054,6 @@ export default function IssueScreen() {
                 Save record for right #{result.right_id}
               </a>
             </p>
-            <p className="muted">
-              Send it to the owner. With it and their secret file they can prove a transfer of the
-              week:
-            </p>
-            <pre>{`npm run zk:prove -- --record right-${result.right_id}.record.json --secret <their secret>.json \\
-  --right ${result.right_id} --from ${readPath(JSON.parse(result.issuedText) as Doc, "owner.stellar_account") || "<owner G…>"} --to <G…> \\
-  ( --rental-until <unix seconds> | --sale --next-secret-hash <buyer's h'> )`}</pre>
 
             <h3>Issuer attestation</h3>
             <p className="muted" style={{ marginTop: 0 }}>
@@ -1068,13 +1121,15 @@ function IssuanceAsk() {
       setError(null);
       setNote(null);
       try {
-        let payload: { secret_hash: string; key_hash?: string };
+        let payload: { secret_hash: string; key_hash?: string; public_key?: string };
         if (cliHash !== undefined) {
           payload = { secret_hash: cliHash.trim() };
         } else {
           const h = await newSecret("issuance ask");
           const key = await newSealKey("issuance ask");
-          payload = { secret_hash: h.toString(), key_hash: key.keyHash };
+          // The public half goes with the ask, so the issuer seals the moment
+          // they issue; the private half never leaves this browser.
+          payload = { secret_hash: h.toString(), key_hash: key.keyHash, public_key: b64u(key.publicRaw) };
         }
         const response = await authFetch("/api/requests/issuance", {
           method: "POST",
@@ -1086,7 +1141,7 @@ function IssuanceAsk() {
           cliHash !== undefined
             ? (body.note ?? "Asked.")
             : "Asked. Your week's secret was made and kept in this browser; only its hash was sent. " +
-                "Once the week is issued, send the issuer the request link below.",
+                "When the issuer issues the week, they get a reply link for you: open it here, in this browser.",
         );
         setHashText("");
         await load();
@@ -1204,7 +1259,23 @@ function IssuanceAsk() {
                 ) : (
                   <span className="muted">waiting for the issuer</span>
                 )}
-                {links[r.id] ? (
+                {links[r.id] && r.public_key ? (
+                  <>
+                    <p className="muted" style={{ margin: "0.4rem 0" }} data-testid="issue-reply-wait">
+                      Nothing to send: when the issuer issues this week, their screen shows a reply
+                      link for you. Open it here, in this browser, and the week&apos;s record is yours.
+                    </p>
+                    {/* Kept for an issuer whose screen lost the reply link (a closed tab). */}
+                    <details>
+                      <summary className="muted">The issuer lost the reply link?</summary>
+                      <p className="muted" style={{ margin: "0.4rem 0" }}>
+                        Send them this request link. They open it in the browser they issued from,
+                        and it makes the reply link again.
+                      </p>
+                      <textarea readOnly value={links[r.id]} style={{ minHeight: "4rem" }} data-testid="issue-request-link" />
+                    </details>
+                  </>
+                ) : links[r.id] ? (
                   <>
                     <p className="muted" style={{ margin: "0.4rem 0" }}>
                       Send the issuer this request link. Once the week is issued they open it and

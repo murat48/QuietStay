@@ -265,6 +265,12 @@ export interface IssuanceRequest {
    * to this.
    */
   key_hash?: string;
+  /**
+   * Step 5 (2026-11-25): the sealed-link public key itself, base64url, whose
+   * SHA-256 is `key_hash`. With it the issuer's browser seals the record as
+   * soon as it issues, and no request link has to travel. Public by nature.
+   */
+  public_key?: string;
   requested_at: string;
   status: IssuanceStatus;
   /** Set when issued. */

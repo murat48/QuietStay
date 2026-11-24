@@ -288,6 +288,36 @@ already carries `h`, and now it also carries `key_hash`. The issuer's browser
 checks it before sealing the record. The ask lives in the existing off-chain
 request store and holds no record data.
 
+**One link instead of two, for the first owner (Step 5, approved 2026-11-25).**
+Testing on the testnet demo showed the two-link round trip was where owners
+got lost. Since then:
+
+- The ask also carries the owner's raw **public key** (`public_key`). The
+  server accepts it only if its SHA-256 is the ask's `key_hash`.
+- When the issuer issues from the ask, the issuer's browser seals the record
+  at once and shows the **reply link**. No request link has to travel. The
+  request link remains as a fallback, for an issuer who lost the reply link.
+- **The issuer's `/issue` screen issues only from an owner's ask.** Weeks #9
+  to #11 on the demo contract were issued with a typed-in owner, so no browser
+  held their secrets and they can never be proven for. Issuing with a
+  typed-in `h` remains a command-line path (`npm run zk:issue`), for an owner
+  who keeps their own secret file.
+- **What this does not change:**
+  - The record and the secret still never travel in a request from the
+    owner's browser.
+  - The reply link still travels only after `#`.
+  - Only the owner's browser can open the reply link.
+- **What the server now learns, and why it gains nothing:**
+  - The server learns the owner's public key, which is public by nature.
+  - It already sees the record at issuance, because `/api/issue` computes `d`
+    and `C`. So a server that swapped in its own key would gain nothing it
+    did not already have.
+- **No change for buyers and swaps.** Their request links still carry the
+  key, which is bound on chain by `request_record`. For them the server never
+  sees the record.
+- The no-leak test (e2e/no-leak.spec.ts) allows an owner's public key in
+  exactly one request, the ask itself, and fails if it appears in any other.
+
 This design has these properties:
 
 - An intercepted link is useless without the buyer's browser, because only
