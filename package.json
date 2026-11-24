@@ -8,7 +8,7 @@
     "predev": "tsx prover-worker/build.ts",
     "dev": "next dev",
     "prebuild": "tsx prover-worker/build.ts",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "commit-record": "tsx scripts/commit-record.ts",
