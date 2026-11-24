@@ -33,7 +33,7 @@ import { prover } from "@/lib/prover-client";
 import { readOnly } from "@/lib/rpc-retry";
 import { requestLink } from "@/lib/sealed";
 import { useProverSupported } from "@/lib/use-prover-supported";
-import { getRecord, newSealKey, newSecret, resolveHolding, sealKey, secretFor } from "@/lib/vault";
+import { getRecord, missingHoldingReason, newSealKey, newSecret, resolveHolding, sealKey, secretFor } from "@/lib/vault";
 
 /** Proofs are made valid for this many ledgers (about half an hour); the contract allows 720. */
 const PROOF_WINDOW = 360;
@@ -217,7 +217,7 @@ function Swap() {
       if (!address) throw new Error("not connected");
       const right = await chainRight(rightId);
       const holding = await resolveHolding(rightId, address, BigInt("0x" + right.commitment));
-      if (!holding) throw new Error(`this browser holds no record and secret for week #${rightId}, so it cannot prove for it`);
+      if (!holding) throw new Error(await missingHoldingReason(rightId));
       const secret = await secretFor(BigInt(holding.h));
       if (secret === null) throw new Error(`this browser no longer holds the secret for week #${rightId}`);
       setStep("proving in this browser…");

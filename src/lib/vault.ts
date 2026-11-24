@@ -176,6 +176,39 @@ export const getHolding = (rightId: number) => get<Holding>(`holding:${rightId}`
  * their secret once the sale lands, and how an owner's first record becomes
  * provable. Nothing is trusted that does not reproduce the on-chain value.
  */
+/**
+ * Why `resolveHolding` found nothing for week `rightId`, in words that say what
+ * to do next (found on the testnet demo, 2026-11-24: the old message did not
+ * tell a missing reply link apart from a missing secret).
+ */
+export async function missingHoldingReason(rightId: number): Promise<string> {
+  const week = `week #${rightId}`;
+  const [record, holding, issued, secrets] = await Promise.all([
+    getRecord(rightId),
+    getHolding(rightId),
+    getIssued(rightId),
+    all<SecretEntry>("secret:"),
+  ]);
+  if (record || holding) {
+    return (
+      `This browser has the record for ${week}, but none of its ${secrets.length} secret(s) matches the week on chain. ` +
+      "The owner's request was made in another browser (prove from that one), or the week was issued without a request, " +
+      "and then no browser holds its secret and it can never be proven for."
+    );
+  }
+  if (issued) {
+    return (
+      `This browser issued ${week}, but the owner's record is not here. Open the owner's request link in this browser ` +
+      "(/receive) to make the reply link, then open the reply link in the owner's browser, signed in as the owner."
+    );
+  }
+  return (
+    `This browser has no record for ${week} yet. The owner opens, in this browser, the reply link the issuer made at /receive ` +
+    `from the request link. This browser holds ${secrets.length} secret(s). If the request was made here, the reply link is the only ` +
+    "step left; if it was made elsewhere, prove from that browser."
+  );
+}
+
 export async function resolveHolding(rightId: number, holder: string, commitment: bigint): Promise<Holding | null> {
   const known = await getHolding(rightId);
   const candidates: JsonValue[] = [];

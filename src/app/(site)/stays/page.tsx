@@ -35,7 +35,7 @@ import { requestLink } from "@/lib/sealed";
 import { formatUsdc, needsUsdcTrustline, parseUsdc } from "@/lib/usdc";
 import { readOnly } from "@/lib/rpc-retry";
 import { useProverSupported } from "@/lib/use-prover-supported";
-import { getRecord, newSealKey, newSecret, resolveHolding, sealKey, secretFor } from "@/lib/vault";
+import { getRecord, missingHoldingReason, newSealKey, newSecret, resolveHolding, sealKey, secretFor } from "@/lib/vault";
 
 const DAY = 86_400;
 /** Proofs are made valid for this many ledgers (about half an hour); the contract allows 720. */
@@ -257,7 +257,7 @@ function Stays() {
       try {
         const right = await chainRight(offer.rightId);
         const holding = await resolveHolding(offer.rightId, address, BigInt("0x" + right.commitment));
-        if (!holding) throw new Error("this browser holds no record and secret for this week, so it cannot prove for it");
+        if (!holding) throw new Error(await missingHoldingReason(offer.rightId));
         const secret = await secretFor(BigInt(holding.h));
         if (secret === null) throw new Error("this browser no longer holds the secret for this week");
         const sale = offer.terms.kind === "sale";
