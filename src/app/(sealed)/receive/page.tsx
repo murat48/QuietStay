@@ -68,18 +68,29 @@ export default function ReceivePage() {
 
   // First thing: take the fragment and clear it from the address bar. The
   // state is set after that, outside the effect's synchronous body.
+  //
+  // A link pasted into a tab already on /receive changes only the fragment:
+  // the browser does not load the page again, so `hashchange` is what brings
+  // the new link in (found on the testnet demo, 2026-11-24: the issuer saw
+  // "Nothing was in the address" after pasting a request link).
   useEffect(() => {
-    if (takenHash === null || window.location.hash !== "") takenHash = window.location.hash;
-    const hash = takenHash;
-    history.replaceState(null, "", window.location.pathname);
-    void Promise.resolve().then(() => {
-      try {
-        setFragment(parseFragment(hash));
-      } catch (e) {
-        setProblem(describeError(e));
-        setFragment(null);
-      }
-    });
+    const take = () => {
+      if (takenHash === null || window.location.hash !== "") takenHash = window.location.hash;
+      const hash = takenHash;
+      history.replaceState(null, "", window.location.pathname);
+      void Promise.resolve().then(() => {
+        try {
+          setProblem(null);
+          setFragment(parseFragment(hash));
+        } catch (e) {
+          setProblem(describeError(e));
+          setFragment(null);
+        }
+      });
+    };
+    take();
+    window.addEventListener("hashchange", take);
+    return () => window.removeEventListener("hashchange", take);
   }, []);
 
   return (
@@ -100,7 +111,9 @@ export default function ReceivePage() {
       {fragment === undefined ? <p className="muted">Reading the link…</p> : null}
       {fragment === null && !problem ? (
         <div className="note">
-          Open this page from a request link or a reply link. Nothing was in the address.
+          Open this page from a request link or a reply link. Nothing was in the address. Paste the whole
+          link, including everything after <code>#</code>, into the address bar. The page removes that
+          part from the address as soon as it reads it, so reloading the page does not read it again.
         </div>
       ) : null}
       {fragment?.type === "request" ? <SealSide link={fragment} /> : null}
