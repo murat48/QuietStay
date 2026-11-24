@@ -16,6 +16,7 @@
 
 import type { ReactNode } from "react";
 
+import { SignInChoice } from "@/components/SignInChoice";
 import { useWallet } from "@/components/WalletProvider";
 
 interface Props {
@@ -27,19 +28,13 @@ interface Props {
 }
 
 export function RoleGate({ requires, action, children }: Props) {
-  const { address, authenticated, standing, busy, connect } = useWallet();
+  const { address, authenticated, standing } = useWallet();
 
   if (!address || !authenticated) {
     return (
       <div className="note">
         <strong>{action} needs a verified account.</strong>
-        <p style={{ margin: "0.5rem 0 0.75rem" }}>
-          Connect a wallet and complete the SEP-10 handshake. Reading the registry and
-          verifying a week need neither — those are open to anyone.
-        </p>
-        <button className="primary" onClick={() => void connect()} disabled={busy}>
-          {busy ? "connecting…" : "Connect wallet"}
-        </button>
+        <SignInChoice />
       </div>
     );
   }

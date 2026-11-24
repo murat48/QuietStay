@@ -43,6 +43,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { RoleGate } from "@/components/RoleGate";
+import { SignInChoice } from "@/components/SignInChoice";
 import { useWallet } from "@/components/WalletProvider";
 import { canonicalText, commit, type JsonValue } from "@/lib/canonical";
 import { FEE_ACCOUNT, NETWORK_LABEL, explorer } from "@/lib/config";
@@ -1021,7 +1022,7 @@ export default function IssueScreen() {
  * sent is `h`. The secret it hashes stays in the owner's file.
  */
 function IssuanceAsk() {
-  const { address, authenticated, standing, readOnly, busy: connecting, connect, authFetch } = useWallet();
+  const { address, authenticated, standing, readOnly, authFetch } = useWallet();
   const [hashText, setHashText] = useState("");
   // Filled from the link `npm run zk:secret` prints, once in the browser.
   useEffect(() => {
@@ -1117,12 +1118,7 @@ function IssuanceAsk() {
       <div className="note">
         <strong>Asking for a week needs a verified account</strong> — the one the week will be
         issued to.
-        <p style={{ margin: "0.5rem 0 0.75rem" }}>
-          Connect a wallet and complete the SEP-10 handshake.
-        </p>
-        <button className="primary" onClick={() => void connect()} disabled={connecting}>
-          {connecting ? "connecting…" : "Connect wallet"}
-        </button>
+        <SignInChoice />
       </div>
     );
   }
