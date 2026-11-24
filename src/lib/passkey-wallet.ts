@@ -20,6 +20,7 @@ import { Buffer } from "buffer";
 import { Address, TransactionBuilder, xdr, type Transaction } from "@stellar/stellar-sdk";
 import type { SmartAccountKit } from "smart-account-kit";
 
+import { contextRuleIdsFor } from "./auth-contexts";
 import { NETWORK_PASSPHRASE, RPC_URL, SMART_ACCOUNT_WASM_HASH, WEBAUTHN_VERIFIER_ID, WEB_AUTH_CONTRACT_ID } from "./config";
 
 /** The wallet's default context rule, whose only signer is its passkey. */
@@ -112,10 +113,15 @@ export async function disconnectPasskeyWallet(): Promise<void> {
   await kit.disconnect();
 }
 
-/** Sign one authorization entry (base64 XDR) with the passkey, valid through `expiration`. */
+/**
+ * Sign one authorization entry (base64 XDR) with the passkey, valid through
+ * `expiration`. The default rule is named once per context in the entry (see
+ * auth-contexts.ts: one id per call, or the account refuses with #3014).
+ */
 export async function signEntry(entryXdr: string, expiration: number): Promise<string> {
   const { kit } = await loadKit();
-  return kit.signAuthEntry(entryXdr, { contextRuleIds: [DEFAULT_RULE], expiration });
+  const contextRuleIds = contextRuleIdsFor(xdr.SorobanAuthorizationEntry.fromXDR(entryXdr, "base64"), DEFAULT_RULE);
+  return kit.signAuthEntry(entryXdr, { contextRuleIds, expiration });
 }
 
 /** Has this entry's address `wallet` and no signature yet? */
