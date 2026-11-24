@@ -1884,6 +1884,15 @@ of the spec, the rest at the second review of `def5eb6`.
         D3's "no server storage".
       - Rejected: instant booking. It needs a contract change.
       - Tests: unit test `src/lib/sealed.test.ts`; app tests 58/58.
+      - No-leak e2e on the new path: 2/2 passed. It recorded 377 requests
+        and found no leaks. Contract `CDC5SDYT…`, sale tx `734aa96b…`,
+        rental tx `9efb1af4…`. Result files:
+        `e2e/results/no-leak-2026-11-24.json` and
+        `evidence/privacy/2026-11-24-no-leak-734aa96b.txt`.
+        - The first run failed at the sale step. The dev server compiled
+          `/list` for the first time and reloaded the page in the middle of
+          sign-in: the challenge was fetched, but no POST followed.
+        - The rerun, with no change to the code, passed.
 
 ### Step 6 — Mainnet deployment
 - Date:
