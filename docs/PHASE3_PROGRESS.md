@@ -1832,6 +1832,24 @@ of the spec, the rest at the second review of `def5eb6`.
       Branch was still `main`.
     - Turbopack failed on the Google fonts, the old Low, now seen on Vercel
       too. Fixed: `build` is `next build --webpack`.
+  - **2026-11-24: the project becomes the Phase 3 testnet demo, in `server`
+    mode** (your request). You are trying the app in the browser, and the
+    passkey works as on testnet: the server pays the fee. Its contract is to
+    be `CATUBRZZ…`. Still to decide: where the `cli` rehearsal for Stop 2
+    runs, either this project switched back for a while, or a third project.
+  - **Found while you tried it: a week issued to the fee account.**
+    - Right #3 on `CC7W4OGP…` (tx `71b1bb78…`, 2026-11-24T15:21Z) has the
+      fee account `GCGDZWCL…L77Z` as its first holder. The issuer had the
+      address in the form's Owner field.
+    - From then on the fee route refused on that contract ("the fee account
+      holds a right; refusing to run"), so passkey offers failed. The refusal
+      is correct; the issuance should never have been possible.
+    - It cannot be undone: a right cannot be taken back. That contract stays
+      for the `cli` rehearsal only, where the server pays no fees.
+    - Fixed: `src/lib/issue-guard.ts`. `/api/issue` refuses a week whose
+      owner is the fee account, the issuer or the sign-in key, before
+      anything is submitted. The form says why and keeps Issue disabled.
+      Unit test; app tests 51/51.
 
 ### Step 6 — Mainnet deployment
 - Date:

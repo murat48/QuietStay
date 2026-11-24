@@ -38,7 +38,8 @@ import { signAttestation } from "@/lib/attestation";
 import { attestationStoreIsWritable, saveAttestation } from "@/lib/attestation-store";
 import { canonicalText, type JsonValue } from "@/lib/canonical";
 import { parseSecretHash } from "@/lib/consent";
-import { CONTRACT_ID, NETWORK_PASSPHRASE, hasIssuerSecret, issuerSecret } from "@/lib/config";
+import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, hasIssuerSecret, issuerSecret } from "@/lib/config";
+import { reservedOwnerReason } from "@/lib/issue-guard";
 import { ContractCallError, buildIssueTx, prepare, readNextId, signWith, submit } from "@/lib/contract";
 import {
   RecordValidationError,
@@ -49,7 +50,7 @@ import {
   validateRecord,
 } from "@/lib/record";
 import { RequestStoreUnavailable, loadIssuanceRequests, markIssued, recordDirectIssuance, weekSecuredBy } from "@/lib/requests";
-import { authenticatedAccount } from "@/lib/sep10";
+import { authenticatedAccount, serverAccount } from "@/lib/sep10";
 
 export async function POST(request: Request): Promise<Response> {
   // A deployment without the issuer key cannot sign, and says so rather than
@@ -112,6 +113,16 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const record = validateRecord(body.record);
+    // Never to the fee account, the issuer or the sign-in key: checked before
+    // anything is submitted, because an issuance cannot be undone.
+    let signIn: string | null = null;
+    try {
+      signIn = serverAccount();
+    } catch {
+      signIn = null;
+    }
+    const reserved = reservedOwnerReason(record.owner.stellar_account, { feeAccount: FEE_ACCOUNT, issuer: issuer.publicKey(), signIn });
+    if (reserved) return Response.json({ error: reserved }, { status: 400 });
     const canonical = canonicalText(record as never);
     // d — what the attestation binds. Phase 1 stored it on chain; Phase 2 wraps it.
     const recordDigest = await recordCommitment(record);

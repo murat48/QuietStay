@@ -45,7 +45,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { RoleGate } from "@/components/RoleGate";
 import { useWallet } from "@/components/WalletProvider";
 import { canonicalText, commit, type JsonValue } from "@/lib/canonical";
-import { explorer } from "@/lib/config";
+import { FEE_ACCOUNT, NETWORK_LABEL, explorer } from "@/lib/config";
+import { reservedOwnerReason } from "@/lib/issue-guard";
 import { describeError, formatDate } from "@/lib/format";
 import type { IssuanceRequest } from "@/lib/requests";
 import { issueScreenView } from "@/lib/roles";
@@ -400,6 +401,9 @@ export default function IssueScreen() {
 
   const text = (path: string) => readPath(parsed, path);
   const ownerMatchesAsk = selected === null || text("owner.stellar_account") === selected.by;
+  // The fee account and the issuer never hold a week (src/lib/issue-guard.ts);
+  // /api/issue refuses them too, and also the sign-in key.
+  const reservedReason = reservedOwnerReason(text("owner.stellar_account"), { feeAccount: FEE_ACCOUNT, issuer: standing?.account ?? null });
 
   if (issueScreenView(standing) === "request") {
     return (
@@ -554,6 +558,9 @@ export default function IssueScreen() {
                     />
                     {selected ? (
                       <p className="muted">From the owner&apos;s request — it cannot be edited.</p>
+                    ) : null}
+                    {reservedReason ? (
+                      <p className="note bad" data-testid="reserved-owner">{reservedReason}</p>
                     ) : null}
                     <p className="muted">
                       The only part of this block that reaches the ledger. The name and email stay in
@@ -935,9 +942,9 @@ export default function IssueScreen() {
           <button
             className="primary"
             onClick={() => void issue()}
-            disabled={busy || !preview || !isIssuer || secretHash.trim() === "" || !ownerMatchesAsk}
+            disabled={busy || !preview || !isIssuer || secretHash.trim() === "" || !ownerMatchesAsk || reservedReason !== null}
           >
-            {busy ? "issuing…" : "Issue on testnet"}
+            {busy ? "issuing…" : `Issue on ${NETWORK_LABEL}`}
           </button>
         )}
       </RoleGate>
