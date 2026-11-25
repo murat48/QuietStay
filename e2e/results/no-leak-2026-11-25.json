@@ -1,13 +1,13 @@
 {
-  "date": "2026-11-25T15:09:36.123Z",
+  "date": "2026-11-25T19:51:41.824Z",
   "command": "npx playwright test e2e/no-leak.spec.ts",
-  "contract": "CCBE622NJWN53V7QKIF7XZXTZEPWES7KOVZZDTAHT6FC2ORSW3PVPZXA",
-  "sale_tx": "https://stellar.expert/explorer/testnet/tx/69e62a89fbd2d2b41b0fa6ac01277460517055134fba399f913f08f1281bdfbc",
-  "rental_tx": "https://stellar.expert/explorer/testnet/tx/956c4a449fc78f548c2640603d4082a835bd325385b0796b9222e493b2ca7136",
-  "requests_recorded": 443,
+  "contract": "CBZE5XBKKMF6GPA2JD7MFCMZWIGIGIPG7E2MCUAVRL3KKUVK27YPPHTP",
+  "sale_tx": "https://stellar.expert/explorer/testnet/tx/974fcecbc94ae1ab99d1b638ccc0ce78f44a18dac441715ff2aa4ff3e7166836",
+  "rental_tx": "https://stellar.expert/explorer/testnet/tx/448f75c9ffb790237cf67c44dcec51f60952f6d921106ce82e60bee3cf4c3372",
+  "requests_recorded": 452,
   "requests_by_browser": {
-    "owner": 261,
-    "buyer": 154,
+    "owner": 252,
+    "buyer": 172,
     "renter": 28
   },
   "worker_requests": [

@@ -14,6 +14,7 @@
  * up front.
  */
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { SignInChoice } from "@/components/SignInChoice";
@@ -76,7 +77,7 @@ export function RoleGate({ requires, action, children }: Props) {
           ) : (
             <p style={{ marginBottom: 0 }}>
               This account holds nothing on this deployment. The{" "}
-              <a href="/list">registry</a> shows who holds what.
+              <Link href="/list">registry</Link> shows who holds what.
             </p>
           )}
         </div>

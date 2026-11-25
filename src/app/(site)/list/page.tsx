@@ -1113,7 +1113,7 @@ export default function ListScreen() {
                         {asks.length === 1 ? "One account is asking" : `${asks.length} accounts are asking`}
                       </legend>
                       <p className="muted" style={{ marginTop: 0 }}>
-                        To accept, open the <a href="/transfer">Transfer</a> screen: your browser
+                        To accept, open the <Link href="/transfer">Transfer</Link> screen: your browser
                         proves you own the week, with the record and secret it keeps, and the ask
                         fills in the asker&apos;s account
                         {asks.some((r) => r.term_secs === null) ? " and, for a sale, their h'" : ""}, so

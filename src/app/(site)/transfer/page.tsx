@@ -23,6 +23,7 @@
  * title holder can prove, so a renter is shown why not.
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ProverNotice } from "@/components/ProverNotice";
@@ -275,7 +276,7 @@ function TransferForm() {
               ) : forThis.length === 0 ? (
                 <p className="muted">
                   Ready to prove. No open asks for it yet: list it on the{" "}
-                  <a href="/list">List</a> screen, and asks to rent or buy appear here.
+                  <Link href="/list">List</Link> screen, and asks to rent or buy appear here.
                 </p>
               ) : (
                 forThis.map((ask) => (

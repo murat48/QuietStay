@@ -1956,6 +1956,24 @@ of the spec, the rest at the second review of `def5eb6`.
       - Passkey wallets sign only on this site, so for them this closes it. A
         Freighter user could still sign a `confirm` on another site. The
         contract rule (no `confirm` before check-in) is a next-phase idea.
+    - **Found in the demo (2026-11-25): the passkey was asked again on a
+      reload, and sometimes between screens.**
+      - The session token lived only in the page's memory. A reload, a link
+        across the two root layouts (`/receive`) or four plain `<a>` links
+        loaded a new page and lost it.
+      - The token is now kept for the tab (`sessionStorage`: one tab, gone
+        when the tab closes). It is taken up again only while unexpired, only
+        for the address the wallet names again on load, and only if `/api/me`
+        accepts it. Disconnect and an ended session clear it. The token signs
+        nothing: every transaction still needs the wallet or the passkey.
+      - The four plain links are now `Link`s.
+      - The no-leak e2e reloads the owner's page and checks the session held.
+        Run: 2/2 passed, 452 requests, no leaks (contract `CBZE5XBK…`, sale tx
+        `974fcecb…`, rental tx `448f75c9…`;
+        `evidence/privacy/2026-11-25-no-leak-974fcecb.txt`).
+      - Not updated: `e2e/passkey-app.spec.ts` and `e2e/swap.spec.ts` still
+        follow the issuance flow from before 2026-11-25 (issue without an
+        ask, reply links) and need rewriting before they can pass again.
 
 ### Step 6 — Mainnet deployment
 - Date:

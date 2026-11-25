@@ -40,6 +40,7 @@
  * issuer takes `h` from an owner's request, or types it.
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { RoleGate } from "@/components/RoleGate";
@@ -1089,7 +1090,7 @@ export default function IssueScreen() {
             <h3>Issuer attestation</h3>
             <p className="muted" style={{ marginTop: 0 }}>
               Give this to a counterparty along with the record. They can check both on the{" "}
-              <a href="/verify">verify screen</a> without asking anyone&apos;s permission.
+              <Link href="/verify">verify screen</Link> without asking anyone&apos;s permission.
             </p>
             <pre>{JSON.stringify(result.attestation, null, 2)}</pre>
           </div>

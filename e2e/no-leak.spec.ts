@@ -101,8 +101,17 @@ async function signIn(page: Page, path: string) {
   for (let attempt = 0; attempt < 2; attempt++) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
-    await page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
+    // Since 2026-11-25 a tab keeps its session across page loads: Sign in is
+    // shown only when it did not (a new tab, or the session ended).
     await expect(page.getByRole("button", { name: "Disconnect" })).toBeVisible();
+    const signInButton = page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true });
+    await page
+      .waitForFunction(() => {
+        const w = document.querySelector(".wallet");
+        return !!w && (w.textContent?.includes("Sign in") || !w.textContent?.includes("not verified"));
+      }, undefined, { timeout: 30_000 })
+      .catch(() => undefined);
+    if (await signInButton.isVisible()) await signInButton.click();
     try {
       // One snapshot, and a positive state: an address shown, with neither
       // "not verified" nor a Sign in button. (Two separate "count 0" checks
@@ -198,6 +207,12 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
 
   // --- 1. the owner asks for a week -------------------------------------------
   await signIn(O.page, "/issue");
+  // A reload keeps the tab's session: no second signature (found on the demo,
+  // 2026-11-25: every reload asked for the passkey again).
+  await O.page.reload();
+  await expect(O.page.locator(".wallet .addr")).toBeVisible({ timeout: 30_000 });
+  await expect(O.page.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0, { timeout: 30_000 });
+  await expect(O.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0);
   await O.page.getByRole("button", { name: "Request issuance", exact: true }).click();
   // Since 2026-11-25 the ask carries the owner's public key, so the issuer
   // seals at once and the request link is only a fallback. The key is public

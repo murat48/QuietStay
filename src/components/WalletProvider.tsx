@@ -141,6 +141,47 @@ function rememberPasskey(on: boolean): void {
   }
 }
 
+/**
+ * The session token, kept for this tab only (sessionStorage: gone when the tab
+ * closes, never shared with another tab), so that a reload or a full page load
+ * between screens does not ask for the passkey or the wallet again (found on
+ * the testnet demo, 2026-11-25). It is used only while unexpired and only for
+ * the address the wallet names again on load. The token signs nothing: every
+ * transaction still needs the wallet or the passkey.
+ */
+const SESSION_KEY = "quietstay:session";
+interface SavedSession {
+  address: string;
+  kind: AccountKind;
+  token: string;
+}
+function tokenExpiry(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/"))) as { exp?: number };
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+function savedSession(): SavedSession | null {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? "null") as SavedSession | null;
+    const exp = s ? tokenExpiry(s.token) : null;
+    // A minute's margin: a token about to end is not worth restoring.
+    return s && exp !== null && exp - 60_000 > Date.now() ? s : null;
+  } catch {
+    return null;
+  }
+}
+function saveSession(s: SavedSession | null): void {
+  try {
+    if (s) sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    else sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // storage unavailable: the session simply lasts as long as this page
+  }
+}
+
 export function useWallet(): WalletState {
   const context = useContext(WalletContext);
   if (!context) throw new Error("useWallet must be used inside <WalletProvider>");
@@ -162,30 +203,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Show the address again if a wallet is already connected to this origin. This
-  // does not restore a session: the SEP-10 signature is what grants one, and it is
-  // deliberately not persisted.
-  useEffect(() => {
-    void (async () => {
-      const known = await connectedAddress();
-      if (known) {
-        setAddress(known);
-        setKind("wallet");
-        return;
-      }
-      // A passkey wallet used in this browser before: show it again, ready to
-      // sign in. The kit is loaded only then, never for regular-wallet users.
-      if (rememberedPasskey()) {
-        const pk = await import("@/lib/passkey-wallet");
-        const wallet = await pk.restoredPasskeyWallet();
-        if (wallet) {
-          setAddress(wallet);
-          setKind("passkey");
-        }
-      }
-    })();
-  }, []);
-
   const loadStanding = useCallback(async (sessionToken: string) => {
     const response = await fetch("/api/me", {
       headers: { authorization: `Bearer ${sessionToken}` },
@@ -205,6 +222,35 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       rentedOut: body.rented_out,
     });
   }, []);
+
+  // Show the address again if a wallet is already connected to this origin, and
+  // take up this tab's session if it is still valid for that same address.
+  useEffect(() => {
+    const resume = async (wallet: string, walletKind: AccountKind) => {
+      setAddress(wallet);
+      setKind(walletKind);
+      const saved = savedSession();
+      if (!saved || saved.address !== wallet || saved.kind !== walletKind) return saveSession(null);
+      try {
+        await loadStanding(saved.token);
+        setToken(saved.token);
+      } catch {
+        // refused (expired, or the server's signing key changed): sign in again
+        saveSession(null);
+      }
+    };
+    void (async () => {
+      const known = await connectedAddress();
+      if (known) return resume(known, "wallet");
+      // A passkey wallet used in this browser before: show it again, ready to
+      // sign in. The kit is loaded only then, never for regular-wallet users.
+      if (rememberedPasskey()) {
+        const pk = await import("@/lib/passkey-wallet");
+        const wallet = await pk.restoredPasskeyWallet();
+        if (wallet) return resume(wallet, "passkey");
+      }
+    })();
+  }, [loadStanding]);
 
   const refreshStanding = useCallback(async () => {
     if (!token) return;
@@ -254,6 +300,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
 
       setToken(session.token);
+      saveSession({ address: connected, kind: "wallet", token: session.token });
 
       // 3. what the registry says this account is
       await loadStanding(session.token);
@@ -281,6 +328,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         // 2. SEP-45: the passkey proves control of the wallet
         const sessionToken = await pk.signInWithPasskey(wallet);
         setToken(sessionToken);
+        saveSession({ address: wallet, kind: "passkey", token: sessionToken });
         // 3. what the registry says this account is
         await loadStanding(sessionToken);
       } catch (caught) {
@@ -298,20 +346,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // every request the server now refuses as "not authenticated".
   const endSession = useCallback(() => {
     setToken(null);
+    saveSession(null);
     setError("Your session ended — sign in again to continue.");
   }, []);
 
   useEffect(() => {
     if (!token) return;
-    let expiresAt: number | null = null;
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/"))) as {
-        exp?: number;
-      };
-      expiresAt = typeof payload.exp === "number" ? payload.exp * 1000 : null;
-    } catch {
-      // An unreadable token is left to the server's 401 below.
-    }
+    // An unreadable token is left to the server's 401 (authFetch).
+    const expiresAt = tokenExpiry(token);
     if (expiresAt === null) return;
     const timer = setTimeout(endSession, Math.max(0, expiresAt - Date.now()));
     return () => clearTimeout(timer);
@@ -319,6 +361,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(() => {
     setToken(null);
+    saveSession(null);
     setAddress(null);
     setStanding(null);
     setError(null);
