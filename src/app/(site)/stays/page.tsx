@@ -172,6 +172,8 @@ function Stays() {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rightsById, setRightsById] = useState<Record<number, ChainRight>>({});
+  // The tab the reader picked; until then, the first one with something in it.
+  const [tab, setTab] = useState<StaysTab | null>(null);
 
   // The week to make an offer for, from the link that brought the reader here.
   useEffect(() => {
@@ -338,6 +340,8 @@ function Stays() {
   // A seller is paid on acceptance and an owner on collect; a G… account
   // without a USDC trustline can receive neither, so it is told before accepting.
   const noTrustline = needsUsdcTrustline(address, data?.account?.usdc);
+  const shown: StaysTab =
+    tab ?? (forMe.length > 0 ? "incoming" : myEscrows.length > 0 ? "stays" : myOffers.length > 0 ? "yours" : "incoming");
 
   return (
     <>
@@ -357,72 +361,106 @@ function Stays() {
           busy={busy}
           step={step}
           run={run}
-          onMade={(m) => rememberOffer(m)}
+          onMade={(m) => {
+            rememberOffer(m);
+            setTab("yours");
+          }}
           setError={setError}
         />
       ) : null}
 
-      <h2>Offers for your weeks</h2>
-      {forMe.length === 0 ? (
-        <p className="muted">No open offers for a week you hold.</p>
-      ) : (
-        forMe.map((o) => (
-          <div className="card" key={o.id} data-testid={`incoming-offer-${o.id}`}>
-            <div className="row" style={{ gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}>
-              <span className="tag ok">offer open</span>
-              <strong>
-                #{o.rightId} · {o.terms.kind === "sale" ? "to buy" : "to rent"} · {formatUsdc(BigInt(o.price))} USDC
-              </strong>
-              <span className="muted">from {shortAddress(o.buyer)}</span>
-            </div>
-            <p className="muted" style={{ marginBottom: "0.5rem" }}>
-              {o.terms.kind === "rental"
-                ? `Check-in ${formatDateTime(o.terms.checkIn)}, ends ${formatDateTime(o.terms.expiresAt)}. On acceptance the payment goes into escrow; you can collect it from ${formatDateTime(o.terms.checkIn + DAY)}.`
-                : "On acceptance the week moves to the buyer and the price moves to you, together."}{" "}
-              Open until ledger {o.expiresLedger.toLocaleString()}.
-            </p>
-            {noTrustline ? (
-              <TrustlineNotice
-                testid={`no-trustline-${o.id}`}
-                before="accept"
-                why={
-                  o.terms.kind === "sale"
-                    ? "This account has no USDC trustline, so it cannot receive the payment: the sale would be refused and nothing would move."
-                    : "This account has no USDC trustline, so you could not collect the payment from escrow; it would wait there until you add one."
-                }
-              />
-            ) : null}
-            <button
-              className="primary"
-              disabled={busy !== null || supported !== true || noTrustline}
-              onClick={() => void accept(o)}
-              data-testid={`accept-offer-${o.id}`}
-            >
-              {busy === `accept-${o.id}` ? (step ?? "working…") : o.terms.kind === "sale" ? "Prove and sell" : "Prove and rent out"}
-            </button>
-          </div>
-        ))
-      )}
+      {/*
+        Three tabs rather than one long page (asked for on the testnet demo,
+        2026-11-26). The counts are on the labels, so an empty tab costs no click.
+      */}
+      <div className="tabs" role="tablist" aria-label="Offers and stays" style={{ marginTop: "1.2rem" }}>
+        {(
+          [
+            ["incoming", "Offers for your weeks", forMe.length],
+            ["yours", "Your offers", myOffers.length],
+            ["stays", "Stays and payments", myEscrows.length],
+          ] as const
+        ).map(([key, label, count]) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={shown === key}
+            onClick={() => setTab(key)}
+            data-testid={`stays-tab-${key}`}
+          >
+            {label} <span className={key === "incoming" && count > 0 ? "tag accent" : "muted"}>{count}</span>
+          </button>
+        ))}
+      </div>
 
-      <h2>Your offers</h2>
-      <YourOffers
-        offers={myOffers}
-        data={data}
-        address={address}
-        rights={rightsById}
-        busy={busy}
-        step={step}
-        onCancel={(o) => void run(`cancel-${o.id}`, { action: "cancel_offer", offerId: o.id }, `Offer #${o.id} cancelled. Your allowance now covers only your remaining offers.`)}
-      />
-
-      <h2>Stays and payments</h2>
-      {myEscrows.length === 0 ? (
-        <p className="muted">No rental payments involve this account yet.</p>
-      ) : (
-        myEscrows.map((e) => (
-          <EscrowCard key={e.id} e={e} now={now} address={address} busy={busy} step={step} run={run} noTrustline={noTrustline} />
-        ))
-      )}
+      <div role="tabpanel" aria-label={STAYS_TAB_LABEL[shown]}>
+        {shown === "incoming" ? (
+          <>
+            {forMe.length === 0 ? (
+              <p className="muted">No open offers for a week you hold.</p>
+            ) : (
+              forMe.map((o) => (
+                <div className="card" key={o.id} data-testid={`incoming-offer-${o.id}`}>
+                  <div className="row" style={{ gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}>
+                    <span className="tag ok">offer open</span>
+                    <strong>
+                      #{o.rightId} · {o.terms.kind === "sale" ? "to buy" : "to rent"} · {formatUsdc(BigInt(o.price))} USDC
+                    </strong>
+                    <span className="muted">from {shortAddress(o.buyer)}</span>
+                  </div>
+                  <p className="muted" style={{ marginBottom: "0.5rem" }}>
+                    {o.terms.kind === "rental"
+                      ? `Check-in ${formatDateTime(o.terms.checkIn)}, ends ${formatDateTime(o.terms.expiresAt)}. On acceptance the payment goes into escrow; you can collect it from ${formatDateTime(o.terms.checkIn + DAY)}.`
+                      : "On acceptance the week moves to the buyer and the price moves to you, together."}{" "}
+                    Open until ledger {o.expiresLedger.toLocaleString()}.
+                  </p>
+                  {noTrustline ? (
+                    <TrustlineNotice
+                      testid={`no-trustline-${o.id}`}
+                      before="accept"
+                      why={
+                        o.terms.kind === "sale"
+                          ? "This account has no USDC trustline, so it cannot receive the payment: the sale would be refused and nothing would move."
+                          : "This account has no USDC trustline, so you could not collect the payment from escrow; it would wait there until you add one."
+                      }
+                    />
+                  ) : null}
+                  <button
+                    className="primary"
+                    disabled={busy !== null || supported !== true || noTrustline}
+                    onClick={() => void accept(o)}
+                    data-testid={`accept-offer-${o.id}`}
+                  >
+                    {busy === `accept-${o.id}` ? (step ?? "working…") : o.terms.kind === "sale" ? "Prove and sell" : "Prove and rent out"}
+                  </button>
+                </div>
+              ))
+            )}
+          </>
+        ) : shown === "yours" ? (
+          <>
+            <YourOffers
+              offers={myOffers}
+              data={data}
+              address={address}
+              rights={rightsById}
+              busy={busy}
+              step={step}
+              onCancel={(o) => void run(`cancel-${o.id}`, { action: "cancel_offer", offerId: o.id }, `Offer #${o.id} cancelled. Your allowance now covers only your remaining offers.`)}
+            />
+          </>
+        ) : (
+          <>
+            {myEscrows.length === 0 ? (
+              <p className="muted">No rental payments involve this account yet.</p>
+            ) : (
+              myEscrows.map((e) => (
+                <EscrowCard key={e.id} e={e} now={now} address={address} busy={busy} step={step} run={run} noTrustline={noTrustline} />
+              ))
+            )}
+          </>
+        )}
+      </div>
 
       <ProverNotice compact />
       {error ? <div className="note bad" data-testid="stays-error">{error}</div> : null}
@@ -442,6 +480,13 @@ function Stays() {
     </>
   );
 }
+
+type StaysTab = "incoming" | "yours" | "stays";
+const STAYS_TAB_LABEL: Record<StaysTab, string> = {
+  incoming: "Offers for your weeks",
+  yours: "Your offers",
+  stays: "Stays and payments",
+};
 
 function PublicSummary({ data }: { data: Payments }) {
   const open = data.offers.filter((o) => !o.expired).length;
