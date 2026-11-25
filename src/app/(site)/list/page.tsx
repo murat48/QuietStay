@@ -174,8 +174,25 @@ interface Inventory {
 }
 
 export default function ListScreen() {
-  const { address: walletAddress, authenticated, readOnly, canRequest, sign, submitSigned, signConsent, authFetch, connect, busy } =
-    useWallet();
+  const {
+    address: walletAddress,
+    kind,
+    authenticated,
+    restoring,
+    readOnly,
+    canRequest,
+    sign,
+    submitSigned,
+    signConsent,
+    authFetch,
+    connect,
+    connectPasskey,
+    busy,
+  } = useWallet();
+  // A recognised passkey wallet signs in with its passkey, not with a regular
+  // wallet (found on the testnet demo, 2026-11-25: these buttons opened the
+  // regular-wallet picker for a passkey user).
+  const signIn = () => void (walletAddress && kind === "passkey" ? connectPasskey(false) : connect());
   // Anyone may browse; only a proved account acts. A wallet connected but not
   // signed in is treated as a visitor, so no owner's control is offered to an
   // address nobody has proved.
@@ -555,11 +572,13 @@ export default function ListScreen() {
         contract. Signing in is asked for only to act — to ask for a week, or to
         offer one you hold.
       */}
-      {!authenticated ? (
+      {restoring && !authenticated ? (
+        <p className="muted">Resuming your session…</p>
+      ) : !authenticated ? (
         <div className="note accent">
           You are browsing as a visitor. <strong>Sign in</strong> to ask for a week or to manage
           your own.{" "}
-          <button className="primary" onClick={() => void connect()} disabled={busy}>
+          <button className="primary" onClick={signIn} disabled={busy}>
             {walletAddress ? (busy ? "signing…" : "Sign in") : busy ? "connecting…" : "Connect wallet"}
           </button>
         </div>
@@ -1012,9 +1031,9 @@ export default function ListScreen() {
                     </p>
                   ) : null}
 
-                  {right.listing && !sublet && !over && !authenticated ? (
+                  {right.listing && !sublet && !over && !authenticated && !restoring ? (
                     <div style={{ marginTop: "0.7rem" }}>
-                      <button className="primary" onClick={() => void connect()} disabled={busy}>
+                      <button className="primary" onClick={signIn} disabled={busy}>
                         {busy
                           ? "signing in…"
                           : right.listing.term_secs === null

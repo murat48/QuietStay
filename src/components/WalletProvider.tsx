@@ -78,6 +78,13 @@ interface WalletState {
   /** Set only after SEP-10 succeeds. */
   token: string | null;
   authenticated: boolean;
+  /**
+   * True while the page is still finding the wallet and taking up this tab's
+   * saved session after a load. Screens show "resuming" then, not Sign in:
+   * a Sign in pressed in that moment asked for the passkey for nothing (found
+   * on the testnet demo, 2026-11-25).
+   */
+  restoring: boolean;
   /** Roles read off the registry. `null` until signed in. */
   standing: AccountStanding | null;
   /**
@@ -202,6 +209,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [canRequest, setCanRequest] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // True on the first render (server and client alike), until the load-time
+  // check below has finished or found nothing saved.
+  const [restoring, setRestoring] = useState(true);
 
   const loadStanding = useCallback(async (sessionToken: string) => {
     const response = await fetch("/api/me", {
@@ -240,14 +250,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
     };
     void (async () => {
-      const known = await connectedAddress();
-      if (known) return resume(known, "wallet");
-      // A passkey wallet used in this browser before: show it again, ready to
-      // sign in. The kit is loaded only then, never for regular-wallet users.
-      if (rememberedPasskey()) {
-        const pk = await import("@/lib/passkey-wallet");
-        const wallet = await pk.restoredPasskeyWallet();
-        if (wallet) return resume(wallet, "passkey");
+      // Nothing saved for this tab: offer sign-in at once, and look for the
+      // wallet in the background.
+      if (!savedSession()) setRestoring(false);
+      try {
+        const known = await connectedAddress();
+        if (known) return await resume(known, "wallet");
+        // A passkey wallet used in this browser before: show it again, ready to
+        // sign in. The kit is loaded only then, never for regular-wallet users.
+        if (rememberedPasskey()) {
+          const pk = await import("@/lib/passkey-wallet");
+          const wallet = await pk.restoredPasskeyWallet();
+          if (wallet) return await resume(wallet, "passkey");
+        }
+        saveSession(null);
+      } finally {
+        setRestoring(false);
       }
     })();
   }, [loadStanding]);
@@ -451,6 +469,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       signConsent,
       token,
       authenticated: token !== null,
+      restoring,
       standing,
       readOnly,
       canRequest,
@@ -463,7 +482,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       signAuth,
       authFetch,
     }),
-    [address, kind, connectPasskey, passkey, submitSigned, signConsent, token, standing, readOnly, canRequest, busy, error, connect, disconnect, refreshStanding, sign, signAuth, authFetch],
+    [address, kind, connectPasskey, passkey, submitSigned, signConsent, token, restoring, standing, readOnly, canRequest, busy, error, connect, disconnect, refreshStanding, sign, signAuth, authFetch],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
@@ -486,12 +505,16 @@ const ROLE_TAG: Record<Role, { text: string; tone: string }> = {
  * the same thing and conflating them is how interfaces start lying.
  */
 export function WalletButton() {
-  const { address, kind, authenticated, standing, busy, error, connect, connectPasskey, passkey, disconnect } = useWallet();
+  const { address, kind, authenticated, restoring, standing, busy, error, connect, connectPasskey, passkey, disconnect } = useWallet();
   const [choosing, setChoosing] = useState(false);
 
   return (
     <div className="wallet">
-      {address ? (
+      {restoring && !authenticated ? (
+        <span className="tag" data-testid="session-resuming">
+          resuming your session…
+        </span>
+      ) : address ? (
         <>
           <span className="addr" title={address}>
             {kind === "passkey" ? "🔑 " : ""}

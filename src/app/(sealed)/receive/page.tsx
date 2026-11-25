@@ -113,7 +113,7 @@ interface Ask {
 }
 
 function SealSide({ link }: { link: Extract<Fragment, { type: "request" }> }) {
-  const { address, authenticated, authFetch } = useWallet();
+  const { address, authenticated, restoring, authFetch } = useWallet();
   const [ask, setAsk] = useState<Ask | null>(null);
   const [linkKeyHash, setLinkKeyHash] = useState<string | null>(null);
   const [reply, setReply] = useState<string | null>(null);
@@ -214,6 +214,7 @@ function SealSide({ link }: { link: Extract<Fragment, { type: "request" }> }) {
     }
   }, [ask, address, link]);
 
+  if (restoring && !authenticated) return <p className="muted">Resuming your session…</p>;
   if (!authenticated) {
     return (
       <div className="card">

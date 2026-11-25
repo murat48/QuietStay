@@ -20,7 +20,11 @@ import Link from "next/link";
 import { useWallet } from "@/components/WalletProvider";
 
 export function ConnectGate() {
-  const { address, authenticated, busy, error, connect } = useWallet();
+  const { address, authenticated, restoring, busy, error, connect } = useWallet();
+
+  if (restoring && !authenticated) {
+    return <p className="muted">Resuming your session…</p>;
+  }
 
   if (address && authenticated) {
     return (

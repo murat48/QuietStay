@@ -102,7 +102,9 @@ async function signIn(page: Page, path: string) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
     // Since 2026-11-25 a tab keeps its session across page loads: Sign in is
-    // shown only when it did not (a new tab, or the session ended).
+    // shown only when it did not (a new tab, or the session ended). While the
+    // saved session is taken up, the header says "resuming" and offers nothing.
+    await expect(page.getByTestId("session-resuming")).toHaveCount(0, { timeout: 60_000 });
     await expect(page.getByRole("button", { name: "Disconnect" })).toBeVisible();
     const signInButton = page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true });
     await page
@@ -210,7 +212,9 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   // A reload keeps the tab's session: no second signature (found on the demo,
   // 2026-11-25: every reload asked for the passkey again).
   await O.page.reload();
-  await expect(O.page.locator(".wallet .addr")).toBeVisible({ timeout: 30_000 });
+  // No Sign in is offered while the session is taken up, then none is needed.
+  await expect(O.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0);
+  await expect(O.page.locator(".wallet .addr")).toBeVisible({ timeout: 60_000 });
   await expect(O.page.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0, { timeout: 30_000 });
   await expect(O.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0);
   await O.page.getByRole("button", { name: "Request issuance", exact: true }).click();
@@ -264,8 +268,9 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   const buyerLink = await B.page.getByTestId("buy-request-link").inputValue({ timeout: 60_000 });
   links.push(buyerLink);
 
-  await O.page.goto(buyerLink.replace(/^https?:\/\/[^/]+/, ""));
-  await O.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
+  // /receive has its own root layout (a full page load); the tab's session
+  // carries over, so Sign in is pressed only if it is shown.
+  await signIn(O.page, buyerLink.replace(/^https?:\/\/[^/]+/, ""));
   await O.page.getByRole("button", { name: "Seal the record" }).click({ timeout: 60_000 });
   const ownerReply = await O.page.getByTestId("reply-link").inputValue();
   links.push(ownerReply);

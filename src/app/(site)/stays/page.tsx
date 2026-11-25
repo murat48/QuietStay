@@ -163,7 +163,7 @@ function ChainSees() {
 }
 
 function Stays() {
-  const { address, authenticated, kind, standing, sign, submitSigned, authFetch, refreshStanding } = useWallet();
+  const { address, authenticated, restoring, kind, standing, sign, submitSigned, authFetch, refreshStanding } = useWallet();
   const supported = useProverSupported();
   const [data, setData] = useState<Payments | null>(null);
   const [focus, setFocus] = useState<{ rightId: number; kind: "rent" | "buy" } | null>(null);
@@ -311,6 +311,7 @@ function Stays() {
     [address, kind, authFetch, sign, submitSigned, refreshStanding, load],
   );
 
+  if (restoring && !authenticated) return <p className="muted">Resuming your session…</p>;
   if (!address || !authenticated) {
     return (
       <div className="card">

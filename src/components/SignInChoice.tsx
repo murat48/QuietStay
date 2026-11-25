@@ -6,9 +6,10 @@
  *
  * It matches the header's WalletButton (found on the testnet app,
  * 2026-11-24):
- * - The session lives in memory only, so after a reload or when it ends, a
- *   passkey wallet is still recognised (`kind === "passkey"`) but has no
- *   session.
+ * - When the tab's session ends (or in a new tab), a passkey wallet is still
+ *   recognised (`kind === "passkey"`) but has no session. While a saved
+ *   session is being taken up after a page load, nothing is offered: a sign-in
+ *   then would ask for the passkey for nothing.
  * - The gate used to offer only "Connect wallet" (Freighter, SEP-10), which
  *   left a passkey user with no way back in from the page.
  * - Now a recognised passkey wallet signs in again with its passkey (SEP-45),
@@ -18,7 +19,11 @@
 import { useWallet } from "@/components/WalletProvider";
 
 export function SignInChoice({ busyLabel = "connecting…" }: { busyLabel?: string }) {
-  const { address, kind, busy, connect, connectPasskey, passkey } = useWallet();
+  const { address, kind, busy, restoring, connect, connectPasskey, passkey } = useWallet();
+
+  if (restoring) {
+    return <p className="muted" style={{ margin: "0.5rem 0 0" }}>Resuming your session…</p>;
+  }
 
   if (address && kind === "passkey") {
     return (

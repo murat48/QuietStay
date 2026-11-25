@@ -124,7 +124,7 @@ export default function SwapScreen() {
 }
 
 function Swap() {
-  const { address, authenticated, kind, standing, sign, submitSigned, authFetch, refreshStanding } = useWallet();
+  const { address, authenticated, restoring, kind, standing, sign, submitSigned, authFetch, refreshStanding } = useWallet();
   const supported = useProverSupported();
   const [data, setData] = useState<Swaps | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -316,6 +316,7 @@ function Swap() {
     [address, authFetch, proveSide, submit, refreshStanding],
   );
 
+  if (restoring && !authenticated) return <p className="muted">Resuming your session…</p>;
   if (!address || !authenticated) {
     return (
       <div className="card">

@@ -29,7 +29,11 @@ interface Props {
 }
 
 export function RoleGate({ requires, action, children }: Props) {
-  const { address, authenticated, standing } = useWallet();
+  const { address, authenticated, restoring, standing } = useWallet();
+
+  if (restoring && !authenticated) {
+    return <p className="muted">Resuming your session…</p>;
+  }
 
   if (!address || !authenticated) {
     return (

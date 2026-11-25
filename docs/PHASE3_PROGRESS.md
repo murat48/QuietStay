@@ -1971,6 +1971,19 @@ of the spec, the rest at the second review of `def5eb6`.
         Run: 2/2 passed, 452 requests, no leaks (contract `CBZE5XBK…`, sale tx
         `974fcecb…`, rental tx `448f75c9…`;
         `evidence/privacy/2026-11-25-no-leak-974fcecb.txt`).
+      - **Still asked after that fix (seen on the demo).** Two causes:
+        - while the saved session was being taken up after a load (a few
+          seconds, `/api/me`), the header and the gates offered Sign in, and
+          pressing it asked for the passkey;
+        - on `/list`, "Sign in" and "Sign in to ask to rent" called the
+          regular-wallet sign-in even for a passkey wallet.
+      - Now the wallet context has a `restoring` state: the header and the
+        gates say "resuming your session…" and offer nothing until it ends.
+        `/list` signs a passkey wallet in with its passkey.
+      - No-leak e2e, with the session carried into `/receive` as well: 2/2,
+        422 requests, no leaks (contract `CBGV7E7X…`, sale tx `320c1537…`,
+        rental tx `fe647fe2…`;
+        `evidence/privacy/2026-11-25-no-leak-320c1537.txt`).
       - Not updated: `e2e/passkey-app.spec.ts` and `e2e/swap.spec.ts` still
         follow the issuance flow from before 2026-11-25 (issue without an
         ask, reply links) and need rewriting before they can pass again.
