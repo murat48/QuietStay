@@ -465,11 +465,11 @@ export default function IssueScreen() {
           The issuer issues usage rights. To have a week issued to you, send the issuer the hash of
           a secret only you hold. The issuer enters the record; the week arrives in this account.
         </p>
-        <div className="note accent phase-note">
-          <span className="tag accent">Phase 2</span> Making your secret is a manual step today: you
-          run <code>npm run zk:secret</code> on your own computer and paste the h it prints.{" "}
-          <span className="tag ok">Phase 3</span> The app will make the secret for you, in your
-          browser, and fill in h automatically — the secret still never leaves your device.
+        <div className="note accent phase-note" data-testid="issue-browser-note">
+          Everything happens in this browser, with any wallet or a passkey: it makes your secret
+          and keeps it, the week&apos;s record arrives here sealed, and the proof is made here when
+          you rent the week out or sell it. Nothing to install and no command line. Your wallet
+          or passkey is asked only to approve.
         </div>
         <IssuanceAsk />
       </>
@@ -1246,6 +1246,10 @@ function IssuanceAsk() {
         ) : null}
         <details style={{ marginTop: "1rem" }}>
           <summary>Advanced: I made my secret with the command line</summary>
+          <p className="muted">
+            Only if you will also prove from the command line: this browser does not hold that
+            secret, so it can never rent out or sell a week asked for this way.
+          </p>
           <pre>npm run zk:secret -- .secrets/my-week.json</pre>
           <div className="field">
             <label htmlFor="ask-secret-hash">Your h</label>

@@ -1080,6 +1080,10 @@ export default function ListScreen() {
                         <div>
                           <details style={{ marginBottom: "0.5rem" }}>
                             <summary className="muted">Advanced: I made my secret with the command line</summary>
+                            <p className="muted">
+                              Only if you will also prove from the command line: this browser will not hold
+                              that secret, so it cannot rent out or sell the week once it is yours.
+                            </p>
                             <div className="field" style={{ marginBottom: "0.5rem" }}>
                               <label htmlFor={`h-${right.id}`}>
                                 Your h&apos; — from <code>npm run zk:secret -- my-secret.json</code>
