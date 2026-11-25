@@ -36,7 +36,9 @@ not money.
    - *Rental:* when the owner accepts, the renter's money goes into the
      contract (an *escrow*), not to the owner. The owner can collect it only
      **24 hours after check-in**. Until then the renter can release it early, or
-     report a problem. A reported problem is settled by the two parties or,
+     report a problem. (The contract allows an early release at any time; the
+     app offers it only from check-in, with a confirmation, so that nobody can
+     talk a renter into paying before seeing the stay. Decided 2026-11-25.) A reported problem is settled by the two parties or,
      failing that, by a fixed *arbiter* address. The arbiter can only send the
      escrowed money to the owner or back to the renter. It cannot touch any week.
 4. **Swaps.** Two owners can exchange weeks. Both weeks move in one transaction,

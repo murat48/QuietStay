@@ -764,6 +764,11 @@ function EscrowCard(props: {
   const isRenter = e.renter === address;
   const amount = formatUsdc(BigInt(e.amount));
   const windowOpen = now < e.checkIn + DAY;
+  // The contract lets the renter release at any time (`confirm`). This page
+  // offers it only from check-in, so nobody can talk a renter into paying for
+  // a stay before seeing it (decided 2026-11-25; the contract is unchanged).
+  const releaseOpen = now >= e.checkIn;
+  const [arming, setArming] = useState(false);
   const myEvidence = isOwner ? e.ownerEvidence : e.renterEvidence;
   const key = (a: string) => `${a}-${e.id}`;
   const label = (a: string, text: string) => (busy === key(a) ? (step ?? "working…") : text);
@@ -819,8 +824,8 @@ function EscrowCard(props: {
 
       {e.state === "Disputed" ? (
         <div className="note bad">
-          A problem was reported. Either party can still settle it: the renter can release the payment, the owner can
-          refund it. Otherwise the pilot arbiter decides, and can only pay the owner or refund the renter.
+          A problem was reported. Either party can still settle it: the renter can release the payment (from
+          check-in), the owner can refund it. Otherwise the pilot arbiter decides, and can only pay the owner or refund the renter.
         </div>
       ) : null}
 
@@ -844,12 +849,8 @@ function EscrowCard(props: {
             {label("collect", windowOpen ? `Collect (from ${formatDateTime(e.checkIn + DAY)})` : "Collect the payment")}
           </button>
         ) : null}
-        {isRenter && (e.state === "Funded" || e.state === "Disputed") ? (
-          <button
-            disabled={busy !== null}
-            onClick={() => void run(key("confirm"), { action: "confirm", escrowId: e.id }, `Released ${amount} USDC to the owner.`)}
-            data-testid={`confirm-${e.id}`}
-          >
+        {isRenter && releaseOpen && !arming && (e.state === "Funded" || e.state === "Disputed") ? (
+          <button disabled={busy !== null} onClick={() => setArming(true)} data-testid={`confirm-${e.id}`}>
             {label("confirm", e.state === "Disputed" ? "Release the payment after all" : "All good: release the payment now")}
           </button>
         ) : null}
@@ -863,6 +864,42 @@ function EscrowCard(props: {
           </button>
         ) : null}
       </div>
+
+      {isRenter && !releaseOpen && (e.state === "Funded" || e.state === "Disputed") ? (
+        <p className="note" data-testid={`confirm-locked-${e.id}`}>
+          The payment stays in escrow until you have checked in. You can release it to the owner from{" "}
+          {formatDateTime(e.checkIn)}, never before: if anyone asks you to pay before you are in, do not. QuietStay never
+          asks for that.
+        </p>
+      ) : null}
+
+      {isRenter && releaseOpen && arming && (e.state === "Funded" || e.state === "Disputed") ? (
+        <div className="note bad" style={{ marginTop: "0.8rem" }} data-testid={`confirm-check-${e.id}`}>
+          <p>
+            This sends {amount} USDC to the owner now, and it cannot be undone.{" "}
+            {e.state === "Disputed"
+              ? "It also ends your reported problem: no refund is possible after this."
+              : "You give up reporting a problem: if anything turns out wrong with the stay, the payment does not come back."}
+          </p>
+          <div className="row" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
+            <button
+              className="primary"
+              disabled={busy !== null}
+              onClick={() =>
+                void run(key("confirm"), { action: "confirm", escrowId: e.id }, `Released ${amount} USDC to the owner.`).then(
+                  () => setArming(false),
+                )
+              }
+              data-testid={`confirm-yes-${e.id}`}
+            >
+              {label("confirm", `Yes, release ${amount} USDC to the owner`)}
+            </button>
+            <button disabled={busy !== null} onClick={() => setArming(false)} data-testid={`confirm-cancel-${e.id}`}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {(isRenter && e.state === "Funded" && windowOpen) || (e.state === "Disputed" && myEvidence.length < 4) ? (
         <div style={{ marginTop: "0.8rem" }}>

@@ -1944,6 +1944,18 @@ of the spec, the rest at the second review of `def5eb6`.
         of 1 USDC into the contract.
       - Escrow #5 is `Funded`. `CBZNDV…` holds #14 from 2026-12-14 to 12-20;
         its USDC balance is now 18.
+    - **Your decision (2026-11-25): early release only from check-in, in the
+      app.**
+      - Found in the demo: "All good: release the payment now" paid the owner
+        before the renter had checked in, so an owner could talk a renter into
+        releasing early.
+      - The contract (`confirm`, any time while Funded or Disputed) is
+        unchanged. `/stays` shows the release only from check-in, behind a
+        confirmation that says the payment cannot come back. Before check-in
+        it says the payment stays in escrow and to pay nobody early.
+      - Passkey wallets sign only on this site, so for them this closes it. A
+        Freighter user could still sign a `confirm` on another site. The
+        contract rule (no `confirm` before check-in) is a next-phase idea.
 
 ### Step 6 — Mainnet deployment
 - Date:
