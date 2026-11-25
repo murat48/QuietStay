@@ -271,6 +271,13 @@ export interface IssuanceRequest {
    * soon as it issues, and no request link has to travel. Public by nature.
    */
   public_key?: string;
+  /**
+   * D3 as amended 2026-11-25: the week's record, sealed in the issuer's
+   * browser to `public_key`, waiting for the owner's browser to pick it up.
+   * Ciphertext only: the server cannot open it. Removed when the owner's
+   * browser confirms it kept the record, or after SEALED_TTL_DAYS.
+   */
+  sealed_record?: { blob: string; delivered_at: string };
   requested_at: string;
   status: IssuanceStatus;
   /** Set when issued. */
@@ -348,6 +355,31 @@ export async function markIssued(
   all[index] = { ...all[index]!, status: "issued", ...issued, issued_at: new Date().toISOString() };
   await saveIssuanceRequests(all);
   return all[index]!;
+}
+
+/** How long a sealed record waits for its owner before it is dropped. */
+export const SEALED_TTL_DAYS = 30;
+/** A sealed record is ~1.5 KB; anything far larger is not one. */
+const SEALED_MAX_CHARS = 16_384;
+
+/** A sealed record as the issuer's browser sends it: base64url, bounded. */
+export function parseSealedBlob(value: unknown): string {
+  if (typeof value !== "string" || value.length < 128 || value.length > SEALED_MAX_CHARS || !/^[A-Za-z0-9_-]+$/.test(value)) {
+    throw new Error("blob must be a sealed record (base64url, 128 to 16384 characters)");
+  }
+  return value;
+}
+
+/** Drop sealed records older than SEALED_TTL_DAYS. Returns whether anything changed. */
+export function expireSealed(all: IssuanceRequest[], now = Date.now()): boolean {
+  let changed = false;
+  for (const r of all) {
+    if (r.sealed_record && now - Date.parse(r.sealed_record.delivered_at) > SEALED_TTL_DAYS * 86_400_000) {
+      delete r.sealed_record;
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 /** A sealed-link key hash: 64 lowercase hex characters, or absent. */

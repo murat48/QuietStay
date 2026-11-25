@@ -189,7 +189,9 @@ interface IssueResult {
    * ask): then the owner's request link, opened here, makes it.
    */
   reply: string | null;
-  /** Why sealing failed, if it did; the week is issued either way. */
+  /** The sealed record was left with the owner's ask, for their browser to pick up. */
+  delivered: boolean;
+  /** Why sealing or delivery failed, if it did; the week is issued either way. */
   replyError?: string;
   record_digest: string;
   commitment: string;
@@ -357,6 +359,7 @@ export default function IssueScreen() {
       // sealed to the owner, now or later from /receive.
       let reply: string | null = null;
       let replyError: string | undefined;
+      let delivered = false;
       if (selected.key_hash && body.right_id !== undefined) {
         const owner = (record as { owner: { stellar_account: string } }).owner.stellar_account;
         await putIssued({
@@ -380,14 +383,25 @@ export default function IssueScreen() {
               contract: CONTRACT_ID,
               request: { kind: "issue", id: selected.id },
             };
-            reply = replyLink(window.location.origin, await seal(unb64u(selected.public_key), selected.key_hash, payload));
+            const blob = await seal(unb64u(selected.public_key), selected.key_hash, payload);
+            reply = replyLink(window.location.origin, blob);
+            // D3 as amended 2026-11-25: leave it, sealed, with the owner's
+            // ask. Their browser picks it up when they sign in; no link has
+            // to travel. The reply link stays on screen as a fallback.
+            const sent = await authFetch("/api/requests/issuance/delivery", {
+              method: "POST",
+              body: JSON.stringify({ id: selected.id, blob }),
+            });
+            const sentBody = (await sent.json()) as { delivered?: boolean; error?: string };
+            if (!sent.ok || !sentBody.delivered) throw new Error(sentBody.error ?? "the sealed record could not be left for the owner");
+            delivered = true;
           } catch (caught) {
             replyError = describeError(caught);
           }
         }
       }
       // Kept as sent: an edit made after issuing must not change what is saved.
-      setResult({ ...body, issuedText: recordText, reply, ...(replyError ? { replyError } : {}) });
+      setResult({ ...body, issuedText: recordText, reply, delivered, ...(replyError ? { replyError } : {}) });
       // An issued request drops off the list.
       if (selected) {
         setAsks((current) => current.filter((ask) => ask.id !== selected.id));
@@ -1000,23 +1014,40 @@ export default function IssueScreen() {
             <strong>Right #{result.right_id}</strong> — {result.note}
           </div>
           <div className="card">
-            <h3 style={{ marginTop: 0 }}>Send the owner their reply link</h3>
-            {result.reply ? (
+            {result.reply && result.delivered ? (
               <>
-                <p className="muted" style={{ marginTop: 0 }}>
-                  The week&apos;s record, sealed to the owner&apos;s browser. Send it through the channel
-                  you already use. The owner opens it in the browser they asked from, and can then
-                  rent the week out or sell it. It is useless to anyone else.
+                <h3 style={{ marginTop: 0 }}>Delivered to the owner</h3>
+                <p className="note accent" style={{ marginTop: 0 }} data-testid="issue-delivered">
+                  The week&apos;s record was sealed in this browser to the owner&apos;s browser, and left
+                  with their request. Their browser picks it up the next time they sign in, checks
+                  it against the chain, and can then rent the week out or sell it. Nothing to send.
+                  The server holds only the sealed form, which it cannot open, until then.
+                </p>
+                <details>
+                  <summary className="muted">The owner did not get it? Send them the reply link instead</summary>
+                  <textarea readOnly value={result.reply} style={{ minHeight: "6rem" }} data-testid="issue-reply-link" />
+                </details>
+              </>
+            ) : result.reply ? (
+              <>
+                <h3 style={{ marginTop: 0 }}>Send the owner their reply link</h3>
+                <p className="note warn" style={{ marginTop: 0 }}>
+                  It could not be left with their request{result.replyError ? <> ({result.replyError})</> : null}.
+                  Send them this link through the channel you already use; they open it in the
+                  browser they asked from. It is useless to anyone else.
                 </p>
                 <textarea readOnly value={result.reply} style={{ minHeight: "6rem" }} data-testid="issue-reply-link" />
               </>
             ) : (
+              <>
+              <h3 style={{ marginTop: 0 }}>Send the owner their record</h3>
               <p className="muted" style={{ marginTop: 0 }} data-testid="issue-reply-later">
                 {result.replyError ? <>Sealing here failed ({result.replyError}). </> : null}
                 This request was made before requests carried the owner&apos;s key. Ask the owner for
                 the request link on their /issue screen, and open it here, in this browser: it makes
                 the reply link.
               </p>
+              </>
             )}
             <dl className="facts">
               <dt>Record digest d</dt>
@@ -1141,7 +1172,7 @@ function IssuanceAsk() {
           cliHash !== undefined
             ? (body.note ?? "Asked.")
             : "Asked. Your week's secret was made and kept in this browser; only its hash was sent. " +
-                "When the issuer issues the week, they get a reply link for you: open it here, in this browser.",
+                "When the issuer issues the week, its record arrives here the next time you sign in, in this browser.",
         );
         setHashText("");
         await load();
@@ -1262,12 +1293,12 @@ function IssuanceAsk() {
                 {links[r.id] && r.public_key ? (
                   <>
                     <p className="muted" style={{ margin: "0.4rem 0" }} data-testid="issue-reply-wait">
-                      Nothing to send: when the issuer issues this week, their screen shows a reply
-                      link for you. Open it here, in this browser, and the week&apos;s record is yours.
+                      Nothing to do: when the issuer issues this week, its record arrives sealed to
+                      this browser and is checked against the chain the next time you sign in here.
                     </p>
-                    {/* Kept for an issuer whose screen lost the reply link (a closed tab). */}
+                    {/* Kept for the case where the sealed record could not be left with the ask. */}
                     <details>
-                      <summary className="muted">The issuer lost the reply link?</summary>
+                      <summary className="muted">The record did not arrive?</summary>
                       <p className="muted" style={{ margin: "0.4rem 0" }}>
                         Send them this request link. They open it in the browser they issued from,
                         and it makes the reply link again.

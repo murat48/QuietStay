@@ -1893,6 +1893,50 @@ of the spec, the rest at the second review of `def5eb6`.
           `/list` for the first time and reloaded the page in the middle of
           sign-in: the challenge was fetched, but no POST followed.
         - The rerun, with no change to the code, passed.
+    - **First rental with real passkeys, in the browser (2026-11-25).**
+      - Week #13 was issued from `CCMTVZ…`'s ask, and the reply link was
+        opened in the owner's browser.
+      - Renter `CBZNDV…` made offer #12, 1 USDC.
+      - The owner pressed *Prove and rent out*: `accept_rental` went through,
+        with the proof verified, the passkey's WebAuthn check returning
+        `true`, and the fee paid by the fee account.
+      - Escrow #4 is `Funded` (read on chain). `CBZNDV…` holds #13 from
+        2026-12-21 to 12-27, and collect opens 2026-12-22 00:00 UTC.
+    - **Your decision (2026-11-25): no link at all for issuance. D3 is
+      amended: the issuance inbox.**
+      - Copying even one link was too much. Of the options, only keeping the
+        record sealed on the server removes the link without a contract
+        change, and you approved it, for issuance only.
+      - The other options considered:
+        - proving at listing time: needs a circuit and contract change;
+        - the renter proving: meaningless, since only the owner holds the
+          secret;
+        - the ledger or WebRTC: rejected.
+      - **How it works now.** The issuer's browser seals and leaves the
+        record with the owner's ask
+        (`/api/requests/issuance/delivery`). The owner's browser picks it
+        up while signed in (`SealedInbox`), checks it against the chain,
+        keeps it, and has the sealed copy dropped. A sealed copy that is not
+        picked up is dropped after 30 days.
+      - **Issuer and owner in one browser** need no inbox: the issuer's copy
+        is used if it reproduces the commitment on chain.
+      - **Why this costs no privacy.** The server already sees the record at
+        issuance. Buyers and swaps keep the sealed link.
+      - The spec (§2, "the issuance inbox") and the D3 row record this.
+      - Tests: unit tests `src/lib/requests.test.ts`; app tests 60/60.
+      - **No-leak e2e through the inbox: 2/2 passed.**
+        - The owner opened no link; the inbox note appeared after sign-in.
+        - It recorded 443 requests and found no leaks. Contract `CCBE622N…`,
+          sale tx `69e62a89…`, rental tx `956c4a44…`. Result files:
+          `e2e/results/no-leak-2026-11-25.json` and
+          `evidence/privacy/2026-11-25-no-leak-69e62a89.txt`.
+        - Two runs before it failed in the test's sign-in helper, not in the
+          app. The dev server reloaded a page it was compiling for the first
+          time, in the middle of sign-in. The helper's two "count 0" checks
+          then passed on the blank page.
+        - The helper now waits for the page to settle and checks one
+          positive state: an address shown, not "not verified", no Sign in
+          button. It retries once.
 
 ### Step 6 — Mainnet deployment
 - Date:

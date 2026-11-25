@@ -9,8 +9,9 @@
  *   1. the owner asks for a week: the secret s and a sealed-link key are made
  *      in the owner's browser;
  *   2. the issuer issues it from the owner's ask, and the issuer's browser
- *      seals the record at once to the owner's key carried by the ask; the
- *      owner opens the reply and checks it against the chain;
+ *      seals the record at once to the owner's key carried by the ask and
+ *      leaves it with the ask; signed in, the owner's browser picks it up and
+ *      checks it against the chain, with no link opened;
  *   3. the owner offers it for sale; the buyer asks to buy (s' made in the
  *      buyer's browser, consent signed), and the owner seals the record to the
  *      buyer's request link; the buyer opens and checks it;
@@ -21,7 +22,7 @@
  * Every request the owner's, buyer's and renter's browsers make is recorded:
  * pages and the prover worker, with URL, headers and body. The issuer's
  * browser is not recorded: its issuance request carries the record to
- * /api/issue by design, and the sealing that follows makes no request.
+ * /api/issue by design, and its delivery carries only the sealed form.
  *
  * Afterwards the secrets and records are read back out of each browser's
  * vault, and the test fails if any recorded request contains:
@@ -93,10 +94,37 @@ function record(who: string, context: BrowserContext) {
 }
 
 async function signIn(page: Page, path: string) {
-  await page.goto(path);
-  await page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Disconnect" })).toBeVisible();
-  await expect(page.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0, { timeout: 60_000 });
+  // The dev server compiles a page on its first visit and may reload it once
+  // that is done; a sign-in started before then is lost with the reload (seen
+  // twice, 2026-11-24 and 2026-11-25: a challenge fetched, never posted). So
+  // wait for the page to settle, and check the sign-in held; retry once.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.goto(path);
+    await page.waitForLoadState("networkidle");
+    await page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Disconnect" })).toBeVisible();
+    try {
+      // One snapshot, and a positive state: an address shown, with neither
+      // "not verified" nor a Sign in button. (Two separate "count 0" checks
+      // passed vacuously while the page was blank mid-reload.)
+      await page.waitForFunction(
+        () => {
+          const w = document.querySelector(".wallet");
+          if (!w || !w.querySelector(".addr")) return false;
+          const text = w.textContent ?? "";
+          return !text.includes("not verified") && ![...w.querySelectorAll("button")].some((b) => b.textContent === "Sign in" || b.textContent === "signing…");
+        },
+        undefined,
+        { timeout: 60_000 },
+      );
+      // Still so a moment later: not a frame caught between two renders.
+      await page.waitForTimeout(1_000);
+      await expect(page.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0);
+      return;
+    } catch (e) {
+      if (attempt === 1) throw e;
+    }
+  }
 }
 
 /** Everything a browser's vault holds, read back for the leak check. */
@@ -196,15 +224,20 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   await I.page.getByRole("button", { name: "Issue on testnet" }).click();
   await expect(I.page.getByText(/Right #\d+/).first()).toBeVisible({ timeout: 120_000 });
 
-  // Sealed in the issuer's browser right after issuing; sealing itself makes
-  // no request. (The issuance request carries the record by design, so the
-  // issuer's browser is not recorded here.)
+  // Sealed in the issuer's browser right after issuing, and left with the
+  // owner's ask (D3 as amended 2026-11-25). The issuer's browser is not
+  // recorded: its issuance request carries the record by design, and its
+  // delivery request carries only the sealed form.
+  await expect(I.page.getByTestId("issue-delivered")).toBeVisible({ timeout: 60_000 });
   const issuerReply = await I.page.getByTestId("issue-reply-link").inputValue({ timeout: 60_000 });
+  // The sealed record's own bytes: no request of the owner's may carry them
+  // (the owner's browser receives them in a response and sends back only the
+  // ask id).
   links.push(issuerReply);
 
-  await O.page.goto(issuerReply.replace(/^https?:\/\/[^/]+/, ""));
-  await expect(O.page.getByTestId("record-received")).toBeVisible({ timeout: 60_000 });
-  expect(O.page.url()).not.toContain("#");
+  // The owner opens no link: signed in, the browser picks the record up.
+  await signIn(O.page, "/stays");
+  await expect(O.page.getByTestId("inbox-received")).toBeVisible({ timeout: 60_000 });
 
   // --- 3. offer for sale; the buyer asks; the record goes to the buyer ---------
   await signIn(O.page, "/list");

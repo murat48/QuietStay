@@ -318,6 +318,49 @@ got lost. Since then:
 - The no-leak test (e2e/no-leak.spec.ts) allows an owner's public key in
   exactly one request, the ask itself, and fails if it appears in any other.
 
+**No link at all, for the first owner: the issuance inbox (D3 amended,
+approved 2026-11-25).** Even one link proved too much in practice. The owner
+had to copy a long link from the issuer's screen into their own browser
+before they could rent the week out. You decided to amend D3 for issuance
+only:
+
+- **What changes.** After sealing, the issuer's browser leaves the sealed
+  record with the owner's ask (`POST /api/requests/issuance/delivery`).
+  - When the owner is signed in, their browser picks it up
+    (`src/components/SealedInbox.tsx`). This happens on sign-in, on each page
+    and when the tab comes back into view.
+  - The browser opens it, checks it against the commitment on chain exactly
+    as `/receive` does, and keeps it (`src/lib/sealed-import.ts`, one
+    implementation for both).
+  - It then asks the server to drop the sealed copy.
+- **What the server holds, and for how long.** Only ciphertext, sealed to a
+  key that is non-extractable in the owner's browser; the server cannot open
+  it. It is dropped when the owner's browser has kept the record, or after 30
+  days.
+  - Only the issuer may deliver, once, and only for an issued ask that
+    carries a key.
+  - Only the ask's owner may drop it.
+- **Why this costs no privacy.** At issuance the server already sees the
+  record in the clear, because `/api/issue` computes `d` and `C`. Holding the
+  sealed form until the owner picks it up tells the server nothing new.
+- **D3 now reads:** the sealed link or the issuance inbox; no file; the
+  server holds no record in the clear and keeps only the sealed form, until
+  pickup; no backup export.
+- **What stays the same.**
+  - **The SOW rule.** No request from the owner's browser contains the
+    record or the secret. The owner's browser receives the sealed form in a
+    response, and sends back only the ask id.
+  - **Buyers and swaps.** They keep the sealed link, bound on chain by
+    `request_record`. There the server never sees the record, so "No
+    QuietStay server sees the record, the link or `d`" still holds for them.
+  - **The reply link** remains on the issuer's screen as a fallback.
+- **Issuer and owner in one browser** (a demo switching accounts). The
+  issuer's own copy of the record is used directly. It is accepted only if,
+  with a secret kept there, it reproduces the commitment on chain.
+- **The no-leak test** now gets the owner's record through the inbox, with no
+  link opened. It fails if any of the owner's requests carries part of the
+  sealed record.
+
 This design has these properties:
 
 - An intercepted link is useless without the buyer's browser, because only
@@ -1339,7 +1382,7 @@ reopened unless something breaks.
 | --- | --- | --- | --- |
 | D1 | Account binding | **Approved** | Kind tag in `hi` (G = 0, C = 1); no circuit change. No range check confirmed; C-holder proof verified off-chain and on chain; contract-level test in Step 2. Stop if a circuit change turns out to be needed |
 | D2 | GPL prover | **Approved** | One separately built GPL-3.0 worker, a `LICENSE` file in `prover-worker/`, an in-app license notice; `zk:check-bundle` enforces the boundary |
-| D3 | First record delivery and backup | **Approved** | The sealed link (§2), no file, no server storage, no backup export; the loss is a known limitation |
+| D3 | First record delivery and backup | **Approved; amended 2026-11-25** | The sealed link (§2), no file, no backup export; the loss is a known limitation. Amended for issuance only: the issuer's browser may leave the record **sealed** with the owner's ask, for the owner's browser to pick up; the server keeps only that ciphertext, until pickup or 30 days (§2, "the issuance inbox") |
 | D4 | Offers carry `h'` | **Approved with changes** | (1) the buyer receives and checks the sealed record against the current on-chain `C` **before** creating an offer; (2) the buyer's encryption-key hash is bound on chain and the seller's browser checks the link key against it before encrypting; (3) no analytics on the receiving page. See D4a for how (1) and (2) fit together |
 | D5 | Three-step swap | **Approved** | §7, with no lock between accept and complete, withdrawal, and a full re-check at complete |
 | D6 | Fees | **Approved with conditions** | §13. Testnet route: QuietStay calls and wallet deployment only, rate-limited, key with no other role. Mainnet: CLI script, auth-entry expiry ≈ 720 ledgers |

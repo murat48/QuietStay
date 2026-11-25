@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { Nav } from "@/components/Nav";
 import { ProverNotice } from "@/components/ProverNotice";
+import { SealedInbox } from "@/components/SealedInbox";
 import { SiteAnalytics } from "@/components/SiteAnalytics";
 import { WalletButton, WalletProvider } from "@/components/WalletProvider";
 import { NetworkBadge, networkDisclosure } from "@/components/NetworkBadge";
@@ -51,7 +52,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </header>
 
-          <main className="shell page-shell" id="main-content" tabIndex={-1}>{children}</main>
+          <main className="shell page-shell" id="main-content" tabIndex={-1}>
+            <SealedInbox />
+            {children}
+          </main>
 
           <div className="shell footer-shell">
             <footer className="foot">

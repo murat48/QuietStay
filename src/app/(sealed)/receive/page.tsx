@@ -27,32 +27,10 @@ import { useWallet } from "@/components/WalletProvider";
 import type { JsonValue } from "@/lib/canonical";
 import { CONTRACT_ID } from "@/lib/config";
 import { describeError, formatDate, shortAddress } from "@/lib/format";
-import { prover } from "@/lib/prover-client";
 import { useProverSupported } from "@/lib/use-prover-supported";
-import {
-  open,
-  parseFragment,
-  replyLink,
-  seal,
-  sha256Hex,
-  type Fragment,
-  type SealedRecord,
-} from "@/lib/sealed";
-import { allSealKeys, getIssued, putHolding, putRecord, resolveHolding, secretFor } from "@/lib/vault";
-
-interface ChainRight {
-  id: number;
-  commitment: string;
-  title_holder: string | null;
-  week: { start: number; end: number };
-}
-
-async function chainRight(rightId: number): Promise<ChainRight> {
-  const res = await fetch(`/api/right/${rightId}`);
-  const body = (await res.json()) as ChainRight & { error?: string };
-  if (!res.ok) throw new Error(body.error ?? `could not read right #${rightId}`);
-  return body;
-}
+import { parseFragment, replyLink, seal, sha256Hex, type Fragment, type SealedRecord } from "@/lib/sealed";
+import { chainRight, importSealed } from "@/lib/sealed-import";
+import { getIssued, resolveHolding } from "@/lib/vault";
 
 /**
  * The fragment as first read. Kept at module scope so that a re-mount (React
@@ -98,8 +76,8 @@ export default function ReceivePage() {
       <p className="eyebrow">SEALED RECORD</p>
       <h1>Pass a private record, browser to browser</h1>
       <p className="lede">
-        The record behind a week never touches a server. It travels sealed to one browser&apos;s
-        key, inside the part of a link that browsers never send.
+        The record behind a week travels sealed to one browser&apos;s key, inside the part of a
+        link that browsers never send. Only that browser can open it.
       </p>
       {supported === false ? (
         <div className="note bad">
@@ -316,40 +294,8 @@ function OpenSide({ blob }: { blob: string }) {
   useEffect(() => {
     void (async () => {
       try {
-        let payload: SealedRecord | null = null;
-        for (const key of await allSealKeys()) {
-          try {
-            payload = (await open(key.privateKey, key.keyHash, blob)) as SealedRecord;
-            break;
-          } catch {
-            // not sealed to this key; try the next
-          }
-        }
-        if (!payload) throw new Error("this browser holds no key that opens this link. Open it in the browser that asked.");
-        if (payload.v !== 1 || payload.contract !== CONTRACT_ID) {
-          throw new Error("this record is for a different QuietStay deployment");
-        }
-        const right = await chainRight(payload.right_id);
-        if (right.title_holder !== payload.holder) {
-          throw new Error(`the chain says week #${payload.right_id} is held by ${shortAddress(right.title_holder)}, not by the sender`);
-        }
-        const { commitment } = await prover.commitment(payload.record as JsonValue, payload.holder, BigInt(payload.h));
-        if (commitment !== BigInt("0x" + right.commitment)) {
-          throw new Error("this record does not match the commitment on chain. It is not the record behind this week; nothing was kept.");
-        }
-        await putRecord({
-          right_id: payload.right_id,
-          record: payload.record as JsonValue,
-          holder: payload.holder,
-          h: payload.h,
-          commitment: right.commitment,
-        });
-        // The first owner already holds the secret behind h: this browser can prove now.
-        const own = (await secretFor(BigInt(payload.h))) !== null;
-        if (own) {
-          await putHolding({ right_id: payload.right_id, record: payload.record as JsonValue, holder: payload.holder, h: payload.h });
-        }
-        setState({ kind: "ok", rightId: payload.right_id, week: right.week, owner: own, record: payload.record as JsonValue });
+        const got = await importSealed(blob);
+        setState({ kind: "ok", rightId: got.rightId, week: got.week, owner: got.owner, record: got.record });
       } catch (e) {
         setState({ kind: "bad", message: describeError(e) });
       }

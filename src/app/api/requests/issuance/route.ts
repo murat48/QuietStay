@@ -5,6 +5,9 @@
  *   GET  /api/requests/issuance                   → { requests }
  *   GET  /api/requests/issuance?id=<id>           → { request }, open or issued
  *
+ * An owner's issued ask may carry `sealed_record`, the week's record sealed
+ * to their browser's key, waiting to be picked up (./delivery/route.ts).
+ *
  * Phase 3: the ask may carry `key_hash`, the hash of the owner's sealed-link
  * key, so the issuer's browser can send the week's record back sealed
  * (docs/PHASE3_SPEC.md §2, D3). Since 2026-11-25 it may also carry
@@ -29,6 +32,7 @@ import { parseSecretHash } from "@/lib/consent";
 import { readIssuer } from "@/lib/contract";
 import {
   RequestStoreUnavailable,
+  expireSealed,
   loadIssuanceRequests,
   parseKeyHash,
   saveIssuanceRequests,
@@ -132,6 +136,9 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     const [issuer, all] = await Promise.all([readIssuer(), loadIssuanceRequests()]);
+    // A sealed record past its lifetime is not served (it is dropped from the
+    // store at the next write).
+    expireSealed(all);
     // One ask by id, open or issued, for the issuer or the asker: what the
     // issuer's browser reads to check a sealed-link key before sealing.
     const id = new URL(request.url).searchParams.get("id");

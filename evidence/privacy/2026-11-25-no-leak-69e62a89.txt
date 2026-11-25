@@ -1,0 +1,40 @@
+  run 2026-11-25T15:09:38.610Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-25-no-leak-69e62a89.txt --tx no-leak-sale=69e62a89fbd2d2b41b0fa6ac01277460517055134fba399f913f08f1281bdfbc --tx no-leak-rental=956c4a449fc78f548c2640603d4082a835bd325385b0796b9222e493b2ca7136 --record /tmp/qs-privacy-wqdFEX/record-0.json --secret /tmp/qs-privacy-wqdFEX/secret-0.json --next-secret /tmp/qs-privacy-wqdFEX/next-secret-0.json
+
+Checking on-chain exposure
+  2 transactions, 57 forbidden values
+  contract the contracts these testnet transactions call
+
+no-leak-sale — 69e62a89fbd2d2b41b0fa6ac01277460517055134fba399f913f08f1281bdfbc
+  ✓ no record contents in 3 layers (9652 bytes: envelope, result, meta)
+  call        transfer(
+                "GA76GRDZ2UQMRBDAJGVZOIFXD4JFP7UPOFANV62UVBLQEQT4GVNLRMZB",
+                "GATGBMUAIRR6LPBJIJVZQTIYHC7KFN7MNS6Y6USFGSG26GORP5TA4YOX",
+                "1",
+                null,
+                {"a":"0x06ea745c20d2aec0…8a121bbe (96 bytes)","b":"0x010e5d7b3eb23a5b…fccf04ad (192 bytes)","c":"0x0486b1c38e81ca67…979a1c6d (96 bytes)"},
+                ["26976638054287032467183062065799159689491029213792090492187670034874462902489","24915618884259490747110694118221996492872577601021649526558408593895728564677","1","84921403977757758037569169493490867986","116964588392782986793904675476355766968","51012744769526147662733103496234023102","216289920906242189960309257992658707982","0","5919497","21078980644154155100214082066400000368548115472939432117118013454257023161619","13776323744438079253076457803297521381099554641516133162413886503988060958716"],
+              )
+  event topics ["transfer","GA76GRDZ2UQMRBDAJGVZOIFXD4JFP7UPOFANV62UVBLQEQT4GVNLRMZB","GATGBMUAIRR6LPBJIJVZQTIYHC7KFN7MNS6Y6USFGSG26GORP5TA4YOX"]
+  event data   {"commitment":"0x1e751f77aad4c1cabfc43ed7714f4eb35977461952482a47bc15c6d096eb2ffc","expires_at":null,"right_id":"1"}
+
+no-leak-rental — 956c4a449fc78f548c2640603d4082a835bd325385b0796b9222e493b2ca7136
+  ✓ no record contents in 3 layers (8432 bytes: envelope, result, meta)
+  call        transfer(
+                "GATGBMUAIRR6LPBJIJVZQTIYHC7KFN7MNS6Y6USFGSG26GORP5TA4YOX",
+                "GAFW2LZUB5Z7YJY2AUKSXONJRBCIZCXA57MBSYESDNXUR4OFZAJ6H67A",
+                "1",
+                "1797033600",
+                {"a":"0x0617d9f0a992199d…17c2c021 (96 bytes)","b":"0x045dae4e5f8fa814…3c2f7ff4 (192 bytes)","c":"0x07811e9fa5514511…4fa35785 (96 bytes)"},
+                ["13776323744438079253076457803297521381099554641516133162413886503988060958716","30127065988172661560017599203181560097272739221841546451095115773549783939363","1","51012744769526147662733103496234023102","216289920906242189960309257992658707982","15188425709112685557934670656706283588","186813018638527528611906615760109704163","1797033600","5919505","0","19451757739345465901380888468861377361844085561787278408084670176049069974859"],
+              )
+  event topics ["transfer","GATGBMUAIRR6LPBJIJVZQTIYHC7KFN7MNS6Y6USFGSG26GORP5TA4YOX","GAFW2LZUB5Z7YJY2AUKSXONJRBCIZCXA57MBSYESDNXUR4OFZAJ6H67A"]
+  event data   {"commitment":"0x1e751f77aad4c1cabfc43ed7714f4eb35977461952482a47bc15c6d096eb2ffc","expires_at":"1797033600","right_id":"1"}
+
+Result
+  ✓ No inventory record value appears in any of these 2 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 1 record(s) given, or s and h of 1 holder secret(s) given, or s' of 1 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /tmp/qs-privacy-wqdFEX/record-0.json
+    • /tmp/qs-privacy-wqdFEX/secret-0.json
+    • /tmp/qs-privacy-wqdFEX/next-secret-0.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.

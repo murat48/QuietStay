@@ -198,14 +198,14 @@ export async function missingHoldingReason(rightId: number): Promise<string> {
   }
   if (issued) {
     return (
-      `This browser issued ${week}, but the owner's record is not here. Open the owner's request link in this browser ` +
-      "(/receive) to make the reply link, then open the reply link in the owner's browser, signed in as the owner."
+      `This browser issued ${week}, but holds no secret for it: the owner asked from another browser. ` +
+      "The record was sealed to that browser; the owner proves from there."
     );
   }
   return (
-    `This browser has no record for ${week} yet. The owner opens, in this browser, the reply link the issuer made at /receive ` +
-    `from the request link. This browser holds ${secrets.length} secret(s). If the request was made here, the reply link is the only ` +
-    "step left; if it was made elsewhere, prove from that browser."
+    `This browser has no record for ${week} yet. If the owner asked from this browser, the record arrives here on its own ` +
+    "once the issuer has issued: reload the page, signed in as the owner. If the owner asked from another browser, prove " +
+    `from that one. (This browser holds ${secrets.length} secret(s).)`
   );
 }
 
@@ -215,6 +215,11 @@ export async function resolveHolding(rightId: number, holder: string, commitment
   if (known) candidates.push(known.record);
   const rec = await getRecord(rightId);
   if (rec) candidates.push(rec.record);
+  // Issuer and owner in one browser (a demo switching accounts): the issuer's
+  // own copy of the record is here already. Used only if, with a secret kept
+  // here, it reproduces the commitment on chain, like any other candidate.
+  const issued = await getIssued(rightId);
+  if (issued && issued.owner === holder) candidates.push(issued.record);
   if (candidates.length === 0) return null;
 
   const secrets = await all<SecretEntry>("secret:");
