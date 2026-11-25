@@ -1047,20 +1047,23 @@ export default function ListScreen() {
                     Phase 3: a paid offer in USDC, on chain. The sale moves the
                     week and the money together; a rental's money waits in
                     escrow until 24 hours after check-in. The unpaid asks below
-                    stay as they were.
+                    stay as they were, for regular wallets. A passkey wallet is
+                    offered only the paid offer, as its main action (asked for
+                    on the testnet demo, 2026-11-26).
                   */}
                   {right.listing && !sublet && !over && authenticated && !mine ? (
                     <p style={{ marginTop: "0.7rem", marginBottom: 0 }}>
-                      <a
+                      <Link
+                        className={kind === "passkey" ? "btn primary" : undefined}
                         href={`/stays?right=${right.id}&kind=${right.listing.term_secs === null ? "buy" : "rent"}`}
                         data-testid={`paid-offer-${right.id}`}
                       >
                         {right.listing.term_secs === null ? "Offer to buy it in USDC →" : "Offer to rent it in USDC →"}
-                      </a>
+                      </Link>
                     </p>
                   ) : null}
 
-                  {right.listing && !sublet && !over && authenticated && !mine && canRequest ? (
+                  {right.listing && !sublet && !over && authenticated && !mine && canRequest && (kind !== "passkey" || myRequest) ? (
                     <div style={{ marginTop: "0.7rem" }}>
                       {myRequest ? (
                         <div className="row" style={{ gap: "0.5rem", alignItems: "center" }}>
