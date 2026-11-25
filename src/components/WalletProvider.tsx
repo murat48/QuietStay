@@ -130,21 +130,32 @@ interface WalletState {
 
 const WalletContext = createContext<WalletState | null>(null);
 
-/** A per-browser hint that a passkey wallet was used here, so the kit is worth loading. */
+/**
+ * The one kind of account this browser last signed in with. One account at a
+ * time (your decision, 2026-11-26): on load only that kind is looked for, so a
+ * regular wallet still connected to this site does not take the place of a
+ * passkey wallet, nor the other way round. Only this choice is kept, never an
+ * address or a key. (`quietstay:passkey-wallet` = "1" is the older hint, read
+ * as "passkey".)
+ */
+const LAST_KIND = "quietstay:account-kind";
 const PASSKEY_HINT = "quietstay:passkey-wallet";
-function rememberedPasskey(): boolean {
+function lastKind(): AccountKind | null {
   try {
-    return localStorage.getItem(PASSKEY_HINT) === "1";
+    const k = localStorage.getItem(LAST_KIND);
+    if (k === "wallet" || k === "passkey") return k;
+    return localStorage.getItem(PASSKEY_HINT) === "1" ? "passkey" : null;
   } catch {
-    return false;
+    return null;
   }
 }
-function rememberPasskey(on: boolean): void {
+function rememberKind(k: AccountKind | null): void {
   try {
-    if (on) localStorage.setItem(PASSKEY_HINT, "1");
-    else localStorage.removeItem(PASSKEY_HINT);
+    localStorage.removeItem(PASSKEY_HINT);
+    if (k) localStorage.setItem(LAST_KIND, k);
+    else localStorage.removeItem(LAST_KIND);
   } catch {
-    // storage unavailable: the user can still pick "Use a passkey"
+    // storage unavailable: the user picks again after a reload
   }
 }
 
@@ -254,11 +265,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // wallet in the background.
       if (!savedSession()) setRestoring(false);
       try {
-        const known = await connectedAddress();
-        if (known) return await resume(known, "wallet");
-        // A passkey wallet used in this browser before: show it again, ready to
-        // sign in. The kit is loaded only then, never for regular-wallet users.
-        if (rememberedPasskey()) {
+        const last = lastKind();
+        // Only the kind last signed in with. A passkey wallet's kit is loaded
+        // only then, never for regular-wallet users.
+        if (last !== "passkey") {
+          const known = await connectedAddress();
+          if (known) return await resume(known, "wallet");
+        }
+        if (last === "passkey") {
           const pk = await import("@/lib/passkey-wallet");
           const wallet = await pk.restoredPasskeyWallet();
           if (wallet) return await resume(wallet, "passkey");
@@ -287,6 +301,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const connected = await connectWallet();
       setAddress(connected);
       setKind("wallet");
+      rememberKind("wallet");
 
       // Surfaces a wrong-network wallet before asking for a signature that could
       // not be used. Wallets that do not report a network return null and are
@@ -342,7 +357,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         const wallet = create ? await pk.createPasskeyWallet() : await pk.connectPasskeyWallet();
         setAddress(wallet);
         setKind("passkey");
-        rememberPasskey(true);
+        rememberKind("passkey");
         // 2. SEP-45: the passkey proves control of the wallet
         const sessionToken = await pk.signInWithPasskey(wallet);
         setToken(sessionToken);
@@ -383,8 +398,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setAddress(null);
     setStanding(null);
     setError(null);
+    rememberKind(null);
     if (kind === "passkey") {
-      rememberPasskey(false);
       void import("@/lib/passkey-wallet").then((pk) => pk.disconnectPasskeyWallet());
     }
     else void disconnectWallet();

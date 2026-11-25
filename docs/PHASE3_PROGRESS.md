@@ -1984,6 +1984,14 @@ of the spec, the rest at the second review of `def5eb6`.
         422 requests, no leaks (contract `CBGV7E7X…`, sale tx `320c1537…`,
         rental tx `fe647fe2…`;
         `evidence/privacy/2026-11-25-no-leak-320c1537.txt`).
+    - **Your decision (2026-11-26): one account at a time.**
+      - A regular wallet still connected to the site took the place of a
+        passkey wallet on reload, and its session was dropped.
+      - The browser now keeps only the kind last signed in with
+        (`quietstay:account-kind`: no address, no key). On load only that
+        kind is looked for. Disconnect forgets it.
+      - No-leak e2e: 2/2, 444 requests, no leaks
+        (`evidence/privacy/2026-11-25-no-leak-73e967af.txt`).
       - Not updated: `e2e/passkey-app.spec.ts` and `e2e/swap.spec.ts` still
         follow the issuance flow from before 2026-11-25 (issue without an
         ask, reply links) and need rewriting before they can pass again.
