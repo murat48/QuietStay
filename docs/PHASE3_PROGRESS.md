@@ -1937,6 +1937,13 @@ of the spec, the rest at the second review of `def5eb6`.
         - The helper now waits for the page to settle and checks one
           positive state: an address shown, not "not verified", no Sign in
           button. It retries once.
+    - **Second passkey rental, in the browser (2026-11-25 16:41 UTC).**
+      - Week #14, owner `CCMTVZ…`, renter `CBZNDV…`, offer #13, 1 USDC.
+      - `accept_rental` went through: `__check_auth` with context rule ids
+        `[0]`, WebAuthn `verify` returning `true`, and USDC `transfer_from`
+        of 1 USDC into the contract.
+      - Escrow #5 is `Funded`. `CBZNDV…` holds #14 from 2026-12-14 to 12-20;
+        its USDC balance is now 18.
 
 ### Step 6 — Mainnet deployment
 - Date:
