@@ -33,7 +33,18 @@ import { ATTESTATIONS, NETWORK_LABEL, explorer } from "@/lib/config";
 import { describeError, formatDate, formatDays, shortAddress, weekIsOver } from "@/lib/format";
 import { unixToIsoDate } from "@/lib/record";
 import { requestLink } from "@/lib/sealed";
+import { formatUsdc, parseUsdc } from "@/lib/usdc";
 import { sealKey } from "@/lib/vault";
+
+/** What the holder typed as an asking price, in base units, or null if it is not one. */
+function typedPrice(text: string | undefined): bigint | null {
+  try {
+    const units = parseUsdc(text ?? "");
+    return units > 0n ? units : null;
+  } catch {
+    return null;
+  }
+}
 
 interface RightRow {
   id: number;
@@ -46,7 +57,13 @@ interface RightRow {
   rented_out: boolean;
   chain_depth: number;
   active: boolean;
-  listing: { by: string; term_secs: number | null; listed_at: number } | null;
+  listing: {
+    by: string;
+    term_secs: number | null;
+    listed_at: number;
+    /** The holder's asking price in USDC base units, kept off chain; null if none. */
+    asking_price: string | null;
+  } | null;
   /** From the issuer's attestation, not the ledger. `null` = never attested. */
   fees: { current: boolean; paid_through: string } | null;
   /**
@@ -202,7 +219,8 @@ export default function ListScreen() {
   // The date the issuer is settling fees through, per right. Keyed rather than
   // held once, so two cards on screen cannot share one input.
   const [paidThrough, setPaidThrough] = useState<Record<number, string>>({});
-  // A buyer's h', per week, typed before asking to buy.
+  // The asking price the holder is typing, per week, in USDC.
+  const [askPrice, setAskPrice] = useState<Record<number, string>>({});
   const [filter, setFilter] = useState<Filter>("all");
   // Which card is showing the placeholder's explanation. Per right, so two cards
   // with arrears cannot share one open notice.
@@ -373,8 +391,39 @@ export default function ListScreen() {
     .sort((a, b) => Number(isBlocked(a)) - Number(isBlocked(b)));
 
 
+  /** Save the asking price for a week already listed by this account. */
+  const savePrice = useCallback(
+    async (rightId: number, units: bigint) => {
+      const response = await authFetch("/api/asking-price", {
+        method: "POST",
+        body: JSON.stringify({ right_id: rightId, price: formatUsdc(units) }),
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "could not save the asking price");
+    },
+    [authFetch],
+  );
+
+  const changePrice = useCallback(
+    async (rightId: number, units: bigint) => {
+      setBusyRight(rightId);
+      setMessage(null);
+      setError(null);
+      try {
+        await savePrice(rightId, units);
+        setMessage(`Asking price for right #${rightId} set to ${formatUsdc(units)} USDC`);
+        await load();
+      } catch (caught) {
+        setError(describeError(caught));
+      } finally {
+        setBusyRight(null);
+      }
+    },
+    [savePrice, load],
+  );
+
   const changeOffer = useCallback(
-    async (rightId: number, action: "list" | "unlist", termSecs: number | null) => {
+    async (rightId: number, action: "list" | "unlist", termSecs: number | null, price: bigint | null = null) => {
       if (!address) return;
       setBusyRight(rightId);
       setMessage(null);
@@ -398,6 +447,15 @@ export default function ListScreen() {
         setMessage(
           `${action === "list" ? "Offer published" : "Offer withdrawn"} for right #${rightId} — ${result.hash}`,
         );
+        // The price is kept off chain, beside the listing just made. If saving it
+        // fails the listing still stands, and the price can be set again below.
+        if (action === "list" && price !== null) {
+          try {
+            await savePrice(rightId, price);
+          } catch (caught) {
+            setError(`The week is listed, but its asking price was not saved: ${describeError(caught)}`);
+          }
+        }
         await load();
       } catch (caught) {
         setError(describeError(caught));
@@ -405,7 +463,7 @@ export default function ListScreen() {
         setBusyRight(null);
       }
     },
-    [address, authFetch, sign, submitSigned, load],
+    [address, authFetch, sign, submitSigned, load, savePrice],
   );
 
   /** Decline an ask, or take your own back. Neither touches the chain. */
@@ -720,6 +778,9 @@ export default function ListScreen() {
                           {right.listing.term_secs === null
                             ? "for sale"
                             : `for rent · ${formatDays(right.listing.term_secs)}`}
+                          {right.listing.asking_price
+                            ? ` · ${formatUsdc(BigInt(right.listing.asking_price))} USDC`
+                            : null}
                         </span>
                       ) : null}
                       {mine && isTitleHolder ? <span className="tag ok">you own it</span> : null}
@@ -977,14 +1038,32 @@ export default function ListScreen() {
                     offered only the paid offer, as its main action (asked for
                     on the testnet demo, 2026-11-26).
                   */}
+                  {right.listing && !over ? (
+                    <p style={{ marginTop: "0.7rem", marginBottom: 0 }} data-testid={`asking-price-shown-${right.id}`}>
+                      {right.listing.asking_price ? (
+                        <>
+                          <strong style={{ fontSize: "1.15rem" }}>
+                            {formatUsdc(BigInt(right.listing.asking_price))} USDC
+                          </strong>{" "}
+                          <span className="muted">
+                            {right.listing.term_secs === null ? "asking price" : "asking price for the stay"} — the
+                            holder&apos;s ask; the price that counts is the one in the offer you make.
+                          </span>
+                        </>
+                      ) : (
+                        <span className="muted">No asking price set — make the offer you think fair.</span>
+                      )}
+                    </p>
+                  ) : null}
+
                   {right.listing && !sublet && !over && authenticated && !mine ? (
                     <p style={{ marginTop: "0.7rem", marginBottom: 0 }}>
                       <Link
-                        className={kind === "passkey" ? "btn primary" : undefined}
+                        className="btn primary"
                         href={`/stays?right=${right.id}&kind=${right.listing.term_secs === null ? "buy" : "rent"}`}
                         data-testid={`paid-offer-${right.id}`}
                       >
-                        {right.listing.term_secs === null ? "Offer to buy it in USDC →" : "Offer to rent it in USDC →"}
+                        {right.listing.term_secs === null ? "Offer to buy it in USDC" : "Offer to rent it in USDC"}
                       </Link>
                     </p>
                   ) : null}
@@ -1116,12 +1195,36 @@ export default function ListScreen() {
                   {mine && !answering ? (
                     <div className="row" style={{ marginTop: "0.85rem" }}>
                       {right.listing ? (
-                        <button
-                          disabled={busyRight === right.id}
-                          onClick={() => void changeOffer(right.id, "unlist", null)}
-                        >
-                          {busyRight === right.id ? "working…" : "Withdraw offer"}
-                        </button>
+                        <>
+                          <label className="row" style={{ gap: "0.4rem", alignItems: "center" }}>
+                            Asking price (USDC)
+                            <input
+                              style={{ width: "7rem" }}
+                              inputMode="decimal"
+                              placeholder={
+                                right.listing.asking_price ? formatUsdc(BigInt(right.listing.asking_price)) : "e.g. 1"
+                              }
+                              value={askPrice[right.id] ?? ""}
+                              onChange={(e) => setAskPrice({ ...askPrice, [right.id]: e.target.value })}
+                              data-testid={`asking-price-${right.id}`}
+                            />
+                          </label>
+                          <button
+                            disabled={busyRight === right.id || typedPrice(askPrice[right.id]) === null}
+                            onClick={() => {
+                              const units = typedPrice(askPrice[right.id]);
+                              if (units !== null) void changePrice(right.id, units);
+                            }}
+                          >
+                            {right.listing.asking_price ? "Change price" : "Set price"}
+                          </button>
+                          <button
+                            disabled={busyRight === right.id}
+                            onClick={() => void changeOffer(right.id, "unlist", null)}
+                          >
+                            {busyRight === right.id ? "working…" : "Withdraw offer"}
+                          </button>
+                        </>
                       ) : mayOffer && over ? (
                         <p className="muted" style={{ margin: 0 }}>
                           This week ended on {formatDate(right.week.end)}, so there is nothing left
@@ -1130,9 +1233,25 @@ export default function ListScreen() {
                         </p>
                       ) : mayOffer ? (
                         <>
+                          {/*
+                            The asking price is asked first, so no listing goes
+                            up without one. It is kept off chain, beside the
+                            listing; the contract's listing has no price.
+                          */}
+                          <label className="row" style={{ gap: "0.4rem", alignItems: "center" }}>
+                            Asking price (USDC)
+                            <input
+                              style={{ width: "7rem" }}
+                              inputMode="decimal"
+                              placeholder="e.g. 1"
+                              value={askPrice[right.id] ?? ""}
+                              onChange={(e) => setAskPrice({ ...askPrice, [right.id]: e.target.value })}
+                              data-testid={`asking-price-${right.id}`}
+                            />
+                          </label>
                           <button
-                            disabled={busyRight === right.id || !right.active}
-                            onClick={() => void changeOffer(right.id, "list", null)}
+                            disabled={busyRight === right.id || !right.active || typedPrice(askPrice[right.id]) === null}
+                            onClick={() => void changeOffer(right.id, "list", null, typedPrice(askPrice[right.id]))}
                           >
                             Offer for sale
                           </button>
@@ -1142,9 +1261,14 @@ export default function ListScreen() {
                             such thing as four days of it.
                           */}
                           <button
-                            disabled={busyRight === right.id || !right.active}
+                            disabled={busyRight === right.id || !right.active || typedPrice(askPrice[right.id]) === null}
                             onClick={() =>
-                              void changeOffer(right.id, "list", right.week.end - right.week.start)
+                              void changeOffer(
+                                right.id,
+                                "list",
+                                right.week.end - right.week.start,
+                                typedPrice(askPrice[right.id]),
+                              )
                             }
                           >
                             Offer for rent — {formatDate(right.week.start)} to{" "}
@@ -1191,9 +1315,9 @@ export default function ListScreen() {
           </div>
 
           <div className="note">
-            No price appears anywhere on this page or on the ledger. Payment, escrow, and settlement
-            of consideration are out of scope — an offer records availability and term,
-            and the parties settle however they already do.
+            A listing on the ledger records availability and term. The asking price beside it is
+            the holder&apos;s, kept off chain, and binds nobody: payment is the USDC offer a buyer
+            or renter makes on chain, which the holder accepts or not.
           </div>
         </>
       ) : error ? null : (

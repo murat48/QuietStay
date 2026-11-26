@@ -56,7 +56,7 @@ export const REQUESTS_DIR = "inventory/phase2/requests";
  * Where a list lives: a right's transfer requests, or the deployment's issuance
  * requests. One store, one key space, one directory.
  */
-type Slot = number | "issuance";
+type Slot = number | "issuance" | "asking-prices";
 
 /** The store's key for a list. Namespaced, since attestations share it. */
 const kvKey = (slot: Slot) => `${kvPrefix()}:${CONTRACT_ID}:requests:${slot}`;
@@ -111,7 +111,12 @@ export interface TransferRequest {
  * Unlike attestations, requests are only ever written here — nothing ships with
  * the build — so there is one location rather than a search order.
  */
-const fileName = (slot: Slot) => (slot === "issuance" ? "issuance.requests.json" : `right-${slot}.requests.json`);
+const fileName = (slot: Slot) =>
+  slot === "issuance"
+    ? "issuance.requests.json"
+    : slot === "asking-prices"
+      ? "asking-prices.json"
+      : `right-${slot}.requests.json`;
 
 function pathFor(slot: Slot): string {
   return resolve(DATA_ROOT, REQUESTS_DIR, fileName(slot));
@@ -188,6 +193,15 @@ export async function requestStoreIsWritable(): Promise<boolean> {
 
 export function saveRequests(rightId: number, requests: TransferRequest[]): Promise<string> {
   return saveSlot(rightId, requests);
+}
+
+/** The holders' asking prices, kept in the same store (./asking-price.ts). */
+export function loadAskingPriceStore<T>(): Promise<T[]> {
+  return loadSlot<T>("asking-prices");
+}
+
+export function saveAskingPriceStore(items: unknown[]): Promise<string> {
+  return saveSlot("asking-prices", items);
 }
 
 async function saveSlot(slot: Slot, items: unknown[]): Promise<string> {

@@ -1395,6 +1395,7 @@ reopened unless something breaks.
 | D11 | `transfer` and `burn` | **Approved with the change** | Keep both. `burn` is refused while the right is rented out, has a Funded or Disputed escrow, or has a pending swap acceptance, with tests for each (§3) |
 | D12 | Allowance | **Approved** | Set by the offer calls themselves. The allowance equals the sum of the buyer's open offers. Leftover from offers that expired on their own cannot be pulled, documented in DESIGN.md. The Step 3 allowance tests apply to this model (§4) |
 | D13 | Unpaid asks (Phase 2) | **Decided 2026-11-26** | Removed from the app's screens: a week is rented or bought only with a USDC offer (/stays). The contract is unchanged, and an ask made before can still be withdrawn on /list or answered on /transfer. The no-leak test now runs its sale and rental through USDC offers |
+| D14 | Asking price | **Decided 2026-11-26** | A holder sets an asking price in USDC when listing, and can change it while listed. The contract's `Listing` has no price and stays unchanged, so the price is kept off chain beside the listing (`src/lib/asking-price.ts`, `/api/asking-price`). It is tied to the listing's `by` and `listed_at`, so it lapses when the listing is withdrawn or the week changes hands. It is capped at `max_payment` and binds nobody: the cards show it and the offer form on /stays starts from it, but the price paid is the one in the on-chain USDC offer the holder accepts |
 
 ### D4a: approved (option 1), with three additions
 

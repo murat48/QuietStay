@@ -30,6 +30,7 @@
  * rest is disclosed once, to them, in exchange for their interest.
  */
 
+import { loadAskingPrices, priceForListing } from "@/lib/asking-price";
 import { attestationIsAuthentic } from "@/lib/attestation";
 import { loadAttestation } from "@/lib/attestation-store";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, explorer } from "@/lib/config";
@@ -40,11 +41,13 @@ export const revalidate = 0;
 
 export async function GET(): Promise<Response> {
   try {
-    const [name, symbol, issuer, rows] = await Promise.all([
+    const [name, symbol, issuer, rows, prices] = await Promise.all([
       readName(),
       readSymbol(),
       readIssuer(),
       readInventory(),
+      // Off chain, and only a holder's ask: an unreachable store shows no price.
+      loadAskingPrices().catch(() => []),
     ]);
 
     const now = Math.floor(Date.now() / 1000);
@@ -98,7 +101,14 @@ export async function GET(): Promise<Response> {
           chain_depth: right.holdings.length,
           active,
           listing: listing
-            ? { by: listing.by, term_secs: listing.termSecs, listed_at: listing.listedAt }
+            ? {
+                by: listing.by,
+                term_secs: listing.termSecs,
+                listed_at: listing.listedAt,
+                // The holder's asking price in USDC base units, kept off chain
+                // (src/lib/asking-price.ts); null when they set none.
+                asking_price: priceForListing(prices, right.id, listing)?.price ?? null,
+              }
             : null,
           // Off chain, from the issuer's attestation store. `null` means the
           // issuer has vouched for nothing, which is not the same as clean.

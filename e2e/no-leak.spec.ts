@@ -275,8 +275,10 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
 
   // --- 3. listed for sale; the buyer asks for the record, then offers ---------
   await signIn(O.page, "/list");
+  await O.page.getByTestId(`asking-price-${rightId}`).fill(PRICE);
   await O.page.getByRole("button", { name: "Offer for sale" }).click();
   await expect(O.page.getByRole("button", { name: "Withdraw offer" })).toBeVisible({ timeout: 120_000 });
+  await expect(O.page.getByTestId(`asking-price-shown-${rightId}`)).toContainText(`${PRICE} USDC`);
 
   const buyPage = `/stays?right=${rightId}&kind=buy`;
   await signIn(B.page, buyPage);
@@ -295,7 +297,9 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   await expect(B.page.getByTestId("record-received")).toBeVisible({ timeout: 60_000 });
 
   await signIn(B.page, buyPage);
-  await B.page.getByTestId("offer-price").fill(PRICE);
+  // The form starts from the holder's asking price.
+  await expect(B.page.getByTestId("offer-asking-price")).toContainText(`${PRICE} USDC`, { timeout: 60_000 });
+  await expect(B.page.getByTestId("offer-price")).toHaveValue(PRICE);
   await expect(B.page.getByText("The record in this browser matches the commitment on chain ✓")).toBeVisible({ timeout: 60_000 });
   await B.page.getByTestId("offer-buy").click();
   await expect(B.page.getByTestId("stays-outcome")).toContainText("Offer made", { timeout: 180_000 });
@@ -319,6 +323,7 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
 
   // --- 5. the buyer lists it for rent; a renter offers; proved with s' ---------
   await signIn(B.page, "/list");
+  await B.page.getByTestId(`asking-price-${rightId}`).fill(PRICE);
   await B.page.getByRole("button", { name: /^Offer for rent/ }).click();
   await expect(B.page.getByRole("button", { name: "Withdraw offer" })).toBeVisible({ timeout: 120_000 });
 

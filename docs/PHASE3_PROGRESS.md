@@ -2018,6 +2018,20 @@ of the spec, the rest at the second review of `def5eb6`.
       - Not updated: `e2e/passkey-app.spec.ts` and `e2e/swap.spec.ts` still
         follow the issuance flow from before 2026-11-25 (issue without an
         ask, reply links) and need rewriting before they can pass again.
+    - **Your request (2026-11-26, D14): show a price on the listing, and make
+      "Offer to rent it in USDC" a button.**
+      - The paid-offer link is a primary button for every account kind.
+      - Listing now asks the holder for an asking price in USDC first; it can
+        be changed while listed. The contract's `Listing` has no price and is
+        unchanged, so the price is kept off chain beside the listing
+        (`src/lib/asking-price.ts`, `/api/asking-price`), tied to its `by`
+        and `listed_at`, capped at `max_payment`. The card shows it, and the
+        offer form on /stays starts from it. It binds nobody.
+      - Unit tests: 69/69.
+      - No-leak e2e, with the owner and buyer setting a 0.1 USDC asking price
+        and the buyer's form checked to start from it: 2/2 passed, 472
+        requests, no leaks. Contract `CAXALDAP…`, sale tx `52d070c1…`,
+        rental tx `8a15cde6…`.
 
 ### Step 6 — Mainnet deployment
 - Date:

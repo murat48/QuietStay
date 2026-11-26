@@ -516,6 +516,7 @@ function MakeOffer(props: {
   const { focus, setFocus, data, address, busy, step, run, onMade, setError } = props;
   const [right, setRight] = useState<ChainRight | null>(null);
   const [price, setPrice] = useState("1");
+  const [asking, setAsking] = useState<string | null>(null);
   const [checkIn, setCheckIn] = useState<string>("");
   const [record, setRecord] = useState<{ commitment: string } | null | undefined>(undefined);
   const [link, setLink] = useState<string | null>(null);
@@ -528,6 +529,15 @@ function MakeOffer(props: {
       })
       .catch((e) => setError(describeError(e)));
     void getRecord(focus.rightId).then((r) => setRecord(r ? { commitment: r.commitment } : null));
+    // The holder's asking price, kept off chain beside the listing: the form
+    // starts from it, and the reader can still offer something else.
+    void fetch(`/api/asking-price?right=${focus.rightId}`)
+      .then((r) => (r.ok ? (r.json() as Promise<{ price: string | null }>) : { price: null }))
+      .then(({ price: asked }) => {
+        setAsking(asked);
+        if (asked) setPrice(formatUsdc(BigInt(asked)));
+      })
+      .catch(() => setAsking(null));
   }, [focus.rightId, setError]);
 
   const myRequest = useMemo(
@@ -642,6 +652,11 @@ function MakeOffer(props: {
         {formatDate(right.week.start)} → {formatDate(right.week.end)} · held by {shortAddress(holder)}
       </p>
       {holder === address ? <div className="note">You hold this week, so there is nothing to offer for.</div> : null}
+      {asking ? (
+        <p data-testid="offer-asking-price">
+          The holder asks <strong>{formatUsdc(BigInt(asking))} USDC</strong>. You can offer that, or another price.
+        </p>
+      ) : null}
 
       <label>
         Price, USDC
