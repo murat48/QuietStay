@@ -1394,6 +1394,7 @@ reopened unless something breaks.
 | D10 | Evidence on chain | **Approved** | In the escrow entry, ≤ 4 hashes per party, plus the decision hash, plus events |
 | D11 | `transfer` and `burn` | **Approved with the change** | Keep both. `burn` is refused while the right is rented out, has a Funded or Disputed escrow, or has a pending swap acceptance, with tests for each (§3) |
 | D12 | Allowance | **Approved** | Set by the offer calls themselves. The allowance equals the sum of the buyer's open offers. Leftover from offers that expired on their own cannot be pulled, documented in DESIGN.md. The Step 3 allowance tests apply to this model (§4) |
+| D13 | Unpaid asks (Phase 2) | **Decided 2026-11-26** | Removed from the app's screens: a week is rented or bought only with a USDC offer (/stays). The contract is unchanged, and an ask made before can still be withdrawn on /list or answered on /transfer. The no-leak test now runs its sale and rental through USDC offers |
 
 ### D4a: approved (option 1), with three additions
 

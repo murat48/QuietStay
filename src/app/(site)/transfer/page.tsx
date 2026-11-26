@@ -275,8 +275,8 @@ function TransferForm() {
                 </div>
               ) : forThis.length === 0 ? (
                 <p className="muted">
-                  Ready to prove. No open asks for it yet: list it on the{" "}
-                  <Link href="/list">List</Link> screen, and asks to rent or buy appear here.
+                  Ready to prove. No open asks for it: asks without payment are no longer made.
+                  Offers in USDC appear on the <Link href="/stays">Offers &amp; stays</Link> screen.
                 </p>
               ) : (
                 forThis.map((ask) => (

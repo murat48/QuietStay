@@ -33,7 +33,7 @@ import { ATTESTATIONS, NETWORK_LABEL, explorer } from "@/lib/config";
 import { describeError, formatDate, formatDays, shortAddress, weekIsOver } from "@/lib/format";
 import { unixToIsoDate } from "@/lib/record";
 import { requestLink } from "@/lib/sealed";
-import { newSealKey, newSecret, sealKey } from "@/lib/vault";
+import { sealKey } from "@/lib/vault";
 
 interface RightRow {
   id: number;
@@ -180,10 +180,8 @@ export default function ListScreen() {
     authenticated,
     restoring,
     readOnly,
-    canRequest,
     sign,
     submitSigned,
-    signConsent,
     authFetch,
     connect,
     connectPasskey,
@@ -205,7 +203,6 @@ export default function ListScreen() {
   // held once, so two cards on screen cannot share one input.
   const [paidThrough, setPaidThrough] = useState<Record<number, string>>({});
   // A buyer's h', per week, typed before asking to buy.
-  const [consentHash, setConsentHash] = useState<Record<number, string>>({});
   const [filter, setFilter] = useState<Filter>("all");
   // Which card is showing the placeholder's explanation. Per right, so two cards
   // with arrears cannot share one open notice.
@@ -411,77 +408,6 @@ export default function ListScreen() {
     [address, authFetch, sign, submitSigned, load],
   );
 
-  /**
-   * Ask for a week on the terms its holder published.
-   *
-   * Asking to buy also gives the buyer's consent to the sale (src/lib/consent.ts):
-   * the buyer's record-secret hash h', and a wallet signature over the right and
-   * that h' — the one signature the contract asks of a buyer. Given now, it lets
-   * the holder complete the sale later without the buyer present. The secret
-   * itself was made on the buyer's machine and never comes here.
-   */
-  const askFor = useCallback(
-    async (rightId: number, sale: boolean) => {
-      setBusyRight(rightId);
-      setMessage(null);
-      setError(null);
-      try {
-        let consent: Record<string, unknown> | undefined;
-        let keyHash: string | undefined;
-        if (sale) {
-          // Phase 3: by default the buyer's next secret s' and a sealed-link key
-          // are made and kept in this browser; only h' and the key's hash leave
-          // it. The Phase 2 path, an h' pasted from `npm run zk:secret`, stays.
-          const pasted = (consentHash[rightId] ?? "").trim();
-          if (pasted !== "" && !/^\d+$/.test(pasted)) {
-            throw new Error("h' must be the decimal number `npm run zk:secret` printed");
-          }
-          let h = pasted;
-          if (pasted === "") {
-            h = (await newSecret(`buy right ${rightId}`)).toString();
-            keyHash = (await newSealKey(`buy right ${rightId}`)).keyHash;
-          }
-          const prep = await authFetch("/api/requests/consent", {
-            method: "POST",
-            body: JSON.stringify({ right_id: rightId, next_secret_hash: h }),
-          });
-          const toSign = (await prep.json()) as {
-            entry?: string;
-            preimage?: string;
-            valid_until_ledger?: number;
-            error?: string;
-          };
-          if (!prep.ok || !toSign.preimage) throw new Error(toSign.error ?? "could not prepare the consent");
-          // A regular wallet signs the preimage; a passkey signs the entry itself.
-          const signedConsent = await signConsent({
-            entry: toSign.entry!,
-            preimage: toSign.preimage,
-            valid_until_ledger: toSign.valid_until_ledger!,
-          });
-          consent = {
-            next_secret_hash: h,
-            entry: toSign.entry,
-            valid_until_ledger: toSign.valid_until_ledger,
-            ...signedConsent,
-          };
-        }
-        const response = await authFetch("/api/requests", {
-          method: "POST",
-          body: JSON.stringify({ right_id: rightId, ...(consent ? { consent } : {}), ...(keyHash ? { key_hash: keyHash } : {}) }),
-        });
-        const body = (await response.json()) as { note?: string; error?: string };
-        if (!response.ok) throw new Error(body.error ?? "could not record the request");
-        setMessage(`Right #${rightId} — ${body.note ?? "request sent"}`);
-        await loadRequests();
-      } catch (caught) {
-        setError(describeError(caught));
-      } finally {
-        setBusyRight(null);
-      }
-    },
-    [authFetch, loadRequests, signConsent, consentHash],
-  );
-
   /** Decline an ask, or take your own back. Neither touches the chain. */
   const answerRequest = useCallback(
     async (req: TransferRequest, action: "decline" | "withdraw") => {
@@ -569,14 +495,14 @@ export default function ListScreen() {
 
       {/*
         Browsing needs no wallet: everything here is read from the public
-        contract. Signing in is asked for only to act — to ask for a week, or to
+        contract. Signing in is asked for only to act — to offer for a week, or to
         offer one you hold.
       */}
       {restoring && !authenticated ? (
         <p className="muted">Resuming your session…</p>
       ) : !authenticated ? (
         <div className="note accent">
-          You are browsing as a visitor. <strong>Sign in</strong> to ask for a week or to manage
+          You are browsing as a visitor. <strong>Sign in</strong> to rent or buy a week, or to manage
           your own.{" "}
           <button className="primary" onClick={signIn} disabled={busy}>
             {walletAddress ? (busy ? "signing…" : "Sign in") : busy ? "connecting…" : "Connect wallet"}
@@ -1037,8 +963,8 @@ export default function ListScreen() {
                         {busy
                           ? "signing in…"
                           : right.listing.term_secs === null
-                            ? "Sign in to ask to buy"
-                            : "Sign in to ask to rent"}
+                            ? "Sign in to buy it"
+                            : "Sign in to rent it"}
                       </button>
                     </div>
                   ) : null}
@@ -1063,7 +989,12 @@ export default function ListScreen() {
                     </p>
                   ) : null}
 
-                  {right.listing && !sublet && !over && authenticated && !mine && canRequest && (kind !== "passkey" || myRequest) ? (
+                  {/*
+                    The unpaid asks of Phase 2 are gone from this screen (your decision,
+                    2026-11-26): a week is rented or bought with a USDC offer. An ask made
+                    before then can still be withdrawn here, or answered on /transfer.
+                  */}
+                  {right.listing && !sublet && !over && authenticated && !mine && myRequest ? (
                     <div style={{ marginTop: "0.7rem" }}>
                       {myRequest ? (
                         <div className="row" style={{ gap: "0.5rem", alignItems: "center" }}>
@@ -1076,61 +1007,8 @@ export default function ListScreen() {
                           </button>
                           <BuyRequestLink ask={myRequest} />
                         </div>
-                      ) : right.listing.term_secs === null ? (
-                        <div>
-                          <details style={{ marginBottom: "0.5rem" }}>
-                            <summary className="muted">Advanced: I made my secret with the command line</summary>
-                            <p className="muted">
-                              Only if you will also prove from the command line: this browser will not hold
-                              that secret, so it cannot rent out or sell the week once it is yours.
-                            </p>
-                            <div className="field" style={{ marginBottom: "0.5rem" }}>
-                              <label htmlFor={`h-${right.id}`}>
-                                Your h&apos; — from <code>npm run zk:secret -- my-secret.json</code>
-                              </label>
-                              <input
-                                id={`h-${right.id}`}
-                                value={consentHash[right.id] ?? ""}
-                                onChange={(e) => setConsentHash((m) => ({ ...m, [right.id]: e.target.value }))}
-                                placeholder="leave empty to have this browser make and keep your secret"
-                                spellCheck={false}
-                              />
-                            </div>
-                          </details>
-                          <button
-                            className="primary"
-                            disabled={busyRight === right.id}
-                            onClick={() => void askFor(right.id, true)}
-                          >
-                            Sign my consent and ask to buy
-                          </button>
-                          <p className="muted" style={{ marginBottom: 0 }}>
-                            Buying a week means it will be committed to a secret only you hold. This
-                            browser makes that secret and keeps it; only its hash is sent. Your
-                            wallet then signs that hash for this week — the one signature a sale
-                            asks of a buyer. Freighter and Hana can sign it; xBull, Albedo and Rabet
-                            cannot yet. Afterwards, send the holder the request link shown here, so
-                            the week&apos;s private record can come back to this browser sealed.
-                          </p>
-                        </div>
-                      ) : (
-                        <button
-                          className="primary"
-                          disabled={busyRight === right.id}
-                          onClick={() => void askFor(right.id, false)}
-                        >
-                          {`Ask to rent it for ${formatDays(right.listing.term_secs)}`}
-                        </button>
-                      )}
+                      ) : null}
                     </div>
-                  ) : null}
-
-                  {right.listing && !sublet && !over && authenticated && !mine && !canRequest ? (
-                    <p className="muted" style={{ marginTop: "0.7rem", marginBottom: 0 }}>
-                      This deployment cannot record a request — it has no writable store, so an ask
-                      would be taken and then lost. The week is really on offer; reach its holder
-                      another way, or use a deployment that can keep one.
-                    </p>
                   ) : null}
 
                   {asks.length > 0 && mine ? (

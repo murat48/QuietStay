@@ -2000,6 +2000,21 @@ of the spec, the rest at the second review of `def5eb6`.
         fee account), with the proof made in the browser and verified on
         chain. 1 USDC moved from the renter into the contract.
       - Escrow #7 is `Funded`. `GCEF…TDAR` holds #16 from 2026-12-07 to 12-13.
+    - **Your decision (2026-11-26, D13): the unpaid asks of Phase 2 are
+      removed from the screens.**
+      - /list no longer offers "Ask to rent it for…" or "Sign my consent and
+        ask to buy". A week is rented or bought only with "Offer to rent/buy
+        it in USDC". An earlier ask can still be withdrawn on /list, or
+        answered on /transfer. The contract is unchanged.
+      - The no-leak e2e now sells and rents through USDC offers on /stays. The
+        buyer asks for the record on chain, receives it sealed, offers; the
+        owner proves and accepts. The renter offers; the buyer proves and
+        accepts. The buyer and the renter get 0.1 testnet USDC each from the
+        `qs-buyer` testnet identity, signed by the Stellar CLI
+        (`sendTestnetUsdc`, which refuses a `qs-main-` identity).
+      - Run: 2/2 passed, 482 requests, no leaks. Contract `CDPAK2ZQ…`, sale
+        tx `0242f1c7…` (accept_sale, 0.1 USDC), rental tx `4d032e1b…`
+        (accept_rental, 0.1 USDC into escrow).
       - Not updated: `e2e/passkey-app.spec.ts` and `e2e/swap.spec.ts` still
         follow the issuance flow from before 2026-11-25 (issue without an
         ask, reply links) and need rewriting before they can pass again.

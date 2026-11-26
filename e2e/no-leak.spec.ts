@@ -12,12 +12,18 @@
  *      seals the record at once to the owner's key carried by the ask and
  *      leaves it with the ask; signed in, the owner's browser picks it up and
  *      checks it against the chain, with no link opened;
- *   3. the owner offers it for sale; the buyer asks to buy (s' made in the
- *      buyer's browser, consent signed), and the owner seals the record to the
- *      buyer's request link; the buyer opens and checks it;
- *   4. the owner proves the sale **in the browser** and submits it;
- *   5. the buyer offers it for rent; a renter asks; the buyer proves the
- *      rental **in the browser** with s', and submits it.
+ *   3. the owner lists it for sale; the buyer asks for its record on chain,
+ *      the owner seals the record to the buyer's request link, and the buyer
+ *      opens and checks it, then makes a USDC purchase offer (s' made in the
+ *      buyer's browser, only h' sent);
+ *   4. the owner proves the sale **in the browser** and accepts the offer;
+ *   5. the buyer lists it for rent; a renter makes a USDC rental offer; the
+ *      buyer proves the rental **in the browser** with s', and accepts it.
+ *
+ * Since 2026-11-26 the sale and the rental go through USDC offers on
+ * /stays, as the app now offers only those (the unpaid asks of Phase 2 were
+ * removed). The buyer and the renter are funded with 0.1 testnet USDC each
+ * from the `qs-buyer` testnet identity, signed by the Stellar CLI.
  *
  * Every request the owner's, buyer's and renter's browsers make is recorded:
  * pages and the prover worker, with URL, headers and body. The issuer's
@@ -49,12 +55,15 @@ import { Keypair } from "@stellar/stellar-sdk";
 
 import canonicalize from "canonicalize";
 import { startApp, type App } from "./lib/app";
-import { deployRightsStep4, fund } from "./lib/testnet";
+import { addUsdcTrustline, deployRightsStep4, fund, sendTestnetUsdc } from "./lib/testnet";
 import { captureFailures, reportFailures, type FailedResponse } from "./lib/failures";
 import { checkPendingPrivacy, evidenceLanded, hashOf } from "./lib/privacy";
 import { attachWallet } from "./lib/wallet";
 
 const PORT = 4321;
+/** 0.1 USDC: the price of the sale and of the rental (the cap is 1 USDC). */
+const PRICE = "0.1";
+const PRICE_STROOPS = 1_000_000n;
 const ANALYTICS = ["/_vercel/insights", "/_vercel/speed-insights", "va.vercel-scripts.com"];
 
 interface Logged {
@@ -175,6 +184,10 @@ test.setTimeout(20 * 60_000);
 test.beforeAll(async () => {
   test.setTimeout(10 * 60_000);
   await Promise.all([issuer, owner, buyer, renter].map(fund));
+  // Paid offers: every party that pays or is paid holds a USDC trustline; the
+  // buyer and the renter get the price, from a testnet identity.
+  await Promise.all([owner, buyer, renter].map(addUsdcTrustline));
+  for (const kp of [buyer, renter]) sendTestnetUsdc(kp.publicKey(), PRICE_STROOPS);
   contract = await deployRightsStep4(issuer, Keypair.random()); // the final WASM (76d69e79…), as on the final testnet deployment
   console.log(`e2e contract ${contract}`);
   app = await startApp({ contract, issuer, sep10, port: PORT });
@@ -241,7 +254,9 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   };
   await I.page.locator("textarea#record").fill(JSON.stringify(theRecord, null, 2));
   await I.page.getByRole("button", { name: "Issue on testnet" }).click();
-  await expect(I.page.getByText(/Right #\d+/).first()).toBeVisible({ timeout: 120_000 });
+  const issued = I.page.getByText(/Right #\d+/).first();
+  await expect(issued).toBeVisible({ timeout: 120_000 });
+  const rightId = Number(/Right #(\d+)/.exec((await issued.textContent()) ?? "")![1]);
 
   // Sealed in the issuer's browser right after issuing, and left with the
   // owner's ask (D3 as amended 2026-11-25). The issuer's browser is not
@@ -258,14 +273,15 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   await signIn(O.page, "/stays");
   await expect(O.page.getByTestId("inbox-received")).toBeVisible({ timeout: 60_000 });
 
-  // --- 3. offer for sale; the buyer asks; the record goes to the buyer ---------
+  // --- 3. listed for sale; the buyer asks for the record, then offers ---------
   await signIn(O.page, "/list");
   await O.page.getByRole("button", { name: "Offer for sale" }).click();
   await expect(O.page.getByRole("button", { name: "Withdraw offer" })).toBeVisible({ timeout: 120_000 });
 
-  await signIn(B.page, "/list");
-  await B.page.getByRole("button", { name: "Sign my consent and ask to buy" }).click();
-  const buyerLink = await B.page.getByTestId("buy-request-link").inputValue({ timeout: 60_000 });
+  const buyPage = `/stays?right=${rightId}&kind=buy`;
+  await signIn(B.page, buyPage);
+  await B.page.getByTestId("ask-record").click({ timeout: 60_000 });
+  const buyerLink = await B.page.getByTestId("offer-request-link").inputValue({ timeout: 120_000 });
   links.push(buyerLink);
 
   // /receive has its own root layout (a full page load); the tab's session
@@ -278,11 +294,17 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   await B.page.goto(ownerReply.replace(/^https?:\/\/[^/]+/, ""));
   await expect(B.page.getByTestId("record-received")).toBeVisible({ timeout: 60_000 });
 
-  // --- 4. the owner proves the sale in the browser -----------------------------
-  await signIn(O.page, "/transfer");
-  await O.page.getByRole("button", { name: "Prove and sell" }).click({ timeout: 60_000 });
-  await expect(O.page.getByTestId("transfer-outcome")).toContainText("Sold", { timeout: 180_000 });
-  const saleTx = await O.page.getByTestId("transfer-outcome").locator("a").getAttribute("href");
+  await signIn(B.page, buyPage);
+  await B.page.getByTestId("offer-price").fill(PRICE);
+  await expect(B.page.getByText("The record in this browser matches the commitment on chain ✓")).toBeVisible({ timeout: 60_000 });
+  await B.page.getByTestId("offer-buy").click();
+  await expect(B.page.getByTestId("stays-outcome")).toContainText("Offer made", { timeout: 180_000 });
+
+  // --- 4. the owner proves the sale in the browser and accepts -----------------
+  await signIn(O.page, "/stays");
+  await O.page.locator('[data-testid^="accept-offer-"]').first().click({ timeout: 60_000 });
+  await expect(O.page.getByTestId("stays-outcome")).toContainText("Sold for", { timeout: 180_000 });
+  const saleTx = await O.page.getByTestId("stays-outcome").locator("a").getAttribute("href");
   // Registered the moment it lands: the owner's s, and the buyer's s' (whose
   // h' a sale publishes by design). The rental joins this same check below.
   const [ownerVault, buyerVault] = await Promise.all([O.page, B.page].map(vaultContents));
@@ -295,19 +317,20 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   };
   evidenceLanded(onChainCheck);
 
-  // --- 5. the buyer rents it out, proving with s' ------------------------------
+  // --- 5. the buyer lists it for rent; a renter offers; proved with s' ---------
   await signIn(B.page, "/list");
   await B.page.getByRole("button", { name: /^Offer for rent/ }).click();
   await expect(B.page.getByRole("button", { name: "Withdraw offer" })).toBeVisible({ timeout: 120_000 });
 
-  await signIn(R.page, "/list");
-  await R.page.getByRole("button", { name: /^Ask to rent it for/ }).click();
-  await expect(R.page.getByText("you asked for this")).toBeVisible({ timeout: 60_000 });
+  await signIn(R.page, `/stays?right=${rightId}&kind=rent`);
+  await R.page.getByTestId("offer-price").fill(PRICE);
+  await R.page.getByTestId("offer-rent").click({ timeout: 60_000 });
+  await expect(R.page.getByTestId("stays-outcome")).toContainText("Offer made", { timeout: 180_000 });
 
-  await signIn(B.page, "/transfer");
-  await B.page.getByRole("button", { name: "Prove and rent out" }).click({ timeout: 60_000 });
-  await expect(B.page.getByTestId("transfer-outcome")).toContainText("Rented out", { timeout: 180_000 });
-  const rentalTx = await B.page.getByTestId("transfer-outcome").locator("a").getAttribute("href");
+  await signIn(B.page, "/stays");
+  await B.page.locator('[data-testid^="accept-offer-"]').first().click({ timeout: 60_000 });
+  await expect(B.page.getByTestId("stays-outcome")).toContainText("Rented out", { timeout: 180_000 });
+  const rentalTx = await B.page.getByTestId("stays-outcome").locator("a").getAttribute("href");
   onChainCheck.txs["no-leak-rental"] = hashOf(rentalTx);
   console.log(`sale ${saleTx}\nrental ${rentalTx}`);
 

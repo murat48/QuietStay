@@ -8,6 +8,7 @@
  * the deployment's real issuer key.
  */
 
+import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { Address, Asset, Keypair, nativeToScVal, Operation, rpc, TransactionBuilder, xdr } from "@stellar/stellar-sdk";
@@ -176,6 +177,23 @@ export async function addUsdcTrustline(kp: Keypair): Promise<string> {
   const done = await server.pollTransaction(sent.hash, { attempts: 30 });
   if (done.status !== rpc.Api.GetTransactionStatus.SUCCESS) throw new Error(`${sent.hash} ended ${done.status}`);
   return sent.hash;
+}
+
+/**
+ * Send testnet USDC to a throwaway account from a testnet identity in the
+ * Stellar CLI keystore (default `qs-buyer`), signed by the CLI: the key is
+ * never read here. A test cannot mint Circle's testnet USDC, so a paid offer
+ * is funded this way (since 2026-11-26, when the unpaid asks were removed from
+ * the app). Testnet only: a `qs-main-` identity is refused before anything runs.
+ */
+export function sendTestnetUsdc(to: string, stroops: bigint, from = process.env.E2E_USDC_SOURCE ?? "qs-buyer"): void {
+  if (from.startsWith("qs-main") || !/^[a-z0-9-]+$/.test(from)) throw new Error(`refusing to send from ${from}`);
+  if (!/^G[A-Z2-7]{55}$/.test(to)) throw new Error(`not an account: ${to}`);
+  execFileSync(
+    "stellar",
+    ["tx", "new", "payment", "--source", from, "--destination", to, "--asset", `USDC:${USDC_ISSUER}`, "--amount", stroops.toString(), "--network", "testnet"],
+    { stdio: ["ignore", "ignore", "pipe"] },
+  );
 }
 
 /** Call the rights contract as `kp`, signed here (the caller is the source account). */
