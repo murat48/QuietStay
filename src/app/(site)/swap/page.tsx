@@ -109,6 +109,32 @@ async function recordChecked(rightId: number): Promise<boolean> {
   return rec !== undefined && rec !== null && rec.commitment === right.commitment;
 }
 
+/**
+ * Whether this browser can prove `rightId` over: it holds the week's record
+ * and the secret behind its h. A week asked for elsewhere, or issued with a
+ * command-line secret, cannot be swapped from here.
+ */
+async function canProve(rightId: number, address: string): Promise<boolean> {
+  try {
+    const right = await chainRight(rightId);
+    const holding = await resolveHolding(rightId, address, BigInt("0x" + right.commitment));
+    return holding !== null && (await secretFor(BigInt(holding.h))) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/** A week in the registry another holder could swap, as /api/inventory lists it. */
+interface RegistryWeek {
+  id: number;
+  week: { start: number; end: number };
+  title_holder: string | null;
+  effective_holder: string;
+  rented_out: boolean;
+  active: boolean;
+  property: { region: string; bedrooms: number } | null;
+}
+
 export default function SwapScreen() {
   return (
     <>
@@ -519,7 +545,42 @@ function MakeSwap(props: Shared & { address: string; owned: { id: number; week: 
   const [give, setGive] = useState<number | null>(null);
   const [wantText, setWantText] = useState("");
   const [want, setWant] = useState<ChainRight | null>(null);
-  const giveId = give ?? owned[0]?.id ?? null;
+  // Which of the account's weeks this browser can prove (found on the testnet
+  // demo, 2026-11-27: a week without its secret here was offered first, and
+  // the swap could only fail at the proof).
+  const [provable, setProvable] = useState<Record<number, boolean>>({});
+  // The weeks another holder could swap: picked from a list, not typed as an id.
+  const [registry, setRegistry] = useState<RegistryWeek[] | null>(null);
+  // The moment the form opened: weeks that ended before then are not offered.
+  const [nowSecs] = useState(() => Math.floor(Date.now() / 1000));
+  const giveable = owned.filter((r) => r.week.end > nowSecs);
+  const giveId = give ?? giveable.find((r) => provable[r.id])?.id ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all(owned.map(async (r) => [r.id, await canProve(r.id, address)] as const)).then((pairs) => {
+      if (!cancelled) setProvable(Object.fromEntries(pairs));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [owned, address]);
+
+  useEffect(() => {
+    void fetch("/api/inventory")
+      .then((r) => r.json() as Promise<{ rights?: RegistryWeek[] }>)
+      .then((b) => setRegistry(b.rights ?? []))
+      .catch(() => setRegistry([]));
+  }, []);
+  const candidates = (registry ?? []).filter(
+    (r) =>
+      r.active &&
+      r.week.end > nowSecs &&
+      r.title_holder !== null &&
+      r.title_holder !== address &&
+      !r.rented_out &&
+      r.effective_holder === r.title_holder,
+  );
 
   useEffect(() => {
     const n = Number(wantText);
@@ -533,13 +594,16 @@ function MakeSwap(props: Shared & { address: string; owned: { id: number; week: 
   const request = want ? myRequest(want.id) : null;
   const checked = useRecordChecked(want?.id ?? null, data);
   const problem = useMemo(() => {
-    if (giveId === null) return "you hold no week as title, so there is nothing to offer";
-    if (!want) return wantText ? "no week with that id" : "enter the id of the week you want";
+    if (giveable.length === 0) return "you hold no week as title that has not ended, so there is nothing to offer";
+    if (giveId === null) {
+      return "none of your weeks can be proved from this browser: it does not hold their secret (they were asked for in another browser, or with a command-line secret)";
+    }
+    if (!want) return wantText ? "reading that week…" : "pick the week you want";
     if (want.id === giveId) return "a week cannot be swapped for itself";
     if (want.title_holder === address) return "you already hold that week";
     if (want.effective_holder && want.effective_holder !== want.title_holder) return "that week is rented out right now; its holder cannot swap it until the rental ends";
     return null;
-  }, [giveId, want, wantText, address]);
+  }, [giveable.length, giveId, want, wantText, address]);
 
   const offer = async () => {
     if (!want || giveId === null || !request) return;
@@ -567,16 +631,26 @@ function MakeSwap(props: Shared & { address: string; owned: { id: number; week: 
       <label>
         Your week (held as title)
         <select value={giveId ?? ""} onChange={(e) => setGive(Number(e.target.value))} data-testid="swap-give">
-          {owned.map((r) => (
-            <option key={r.id} value={r.id}>
+          {giveId === null ? <option value="">—</option> : null}
+          {giveable.map((r) => (
+            <option key={r.id} value={r.id} disabled={provable[r.id] !== true}>
               #{r.id} · {formatDate(r.week.start)} → {formatDate(r.week.end)}
+              {provable[r.id] === false ? " · its secret is not in this browser" : provable[r.id] === undefined ? " · checking…" : ""}
             </option>
           ))}
         </select>
       </label>
       <label>
-        The week you want (its id)
-        <input value={wantText} onChange={(e) => setWantText(e.target.value.trim())} inputMode="numeric" data-testid="swap-want" />
+        The week you want
+        <select value={wantText} onChange={(e) => setWantText(e.target.value)} data-testid="swap-want">
+          <option value="">{registry === null ? "reading the registry…" : candidates.length === 0 ? "no other week can be swapped now" : "pick a week"}</option>
+          {candidates.map((r) => (
+            <option key={r.id} value={String(r.id)}>
+              #{r.id} · {formatDate(r.week.start)} → {formatDate(r.week.end)}
+              {r.property ? ` · ${r.property.region}, ${r.property.bedrooms} bedroom${r.property.bedrooms === 1 ? "" : "s"}` : ""}
+            </option>
+          ))}
+        </select>
       </label>
       {want ? (
         <p className="muted">

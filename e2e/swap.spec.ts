@@ -202,7 +202,7 @@ test("two owners swap weeks through the swap screen, with the records exchanged 
 
   // --- 1. the maker asks for the taker's record, receives it, offers -----------------
   await signIn(M.page, "/swap");
-  await M.page.getByTestId("swap-want").fill(String(want));
+  await M.page.getByTestId("swap-want").selectOption(String(want));
   await M.page.getByTestId("swap-want-record-ask").click();
   const makerAsk = await M.page.getByTestId("swap-want-record-link").inputValue({ timeout: 120_000 });
   await openLink(T.page, makerAsk);
@@ -213,7 +213,7 @@ test("two owners swap weeks through the swap screen, with the records exchanged 
   await expect(M.page.getByTestId("record-received")).toBeVisible({ timeout: 60_000 });
 
   await signIn(M.page, "/swap");
-  await M.page.getByTestId("swap-want").fill(String(want));
+  await M.page.getByTestId("swap-want").selectOption(String(want));
   await expect(M.page.getByText(`Week #${want}'s record is in this browser and matches the commitment on chain ✓`)).toBeVisible({ timeout: 60_000 });
   await M.page.getByTestId("swap-offer").click();
   await outcomeTx(M.page, "swap-offer", "Swap offered");

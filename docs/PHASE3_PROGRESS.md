@@ -2099,6 +2099,18 @@ of the spec, the rest at the second review of `def5eb6`.
       this browser's passkey wallet with one prompt. No-leak e2e (the run
       after the editable-form change too): 2/2 passed, 517 requests, no
       leaks (sale tx `d07faa87…`, rental tx `4fd0d602…`).
+    - **Your report (2026-11-27): the swap form has a problem.** Two found:
+      - The week wanted was typed as an id. It is now picked from a list of
+        the registry's weeks another holder could swap (active, not ended,
+        not rented out, not yours), with dates and region.
+      - "Your week" offered every week held as title, including weeks this
+        browser cannot prove (no secret here: weeks #9–#11, or weeks asked
+        for in another browser), and ended weeks; the swap could only fail at
+        the proof. Ended weeks are left out, the unprovable ones are shown
+        disabled with the reason, and the first provable one is chosen.
+      - Checked by typecheck and lint only: `e2e/swap.spec.ts` still follows
+        the old issuance flow and cannot run (its two `fill` calls now pick
+        from the list).
 
 ### Step 6 — Mainnet deployment
 - Date:
