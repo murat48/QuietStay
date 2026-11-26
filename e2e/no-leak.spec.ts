@@ -114,7 +114,11 @@ async function signIn(page: Page, path: string) {
     // shown only when it did not (a new tab, or the session ended). While the
     // saved session is taken up, the header says "resuming" and offers nothing.
     await expect(page.getByTestId("session-resuming")).toHaveCount(0, { timeout: 60_000 });
-    await expect(page.getByRole("button", { name: "Disconnect" })).toBeVisible();
+    // Since 2026-11-26 a browser that has not signed in yet (or signed out)
+    // takes up no wallet on load: it shows Connect wallet, which signs in at once.
+    const connectButton = page.locator(".wallet").getByRole("button", { name: "Connect wallet" });
+    if (await connectButton.isVisible()) await connectButton.click();
+    await expect(page.getByRole("button", { name: "Disconnect" })).toBeVisible({ timeout: 60_000 });
     const signInButton = page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true });
     await page
       .waitForFunction(() => {

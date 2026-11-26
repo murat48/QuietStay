@@ -39,7 +39,6 @@ import {
   NetworkMismatch,
   connectWallet,
   connectedAddress,
-  disconnectWallet,
   signAuthEntryWithWallet,
   signWithWallet,
   walletNetwork,
@@ -160,10 +159,12 @@ function rememberKind(k: AccountKind | null): void {
 }
 
 /**
- * The session token, kept for this tab only (sessionStorage: gone when the tab
- * closes, never shared with another tab), so that a reload or a full page load
- * between screens does not ask for the passkey or the wallet again (found on
- * the testnet demo, 2026-11-25). It is used only while unexpired and only for
+ * The session token, kept in this browser (localStorage, shared by its tabs),
+ * so that a reload, a full page load between screens, or a link opened in a
+ * new tab does not ask for the passkey or the wallet again (found on the
+ * testnet demo, 2026-11-25 and 11-26; a tab-only store asked again in every
+ * new tab). It lasts at most the token's hour, is cleared by Disconnect in
+ * every tab, and is used only while unexpired and only for
  * the address the wallet names again on load. The token signs nothing: every
  * transaction still needs the wallet or the passkey.
  */
@@ -183,7 +184,7 @@ function tokenExpiry(token: string): number | null {
 }
 function savedSession(): SavedSession | null {
   try {
-    const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? "null") as SavedSession | null;
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) ?? "null") as SavedSession | null;
     const exp = s ? tokenExpiry(s.token) : null;
     // A minute's margin: a token about to end is not worth restoring.
     return s && exp !== null && exp - 60_000 > Date.now() ? s : null;
@@ -193,8 +194,10 @@ function savedSession(): SavedSession | null {
 }
 function saveSession(s: SavedSession | null): void {
   try {
-    if (s) sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
-    else sessionStorage.removeItem(SESSION_KEY);
+    // The tab-only copy of earlier builds is dropped, so it cannot come back.
+    sessionStorage.removeItem(SESSION_KEY);
+    if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    else localStorage.removeItem(SESSION_KEY);
   } catch {
     // storage unavailable: the session simply lasts as long as this page
   }
@@ -268,7 +271,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         const last = lastKind();
         // Only the kind last signed in with. A passkey wallet's kit is loaded
         // only then, never for regular-wallet users.
-        if (last !== "passkey") {
+        // Disconnect forgets the kind, so nothing is taken up after it, even
+        // though the wallet's selection and the passkey kit's session are kept
+        // (they make the next sign-in a single prompt).
+        if (last === "wallet") {
           const known = await connectedAddress();
           if (known) return await resume(known, "wallet");
         }
@@ -297,8 +303,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setBusy(true);
     setError(null);
     try {
-      // 1. pick a wallet
-      const connected = await connectWallet();
+      // 1. pick a wallet. One already picked in this browser, and still
+      // naming an account, is used as it is: asking again was the first of
+      // two prompts for one sign-in (testnet demo, 2026-11-26). The account
+      // is the one the wallet has selected; switch it there to sign in as
+      // another.
+      const connected = (await connectedAddress()) ?? (await connectWallet());
       setAddress(connected);
       setKind("wallet");
       rememberKind("wallet");
@@ -398,13 +408,31 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setAddress(null);
     setStanding(null);
     setError(null);
+    // Signing out ends the session in every tab (the storage listener below).
+    // The wallet's selection and the passkey kit's own session are kept: they
+    // only name a public address, and keeping them makes the next sign-in one
+    // prompt, not two (the passkey kit asked for the passkey once to find the
+    // wallet and again to sign in). Nothing signs without a new prompt.
     rememberKind(null);
-    if (kind === "passkey") {
-      void import("@/lib/passkey-wallet").then((pk) => pk.disconnectPasskeyWallet());
-    }
-    else void disconnectWallet();
     setKind(null);
-  }, [kind]);
+  }, []);
+
+  // Another tab signed out, or signed in as another account: follow it. A new
+  // token for the same account (that tab signed in again) is taken up as is.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== SESSION_KEY) return;
+      const next = savedSession();
+      if (next && next.address === address && next.kind === kind) {
+        setToken(next.token);
+        return;
+      }
+      if (!next && !token) return;
+      window.location.reload();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [address, kind, token]);
 
   const sign = useCallback(
     async (xdr: string): Promise<string> => {

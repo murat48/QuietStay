@@ -2032,6 +2032,27 @@ of the spec, the rest at the second review of `def5eb6`.
         and the buyer's form checked to start from it: 2/2 passed, 472
         requests, no leaks. Contract `CAXALDAP…`, sale tx `52d070c1…`,
         rental tx `8a15cde6…`.
+      - On the demo, weeks #9–#11 show no price: they were listed on
+        2026-11-24, before asking prices existed. Their holders set one with
+        "Set price" on /list.
+    - **Your report (2026-11-26): sign-in sometimes asks twice, with a
+      passkey and with Freighter.** Three causes, all fixed in
+      `WalletProvider.tsx`:
+      - The session was kept per tab (sessionStorage), so a link opened in a
+        new tab asked again. It is now kept in localStorage, shared by the
+        browser's tabs, for at most the token's hour. Disconnect in one tab
+        ends it in every tab (storage listener).
+      - Disconnect cleared the passkey kit's own session, so the next sign-in
+        asked for the passkey once to find the wallet and once to sign in. The
+        kit's session is now kept (it names only a public address).
+      - Freighter sign-in always opened the wallet picker first. A wallet
+        already picked in this browser is now used as it is, so sign-in is
+        the one signature.
+      - Disconnect still forgets the account kind, so nothing is taken up on
+        the next load, and every transaction still needs its own approval.
+      - No-leak e2e (its helper now presses Connect wallet, since a browser
+        that has not signed in takes up no wallet on load): 2/2 passed, 494
+        requests, no leaks. Sale tx `5e3b5ec3…`, rental tx `c67b0ef2…`.
 
 ### Step 6 — Mainnet deployment
 - Date:
