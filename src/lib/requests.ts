@@ -56,7 +56,7 @@ export const REQUESTS_DIR = "inventory/phase2/requests";
  * Where a list lives: a right's transfer requests, or the deployment's issuance
  * requests. One store, one key space, one directory.
  */
-type Slot = number | "issuance" | "asking-prices";
+type Slot = number | "issuance" | "asking-prices" | "issuer-key";
 
 /** The store's key for a list. Namespaced, since attestations share it. */
 const kvKey = (slot: Slot) => `${kvPrefix()}:${CONTRACT_ID}:requests:${slot}`;
@@ -116,7 +116,9 @@ const fileName = (slot: Slot) =>
     ? "issuance.requests.json"
     : slot === "asking-prices"
       ? "asking-prices.json"
-      : `right-${slot}.requests.json`;
+      : slot === "issuer-key"
+        ? "issuer-key.json"
+        : `right-${slot}.requests.json`;
 
 function pathFor(slot: Slot): string {
   return resolve(DATA_ROOT, REQUESTS_DIR, fileName(slot));
@@ -202,6 +204,15 @@ export function loadAskingPriceStore<T>(): Promise<T[]> {
 
 export function saveAskingPriceStore(items: unknown[]): Promise<string> {
   return saveSlot("asking-prices", items);
+}
+
+/** The issuer's published intake key (./issuer-key.ts), as a list of at most one. */
+export function loadIssuerKeyStore<T>(): Promise<T[]> {
+  return loadSlot<T>("issuer-key");
+}
+
+export function saveIssuerKeyStore(items: unknown[]): Promise<string> {
+  return saveSlot("issuer-key", items);
 }
 
 async function saveSlot(slot: Slot, items: unknown[]): Promise<string> {
@@ -292,6 +303,12 @@ export interface IssuanceRequest {
    * browser confirms it kept the record, or after SEALED_TTL_DAYS.
    */
   sealed_record?: { blob: string; delivered_at: string };
+  /**
+   * D16 (2026-11-26): the week's details as the owner entered them, sealed in
+   * the owner's browser to the issuer's intake key (`key_hash`). Ciphertext
+   * only: the server cannot open it. It fills in the issuer's form.
+   */
+  sealed_details?: { blob: string; key_hash: string };
   requested_at: string;
   status: IssuanceStatus;
   /** Set when issued. */

@@ -37,6 +37,7 @@ import {
   expireSealed,
   loadIssuanceRequests,
   parseKeyHash,
+  parseSealedBlob,
   saveIssuanceRequests,
   type IssuanceRequest,
 } from "@/lib/requests";
@@ -54,7 +55,7 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let body: { secret_hash?: unknown; owner?: unknown; key_hash?: unknown; public_key?: unknown };
+  let body: { secret_hash?: unknown; owner?: unknown; key_hash?: unknown; public_key?: unknown; sealed_details?: unknown };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -88,10 +89,19 @@ export async function POST(request: Request): Promise<Response> {
   let h: bigint;
   let keyHash: string | undefined;
   let publicKey: string | undefined;
+  let sealedDetails: { blob: string; key_hash: string } | undefined;
   try {
     h = parseSecretHash(body.secret_hash);
     keyHash = parseKeyHash(body.key_hash);
     publicKey = await checkedAskPublicKey(body.public_key, keyHash);
+    // D16: the week's details, sealed in the owner's browser to the issuer's
+    // intake key. Ciphertext only; kept with the ask for the issuer's browser.
+    if (body.sealed_details !== undefined && body.sealed_details !== null) {
+      const d = body.sealed_details as { blob?: unknown; key_hash?: unknown };
+      const detailsKey = parseKeyHash(d.key_hash);
+      if (!detailsKey) throw new Error("sealed_details.key_hash is required");
+      sealedDetails = { blob: parseSealedBlob(d.blob), key_hash: detailsKey };
+    }
   } catch (error) {
     return Response.json({ error: (error as Error).message }, { status: 400 });
   }
@@ -123,6 +133,7 @@ export async function POST(request: Request): Promise<Response> {
       secret_hash: h.toString(),
       ...(keyHash ? { key_hash: keyHash } : {}),
       ...(publicKey ? { public_key: publicKey } : {}),
+      ...(sealedDetails ? { sealed_details: sealedDetails } : {}),
       requested_at: new Date().toISOString(),
       status: "open",
     };

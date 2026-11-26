@@ -49,6 +49,9 @@ import { useWallet } from "@/components/WalletProvider";
 import { canonicalText, commit, type JsonValue } from "@/lib/canonical";
 import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_LABEL, explorer } from "@/lib/config";
 import { reservedOwnerReason } from "@/lib/issue-guard";
+import { intakeStatus, openDetails, publishIntakeKey, sealDetails, verifiedIntakeKey } from "@/lib/issuer-intake";
+import { DETAIL_FIELDS, cleanDetails, detailValues, type DetailKey } from "@/lib/issuer-key";
+import { signMessageWithWallet } from "@/lib/wallet-kit";
 import { describeError, formatDate } from "@/lib/format";
 import type { IssuanceRequest } from "@/lib/requests";
 import { issueScreenView } from "@/lib/roles";
@@ -220,6 +223,12 @@ export default function IssueScreen() {
   const [asksError, setAsksError] = useState<string | null>(null);
   const [selected, setSelected] = useState<IssuanceRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // D16: whether this browser holds the published intake key owners seal their
+  // details to, and what happened when an ask's details were opened.
+  const [intake, setIntake] = useState<"ready" | "missing" | null>(null);
+  const [intakeBusy, setIntakeBusy] = useState(false);
+  const [intakeError, setIntakeError] = useState<string | null>(null);
+  const [detailsNote, setDetailsNote] = useState<{ ok: boolean; text: string } | null>(null);
 
   // Generate the two commitment fields once the component is in the browser.
   // Doing it during render would make the server's HTML disagree with the
@@ -439,13 +448,60 @@ export default function IssueScreen() {
     };
   }, [isIssuer, authenticated, authFetch]);
 
+  // D16: does this browser hold the intake key owners seal their details to?
+  useEffect(() => {
+    if (!isIssuer || !authenticated || !standing) return;
+    let cancelled = false;
+    void intakeStatus(standing.account)
+      .then((status) => {
+        if (!cancelled) setIntake(status);
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled) setIntakeError(describeError(caught));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isIssuer, authenticated, standing]);
+
+  const publishIntake = useCallback(async () => {
+    if (!standing) return;
+    setIntakeBusy(true);
+    setIntakeError(null);
+    try {
+      await publishIntakeKey((message) => signMessageWithWallet(message, standing.account), authFetch);
+      setIntake(await intakeStatus(standing.account));
+    } catch (caught) {
+      setIntakeError(describeError(caught));
+    } finally {
+      setIntakeBusy(false);
+    }
+  }, [standing, authFetch]);
+
   const pick = useCallback(
     (ask: IssuanceRequest | null) => {
       setSelected(ask);
       setSecretHash(ask ? ask.secret_hash : "");
-      if (ask) setField("owner.stellar_account", ask.by);
+      setDetailsNote(null);
+      if (!ask) return;
+      setField("owner.stellar_account", ask.by);
+      if (!ask.sealed_details) return;
+      // The owner's details, opened here with the intake key: they fill in the
+      // form, and the issuer checks each against the deed before issuing.
+      void openDetails(ask)
+        .then((details) => {
+          for (const { path, value } of detailValues(details)) {
+            if (path === "week.check_in") setCheckIn(String(value));
+            else setField(path, value);
+          }
+          setDetailsNote({
+            ok: true,
+            text: "Filled in from the details the owner entered. Check every field against the deed and the resort's books before issuing: the owner's word is not proof.",
+          });
+        })
+        .catch((caught: unknown) => setDetailsNote({ ok: false, text: `The owner's details could not be opened: ${describeError(caught)}` }));
     },
-    [setField],
+    [setField, setCheckIn],
   );
   const feesOutstanding =
     preview !== null && Number.parseFloat(preview.feesOutstanding) !== 0;
@@ -486,6 +542,31 @@ export default function IssueScreen() {
         week&apos;s dates, the use year, and the first holder — nothing else.
       </p>
 
+      <div className="card" data-testid="intake-card">
+        <h3 style={{ marginTop: 0 }}>Owners&apos; details</h3>
+        {intake === "ready" ? (
+          <p className="muted" style={{ marginBottom: 0 }} data-testid="intake-ready">
+            Owners can send you their week&apos;s details with their ask, sealed to this browser. Picking
+            an ask fills the form in. Only this browser can open them.
+          </p>
+        ) : intake === "missing" ? (
+          <>
+            <p className="muted">
+              Let owners send their week&apos;s details (name, resort, unit, dates, deed, fees) with their
+              ask, so the form starts filled in. This browser makes a key; your wallet signs it once, so
+              an owner&apos;s browser can check the key is yours before sealing anything to it. Details
+              sealed to a key made in another browser cannot be opened here.
+            </p>
+            <button className="primary" onClick={() => void publishIntake()} disabled={intakeBusy} data-testid="intake-publish">
+              {intakeBusy ? "waiting for your wallet…" : "Let owners send their details"}
+            </button>
+          </>
+        ) : (
+          <p className="muted" style={{ marginBottom: 0 }}>Checking…</p>
+        )}
+        {intakeError ? <div className="note bad" style={{ marginTop: "0.6rem" }}>{intakeError}</div> : null}
+      </div>
+
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Requests from owners</h3>
         {asksError ? <div className="note bad">{asksError}</div> : null}
@@ -499,6 +580,7 @@ export default function IssueScreen() {
               <li key={ask.id}>
                 <code>{ask.by}</code>{" "}
                 <span className="muted">· asked {formatDate(Date.parse(ask.requested_at) / 1000)}</span>{" "}
+                {ask.sealed_details ? <span className="tag accent">details sent</span> : null}{" "}
                 {selected?.id === ask.id ? (
                   <button type="button" onClick={() => pick(null)}>
                     Deselect
@@ -512,6 +594,11 @@ export default function IssueScreen() {
             ))}
           </ul>
         )}
+        {detailsNote ? (
+          <div className={`note ${detailsNote.ok ? "warn" : "bad"}`} data-testid="issue-details-note">
+            {detailsNote.text}
+          </div>
+        ) : null}
       </div>
 
       <div className="card">
@@ -1121,6 +1208,23 @@ function IssuanceAsk() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  // D16: the week's details, typed here and sealed in this browser to the
+  // issuer's intake key, which is checked against the issuer on chain first.
+  const [details, setDetails] = useState<Partial<Record<DetailKey, string>>>({});
+  const [intakeOpen, setIntakeOpen] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void verifiedIntakeKey()
+      .then((k) => {
+        if (!cancelled) setIntakeOpen(k !== null);
+      })
+      .catch(() => {
+        if (!cancelled) setIntakeOpen(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     const response = await authFetch("/api/requests/issuance");
@@ -1144,11 +1248,26 @@ function IssuanceAsk() {
       setError(null);
       setNote(null);
       try {
+        if (!address) throw new Error("sign in first");
+        // Sealed before anything else is made, so a refused key stops the ask
+        // with nothing sent. The details never leave this browser in the clear.
+        const cleaned = cleanDetails(details);
+        let sealedDetails: { blob: string; key_hash: string } | undefined;
+        if (Object.keys(cleaned).length > 0) {
+          const intakeKey = await verifiedIntakeKey();
+          if (!intakeKey) throw new Error("the issuer cannot receive details yet; empty the fields to ask without them");
+          sealedDetails = await sealDetails(intakeKey, address, cleaned);
+        }
         const h = await newSecret("issuance ask");
         const key = await newSealKey("issuance ask");
         // The public half goes with the ask, so the issuer seals the moment
         // they issue; the private half never leaves this browser.
-        const payload = { secret_hash: h.toString(), key_hash: key.keyHash, public_key: b64u(key.publicRaw) };
+        const payload = {
+          secret_hash: h.toString(),
+          key_hash: key.keyHash,
+          public_key: b64u(key.publicRaw),
+          ...(sealedDetails ? { sealed_details: sealedDetails } : {}),
+        };
         const response = await authFetch("/api/requests/issuance", {
           method: "POST",
           body: JSON.stringify(payload),
@@ -1159,6 +1278,7 @@ function IssuanceAsk() {
           "Asked. Your week's secret was made and kept in this browser; only its hash was sent. " +
             "When the issuer issues the week, its record arrives here the next time you sign in, in this browser.",
         );
+        setDetails({});
         await load();
       } catch (caught) {
         setError(describeError(caught));
@@ -1166,7 +1286,7 @@ function IssuanceAsk() {
         setSending(false);
       }
     },
-    [authFetch, load],
+    [address, authFetch, details, load],
   );
 
   // A request link for each ask this browser holds the key for.
@@ -1221,6 +1341,37 @@ function IssuanceAsk() {
           secret, this browser can rent the week out or sell it, and nobody else can — the issuer
           included. If this browser&apos;s storage is cleared, that ability is lost for good.
         </p>
+        <fieldset style={{ border: 0, padding: 0, margin: "0 0 1rem" }} disabled={intakeOpen !== true || sending}>
+          <legend style={{ fontWeight: 600 }}>Your week, for the issuer</legend>
+          {intakeOpen === false ? (
+            <p className="muted" data-testid="details-closed">
+              The issuer cannot receive details here yet. Ask without them; the issuer will get them from
+              you another way.
+            </p>
+          ) : (
+            <p className="muted">
+              What you know of your week, so the issuer&apos;s form starts filled in. Sealed in this
+              browser so that only the issuer&apos;s browser can open it — this site&apos;s server cannot
+              read it. The issuer checks each field against the deed and the resort&apos;s books. Leave out
+              what you do not know.
+            </p>
+          )}
+          <div className="field-row">
+            {DETAIL_FIELDS.map((f) => (
+              <div className="field" key={f.key}>
+                <label htmlFor={`detail-${f.key}`}>{f.label}</label>
+                <input
+                  id={`detail-${f.key}`}
+                  type={"type" in f && f.type === "date" ? "date" : "text"}
+                  inputMode={"type" in f && f.type === "number" ? "numeric" : undefined}
+                  value={details[f.key] ?? ""}
+                  onChange={(event) => setDetails({ ...details, [f.key]: event.target.value })}
+                  data-testid={`detail-${f.key}`}
+                />
+              </div>
+            ))}
+          </div>
+        </fieldset>
         <button className="primary" onClick={() => void ask()} disabled={sending || supported !== true}>
           {sending ? "making your secret…" : "Request issuance"}
         </button>

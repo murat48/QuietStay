@@ -2060,6 +2060,21 @@ of the spec, the rest at the second review of `def5eb6`.
       `npm run zk:secret` opens /issue with a note saying so. API and scripts
       unchanged. No-leak e2e: 2/2 passed, 472 requests, no leaks. Sale tx
       `b1acdd8e…`, rental tx `d371e271…`.
+    - **Your request (2026-11-26, D16): the owner enters their week's details
+      for the issuer on "Add your week".**
+      - The issuer publishes an intake key once on /issue ("Let owners send
+        their details"): made in their browser, signed with their wallet
+        (SEP-53). The owner's browser checks the signature against the issuer
+        read from the chain through the public RPC, then seals the details to
+        it. The server keeps ciphertext only (`sealed_details`); picking the
+        ask fills the issuer's form, with a note to check every field.
+      - Unit tests: 75/75 (signature checks, field mapping).
+      - No-leak e2e, with the owner entering name, email, deed and check-in
+        and the issuer's form checked to start from them: 2/2 passed, 518
+        requests, no leaks (the name, email and deed in none of the owner's
+        requests). Sale tx `777dc831…`, rental tx `1dcc2080…`.
+      - On the demo the issuer must press "Let owners send their details"
+        once, in the browser they issue from, before owners can send any.
 
 ### Step 6 — Mainnet deployment
 - Date:

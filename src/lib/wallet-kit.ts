@@ -47,6 +47,10 @@ interface Kit {
     preimageXdr: string,
     opts?: { networkPassphrase?: string; address?: string },
   ): Promise<{ signedAuthEntry: string; signerAddress?: string }>;
+  signMessage(
+    message: string,
+    opts?: { networkPassphrase?: string; address?: string },
+  ): Promise<{ signedMessage: string; signerAddress?: string }>;
   getNetwork(): Promise<{ network: string; networkPassphrase: string }>;
   disconnect(): Promise<void>;
 }
@@ -58,6 +62,7 @@ interface TestWalletBridge {
   address(): Promise<string>;
   signTransaction(xdr: string): Promise<string>;
   signAuthEntry(preimageXdr: string): Promise<string>;
+  signMessage(message: string): Promise<string>;
 }
 
 /**
@@ -84,6 +89,7 @@ export function walletKit(): Promise<Kit> {
         getAddress: async () => ({ address: await bridge.address() }),
         signTransaction: async (xdr) => ({ signedTxXdr: await bridge.signTransaction(xdr) }),
         signAuthEntry: async (preimage) => ({ signedAuthEntry: await bridge.signAuthEntry(preimage) }),
+        signMessage: async (message) => ({ signedMessage: await bridge.signMessage(message) }),
         getNetwork: async () => ({ network: IS_MAINNET ? "PUBLIC" : "TESTNET", networkPassphrase: NETWORK_PASSPHRASE }),
         disconnect: async () => {},
       });
@@ -206,6 +212,18 @@ export async function signAuthEntryWithWallet(preimageXdr: string, address: stri
   });
   if (!signedAuthEntry) throw new Error("the wallet returned no signature");
   return signedAuthEntry;
+}
+
+/**
+ * Sign a text message with the connected wallet (SEP-53, as Freighter does it).
+ * Returns the base64 signature. Used once by the issuer, to vouch for the key
+ * owners seal their week's details to (src/lib/issuer-key.ts).
+ */
+export async function signMessageWithWallet(message: string, address: string): Promise<string> {
+  const kit = await walletKit();
+  const { signedMessage } = await kit.signMessage(message, { networkPassphrase: NETWORK_PASSPHRASE, address });
+  if (!signedMessage) throw new Error("the wallet returned no signature");
+  return signedMessage;
 }
 
 export async function disconnectWallet(): Promise<void> {

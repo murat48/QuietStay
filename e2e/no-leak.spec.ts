@@ -224,6 +224,17 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   const R = await ctx("renter", renter);
   const I = await ctx("issuer", issuer, false);
 
+  // The details the owner enters for the issuer (D16), and the record's own.
+  const ownerName = "E2E Owner Zelda";
+  const ownerEmail = "zelda.e2e@example.invalid";
+  const deedRef = `E2E-${randomBytes(4).toString("hex")}`;
+
+  // --- 0. the issuer lets owners send their details (D16) ---------------------
+  // A key made in the issuer's browser, signed once with the issuer's wallet.
+  await signIn(I.page, "/issue");
+  await I.page.getByTestId("intake-publish").click({ timeout: 60_000 });
+  await expect(I.page.getByTestId("intake-ready")).toBeVisible({ timeout: 60_000 });
+
   // --- 1. the owner asks for a week -------------------------------------------
   await signIn(O.page, "/issue");
   // A reload keeps the tab's session: no second signature (found on the demo,
@@ -234,6 +245,14 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   await expect(O.page.locator(".wallet .addr")).toBeVisible({ timeout: 60_000 });
   await expect(O.page.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0, { timeout: 30_000 });
   await expect(O.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0);
+  // The details are sealed in the owner's browser to the issuer's key, checked
+  // against the issuer on chain: the leak check below forbids the name, the
+  // email and the deed in every request the owner's browser makes.
+  await expect(O.page.getByTestId("detail-owner_name")).toBeEnabled({ timeout: 60_000 });
+  await O.page.getByTestId("detail-owner_name").fill(ownerName);
+  await O.page.getByTestId("detail-owner_email").fill(ownerEmail);
+  await O.page.getByTestId("detail-title_deed").fill(deedRef);
+  await O.page.getByTestId("detail-week_check_in").fill("2026-12-05");
   await O.page.getByRole("button", { name: "Request issuance", exact: true }).click();
   // Since 2026-11-25 the ask carries the owner's public key, so the issuer
   // seals at once and the request link is only a fallback. The key is public
@@ -246,15 +265,21 @@ test("a sale and a rental proved in the browser send no secret, record or d", as
   // --- 2. the issuer issues and seals; the owner opens -------------------------
   await signIn(I.page, "/issue");
   await I.page.getByRole("button", { name: "Issue to this account" }).first().click();
+  // The form starts from what the owner entered, opened in the issuer's browser.
+  await expect(I.page.getByTestId("issue-details-note")).toContainText("Filled in from the details", { timeout: 60_000 });
+  await expect(I.page.locator("#owner_name")).toHaveValue(ownerName);
+  await expect(I.page.locator("#owner_email")).toHaveValue(ownerEmail);
+  await expect(I.page.locator("#title_deed")).toHaveValue(deedRef);
+  await expect(I.page.locator("#week_in")).toHaveValue("2026-12-05");
   await I.page.locator("#tab-json").click();
   const sample = JSON.parse(readFileSync("inventory/records/week-01.json", "utf8"));
   const theRecord = {
     ...sample,
     record_id: randomUUID(),
     salt: randomBytes(32).toString("hex"),
-    owner: { name: "E2E Owner Zelda", email: "zelda.e2e@example.invalid", stellar_account: owner.publicKey() },
+    owner: { name: ownerName, email: ownerEmail, stellar_account: owner.publicKey() },
     week: { check_in: "2026-12-05", check_out: "2026-12-12", use_year: 2026, week_number: 49 },
-    title: { ...sample.title, deed_reference: `E2E-${randomBytes(4).toString("hex")}` },
+    title: { ...sample.title, deed_reference: deedRef },
   };
   await I.page.locator("textarea#record").fill(JSON.stringify(theRecord, null, 2));
   await I.page.getByRole("button", { name: "Issue on testnet" }).click();
