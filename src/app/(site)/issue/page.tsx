@@ -53,7 +53,7 @@ import { describeError, formatDate } from "@/lib/format";
 import type { IssuanceRequest } from "@/lib/requests";
 import { issueScreenView } from "@/lib/roles";
 import { useProverSupported } from "@/lib/use-prover-supported";
-import { issuanceRequestPrefill, parseSecretHash } from "@/lib/secret-hash";
+import { issuanceRequestPrefill } from "@/lib/secret-hash";
 import { b64u, replyLink, requestLink, seal, unb64u, type SealedRecord } from "@/lib/sealed";
 import { newSealKey, newSecret, putIssued, sealKey } from "@/lib/vault";
 import {
@@ -1104,26 +1104,18 @@ export default function IssueScreen() {
  * The owner's side: ask the issuer to issue a week to the account signed in.
  *
  * The account is the session's — shown, never typed — and the only other thing
- * sent is `h`. The secret it hashes stays in the owner's file.
+ * sent is `h`. The secret it hashes is made and kept in this browser.
  */
 function IssuanceAsk() {
   const { address, authenticated, standing, readOnly, authFetch } = useWallet();
-  const [hashText, setHashText] = useState("");
-  // Filled from the link `npm run zk:secret` prints, once in the browser.
+  // A link from `npm run zk:secret` carries an h made on the command line.
+  // Asking with one is no longer offered here (2026-11-26, D15): this browser
+  // would not hold its secret, so it could never rent the week out or sell
+  // it. The link is only answered with a note.
+  const [cliLink, setCliLink] = useState(false);
   useEffect(() => {
-    const { value } = issuanceRequestPrefill(window.location.search);
-    if (value) setHashText(value);
+    if (issuanceRequestPrefill(window.location.search).value) void Promise.resolve().then(() => setCliLink(true));
   }, []);
-  // The same check the server makes, shown before anything is sent.
-  const hashError = useMemo(() => {
-    if (hashText.trim() === "") return null;
-    try {
-      parseSecretHash(hashText);
-      return null;
-    } catch (caught) {
-      return describeError(caught);
-    }
-  }, [hashText]);
   const [mine, setMine] = useState<IssuanceRequest[]>([]);
   const supported = useProverSupported();
   const [sending, setSending] = useState(false);
@@ -1144,25 +1136,19 @@ function IssuanceAsk() {
 
   /**
    * Phase 3 (D3): make the secret and a sealed-link key in this browser, keep
-   * both in its vault, and send only `h` and the key's hash. With `cliHash`,
-   * the Phase 2 path: an `h` made by `npm run zk:secret`, and no sealed link.
+   * both in its vault, and send only `h` and the key's hash.
    */
   const ask = useCallback(
-    async (cliHash?: string) => {
+    async () => {
       setSending(true);
       setError(null);
       setNote(null);
       try {
-        let payload: { secret_hash: string; key_hash?: string; public_key?: string };
-        if (cliHash !== undefined) {
-          payload = { secret_hash: cliHash.trim() };
-        } else {
-          const h = await newSecret("issuance ask");
-          const key = await newSealKey("issuance ask");
-          // The public half goes with the ask, so the issuer seals the moment
-          // they issue; the private half never leaves this browser.
-          payload = { secret_hash: h.toString(), key_hash: key.keyHash, public_key: b64u(key.publicRaw) };
-        }
+        const h = await newSecret("issuance ask");
+        const key = await newSealKey("issuance ask");
+        // The public half goes with the ask, so the issuer seals the moment
+        // they issue; the private half never leaves this browser.
+        const payload = { secret_hash: h.toString(), key_hash: key.keyHash, public_key: b64u(key.publicRaw) };
         const response = await authFetch("/api/requests/issuance", {
           method: "POST",
           body: JSON.stringify(payload),
@@ -1170,12 +1156,9 @@ function IssuanceAsk() {
         const body = (await response.json()) as { note?: string; error?: string };
         if (!response.ok) throw new Error(body.error ?? "the request was not recorded");
         setNote(
-          cliHash !== undefined
-            ? (body.note ?? "Asked.")
-            : "Asked. Your week's secret was made and kept in this browser; only its hash was sent. " +
-                "When the issuer issues the week, its record arrives here the next time you sign in, in this browser.",
+          "Asked. Your week's secret was made and kept in this browser; only its hash was sent. " +
+            "When the issuer issues the week, its record arrives here the next time you sign in, in this browser.",
         );
-        setHashText("");
         await load();
       } catch (caught) {
         setError(describeError(caught));
@@ -1244,29 +1227,14 @@ function IssuanceAsk() {
         {supported === false ? (
           <div className="note bad" data-testid="prover-unsupported">This browser cannot keep a secret for you: it lacks Web Workers, WebCrypto or IndexedDB.</div>
         ) : null}
-        <details style={{ marginTop: "1rem" }}>
-          <summary>Advanced: I made my secret with the command line</summary>
-          <p className="muted">
-            Only if you will also prove from the command line: this browser does not hold that
-            secret, so it can never rent out or sell a week asked for this way.
-          </p>
-          <pre>npm run zk:secret -- .secrets/my-week.json</pre>
-          <div className="field">
-            <label htmlFor="ask-secret-hash">Your h</label>
-            <input
-              id="ask-secret-hash"
-              className="mono"
-              value={hashText}
-              onChange={(event) => setHashText(event.target.value)}
-              placeholder="the number npm run zk:secret printed — decimal or hex"
-              spellCheck={false}
-            />
-            {hashError ? <div className="note bad">{hashError}</div> : null}
+        {cliLink ? (
+          <div className="note warn" style={{ marginTop: "1rem" }} data-testid="issue-cli-link">
+            This link carries a secret hash made on the command line. Asking with one is no longer
+            offered: this browser would not hold its secret, so it could never rent the week out or
+            sell it. Use <strong>Request issuance</strong> above; the browser makes and keeps the
+            secret for you.
           </div>
-          <button onClick={() => void ask(hashText)} disabled={sending || hashText.trim() === "" || hashError !== null}>
-            Request issuance with this h
-          </button>
-        </details>
+        ) : null}
         {error ? <div className="note bad" style={{ marginTop: "1rem" }}>{error}</div> : null}
         {note ? <div className="note accent" style={{ marginTop: "1rem" }}>{note}</div> : null}
       </div>

@@ -2053,6 +2053,13 @@ of the spec, the rest at the second review of `def5eb6`.
       - No-leak e2e (its helper now presses Connect wallet, since a browser
         that has not signed in takes up no wallet on load): 2/2 passed, 494
         requests, no leaks. Sale tx `5e3b5ec3…`, rental tx `c67b0ef2…`.
+    - **Your decision (2026-11-26, D15): remove "Advanced: I made my secret
+      with the command line" from /issue.** A week asked for with a
+      command-line `h` could never be rented out or sold from the browser.
+      Only the browser's Request issuance remains; a link from
+      `npm run zk:secret` opens /issue with a note saying so. API and scripts
+      unchanged. No-leak e2e: 2/2 passed, 472 requests, no leaks. Sale tx
+      `b1acdd8e…`, rental tx `d371e271…`.
 
 ### Step 6 — Mainnet deployment
 - Date:
