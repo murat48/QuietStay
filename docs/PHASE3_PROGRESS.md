@@ -2111,6 +2111,16 @@ of the spec, the rest at the second review of `def5eb6`.
       - Checked by typecheck and lint only: `e2e/swap.spec.ts` still follows
         the old issuance flow and cannot run (its two `fill` calls now pick
         from the list).
+    - **First swap in the browser on the testnet demo (2026-11-27), swap #2
+      on `CATUBRZZ…`:** maker GCWP…UBN4 gave week #17 for week #18, held by
+      GC4C…DYUE.
+      - The taker accepted (`accept_swap`, their request #7, proof valid to
+        ledger 5,941,200); the maker completed (`complete_swap`), both proofs
+        verified in one transaction (167.9 M instructions).
+      - Read back from the chain: week #17 is now held by GC4C…DYUE with
+        commitment `084cb1ca…`, week #18 by GCWP…UBN4 with `03ecc6dc…`, as
+        the `transfer` events say; both listings were removed by the swap; no
+        open swap remains.
 
 ### Step 6 — Mainnet deployment
 - Date:
