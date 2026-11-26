@@ -52,6 +52,7 @@ import { reservedOwnerReason } from "@/lib/issue-guard";
 import { intakeStatus, openDetails, publishIntakeKey, sealDetails, verifiedIntakeKey } from "@/lib/issuer-intake";
 import { DETAIL_FIELDS, cleanDetails, detailValues, type DetailKey } from "@/lib/issuer-key";
 import { signMessageWithWallet } from "@/lib/wallet-kit";
+import { addDays, followCheckIn, todayIso } from "@/lib/week-dates";
 import { describeError, formatDate } from "@/lib/format";
 import type { IssuanceRequest } from "@/lib/requests";
 import { issueScreenView } from "@/lib/roles";
@@ -242,7 +243,17 @@ export default function IssueScreen() {
         return current;
       }
       if (doc.record_id || doc.salt) return current;
-      return JSON.stringify({ ...doc, record_id: freshRecordId(), salt: freshSalt() }, null, 2);
+      // The week starts today, for a week, in this year (asked for on the
+      // testnet demo, 2026-11-26: the sample's fixed dates were in the past).
+      const today = todayIso();
+      const year = Number(today.slice(0, 4));
+      const week = { check_in: today, check_out: addDays(today, 7), use_year: year, week_number: isoWeekNumber(today) };
+      const fees = { ...(doc.maintenance_fees as object), paid_through: `${year}-12-31` };
+      return JSON.stringify(
+        { ...doc, record_id: freshRecordId(), salt: freshSalt(), week, maintenance_fees: fees },
+        null,
+        2,
+      );
     });
     setSeeded(true);
   }, []);
@@ -304,7 +315,21 @@ export default function IssueScreen() {
    */
   const setCheckIn = useCallback((value: string) => {
     setRecordText((current) => {
-      const withDate = writePath(current, "week.check_in", value);
+      let withDate = writePath(current, "week.check_in", value);
+      // Check-out keeps the stay's length and the use year follows check-in,
+      // so moving the week is one edit, not three.
+      let previous: { checkIn?: string; checkOut?: string } = {};
+      try {
+        const doc = JSON.parse(current) as { week?: { check_in?: string; check_out?: string } };
+        previous = { checkIn: doc.week?.check_in, checkOut: doc.week?.check_out };
+      } catch {
+        // not JSON: nothing to follow
+      }
+      const follow = followCheckIn(value, previous);
+      if (follow) {
+        withDate = writePath(withDate, "week.check_out", follow.checkOut);
+        withDate = writePath(withDate, "week.use_year", follow.useYear);
+      }
       try {
         return writePath(withDate, "week.week_number", isoWeekNumber(value));
       } catch {
@@ -1211,6 +1236,28 @@ function IssuanceAsk() {
   // D16: the week's details, typed here and sealed in this browser to the
   // issuer's intake key, which is checked against the issuer on chain first.
   const [details, setDetails] = useState<Partial<Record<DetailKey, string>>>({});
+  // The week starts today, for a week, in this year; set after mount so the
+  // server's HTML and the browser's agree.
+  useEffect(() => {
+    const today = todayIso();
+    void Promise.resolve().then(() =>
+      setDetails((d) => ({
+        week_check_in: today,
+        week_check_out: addDays(today, 7) ?? "",
+        week_use_year: today.slice(0, 4),
+        ...d,
+      })),
+    );
+  }, []);
+  const setDetail = (key: DetailKey, value: string) => {
+    if (key !== "week_check_in") return setDetails({ ...details, [key]: value });
+    const follow = followCheckIn(value, { checkIn: details.week_check_in, checkOut: details.week_check_out });
+    setDetails({
+      ...details,
+      week_check_in: value,
+      ...(follow ? { week_check_out: follow.checkOut, week_use_year: String(follow.useYear) } : {}),
+    });
+  };
   const [intakeOpen, setIntakeOpen] = useState<boolean | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -1251,11 +1298,21 @@ function IssuanceAsk() {
         if (!address) throw new Error("sign in first");
         // Sealed before anything else is made, so a refused key stops the ask
         // with nothing sent. The details never leave this browser in the clear.
-        const cleaned = cleanDetails(details);
+        // With the intake closed the fields are disabled, and the ask goes
+        // without them (the dates are filled in by default, so they are never
+        // empty).
+        // The issuer may have turned it on since this page loaded: look again
+        // before asking without the details, and stop so they can be checked.
+        if (intakeOpen !== true && (await verifiedIntakeKey().catch(() => null))) {
+          setIntakeOpen(true);
+          setNote("The issuer can receive details now. Check what you entered, then press Request issuance.");
+          return;
+        }
+        const cleaned = intakeOpen === true ? cleanDetails(details) : {};
         let sealedDetails: { blob: string; key_hash: string } | undefined;
         if (Object.keys(cleaned).length > 0) {
           const intakeKey = await verifiedIntakeKey();
-          if (!intakeKey) throw new Error("the issuer cannot receive details yet; empty the fields to ask without them");
+          if (!intakeKey) throw new Error("the issuer cannot receive details yet; nothing was sent");
           sealedDetails = await sealDetails(intakeKey, address, cleaned);
         }
         const h = await newSecret("issuance ask");
@@ -1278,7 +1335,8 @@ function IssuanceAsk() {
           "Asked. Your week's secret was made and kept in this browser; only its hash was sent. " +
             "When the issuer issues the week, its record arrives here the next time you sign in, in this browser.",
         );
-        setDetails({});
+        const today = todayIso();
+        setDetails({ week_check_in: today, week_check_out: addDays(today, 7) ?? "", week_use_year: today.slice(0, 4) });
         await load();
       } catch (caught) {
         setError(describeError(caught));
@@ -1286,7 +1344,7 @@ function IssuanceAsk() {
         setSending(false);
       }
     },
-    [address, authFetch, details, load],
+    [address, authFetch, details, intakeOpen, load],
   );
 
   // A request link for each ask this browser holds the key for.
@@ -1341,13 +1399,22 @@ function IssuanceAsk() {
           secret, this browser can rent the week out or sell it, and nobody else can — the issuer
           included. If this browser&apos;s storage is cleared, that ability is lost for good.
         </p>
-        <fieldset style={{ border: 0, padding: 0, margin: "0 0 1rem" }} disabled={intakeOpen !== true || sending}>
+        {/*
+          Always editable (found on the testnet demo, 2026-11-26: a form
+          locked until the issuer acted looked broken). Until the issuer has
+          published an intake key, nothing typed here is sent, and the screen
+          says so and what the issuer has to do.
+        */}
+        <fieldset style={{ border: 0, padding: 0, margin: "0 0 1rem" }} disabled={sending}>
           <legend style={{ fontWeight: 600 }}>Your week, for the issuer</legend>
           {intakeOpen === false ? (
-            <p className="muted" data-testid="details-closed">
-              The issuer cannot receive details here yet. Ask without them; the issuer will get them from
-              you another way.
-            </p>
+            <div className="note warn" data-testid="details-closed">
+              <strong>The issuer has not turned on receiving details yet,</strong> so what you type here
+              cannot be sent: there is no key yet that only the issuer&apos;s browser can open. The
+              issuer does it once, on this screen signed in with the issuer account, with{" "}
+              <em>Let owners send their details</em>. Until then you can ask without details, and the
+              issuer gets them from you another way.
+            </div>
           ) : (
             <p className="muted">
               What you know of your week, so the issuer&apos;s form starts filled in. Sealed in this
@@ -1365,7 +1432,7 @@ function IssuanceAsk() {
                   type={"type" in f && f.type === "date" ? "date" : "text"}
                   inputMode={"type" in f && f.type === "number" ? "numeric" : undefined}
                   value={details[f.key] ?? ""}
-                  onChange={(event) => setDetails({ ...details, [f.key]: event.target.value })}
+                  onChange={(event) => setDetail(f.key, event.target.value)}
                   data-testid={`detail-${f.key}`}
                 />
               </div>
@@ -1373,7 +1440,7 @@ function IssuanceAsk() {
           </div>
         </fieldset>
         <button className="primary" onClick={() => void ask()} disabled={sending || supported !== true}>
-          {sending ? "making your secret…" : "Request issuance"}
+          {sending ? "making your secret…" : intakeOpen === false ? "Ask without details" : "Request issuance"}
         </button>
         {supported === false ? (
           <div className="note bad" data-testid="prover-unsupported">This browser cannot keep a secret for you: it lacks Web Workers, WebCrypto or IndexedDB.</div>

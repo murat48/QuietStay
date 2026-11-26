@@ -2075,6 +2075,22 @@ of the spec, the rest at the second review of `def5eb6`.
         requests). Sale tx `777dc831…`, rental tx `1dcc2080…`.
       - On the demo the issuer must press "Let owners send their details"
         once, in the browser they issue from, before owners can send any.
+    - **Your report (2026-11-26): the dates should start from today; the
+      owner's form could not be edited at all.**
+      - Both forms (the issuer's record and the owner's details) start with
+        check-in today, check-out a week later and this use year; the
+        issuer's fees are paid through 31 December. Moving check-in moves
+        check-out (keeping the stay's length) and the use year
+        (`src/lib/week-dates.ts`, tested).
+      - The owner's form was locked because the demo's issuer had not
+        published an intake key yet (`/api/issuer-key` → null). It is now
+        always editable; until the key exists a warning says nothing typed is
+        sent and what the issuer has to do, the button reads "Ask without
+        details", and the key is looked up again before asking.
+      - Unit tests: 80/80. No-leak e2e with the default dates: 2/2 passed,
+        518 requests, no leaks (sale tx `1c3592a7…`, rental tx `ca0dc3e7…`).
+        The editable-form change came after that run and was checked by
+        typecheck and lint only.
 
 ### Step 6 — Mainnet deployment
 - Date:
