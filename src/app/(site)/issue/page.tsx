@@ -47,9 +47,18 @@ import { RoleGate } from "@/components/RoleGate";
 import { SignInChoice } from "@/components/SignInChoice";
 import { useWallet } from "@/components/WalletProvider";
 import { canonicalText, commit, type JsonValue } from "@/lib/canonical";
-import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_LABEL, explorer } from "@/lib/config";
+import { CONTRACT_ID, FEE_ACCOUNT, NETWORK, NETWORK_LABEL, explorer } from "@/lib/config";
 import { reservedOwnerReason } from "@/lib/issue-guard";
-import { intakeStatus, openDetails, publishIntakeKey, sealDetails, verifiedIntakeKey } from "@/lib/issuer-intake";
+import {
+  intakeSignCommand,
+  intakeStatus,
+  openDetails,
+  prepareIntakeKey,
+  publishIntakeKey,
+  sealDetails,
+  submitIntakeKey,
+  verifiedIntakeKey,
+} from "@/lib/issuer-intake";
 import { DETAIL_FIELDS, cleanDetails, detailValues, type DetailKey } from "@/lib/issuer-key";
 import { signMessageWithWallet } from "@/lib/wallet-kit";
 import { addDays, followCheckIn, todayIso } from "@/lib/week-dates";
@@ -59,7 +68,7 @@ import { issueScreenView } from "@/lib/roles";
 import { useProverSupported } from "@/lib/use-prover-supported";
 import { issuanceRequestPrefill } from "@/lib/secret-hash";
 import { b64u, replyLink, requestLink, seal, unb64u, type SealedRecord } from "@/lib/sealed";
-import { newSealKey, newSecret, putIssued, sealKey } from "@/lib/vault";
+import { getPendingIssue, newSealKey, newSecret, putIssued, putPendingIssue, sealKey, type PendingIssue } from "@/lib/vault";
 import {
   isoWeekNumber,
   onChainWindows,
@@ -208,7 +217,7 @@ interface IssueResult {
 }
 
 export default function IssueScreen() {
-  const { standing, readOnly, authFetch, authenticated } = useWallet();
+  const { standing, readOnly, authFetch, authenticated, kind } = useWallet();
 
   const [tab, setTab] = useState<Tab>("form");
   const [recordText, setRecordText] = useState(() => JSON.stringify(TEMPLATE, null, 2));
@@ -371,61 +380,39 @@ export default function IssueScreen() {
     };
   }, [recordText, seeded]);
 
-  const issue = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    setResult(null);
-    try {
-      // Only from an owner's request (Step 5, 2026-11-25). A week issued with
-      // an h typed in has its secret nowhere this app can reach, so it can never
-      // be proven for from a browser: on the testnet demo, weeks #9–#11 were
-      // issued that way and could not be rented. Direct issuance with an h stays
-      // a command-line path (npm run zk:issue), for someone who keeps the secret
-      // file themselves.
-      if (!selected) throw new Error("pick the owner's request from the list first; a week is issued here only from a request");
-      const record: unknown = JSON.parse(recordText);
-      const response = await authFetch("/api/issue", {
-        method: "POST",
-        body: JSON.stringify({ record, request_id: selected.id }),
-      });
-      const body = (await response.json()) as Omit<IssueResult, "issuedText" | "reply"> & { error?: string };
-      if (!response.ok) throw new Error(body.error ?? "issuance failed");
-      // Phase 3 (D3): keep this browser's copy of the record, so it can be
-      // sealed to the owner, now or later from /receive.
+  /**
+   * After a week is on chain, by either path: keep this browser's copy of the
+   * record, seal it to the owner and leave it with their ask (D3 as amended
+   * 2026-11-25), and show the result.
+   */
+  const finishIssued = useCallback(
+    async (body: Omit<IssueResult, "issuedText" | "reply" | "delivered">, issuedText: string, sel: IssuanceRequest) => {
+      const record = JSON.parse(issuedText) as unknown;
       let reply: string | null = null;
       let replyError: string | undefined;
       let delivered = false;
-      if (selected.key_hash && body.right_id !== undefined) {
+      if (sel.key_hash && body.right_id !== undefined) {
         const owner = (record as { owner: { stellar_account: string } }).owner.stellar_account;
-        await putIssued({
-          right_id: body.right_id,
-          record: record as JsonValue,
-          owner,
-          h: selected.secret_hash,
-          ask_id: selected.id,
-        });
+        await putIssued({ right_id: body.right_id, record: record as JsonValue, owner, h: sel.secret_hash, ask_id: sel.id });
         // Seal at once when the ask carries the owner's public key: no request
         // link has to travel. `seal` refuses a key that does not hash to the
         // ask's key_hash.
-        if (selected.public_key) {
+        if (sel.public_key) {
           try {
             const payload: SealedRecord = {
               v: 1,
               record,
-              h: selected.secret_hash,
+              h: sel.secret_hash,
               holder: owner,
               right_id: body.right_id,
               contract: CONTRACT_ID,
-              request: { kind: "issue", id: selected.id },
+              request: { kind: "issue", id: sel.id },
             };
-            const blob = await seal(unb64u(selected.public_key), selected.key_hash, payload);
+            const blob = await seal(unb64u(sel.public_key), sel.key_hash, payload);
             reply = replyLink(window.location.origin, blob);
-            // D3 as amended 2026-11-25: leave it, sealed, with the owner's
-            // ask. Their browser picks it up when they sign in; no link has
-            // to travel. The reply link stays on screen as a fallback.
             const sent = await authFetch("/api/requests/issuance/delivery", {
               method: "POST",
-              body: JSON.stringify({ id: selected.id, blob }),
+              body: JSON.stringify({ id: sel.id, blob }),
             });
             const sentBody = (await sent.json()) as { delivered?: boolean; error?: string };
             if (!sent.ok || !sentBody.delivered) throw new Error(sentBody.error ?? "the sealed record could not be left for the owner");
@@ -436,19 +423,114 @@ export default function IssueScreen() {
         }
       }
       // Kept as sent: an edit made after issuing must not change what is saved.
-      setResult({ ...body, issuedText: recordText, reply, delivered, ...(replyError ? { replyError } : {}) });
+      setResult({ ...body, issuedText, reply, delivered, ...(replyError ? { replyError } : {}) });
       // An issued request drops off the list.
-      if (selected) {
-        setAsks((current) => current.filter((ask) => ask.id !== selected.id));
-        setSelected(null);
-        setSecretHash("");
-      }
+      setAsks((current) => current.filter((ask) => ask.id !== sel.id));
+      setSelected(null);
+      setSecretHash("");
+    },
+    [authFetch],
+  );
+
+  const issue = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      // Only from an owner's request (Step 5, 2026-11-25): a week issued with
+      // an h typed in has its secret nowhere this app can reach.
+      if (!selected) throw new Error("pick the owner's request from the list first; a week is issued here only from a request");
+      const record: unknown = JSON.parse(recordText);
+      const response = await authFetch("/api/issue", {
+        method: "POST",
+        body: JSON.stringify({ record, request_id: selected.id }),
+      });
+      const body = (await response.json()) as Omit<IssueResult, "issuedText" | "reply" | "delivered"> & { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "issuance failed");
+      await finishIssued(body, recordText, selected);
+    } catch (caught) {
+      setError(describeError(caught));
+    } finally {
+      setBusy(false);
+    }
+  }, [authFetch, recordText, selected, finishIssued]);
+
+  /*
+   * The CLI path (Step 5 plan, item 3, 2026-11-27): the server builds the
+   * unsigned `issue` envelope; the issuer reviews, signs and sends it with
+   * scripts/mainnet-sign-submit.sh, then pastes the hash; the server reads it
+   * back from the chain before closing the ask. The only path where the
+   * deployment holds no issuer key (`cli` mode, mainnet). The record and the
+   * ask wait in this browser's vault meanwhile, so a reload loses nothing.
+   */
+  const [envelope, setEnvelope] = useState<PendingIssue | null>(null);
+  const [txHash, setTxHash] = useState("");
+  useEffect(() => {
+    if (!selected) return;
+    let cancelled = false;
+    void getPendingIssue(selected.id).then((p) => {
+      if (!cancelled && p) setEnvelope(p);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected]);
+
+  const buildEnvelope = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      if (!selected) throw new Error("pick the owner's request from the list first");
+      const record: unknown = JSON.parse(recordText);
+      const response = await authFetch("/api/issue", {
+        method: "POST",
+        body: JSON.stringify({ record, request_id: selected.id, envelope: true }),
+      });
+      const body = (await response.json()) as { xdr?: string; valid_until?: string; expected_right_id?: number; error?: string };
+      if (!response.ok || !body.xdr) throw new Error(body.error ?? "the envelope could not be built");
+      const pending: PendingIssue = {
+        ask: selected,
+        recordText,
+        xdr: body.xdr,
+        validUntil: body.valid_until ?? "",
+        expectedRightId: body.expected_right_id ?? null,
+      };
+      await putPendingIssue(pending);
+      setEnvelope(pending);
+      setTxHash("");
     } catch (caught) {
       setError(describeError(caught));
     } finally {
       setBusy(false);
     }
   }, [authFetch, recordText, selected]);
+
+  const confirmEnvelope = useCallback(async () => {
+    if (!envelope) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await authFetch("/api/issue/confirm", {
+        method: "POST",
+        body: JSON.stringify({ tx_hash: txHash.trim(), record: JSON.parse(envelope.recordText), request_id: envelope.ask.id }),
+      });
+      const body = (await response.json()) as Omit<IssueResult, "issuedText" | "reply" | "delivered"> & { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "the issuance could not be confirmed");
+      await finishIssued(
+        { ...body, attested_clean: body.attested_clean ?? false, attestation: body.attestation ?? null },
+        envelope.recordText,
+        envelope.ask,
+      );
+      await putPendingIssue(null, envelope.ask.id);
+      setEnvelope(null);
+      setTxHash("");
+    } catch (caught) {
+      setError(describeError(caught));
+    } finally {
+      setBusy(false);
+    }
+  }, [authFetch, envelope, txHash, finishIssued]);
 
   // Taken from the registry rather than compared against configuration, so the
   // button agrees with what the contract would actually accept.
@@ -489,19 +571,34 @@ export default function IssueScreen() {
     };
   }, [isIssuer, authenticated, standing]);
 
+  // A CLI session signs the key's message with `stellar message sign`: the
+  // key is made here first, then the signature pasted back.
+  const [intakeCli, setIntakeCli] = useState<{ publicKey: string; message: string } | null>(null);
+  const [intakeSig, setIntakeSig] = useState("");
   const publishIntake = useCallback(async () => {
     if (!standing) return;
     setIntakeBusy(true);
     setIntakeError(null);
     try {
-      await publishIntakeKey((message) => signMessageWithWallet(message, standing.account), authFetch);
+      if (kind === "cli") {
+        if (!intakeCli) {
+          const key = await prepareIntakeKey();
+          setIntakeCli({ publicKey: key.publicKey, message: key.message });
+          return;
+        }
+        await submitIntakeKey(intakeCli.publicKey, intakeSig, authFetch);
+        setIntakeCli(null);
+        setIntakeSig("");
+      } else {
+        await publishIntakeKey((message) => signMessageWithWallet(message, standing.account), authFetch);
+      }
       setIntake(await intakeStatus(standing.account));
     } catch (caught) {
       setIntakeError(describeError(caught));
     } finally {
       setIntakeBusy(false);
     }
-  }, [standing, authFetch]);
+  }, [standing, authFetch, kind, intakeCli, intakeSig]);
 
   const pick = useCallback(
     (ask: IssuanceRequest | null) => {
@@ -582,9 +679,35 @@ export default function IssueScreen() {
               an owner&apos;s browser can check the key is yours before sealing anything to it. Details
               sealed to a key made in another browser cannot be opened here.
             </p>
-            <button className="primary" onClick={() => void publishIntake()} disabled={intakeBusy} data-testid="intake-publish">
-              {intakeBusy ? "waiting for your wallet…" : "Let owners send their details"}
-            </button>
+            {intakeCli ? (
+              <>
+                <p className="muted">
+                  Sign the key with the CLI (SEP-53). It signs only this message and sends nothing; paste the
+                  signature it prints.
+                </p>
+                <pre className="mono" style={{ whiteSpace: "pre-wrap" }} data-testid="intake-cli-command">
+                  {intakeSignCommand(intakeCli.message, NETWORK === "mainnet" ? "qs-main-issuer" : "qs-issuer")}
+                </pre>
+                <div className="field">
+                  <label htmlFor="intake-sig">The signature</label>
+                  <input
+                    id="intake-sig"
+                    className="mono"
+                    value={intakeSig}
+                    onChange={(e) => setIntakeSig(e.target.value.trim())}
+                    spellCheck={false}
+                    data-testid="intake-cli-signature"
+                  />
+                </div>
+                <button className="primary" onClick={() => void publishIntake()} disabled={intakeBusy || intakeSig === ""} data-testid="intake-cli-publish">
+                  {intakeBusy ? "publishing…" : "Publish the key"}
+                </button>
+              </>
+            ) : (
+              <button className="primary" onClick={() => void publishIntake()} disabled={intakeBusy} data-testid="intake-publish">
+                {intakeBusy ? (kind === "cli" ? "making the key…" : "waiting for your wallet…") : "Let owners send their details"}
+              </button>
+            )}
           </>
         ) : (
           <p className="muted" style={{ marginBottom: 0 }}>Checking…</p>
@@ -1100,14 +1223,12 @@ export default function IssueScreen() {
             the week.
           </p>
         </div>
-        {readOnly ? (
-          <div className="note warn">
-            <strong>This deployment cannot issue.</strong> It does not hold the issuer key, on
-            purpose: the key signs every attestation, and the contract fixed its issuer at
-            construction, so a key that leaked could never be replaced. Everything above still
-            works — the record digest is computed in your browser and needs no key at all. Issuing is done from wherever the key already lives.
-          </div>
-        ) : (
+        {/*
+          Two ways to issue (2026-11-27). Signed here where the deployment holds
+          the issuer key; and always the envelope, signed with the CLI, which
+          is the only way where it holds none (`cli` mode, mainnet).
+        */}
+        {readOnly ? null : (
           <button
             className="primary"
             onClick={() => void issue()}
@@ -1116,6 +1237,66 @@ export default function IssueScreen() {
             {busy ? "issuing…" : `Issue on ${NETWORK_LABEL}`}
           </button>
         )}
+        <div className="card" style={{ marginTop: "1rem" }} data-testid="issue-envelope-card">
+          <h3 style={{ marginTop: 0 }}>{readOnly ? "Issue with the CLI" : "Or issue with the CLI"}</h3>
+          <p className="muted">
+            {readOnly
+              ? "This deployment holds no issuer key, on purpose. "
+              : ""}
+            The server builds the unsigned <code>issue</code> transaction from this record and the
+            owner&apos;s request. You review, sign and send it in your own terminal with{" "}
+            <code>scripts/mainnet-sign-submit.sh</code>, then paste its hash here: the server reads it back
+            from the chain before closing the request, and this browser seals the record to the owner.
+          </p>
+          <button
+            onClick={() => void buildEnvelope()}
+            disabled={busy || !preview || !isIssuer || selected === null || !ownerMatchesAsk || reservedReason !== null}
+            data-testid="issue-build-envelope"
+          >
+            {busy && !envelope ? "building…" : envelope ? "Build it again" : "Build the envelope"}
+          </button>
+          {envelope && selected?.id === envelope.ask.id ? (
+            <>
+              <p className="muted" style={{ marginBottom: "0.3rem" }}>
+                Valid until {envelope.validUntil ? new Date(envelope.validUntil).toLocaleString() : "…"}
+                {envelope.expectedRightId !== null ? <> · it will be right #{envelope.expectedRightId} if nothing is issued first</> : null}.
+                Save it as a file, then run:
+              </p>
+              <textarea readOnly className="mono" value={envelope.xdr} style={{ minHeight: "5rem" }} data-testid="issue-envelope-xdr" />
+              <p>
+                <a
+                  className="btn"
+                  download={`issue-ask-${envelope.ask.id.slice(0, 8)}.xdr`}
+                  href={`data:text/plain,${encodeURIComponent(envelope.xdr + "\n")}`}
+                >
+                  Save the envelope (.xdr)
+                </a>
+              </p>
+              <pre className="mono" style={{ whiteSpace: "pre-wrap" }} data-testid="issue-envelope-command">
+                {`scripts/mainnet-sign-submit.sh issue-ask-${envelope.ask.id.slice(0, 8)}.xdr ${NETWORK === "mainnet" ? "qs-main-issuer" : "qs-issuer"} --network ${NETWORK}`}
+              </pre>
+              <div className="field">
+                <label htmlFor="issue-tx-hash">The transaction hash it printed</label>
+                <input
+                  id="issue-tx-hash"
+                  className="mono"
+                  value={txHash}
+                  onChange={(e) => setTxHash(e.target.value.trim())}
+                  spellCheck={false}
+                  data-testid="issue-tx-hash"
+                />
+              </div>
+              <button
+                className="primary"
+                onClick={() => void confirmEnvelope()}
+                disabled={busy || !/^[0-9a-fA-F]{64}$/.test(txHash)}
+                data-testid="issue-confirm"
+              >
+                {busy ? "reading it from the chain…" : "Confirm the issuance"}
+              </button>
+            </>
+          ) : null}
+        </div>
       </RoleGate>
 
       {error ? <div className="note bad" style={{ marginTop: "1rem" }}>{error}</div> : null}
@@ -1199,12 +1380,17 @@ export default function IssueScreen() {
               </a>
             </p>
 
-            <h3>Issuer attestation</h3>
-            <p className="muted" style={{ marginTop: 0 }}>
-              Give this to a counterparty along with the record. They can check both on the{" "}
-              <Link href="/verify">verify screen</Link> without asking anyone&apos;s permission.
-            </p>
-            <pre>{JSON.stringify(result.attestation, null, 2)}</pre>
+            {/* None on the CLI path in `cli` mode: that deployment signs no attestations. */}
+            {result.attestation ? (
+              <>
+                <h3>Issuer attestation</h3>
+                <p className="muted" style={{ marginTop: 0 }}>
+                  Give this to a counterparty along with the record. They can check both on the{" "}
+                  <Link href="/verify">verify screen</Link> without asking anyone&apos;s permission.
+                </p>
+                <pre>{JSON.stringify(result.attestation, null, 2)}</pre>
+              </>
+            ) : null}
           </div>
         </>
       ) : null}

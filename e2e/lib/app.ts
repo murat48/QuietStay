@@ -28,13 +28,19 @@ export async function startApp(opts: {
   port: number;
   /** A throwaway fee account for /api/tx/sponsor; the real one is never used in tests. */
   fee?: Keypair;
+  /**
+   * `cli` mode, as on mainnet (2026-11-27): no issuer key on the server, no
+   * attestations; the issuer signs in and issues with envelopes.
+   */
+  cli?: boolean;
 }): Promise<App> {
   const host = `localhost:${opts.port}`;
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     QUIETSTAY_CONTRACT_ID: opts.contract,
     NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID: opts.contract,
-    QUIETSTAY_ISSUER_SECRET: opts.issuer.secret(),
+    QUIETSTAY_ISSUER_SECRET: opts.cli ? "" : opts.issuer.secret(),
+    NEXT_PUBLIC_QUIETSTAY_SIGNING: opts.cli ? "cli" : "server",
     QUIETSTAY_SEP10_SERVER_SECRET: opts.sep10.secret(),
     QUIETSTAY_SESSION_SECRET: randomBytes(32).toString("hex"),
     QUIETSTAY_HOME_DOMAIN: host,

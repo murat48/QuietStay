@@ -1,78 +1,69 @@
 /**
  * Issue a usage right.
  *
- *   POST /api/issue  { record, secret_hash }  → { right_id, record_digest, commitment, tx, attestation }
- *   POST /api/issue  { record, request_id }   → the same, from an owner's issuance request
+ *   POST /api/issue  { record, request_id }                  → { right_id, … }   signed here
+ *   POST /api/issue  { record, request_id, envelope: true }  → { xdr, … }        for the CLI
+ *   POST /api/issue  { record, secret_hash }                 → the same, with an h typed in
  *
- * With `request_id` the owner's `h` comes from their request
- * (/api/requests/issuance), the record's first holder must be the account that
- * asked, and the request is closed once the week is on chain.
+ * Two ways (src/lib/issuance.ts):
  *
- * Only the issuer can issue, and the contract enforces that independently. This
- * route additionally requires the caller to have proved control of the issuer's
- * account over SEP-10, so the deployment's issuing key cannot be driven by anyone
- * who merely finds the URL.
+ * - **Signed here**, where the deployment holds the issuer key (the testnet
+ *   demo). The week is issued and attested at once.
+ * - **As an envelope** (Step 5 plan, item 3, 2026-11-27): the unsigned
+ *   `issue` call, built and simulated here, for the issuer to review, sign
+ *   and send with `scripts/mainnet-sign-submit.sh`. Then
+ *   `POST /api/issue/confirm` reads it back from the chain by its hash and
+ *   closes the ask. The only way where the server holds no issuer key: `cli`
+ *   mode, always on mainnet.
  *
- * What happens here, in order: validate the record and the owner's `h`, compute
- * the record's digest `d` and the commitment `C = Poseidon(d, owner, h)`, issue on
- * chain with `C`, and sign an attestation bound to `d`, this right and this
- * contract, saying whether maintenance fees are settled.
+ * Only the issuer can issue, and the contract enforces that independently.
+ * This route also requires the caller's session to be the issuer's (SEP-10:
+ * Freighter, or a challenge signed with the CLI), so nobody who merely finds
+ * the URL can drive it.
  *
- * `h = Poseidon(s)` is all the owner sends; the secret `s` never reaches this
- * server. `C` is computed with `commitment` from scripts/lib/zk.ts — the module
- * `npm run zk:commitment` and `zk:issue` use, on the one Poseidon implementation
- * in circuits/gpl/ — so the app and the command line cannot disagree about it.
- * Poseidon runs in the circuit, the command line and here; never in the contract
- * and never in a browser (`npm run zk:check-bundle`). Any holder or buyer can
- * confirm `C` later with `npm run verify-record -- … --secret-hash <h>`.
+ * In order: validate the record and the owner's `h`, compute the record's
+ * digest `d` and the commitment `C = Poseidon(d, owner, h)`, then issue on
+ * chain with `C` (or build the envelope that will). `h = Poseidon(s)` is all
+ * the owner sends; the secret `s` never reaches this server. Poseidon runs in
+ * the circuit, the command line and here; never in the contract and never in
+ * a browser (`npm run zk:check-bundle`).
  */
 
 import { Keypair } from "@stellar/stellar-sdk";
 
-// Server only: a route handler, never part of the browser bundle. GPL-3.0 code
-// is reached through this import — see the license section of the README.
-import { commitment as poseidonCommitment, splitRecordDigest } from "../../../../scripts/lib/zk";
-import { fr } from "../../../../scripts/lib/zk-encode";
-
-import { signAttestation } from "@/lib/attestation";
-import { attestationStoreIsWritable, saveAttestation } from "@/lib/attestation-store";
-import { canonicalText, type JsonValue } from "@/lib/canonical";
-import { parseSecretHash } from "@/lib/consent";
-import { CONTRACT_ID, FEE_ACCOUNT, NETWORK_PASSPHRASE, hasIssuerSecret, issuerSecret } from "@/lib/config";
-import { reservedOwnerReason } from "@/lib/issue-guard";
-import { ContractCallError, buildIssueTx, prepare, readNextId, signWith, submit } from "@/lib/contract";
-import {
-  RecordValidationError,
-  feesAreCurrent,
-  onChainWindows,
-  propertyFacts,
-  recordCommitment,
-  validateRecord,
-} from "@/lib/record";
-import { RequestStoreUnavailable, loadIssuanceRequests, markIssued, recordDirectIssuance, weekSecuredBy } from "@/lib/requests";
-import { authenticatedAccount, serverAccount } from "@/lib/sep10";
+import { attestationStoreIsWritable } from "@/lib/attestation-store";
+import { explorer, hasIssuerSecret, issuerSecret } from "@/lib/config";
+import { ContractCallError, ENVELOPE_SECONDS, buildIssueEnvelope, buildIssueTx, prepare, readIssuer, readNextId, signWith, submit } from "@/lib/contract";
+import { IssuanceRefused, attestIssued, prepareIssuance } from "@/lib/issuance";
+import { RecordValidationError } from "@/lib/record";
+import { RequestStoreUnavailable, markIssued, recordDirectIssuance } from "@/lib/requests";
+import { authenticatedAccount } from "@/lib/sep10";
 
 export async function POST(request: Request): Promise<Response> {
-  // A deployment without the issuer key cannot sign, and says so rather than
-  // failing on a missing environment variable. See `hasIssuerSecret`.
-  if (!hasIssuerSecret()) {
+  let body: { record?: unknown; secret_hash?: unknown; request_id?: unknown; envelope?: unknown };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return Response.json({ error: "expected a JSON body" }, { status: 400 });
+  }
+  const asEnvelope = body.envelope === true;
+
+  // Signing here needs the key, and somewhere to keep the attestation. An
+  // envelope needs neither: the CLI signs it, and there is no attestation in
+  // `cli` mode.
+  if (!asEnvelope && !hasIssuerSecret()) {
     return Response.json(
       {
         error:
-          "this deployment is read-only: it does not hold the issuer key, so it cannot " +
-          "issue or attest. Browsing, verifying and transfers need no issuer key.",
+          "this deployment does not hold the issuer key, so it cannot sign an issuance. " +
+          "Build the envelope instead and sign it with the CLI.",
         read_only: true,
+        envelope_only: true,
       },
       { status: 503 },
     );
   }
-
-  // Asked here, before anything is submitted, because the issuance cannot be
-  // undone: a right issued with nowhere to put its attestation would leave buyers
-  // nothing to read. A host holding the key but with nothing writable — a
-  // serverless deployment given the key by mistake — used to get as far as the
-  // ledger and fail on `EROFS` afterwards.
-  if (!(await attestationStoreIsWritable())) {
+  if (!asEnvelope && !(await attestationStoreIsWritable())) {
     return Response.json(
       {
         error:
@@ -84,156 +75,73 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const issuer = Keypair.fromSecret(issuerSecret());
-
   const caller = await authenticatedAccount(request);
   if (!caller) {
     return Response.json(
-      { error: "not authenticated — connect the issuer's wallet and sign in" },
+      { error: "not authenticated — sign in as the issuer (wallet, or the CLI)" },
       { status: 401 },
     );
   }
-  if (caller !== issuer.publicKey()) {
-    return Response.json(
-      {
-        error: "only the issuer can issue usage rights",
-        authenticated_as: caller,
-        issuer: issuer.publicKey(),
-      },
-      { status: 403 },
-    );
-  }
-
-  let body: { record?: unknown; secret_hash?: unknown; request_id?: unknown };
-  try {
-    body = (await request.json()) as { record?: unknown; secret_hash?: unknown; request_id?: unknown };
-  } catch {
-    return Response.json({ error: "expected a JSON body" }, { status: 400 });
-  }
 
   try {
-    const record = validateRecord(body.record);
-    // Never to the fee account, the issuer or the sign-in key: checked before
-    // anything is submitted, because an issuance cannot be undone.
-    let signIn: string | null = null;
-    try {
-      signIn = serverAccount();
-    } catch {
-      signIn = null;
-    }
-    const reserved = reservedOwnerReason(record.owner.stellar_account, { feeAccount: FEE_ACCOUNT, issuer: issuer.publicKey(), signIn });
-    if (reserved) return Response.json({ error: reserved }, { status: 400 });
-    const canonical = canonicalText(record as never);
-    // d — what the attestation binds. Phase 1 stored it on chain; Phase 2 wraps it.
-    const recordDigest = await recordCommitment(record);
-    // Checked before anything is submitted: a malformed h would otherwise make a
-    // commitment nobody can prove against, and the issuance cannot be undone.
-    let h: bigint;
-    let requestId: string | null = null;
-    if (body.request_id !== undefined) {
-      // From an owner's ask: h is theirs, and so is the week.
-      const ask = (await loadIssuanceRequests()).find((r) => r.id === body.request_id);
-      if (!ask) return Response.json({ error: "no such issuance request" }, { status: 404 });
-      if (ask.status !== "open") {
-        return Response.json({ error: `this request was already ${ask.status}`, request: ask }, { status: 409 });
-      }
-      if (record.owner.stellar_account !== ask.by) {
-        return Response.json(
-          { error: `the record's first holder must be the account that asked, ${ask.by}` },
-          { status: 400 },
-        );
-      }
-      h = parseSecretHash(ask.secret_hash);
-      requestId = ask.id;
-    } else {
-      try {
-        h = parseSecretHash(body.secret_hash);
-      } catch (caught) {
-        return Response.json(
-          { error: `secret_hash: ${caught instanceof Error ? caught.message : "not valid"}` },
-          { status: 400 },
-        );
-      }
-      // Typed in rather than picked from the list, but the same ask: the owner's
-      // account and the very h they sent. Close it too, or it stays on the
-      // issuer's list as though the week were still owed. A store that cannot be
-      // read costs nothing here — there is then no list to tidy.
-      try {
-        const same = (await loadIssuanceRequests()).find(
-          (r) => r.status === "open" && r.by === record.owner.stellar_account && parseSecretHash(r.secret_hash) === h,
-        );
-        if (same) requestId = same.id;
-      } catch {
-        // No readable store: nothing to close.
-      }
-    }
-    // One secret per week (see `weekSecuredBy`): refused before anything goes on
-    // chain. A deployment without a readable request store has no record of
-    // spent h's to consult, and issues as before.
-    try {
-      const spent = await weekSecuredBy(h);
-      if (spent && spent.id !== requestId) {
-        return Response.json(
-          {
-            error:
-              `this h already secures week #${spent.right_id} — the owner should make a new ` +
-              "secret for this week: npm run zk:secret -- .secrets/<new-file>.json",
-          },
-          { status: 409 },
-        );
-      }
-    } catch (caught) {
-      if (!(caught instanceof RequestStoreUnavailable)) throw caught;
-    }
-    const d = await splitRecordDigest(record as unknown as JsonValue);
-    const commitment = fr(await poseidonCommitment(d, record.owner.stellar_account, h));
-    const windows = onChainWindows(record);
-
-    const rightId = await readNextId();
-    const tx = await buildIssueTx({
-      issuer: issuer.publicKey(),
-      owner: record.owner.stellar_account,
-      period: windows.period,
-      validity: windows.validity,
-      commitment,
-    });
-    const result = await submit(signWith(await prepare(tx), issuer));
-
-    if (!result.successful) {
+    // The contract's issuer, read from the chain: in `cli` mode there is no key
+    // here to take it from, and signed here it must be the same account.
+    const issuerAddress = asEnvelope ? await readIssuer() : Keypair.fromSecret(issuerSecret()).publicKey();
+    if (caller !== issuerAddress) {
       return Response.json(
-        { error: result.failure ?? "the contract rejected the issuance", tx: result.hash },
-        { status: 400 },
+        { error: "only the issuer can issue usage rights", authenticated_as: caller, issuer: issuerAddress },
+        { status: 403 },
       );
     }
 
-    const clean = feesAreCurrent(record);
-    const attestation = signAttestation(issuer, {
-      contract: CONTRACT_ID,
-      network: NETWORK_PASSPHRASE,
-      rightId,
-      recordDigest,
-      weekValid: true,
-      // Where it is, how big it is, what it offers — everything someone
-      // deciding to take the week needs, and nothing that names the apartment.
-      property: propertyFacts(record),
-      feesCurrent: clean,
-      feesPaidThrough: record.maintenance_fees.paid_through,
-      validForDays: 365,
-    });
+    const prepared = await prepareIssuance(body, issuerAddress);
+    const issueParams = {
+      issuer: issuerAddress,
+      owner: prepared.record.owner.stellar_account,
+      period: prepared.windows.period,
+      validity: prepared.windows.validity,
+      commitment: prepared.commitment,
+    };
 
-    // Record it, so the registry and buyers can read it — returning it to the
-    // browser is not enough. No transfer depends on it.
-    const attestationPath = await saveAttestation(rightId, attestation);
+    if (asEnvelope) {
+      // Issued only from an owner's ask, so the confirmation can find the h
+      // and close it: a week whose secret no browser holds could never be
+      // rented out or sold (D15).
+      if (!prepared.requestId) {
+        return Response.json({ error: "an envelope is built only from an owner's request" }, { status: 400 });
+      }
+      const tx = await buildIssueEnvelope(issueParams);
+      return Response.json({
+        xdr: tx.toXDR(),
+        commitment: prepared.commitment,
+        request_id: prepared.requestId,
+        owner: issueParams.owner,
+        expected_right_id: await readNextId(),
+        valid_until: new Date(Number(tx.timeBounds!.maxTime) * 1000).toISOString(),
+        valid_seconds: ENVELOPE_SECONDS,
+        fee_stroops: tx.fee,
+      });
+    }
+
+    const issuer = Keypair.fromSecret(issuerSecret());
+    const rightId = await readNextId();
+    const tx = await buildIssueTx(issueParams);
+    const result = await submit(signWith(await prepare(tx), issuer));
+    if (!result.successful) {
+      return Response.json({ error: result.failure ?? "the contract rejected the issuance", tx: result.hash }, { status: 400 });
+    }
+
+    const { clean, attestation, attestationPath } = await attestIssued(issuer, prepared, rightId);
 
     // The week is on chain whatever happens here; a request left open is said so.
     let requestNote: string | undefined;
     try {
-      if (requestId) {
-        await markIssued(requestId, { right_id: rightId, tx: result.hash });
+      if (prepared.requestId) {
+        await markIssued(prepared.requestId, { right_id: rightId, tx: result.hash });
       } else {
         await recordDirectIssuance({
-          owner: record.owner.stellar_account,
-          secret_hash: h.toString(),
+          owner: prepared.record.owner.stellar_account,
+          secret_hash: prepared.h.toString(),
           right_id: rightId,
           tx: result.hash,
         });
@@ -244,16 +152,16 @@ export async function POST(request: Request): Promise<Response> {
 
     return Response.json({
       right_id: rightId,
-      record_digest: recordDigest,
-      commitment,
-      canonical_bytes: canonical.length,
-      windows,
+      record_digest: prepared.recordDigest,
+      commitment: prepared.commitment,
+      canonical_bytes: prepared.canonicalBytes,
+      windows: prepared.windows,
       tx: result.hash,
-      explorer: result.explorer,
+      explorer: result.explorer ?? explorer.tx(result.hash),
       attested_clean: clean,
       attestation,
       attestation_path: attestationPath,
-      ...(requestId ? { request_id: requestId } : {}),
+      ...(prepared.requestId ? { request_id: prepared.requestId } : {}),
       ...(requestNote ? { request_note: requestNote } : {}),
       note: clean
         ? "The issuer attests this week is valid and free of unpaid maintenance fees."
@@ -261,17 +169,16 @@ export async function POST(request: Request): Promise<Response> {
           "A counterparty verifying this week will see that check fail.",
     });
   } catch (error) {
+    if (error instanceof IssuanceRefused) {
+      return Response.json({ error: error.message, ...error.extra }, { status: error.status });
+    }
     if (error instanceof RecordValidationError) {
       return Response.json({ error: `record is not valid: ${error.message}` }, { status: 400 });
     }
     if (error instanceof ContractCallError) {
       return Response.json({ error: error.message }, { status: 400 });
     }
-    // Logged with its stack: an intermittent 500 here is under investigation (Step 2 review).
     console.error("[/api/issue] unexpected failure:", error);
-    return Response.json(
-      { error: error instanceof Error ? error.message : "issuance failed" },
-      { status: 500 },
-    );
+    return Response.json({ error: error instanceof Error ? error.message : "issuance failed" }, { status: 500 });
   }
 }

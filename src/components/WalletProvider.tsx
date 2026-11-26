@@ -45,6 +45,7 @@ import {
 } from "@/lib/wallet-kit";
 import { PASSKEY_FALLBACK, passkeySupport } from "@/lib/passkey";
 import type { AccountStanding, Role, RightSummary } from "@/lib/roles";
+import { IS_MAINNET } from "@/lib/config";
 import { describeError } from "@/lib/format";
 
 interface StandingResponse {
@@ -59,7 +60,13 @@ interface StandingResponse {
   error?: string;
 }
 
-export type AccountKind = "wallet" | "passkey";
+/**
+ * `cli` (2026-11-27): an account signed in by a SEP-10 challenge signed with
+ * the Stellar CLI, for the issuer, whose mainnet key lives only in the CLI
+ * keystore. Such a session signs nothing in the browser: its transactions
+ * are envelopes the CLI signs (scripts/mainnet-sign-submit.sh).
+ */
+export type AccountKind = "wallet" | "passkey" | "cli";
 
 /** What /api/tx/submit and /api/tx/sponsor both answer. */
 export interface SubmitOutcome {
@@ -105,6 +112,10 @@ interface WalletState {
   connectPasskey: (create: boolean) => Promise<void>;
   /** Whether this browser can use a passkey, and if not, why and what to use instead. */
   passkey: { supported: boolean | null; reason?: string; fallback: string };
+  /** A SEP-10 challenge for `account`, to be signed with the Stellar CLI. */
+  cliChallenge: (account: string) => Promise<string>;
+  /** Sign in with a challenge the CLI signed (see `cliChallenge`). */
+  connectCli: (signedChallenge: string) => Promise<void>;
   disconnect: () => void;
   /** Re-read the account's standing, e.g. after a transfer changes it. */
   refreshStanding: () => Promise<void>;
@@ -142,7 +153,7 @@ const PASSKEY_HINT = "quietstay:passkey-wallet";
 function lastKind(): AccountKind | null {
   try {
     const k = localStorage.getItem(LAST_KIND);
-    if (k === "wallet" || k === "passkey") return k;
+    if (k === "wallet" || k === "passkey" || k === "cli") return k;
     return localStorage.getItem(PASSKEY_HINT) === "1" ? "passkey" : null;
   } catch {
     return null;
@@ -275,13 +286,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         // though the wallet's selection and the passkey kit's session are kept
         // (they make the next sign-in a single prompt).
         if (last === "wallet") {
-          const known = await connectedAddress();
-          if (known) return await resume(known, "wallet");
+          // A wallet extension can be slow to answer as the page loads. Ask a
+          // few times, and if it still says nothing, keep the saved session
+          // for the next load rather than wipe it: a wipe there was one way a
+          // reload asked to sign in again (found in the CLI test, 2026-11-27).
+          for (const wait of [0, 400, 1200]) {
+            if (wait) await new Promise((r) => setTimeout(r, wait));
+            const known = await connectedAddress();
+            if (known) return await resume(known, "wallet");
+          }
+          return;
         }
         if (last === "passkey") {
           const pk = await import("@/lib/passkey-wallet");
           const wallet = await pk.restoredPasskeyWallet();
           if (wallet) return await resume(wallet, "passkey");
+        }
+        // A CLI session has no wallet to ask: its address is the saved one.
+        if (last === "cli") {
+          const saved = savedSession();
+          if (saved?.kind === "cli") return await resume(saved.address, "cli");
         }
         saveSession(null);
       } finally {
@@ -386,6 +410,41 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [loadStanding],
   );
 
+  const cliChallenge = useCallback(async (account: string): Promise<string> => {
+    const res = await fetch(`/api/auth?account=${encodeURIComponent(account.trim())}`);
+    const body = (await res.json()) as { transaction?: string; error?: string };
+    if (!res.ok || !body.transaction) throw new Error(body.error ?? "could not get an authentication challenge");
+    return body.transaction;
+  }, []);
+
+  const connectCli = useCallback(
+    async (signedChallenge: string) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/auth", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ transaction: signedChallenge.trim() }),
+        });
+        const body = (await res.json()) as { token?: string; account?: string; error?: string };
+        if (!res.ok || !body.token || !body.account) throw new Error(body.error ?? "authentication failed");
+        setAddress(body.account);
+        setKind("cli");
+        rememberKind("cli");
+        setToken(body.token);
+        saveSession({ address: body.account, kind: "cli", token: body.token });
+        await loadStanding(body.token);
+      } catch (caught) {
+        setError(describeError(caught));
+        throw caught;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [loadStanding],
+  );
+
   // A session lasts an hour (SESSION_LIFETIME in sep10.ts). When it ends, say so
   // and offer Sign in again, rather than keep showing a signed-in account whose
   // every request the server now refuses as "not authenticated".
@@ -439,6 +498,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const sign = useCallback(
     async (xdr: string): Promise<string> => {
       if (!address) throw new Error("connect a wallet first");
+      if (kind === "cli") {
+        throw new Error("this session was signed in with the CLI, which signs nothing in the browser. Sign in with a wallet or a passkey for this, or use the envelope the screen offers.");
+      }
       if (kind === "passkey") {
         const pk = await import("@/lib/passkey-wallet");
         try {
@@ -521,13 +583,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       busy,
       error,
       connect,
+      cliChallenge,
+      connectCli,
       disconnect,
       refreshStanding,
       sign,
       signAuth,
       authFetch,
     }),
-    [address, kind, connectPasskey, passkey, submitSigned, signConsent, token, restoring, standing, readOnly, canRequest, busy, error, connect, disconnect, refreshStanding, sign, signAuth, authFetch],
+    [address, kind, connectPasskey, passkey, submitSigned, signConsent, token, restoring, standing, readOnly, canRequest, busy, error, connect, cliChallenge, connectCli, disconnect, refreshStanding, sign, signAuth, authFetch],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
@@ -552,6 +616,15 @@ const ROLE_TAG: Record<Role, { text: string; tone: string }> = {
 export function WalletButton() {
   const { address, kind, authenticated, restoring, standing, busy, error, connect, connectPasskey, passkey, disconnect } = useWallet();
   const [choosing, setChoosing] = useState(false);
+  const [cli, setCli] = useState(false);
+
+  if (cli) {
+    return (
+      <div className="wallet">
+        <CliSignIn account={kind === "cli" ? address : null} onDone={() => setCli(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="wallet">
@@ -562,7 +635,7 @@ export function WalletButton() {
       ) : address ? (
         <>
           <span className="addr" title={address}>
-            {kind === "passkey" ? "🔑 " : ""}
+            {kind === "passkey" ? "🔑 " : kind === "cli" ? "⌨ " : ""}
             {address.slice(0, 6)}…{address.slice(-6)}
           </span>
 
@@ -577,7 +650,10 @@ export function WalletButton() {
           )}
 
           {authenticated ? null : (
-            <button onClick={() => void (kind === "passkey" ? connectPasskey(false) : connect())} disabled={busy}>
+            <button
+              onClick={() => (kind === "cli" ? setCli(true) : void (kind === "passkey" ? connectPasskey(false) : connect()))}
+              disabled={busy}
+            >
               {busy ? "signing…" : "Sign in"}
             </button>
           )}
@@ -611,6 +687,9 @@ export function WalletButton() {
           <button onClick={() => setChoosing(true)} disabled={busy}>
             Use a passkey
           </button>
+          <button onClick={() => setCli(true)} disabled={busy} data-testid="cli-sign-in-open">
+            Use the CLI
+          </button>
         </>
       )}
 
@@ -620,5 +699,82 @@ export function WalletButton() {
         </span>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Sign in with a SEP-10 challenge signed by the Stellar CLI (2026-11-27), for
+ * an account whose key is only in the CLI keystore: the issuer on mainnet.
+ *
+ * The challenge is a transaction with sequence number 0 from the server's
+ * sign-in account, so it can never be submitted: signing it proves control of
+ * the account and sends nothing. The command below only signs; it prints the
+ * signed challenge, which goes back here.
+ */
+export function CliSignIn({ account, onDone }: { account: string | null; onDone: () => void }) {
+  const { busy, cliChallenge, connectCli } = useWallet();
+  const [who, setWho] = useState(account ?? "");
+  const [identity, setIdentity] = useState(IS_MAINNET ? "qs-main-issuer" : "qs-issuer");
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [signed, setSigned] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
+  const command = challenge
+    ? `stellar tx sign --sign-with-key ${identity || "<identity>"} --network ${IS_MAINNET ? "mainnet" : "testnet"} ${challenge}`
+    : "";
+
+  return (
+    <span className="passkey-choice" data-testid="cli-sign-in" style={{ display: "grid", gap: "0.4rem", minWidth: "min(100%, 28rem)" }}>
+      {challenge === null ? (
+        <>
+          <label>
+            Account (G…)
+            <input className="mono" value={who} onChange={(e) => setWho(e.target.value.trim())} spellCheck={false} data-testid="cli-account" />
+          </label>
+          <button
+            className="primary"
+            disabled={!/^G[A-Z2-7]{55}$/.test(who)}
+            onClick={() => {
+              setProblem(null);
+              cliChallenge(who).then(setChallenge, (e: unknown) => setProblem(describeError(e)));
+            }}
+            data-testid="cli-get-challenge"
+          >
+            Get the sign-in challenge
+          </button>
+        </>
+      ) : (
+        <>
+          <label>
+            CLI identity
+            <input className="mono" value={identity} onChange={(e) => setIdentity(e.target.value.trim())} spellCheck={false} />
+          </label>
+          <span className="muted">
+            Run this in your terminal. It only signs: the challenge has sequence 0 and can never be sent. Paste
+            what it prints below. Valid for a few minutes.
+          </span>
+          <textarea readOnly className="mono" value={command} style={{ minHeight: "5rem" }} data-testid="cli-command" />
+          <button onClick={() => void navigator.clipboard?.writeText(command)}>Copy the command</button>
+          <label>
+            The signed challenge
+            <textarea className="mono" value={signed} onChange={(e) => setSigned(e.target.value)} style={{ minHeight: "4rem" }} data-testid="cli-signed" />
+          </label>
+          <button
+            className="primary"
+            disabled={busy || signed.trim() === ""}
+            onClick={() => {
+              setProblem(null);
+              connectCli(signed).then(onDone, (e: unknown) => setProblem(describeError(e)));
+            }}
+            data-testid="cli-sign-in-submit"
+          >
+            {busy ? "signing in…" : "Sign in"}
+          </button>
+        </>
+      )}
+      {problem ? <span className="note bad" style={{ margin: 0 }}>{problem}</span> : null}
+      <button onClick={onDone} disabled={busy}>
+        Back
+      </button>
+    </span>
   );
 }

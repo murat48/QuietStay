@@ -410,6 +410,85 @@ export const buildIssueTx = (
     contractId,
   );
 
+/**
+ * How long an issuance envelope stays valid: long enough to review, sign and
+ * send it by hand with scripts/mainnet-sign-submit.sh (as pilot-envelope.ts).
+ */
+export const ENVELOPE_SECONDS = 1500;
+
+/**
+ * The issuer's `issue` call as an unsigned envelope, for the CLI to sign
+ * (Step 5 plan, item 3). Simulated twice, so its declared resources include
+ * the check of the issuer's own authorization, as the review re-simulates it.
+ * Signs nothing.
+ */
+export async function buildIssueEnvelope(params: {
+  issuer: string;
+  owner: string;
+  period: { start: number; end: number };
+  validity: { from: number; until: number };
+  commitment: string;
+}): Promise<Transaction> {
+  const account = await server.getAccount(params.issuer);
+  let tx = new TransactionBuilder(account, { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
+    .addOperation(
+      contract(CONTRACT_ID).call(
+        "issue",
+        addr(params.owner),
+        periodScVal(params.period),
+        validityScVal(params.validity),
+        bytes32(params.commitment),
+      ),
+    )
+    .setTimeout(ENVELOPE_SECONDS)
+    .build();
+  for (let pass = 1; pass <= 2; pass++) tx = await prepare(tx);
+  return tx;
+}
+
+/** What an `issue` transaction on chain did, read back by its hash. */
+export interface LandedIssue {
+  status: "SUCCESS" | "FAILED" | "NOT_FOUND";
+  source?: string;
+  contract?: string;
+  fn?: string;
+  owner?: string;
+  /** The commitment the call carried, hex. */
+  commitment?: string;
+  rightId?: number;
+}
+
+export async function readLandedIssue(hash: string): Promise<LandedIssue> {
+  const t = await server.getTransaction(hash);
+  if (t.status === rpc.Api.GetTransactionStatus.NOT_FOUND) return { status: "NOT_FOUND" };
+  const env = t.envelopeXdr;
+  const inner = env.switch().name === "envelopeTypeTxFeeBump" ? env.feeBump().tx().innerTx().v1() : env.v1();
+  const tx = inner.tx();
+  const out: LandedIssue = {
+    status: t.status === rpc.Api.GetTransactionStatus.SUCCESS ? "SUCCESS" : "FAILED",
+    source: Address.account(tx.sourceAccount().ed25519()).toString(),
+  };
+  const ops = tx.operations();
+  const op = ops[0];
+  if (ops.length !== 1 || !op || op.body().switch().name !== "invokeHostFunction") return out;
+  const fn = op.body().invokeHostFunctionOp().hostFunction();
+  if (fn.switch().name !== "hostFunctionTypeInvokeContract") return out;
+  const call = fn.invokeContract();
+  out.contract = Address.fromScAddress(call.contractAddress()).toString();
+  out.fn = call.functionName().toString();
+  const args = call.args();
+  const [ownerArg, , , commitmentArg] = args;
+  if (out.fn === "issue" && args.length === 4 && ownerArg && commitmentArg) {
+    out.owner = Address.fromScVal(ownerArg).toString();
+    out.commitment = Buffer.from(commitmentArg.bytes()).toString("hex");
+  }
+  if (out.status === "SUCCESS") {
+    const rv = (t as rpc.Api.GetSuccessfulTransactionResponse).returnValue;
+    if (rv) out.rightId = Number(scValToNative(rv));
+  }
+  return out;
+}
+
 export const buildListTx = (
   params: { by: string; rightId: number; termSecs: number | null },
   contractId?: string,

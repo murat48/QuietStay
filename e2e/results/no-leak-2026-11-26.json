@@ -1,12 +1,12 @@
 {
-  "date": "2026-11-26T20:30:50.215Z",
+  "date": "2026-11-26T21:57:05.728Z",
   "command": "npx playwright test e2e/no-leak.spec.ts",
-  "contract": "CD53UMIVRPOIZAMYI4RXSEYES2TNKC3XPEJ4TTGN4RZDBS6V62A7KWIZ",
-  "sale_tx": "https://stellar.expert/explorer/testnet/tx/d07faa87cde1fe7b4b5caa3b003aad3520812a462ec29d6f88538f96738f7d3e",
-  "rental_tx": "https://stellar.expert/explorer/testnet/tx/4fd0d602abefd6adb0f251edacf3a32d7f399ebf8c2918a819ddd42462181593",
-  "requests_recorded": 517,
+  "contract": "CCBRM6JWJVRO5KF2DM35APRFQ5YDJYZXSTQEES4KCIISAYQL3UZJ4KZP",
+  "sale_tx": "https://stellar.expert/explorer/testnet/tx/0db50a2f51c33ffd933af26c97fbcd2dc65fb50bcebdb75e90e8d3d0dfea27b3",
+  "rental_tx": "https://stellar.expert/explorer/testnet/tx/4c0f838a8dcfdd8eb9563bf67437fc9033f5006bc241c1ebd9c18ec9836fb393",
+  "requests_recorded": 518,
   "requests_by_browser": {
-    "owner": 293,
+    "owner": 294,
     "buyer": 190,
     "renter": 34
   },
@@ -23,7 +23,7 @@
     "buyer: /zk/transfer.wasm",
     "buyer: /zk/transfer.zkey"
   ],
-  "forbidden_values_checked": 22,
+  "forbidden_values_checked": 23,
   "secrets_found_in_vaults": 2,
   "leaks": []
 }

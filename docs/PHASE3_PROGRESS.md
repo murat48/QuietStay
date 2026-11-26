@@ -2121,6 +2121,41 @@ of the spec, the rest at the second review of `def5eb6`.
         commitment `084cb1ca…`, week #18 by GCWP…UBN4 with `03ecc6dc…`, as
         the `transfer` events say; both listings were removed by the swap; no
         open swap remains.
+- **Item 3 done (2026-11-27): issuing through unsigned envelopes.** Your
+  go-ahead ("adım 5 tamamlayalım"), and your decision: keep the current way
+  and add the CLI one beside it, to remove one later if wanted.
+  - **Sign in with the CLI** (a third kind, `cli`, beside the wallet and the
+    passkey): the app shows the SEP-10 challenge as a
+    `stellar tx sign --sign-with-key <identity> --network <net> <xdr>`
+    command; the signed challenge is pasted back. The challenge has sequence
+    0 and can never be submitted. Kept like the other sessions (an hour,
+    across reloads and tabs). A `cli` session signs nothing in the browser
+    and says so if asked to.
+  - **The envelope**: `POST /api/issue { …, envelope: true }` runs the same
+    checks and commitment as before (now `src/lib/issuance.ts`), and returns
+    the unsigned `issue` call, simulated twice, valid 25 minutes. The issuer
+    signs and sends it with `scripts/mainnet-sign-submit.sh`, then pastes the
+    hash. `POST /api/issue/confirm` reads it back from the chain: SUCCESS, an
+    `issue` on this contract, sent by the issuer, for the ask's account, with
+    exactly the commitment this record and the ask's h make; the right's
+    number is the call's return value. Only then is the ask closed; the
+    issuer's browser seals the record to the owner as before. The record and
+    the ask wait in the issuer's browser vault meanwhile.
+  - **The intake key** (D16) can be signed with
+    `stellar message sign --base64 …` (SEP-53) by a `cli` session.
+  - On the testnet demo both ways are offered; in `cli` mode (mainnet) only
+    the envelope. With an issuer key, the confirmation still attests.
+  - Found by the new test: on load, a wallet that did not answer at once
+    wiped the saved session. It is now asked three times, and the session is
+    kept if it still says nothing.
+  - Tests: new `e2e/cli-issue.spec.ts`, in `cli` mode (no issuer key on the
+    server): CLI sign-in, the intake key signed as `stellar message sign`
+    does, the owner's ask with details, the envelope signed and sent as
+    `mainnet-sign-submit.sh` does (tx `7dc6269b…`), a wrong hash refused, the
+    confirmation, and the owner's browser picking the record up: passed. The
+    no-leak test in the same run: 2/2, 518 requests, no leaks (sale
+    `0db50a2f…`, rental `4c0f838a…`). Unit tests 80/80.
+  - Next: item 4, the two passkey fee envelopes.
 
 ### Step 6 — Mainnet deployment
 - Date:

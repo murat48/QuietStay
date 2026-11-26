@@ -16,13 +16,26 @@
  *   and with nothing connected both choices are offered.
  */
 
-import { useWallet } from "@/components/WalletProvider";
+import { useState } from "react";
+
+import { CliSignIn, useWallet } from "@/components/WalletProvider";
 
 export function SignInChoice({ busyLabel = "connecting…" }: { busyLabel?: string }) {
   const { address, kind, busy, restoring, connect, connectPasskey, passkey } = useWallet();
+  // 2026-11-27: an account whose key is only in the CLI keystore (the issuer
+  // on mainnet) signs the SEP-10 challenge with the Stellar CLI.
+  const [cli, setCli] = useState(false);
 
   if (restoring) {
     return <p className="muted" style={{ margin: "0.5rem 0 0" }}>Resuming your session…</p>;
+  }
+
+  if (cli || (address && kind === "cli")) {
+    return (
+      <div style={{ marginTop: "0.5rem" }}>
+        <CliSignIn account={kind === "cli" ? address : null} onDone={() => setCli(false)} />
+      </div>
+    );
   }
 
   if (address && kind === "passkey") {
@@ -54,6 +67,9 @@ export function SignInChoice({ busyLabel = "connecting…" }: { busyLabel?: stri
             Sign in with passkey
           </button>
         ) : null}
+        <button onClick={() => setCli(true)} disabled={busy} data-testid="gate-cli-sign-in">
+          Sign in with the CLI
+        </button>
       </span>
     </>
   );

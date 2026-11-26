@@ -159,6 +159,32 @@ export interface IssuedEntry {
   ask_id: string;
 }
 
+/**
+ * An issuance built as an envelope for the CLI and not yet confirmed (Step 5
+ * plan, item 3): the record and the ask wait here, in the issuer's browser,
+ * until the hash comes back. The record never goes to the server's store.
+ */
+export interface PendingIssue {
+  ask: {
+    id: string;
+    by: string;
+    secret_hash: string;
+    key_hash?: string;
+    public_key?: string;
+    requested_at: string;
+    status: "open" | "issued";
+  };
+  recordText: string;
+  xdr: string;
+  validUntil: string;
+  expectedRightId: number | null;
+}
+
+export const getPendingIssue = (askId: string) => get<PendingIssue>(`pending-issue:${askId}`);
+/** Keep one, or (`null`) drop the one for `askId` once confirmed. */
+export const putPendingIssue = (p: PendingIssue | null, askId?: string) =>
+  put(`pending-issue:${p ? p.ask.id : askId}`, p);
+
 export const putIssued = (e: IssuedEntry) => put(`issued:${e.right_id}`, e);
 export const getIssued = (rightId: number) => get<IssuedEntry>(`issued:${rightId}`);
 

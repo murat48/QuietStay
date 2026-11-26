@@ -84,20 +84,46 @@ export async function intakeStatus(issuer: string): Promise<"ready" | "missing">
   return (await sealKey(key.key_hash)) ? "ready" : "missing";
 }
 
-/** Make an intake key in this browser and publish it, signed by the issuer's wallet. */
+/**
+ * Make an intake key in this browser (kept in its vault) and the message the
+ * issuer signs for it. Nothing is published yet.
+ */
+export async function prepareIntakeKey(): Promise<{ publicKey: string; keyHash: string; message: string }> {
+  const key = await newSealKey(INTAKE_PURPOSE);
+  return {
+    publicKey: b64u(key.publicRaw),
+    keyHash: key.keyHash,
+    message: intakeKeyMessage({ contract: CONTRACT_ID, network: NETWORK_PASSPHRASE, keyHash: key.keyHash }),
+  };
+}
+
+/** Publish a prepared key with the issuer's SEP-53 signature (base64). */
+export async function submitIntakeKey(
+  publicKey: string,
+  signature: string,
+  authFetch: (input: string, init?: RequestInit) => Promise<Response>,
+): Promise<void> {
+  const res = await authFetch("/api/issuer-key", {
+    method: "POST",
+    body: JSON.stringify({ public_key: publicKey, signature: signature.trim() }),
+  });
+  const body = (await res.json()) as { error?: string };
+  if (!res.ok) throw new Error(body.error ?? "the intake key was not published");
+}
+
+/** Make an intake key and publish it, signed by the issuer's wallet. */
 export async function publishIntakeKey(
   signMessage: (message: string) => Promise<string>,
   authFetch: (input: string, init?: RequestInit) => Promise<Response>,
 ): Promise<void> {
-  const key = await newSealKey(INTAKE_PURPOSE);
-  const message = intakeKeyMessage({ contract: CONTRACT_ID, network: NETWORK_PASSPHRASE, keyHash: key.keyHash });
-  const signature = await signMessage(message);
-  const res = await authFetch("/api/issuer-key", {
-    method: "POST",
-    body: JSON.stringify({ public_key: b64u(key.publicRaw), signature }),
-  });
-  const body = (await res.json()) as { error?: string };
-  if (!res.ok) throw new Error(body.error ?? "the intake key was not published");
+  const key = await prepareIntakeKey();
+  await submitIntakeKey(key.publicKey, await signMessage(key.message), authFetch);
+}
+
+/** The CLI command that signs `message` (SEP-53), as base64 so no shell quoting can change it. */
+export function intakeSignCommand(message: string, identity: string): string {
+  const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(message)));
+  return `stellar message sign --base64 --sign-with-key ${identity} ${b64}`;
 }
 
 /** Open an ask's sealed details in the issuer's browser, checked against the ask. */
