@@ -29,7 +29,9 @@
 import { randomUUID } from "node:crypto";
 
 import { parseSecretHash } from "@/lib/consent";
+import { FEE_ACCOUNT } from "@/lib/config";
 import { readIssuer } from "@/lib/contract";
+import { reservedAskerReason } from "@/lib/issue-guard";
 import {
   RequestStoreUnavailable,
   expireSealed,
@@ -39,7 +41,7 @@ import {
   type IssuanceRequest,
 } from "@/lib/requests";
 import { checkedAskPublicKey } from "@/lib/sealed";
-import { authenticatedAccount } from "@/lib/sep10";
+import { authenticatedAccount, serverAccount } from "@/lib/sep10";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +60,18 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return Response.json({ error: "expected a JSON body" }, { status: 400 });
   }
+
+  // The fee account, the issuer and the sign-in key never hold a week, so they
+  // may not ask for one: refused here, to the asker, not later at issue time.
+  let signIn: string | null = null;
+  try {
+    signIn = serverAccount();
+  } catch {
+    signIn = null;
+  }
+  const issuerAccount = await readIssuer().catch(() => null);
+  const reserved = reservedAskerReason(caller, { feeAccount: FEE_ACCOUNT, issuer: issuerAccount, signIn });
+  if (reserved) return Response.json({ error: reserved }, { status: 403 });
 
   // The ask is the session's account's, and only its. A body that names anyone
   // else is somebody trying to file an h for an account they have not proved.
@@ -146,9 +160,19 @@ export async function GET(request: Request): Promise<Response> {
       const ask = all.find((r) => r.id === id && !r.direct && (caller === issuer || r.by === caller));
       return ask ? Response.json({ request: ask }) : Response.json({ error: "no such request" }, { status: 404 });
     }
+    // An ask from an account that can never hold a week (one recorded before
+    // such asks were refused) is not offered to the issuer: issuing it would
+    // be refused anyway.
+    let signIn: string | null = null;
+    try {
+      signIn = serverAccount();
+    } catch {
+      signIn = null;
+    }
+    const reserved = { feeAccount: FEE_ACCOUNT, issuer, signIn };
     const requests =
       caller === issuer
-        ? all.filter((r) => r.status === "open")
+        ? all.filter((r) => r.status === "open" && reservedAskerReason(r.by, reserved) === null)
         : all.filter((r) => r.by === caller && !r.direct);
     return Response.json({ requests, as_issuer: caller === issuer });
   } catch (error) {

@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 
-import { reservedOwnerReason } from "./issue-guard";
+import { reservedAskerReason, reservedOwnerReason } from "./issue-guard";
 
 const FEE = "GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z";
 const ISSUER = "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE";
@@ -22,5 +22,16 @@ describe("reservedOwnerReason", () => {
     assert.equal(reservedOwnerReason(OWNER, reserved), null);
     assert.equal(reservedOwnerReason("", reserved), null);
     assert.equal(reservedOwnerReason(FEE, {}), null);
+  });
+});
+
+describe("reservedAskerReason", () => {
+  const reserved = { feeAccount: FEE, issuer: ISSUER, signIn: SIGN_IN };
+
+  it("tells the asker, in their own terms, that the account cannot ask", () => {
+    assert.match(reservedAskerReason(FEE, reserved) ?? "", /signed in with is QuietStay's fee account.*Nothing was asked/);
+    assert.match(reservedAskerReason(ISSUER, reserved) ?? "", /is the issuer/);
+    assert.match(reservedAskerReason(SIGN_IN, reserved) ?? "", /sign-in key/);
+    assert.equal(reservedAskerReason(OWNER, reserved), null);
   });
 });

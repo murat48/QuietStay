@@ -37,3 +37,24 @@ export function reservedOwnerReason(owner: string, reserved: ReservedAccounts): 
   }
   return null;
 }
+
+/**
+ * Why `asker` may not ask for a week, or `null` if it may: the same three
+ * accounts, told to the person asking, at the moment they ask (found on the
+ * testnet demo, 2026-11-26: the fee account, imported into Freighter, asked,
+ * and only the issuer was told, at issue time).
+ */
+export function reservedAskerReason(asker: string, reserved: ReservedAccounts): string | null {
+  const which = reservedOwnerReason(asker, reserved);
+  if (!which) return null;
+  const role =
+    reserved.feeAccount && asker.trim() === reserved.feeAccount
+      ? "QuietStay's fee account, which pays passkey fees"
+      : reserved.issuer && asker.trim() === reserved.issuer
+        ? "the issuer"
+        : "this deployment's sign-in key";
+  return (
+    `The account you are signed in with is ${role}, and it can never hold a week. ` +
+    "Nothing was asked. In your wallet, switch to (or create) an account of your own, sign in with it, and ask again."
+  );
+}
