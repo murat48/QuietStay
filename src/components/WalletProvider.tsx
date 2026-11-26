@@ -303,12 +303,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setBusy(true);
     setError(null);
     try {
-      // 1. pick a wallet. One already picked in this browser, and still
-      // naming an account, is used as it is: asking again was the first of
-      // two prompts for one sign-in (testnet demo, 2026-11-26). The account
-      // is the one the wallet has selected; switch it there to sign in as
-      // another.
-      const connected = (await connectedAddress()) ?? (await connectWallet());
+      // 1. pick a wallet. Signing in again to the same wallet (the session
+      // ended, or a new tab) uses the one already picked, so it is one
+      // prompt (testnet demo, 2026-11-26). After Disconnect the kind is
+      // forgotten and the picker opens, so another wallet or account can be
+      // chosen (found on the demo the same day: Disconnect then left no way
+      // to sign in with another wallet).
+      const sameWallet = lastKind() === "wallet" ? await connectedAddress() : null;
+      const connected = sameWallet ?? (await connectWallet());
       setAddress(connected);
       setKind("wallet");
       rememberKind("wallet");

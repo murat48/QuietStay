@@ -2091,6 +2091,14 @@ of the spec, the rest at the second review of `def5eb6`.
         518 requests, no leaks (sale tx `1c3592a7…`, rental tx `ca0dc3e7…`).
         The editable-form change came after that run and was checked by
         typecheck and lint only.
+    - **Your report (2026-11-26): after Disconnect, no way to sign in with
+      another wallet.** Caused by the one-prompt change above: Connect wallet
+      reused the wallet already picked, so the picker never opened. It now
+      reuses it only when the kind is still remembered (the session ended, a
+      new tab); after Disconnect the picker opens. A passkey still reopens
+      this browser's passkey wallet with one prompt. No-leak e2e (the run
+      after the editable-form change too): 2/2 passed, 517 requests, no
+      leaks (sale tx `d07faa87…`, rental tx `4fd0d602…`).
 
 ### Step 6 — Mainnet deployment
 - Date:
