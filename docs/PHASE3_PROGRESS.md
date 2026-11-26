@@ -1992,6 +1992,14 @@ of the spec, the rest at the second review of `def5eb6`.
         kind is looked for. Disconnect forgets it.
       - No-leak e2e: 2/2, 444 requests, no leaks
         (`evidence/privacy/2026-11-25-no-leak-73e967af.txt`).
+    - **First USDC rental with Freighter on both sides, in the browser
+      (2026-11-26 09:21 UTC).**
+      - Week #16, owner `GCGS…IHNJ`, renter `GCEF…TDAR` (both `G…` accounts),
+        offer #16, 1 USDC.
+      - `accept_rental` was signed and paid by the owner's own account (no
+        fee account), with the proof made in the browser and verified on
+        chain. 1 USDC moved from the renter into the contract.
+      - Escrow #7 is `Funded`. `GCEF…TDAR` holds #16 from 2026-12-07 to 12-13.
       - Not updated: `e2e/passkey-app.spec.ts` and `e2e/swap.spec.ts` still
         follow the issuance flow from before 2026-11-25 (issue without an
         ask, reply links) and need rewriting before they can pass again.
