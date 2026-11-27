@@ -754,6 +754,12 @@ export default function IssueScreen() {
                 <code>{ask.by}</code>{" "}
                 <span className="muted">· asked {formatDate(Date.parse(ask.requested_at) / 1000)}</span>{" "}
                 {ask.sealed_details ? <span className="tag accent">details sent</span> : null}{" "}
+                {ask.renew_of ? (
+                  <span className="tag" data-testid={`ask-renews-${ask.id}`}>
+                    renews week #{ask.renew_of}
+                    {ask.auto_renew ? " · each year" : ""}
+                  </span>
+                ) : null}{" "}
                 <button type="button" onClick={() => {
                     setViewing(viewing === ask.id ? null : ask.id);
                     setDeclineFirst(null);

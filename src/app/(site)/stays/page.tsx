@@ -33,6 +33,7 @@ import { describeError, formatDate, formatDateTime, shortAddress } from "@/lib/f
 import { prover } from "@/lib/prover-client";
 import { requestLink } from "@/lib/sealed";
 import { formatUsdc, needsUsdcTrustline, parseUsdc } from "@/lib/usdc";
+import { useAutoRenewals } from "@/lib/use-auto-renew";
 import { readOnly } from "@/lib/rpc-retry";
 import { useProverSupported } from "@/lib/use-prover-supported";
 import { getRecord, missingHoldingReason, newSealKey, newSecret, resolveHolding, sealKey, secretFor } from "@/lib/vault";
@@ -164,6 +165,8 @@ function ChainSees() {
 
 function Stays() {
   const { address, authenticated, restoring, kind, standing, sign, submitSigned, authFetch, refreshStanding } = useWallet();
+  // Automatic renewals carry on once their week's record is picked up here.
+  useAutoRenewals();
   const supported = useProverSupported();
   const [data, setData] = useState<Payments | null>(null);
   const [focus, setFocus] = useState<{ rightId: number; kind: "rent" | "buy" } | null>(null);

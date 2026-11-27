@@ -170,6 +170,8 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   await I.getByTestId("issue-confirm").click();
   const issued = I.getByText(/Right #\d+/).first();
   await expect(issued).toBeVisible({ timeout: 120_000 });
+  // Read at once: a dev-server reload later in the test clears this result.
+  const rightId = Number(/Right #(\d+)/.exec((await issued.textContent()) ?? "")![1]);
   await expect(I.getByText("Issued with the CLI and confirmed on chain")).toBeVisible();
   await expect(I.getByTestId("issue-delivered")).toBeVisible({ timeout: 60_000 });
 
@@ -180,4 +182,28 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   });
   await settle(O, "/stays");
   await expect(O.getByTestId("inbox-received")).toBeVisible({ timeout: 60_000 });
+
+  // --- 6. renewal (2026-11-27): the contract cannot move a week's dates, so the
+  // title holder asks for next year's, filled in from the record held here.
+  await settle(O, "/list");
+  await O.getByTestId(`renew-now-${rightId}`).click({ timeout: 60_000 });
+  await expect(O.getByTestId(`renew-waiting-${rightId}`)).toContainText("waiting for the issuer", { timeout: 60_000 });
+
+  await settle(I, "/issue");
+  await expect(I.locator('[data-testid^="ask-renews-"]')).toContainText(`renews week #${rightId}`, { timeout: 60_000 });
+  await I.getByRole("button", { name: "Issue to this account" }).first().click();
+  // The same week, 52 weeks later, from the owner's record.
+  await expect(I.locator("#week_in")).toHaveValue("2027-12-18", { timeout: 60_000 });
+  await expect(I.locator("#owner_name")).toHaveValue(ownerName);
+
+  // Declined, so the owner can file an automatic one instead: it waits,
+  // hidden from the issuer, until this week ends (2026-12-26).
+  await I.locator('[data-testid^="ask-decline-"]').first().click();
+  await I.locator('[data-testid^="decline-yes-"]').click();
+  await expect(I.getByTestId("ask-declined-note")).toBeVisible({ timeout: 60_000 });
+  await settle(O, "/list");
+  await O.getByTestId(`renew-auto-${rightId}`).click({ timeout: 60_000 });
+  await expect(O.getByTestId(`renew-waiting-${rightId}`)).toContainText("automatic renewal filed", { timeout: 60_000 });
+  await settle(I, "/issue");
+  await expect(I.getByText("No pending requests.")).toBeVisible({ timeout: 60_000 });
 });

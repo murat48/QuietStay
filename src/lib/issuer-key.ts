@@ -137,3 +137,51 @@ export function detailValues(details: OwnerDetails): { path: string; value: unkn
   }
   return out;
 }
+
+const DAY_MS = 86_400_000;
+
+function shiftIso(iso: unknown, days: number): string | undefined {
+  if (typeof iso !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return undefined;
+  const ms = Date.parse(`${iso}T00:00:00Z`);
+  return Number.isNaN(ms) ? undefined : new Date(ms + days * DAY_MS).toISOString().slice(0, 10);
+}
+
+/**
+ * The details of next year's week, from the record of this year's (2026-11-27,
+ * renewals). Everything carries over; the stay moves by 52 weeks, so it keeps
+ * its weekday and its week number, and the use year follows the new check-in.
+ * The issuer checks it all again before issuing.
+ */
+export function renewalDetails(record: unknown, days = 364): OwnerDetails {
+  const r = (record ?? {}) as {
+    owner?: { name?: unknown; email?: unknown };
+    resort?: { name?: unknown; city?: unknown; country?: unknown; unit?: unknown; bedrooms?: unknown; sleeps?: unknown; features?: unknown };
+    week?: { check_in?: unknown; check_out?: unknown };
+    title?: { deed_reference?: unknown; registry?: unknown; recorded_on?: unknown };
+    maintenance_fees?: { annual_amount?: unknown; currency?: unknown; paid_through?: unknown; outstanding?: unknown };
+  };
+  const str = (v: unknown) => (typeof v === "string" || typeof v === "number" ? String(v) : undefined);
+  const checkIn = shiftIso(r.week?.check_in, days);
+  const raw: Record<string, string | undefined> = {
+    owner_name: str(r.owner?.name),
+    owner_email: str(r.owner?.email),
+    resort_name: str(r.resort?.name),
+    resort_city: str(r.resort?.city),
+    resort_country: str(r.resort?.country),
+    resort_unit: str(r.resort?.unit),
+    resort_bedrooms: str(r.resort?.bedrooms),
+    resort_sleeps: str(r.resort?.sleeps),
+    resort_features: Array.isArray(r.resort?.features) ? r.resort.features.join(", ") : undefined,
+    week_check_in: checkIn,
+    week_check_out: shiftIso(r.week?.check_out, days),
+    week_use_year: checkIn?.slice(0, 4),
+    title_deed: str(r.title?.deed_reference),
+    title_registry: str(r.title?.registry),
+    title_recorded: str(r.title?.recorded_on),
+    fees_annual: str(r.maintenance_fees?.annual_amount),
+    fees_currency: str(r.maintenance_fees?.currency),
+    fees_through: str(r.maintenance_fees?.paid_through),
+    fees_outstanding: str(r.maintenance_fees?.outstanding),
+  };
+  return cleanDetails(raw);
+}

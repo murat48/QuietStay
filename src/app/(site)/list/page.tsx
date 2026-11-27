@@ -34,7 +34,10 @@ import { describeError, formatDate, formatDays, shortAddress, weekIsOver } from 
 import { unixToIsoDate } from "@/lib/record";
 import { requestLink } from "@/lib/sealed";
 import { formatUsdc, parseUsdc } from "@/lib/usdc";
-import { sealKey } from "@/lib/vault";
+import { fileRenewal } from "@/lib/issuance-ask";
+import { renewalDetails } from "@/lib/issuer-key";
+import { useAutoRenewals } from "@/lib/use-auto-renew";
+import { getRecord, sealKey } from "@/lib/vault";
 
 /** What the holder typed as an asking price, in base units, or null if it is not one. */
 function typedPrice(text: string | undefined): bigint | null {
@@ -248,6 +251,23 @@ export default function ListScreen() {
       document.body.style.overflow = overflow;
     };
   }, [opened]);
+  // Automatic renewals carry on by themselves once their week is in this browser.
+  useAutoRenewals();
+  // This account's issuance asks, for each week's renewal status (2026-11-27).
+  const [myAsks, setMyAsks] = useState<OwnIssuanceAsk[]>([]);
+  const loadMyAsks = useCallback(async () => {
+    if (!authenticated) return setMyAsks([]);
+    try {
+      const res = await authFetch("/api/requests/issuance");
+      const body = (await res.json()) as { requests?: OwnIssuanceAsk[] };
+      if (res.ok) setMyAsks(body.requests ?? []);
+    } catch {
+      // shown again on the next load
+    }
+  }, [authenticated, authFetch]);
+  useEffect(() => {
+    void Promise.resolve().then(loadMyAsks);
+  }, [loadMyAsks]);
   const [requests, setRequests] = useState<{ incoming: TransferRequest[]; outgoing: TransferRequest[] }>(
     { incoming: [], outgoing: [] },
   );
@@ -1192,6 +1212,22 @@ export default function ListScreen() {
                     </fieldset>
                   ) : null}
 
+                  {/*
+                    Renewal (2026-11-27). The contract cannot move a right's
+                    dates, so next year's week is a new right the issuer
+                    issues; the title holder asks for it, filled in from the
+                    record in this browser.
+                  */}
+                  {isTitleHolder && address ? (
+                    <RenewWeek
+                      rightId={right.id}
+                      weekEnd={right.week.end}
+                      address={address}
+                      asks={myAsks.filter((a) => a.renew_of === right.id)}
+                      onFiled={() => void loadMyAsks()}
+                    />
+                  ) : null}
+
                   {mine && !answering ? (
                     <div className="row" style={{ marginTop: "0.85rem" }}>
                       {right.listing ? (
@@ -1324,5 +1360,115 @@ export default function ListScreen() {
         <p className="muted">Reading the contract…</p>
       )}
     </>
+  );
+}
+
+/** One of this account's issuance asks, as /api/requests/issuance serves it to the asker. */
+interface OwnIssuanceAsk {
+  id: string;
+  status: "open" | "issued" | "declined";
+  requested_at: string;
+  renew_of?: number;
+  auto_renew?: boolean;
+  open_from?: string;
+  right_id?: number;
+  reason?: string;
+}
+
+/**
+ * Renew a week for next year, now or automatically each year (2026-11-27).
+ * Manual: the ask goes to the issuer at once. Automatic: it is filed now and
+ * opens to the issuer when this week ends; once that week is issued and in
+ * this browser, the next year's is filed the same way (useAutoRenewals).
+ * Either way the issuer checks and issues it: only the issuer can.
+ */
+function RenewWeek(props: {
+  rightId: number;
+  weekEnd: number;
+  address: string;
+  asks: OwnIssuanceAsk[];
+  onFiled: () => void;
+}) {
+  const { rightId, weekEnd, address, asks, onFiled } = props;
+  const { authFetch, kind } = useWallet();
+  const [hasRecord, setHasRecord] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState<"manual" | "auto" | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  // Read once when the card opens: what "ended" and "opens later" are said against.
+  const [now] = useState(() => Date.now());
+  useEffect(() => {
+    void getRecord(rightId).then((r) => setHasRecord(r !== null));
+  }, [rightId]);
+
+  const waiting = asks.find((a) => a.status === "open");
+  const issued = asks.find((a) => a.status === "issued");
+  const declined = asks.find((a) => a.status === "declined");
+  const opensLater = waiting?.open_from && Date.parse(waiting.open_from) > now;
+
+  const renew = async (auto: boolean) => {
+    setBusy(auto ? "auto" : "manual");
+    setProblem(null);
+    try {
+      const rec = await getRecord(rightId);
+      if (!rec) throw new Error("this browser does not hold this week's record, so it cannot fill the renewal in");
+      await fileRenewal({ address, rightId, details: renewalDetails(rec.record), auto, authFetch });
+      onFiled();
+    } catch (caught) {
+      setProblem(describeError(caught));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="note" style={{ marginTop: "0.7rem" }} data-testid={`renew-${rightId}`}>
+      <strong>Next year&apos;s week</strong>{" "}
+      {issued?.right_id !== undefined ? (
+        <span data-testid={`renew-issued-${rightId}`}>
+          · renewed as week #{issued.right_id}
+          {issued.auto_renew ? " (renews automatically each year)" : ""}.
+        </span>
+      ) : waiting ? (
+        <span data-testid={`renew-waiting-${rightId}`}>
+          ·{" "}
+          {opensLater
+            ? `automatic renewal filed: it goes to the issuer on ${formatDate(Date.parse(waiting.open_from!) / 1000)}, when this week ends`
+            : "renewal waiting for the issuer"}
+          .
+        </span>
+      ) : (
+        <>
+          {declined ? (
+            <span className="muted">
+              · the last renewal was declined{declined.reason ? `: “${declined.reason}”` : ""}.{" "}
+            </span>
+          ) : null}
+          <span className="muted">
+            A week is one year&apos;s dates, so next year&apos;s is a new week the issuer issues. This browser fills
+            the request in from this week&apos;s record, 52 weeks later.
+          </span>
+          {kind === "cli" ? null : hasRecord === false ? (
+            <p className="muted" style={{ margin: "0.4rem 0 0" }}>
+              This browser does not hold this week&apos;s record, so it cannot renew it from here.
+            </p>
+          ) : (
+            <div className="row" style={{ gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+              <button disabled={busy !== null || hasRecord !== true} onClick={() => void renew(false)} data-testid={`renew-now-${rightId}`}>
+                {busy === "manual" ? "asking…" : "Renew for next year"}
+              </button>
+              <button disabled={busy !== null || hasRecord !== true} onClick={() => void renew(true)} data-testid={`renew-auto-${rightId}`}>
+                {busy === "auto" ? "filing…" : "Renew automatically each year"}
+              </button>
+              <span className="muted">
+                {weekEnd * 1000 > now
+                  ? `Automatic: it goes to the issuer when this week ends (${formatDate(weekEnd)}).`
+                  : "Automatic: it goes to the issuer now, as this week has ended."}
+              </span>
+            </div>
+          )}
+        </>
+      )}
+      {problem ? <div className="note bad" style={{ marginTop: "0.5rem" }}>{problem}</div> : null}
+    </div>
   );
 }

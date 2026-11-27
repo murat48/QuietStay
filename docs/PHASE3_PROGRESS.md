@@ -2186,6 +2186,31 @@ of the spec, the rest at the second review of `def5eb6`.
     inside Details. Each row now has its own Decline button, which opens the
     panel ready to decline (reason box focused, the confirmation shown). The
     test declines from that button: passed (tx `79040a4f…`).
+- **Your request (2026-11-27, D17): renew a week, manually or automatically
+  each year.** I stopped first: as asked it needs a contract change (a
+  right's dates cannot be moved, and only the issuer issues). You chose to
+  add both kinds without one.
+  - On /list, the title holder's card has "Next year's week": **Renew for
+    next year** (the ask goes to the issuer now) and **Renew automatically
+    each year** (filed now, shown to the issuer from the week's end). Both are
+    filled in from the record in this browser, 52 weeks later
+    (`renewalDetails`), sealed to the intake key. The card shows the state:
+    waiting, filed for a date, renewed as week #N, or declined with the
+    reason.
+  - `POST /api/requests/issuance` takes `renew_of` and `auto_renew`: only
+    the week's title holder on chain, one waiting renewal per week; an
+    automatic one gets `open_from` = the week's end, and until then the
+    issuer neither sees nor can issue it.
+  - `useAutoRenewals` (on /stays and /list): when a week issued from an
+    automatic renewal is in this browser, the next year's is filed.
+  - The issuer's list tags a renewal "renews week #N", and "each year".
+  - Tests: unit 81/81 (the 52-week shift across a year end).
+    `cli-issue.spec.ts` now renews the issued week by hand, checks the
+    issuer's form starts at 2027-12-18 with the owner's details, declines it,
+    files an automatic one and checks the issuer does not see it: passed (tx
+    `c490f977…`). The automatic chain itself (filing the next year once a
+    renewed week is picked up) needs a week that has ended, so it is not run
+    by a test. No-leak 2/2, 489 requests, no leaks.
 
 ### Step 6 — Mainnet deployment
 - Date:

@@ -30,10 +30,11 @@ import { randomUUID } from "node:crypto";
 
 import { parseSecretHash } from "@/lib/consent";
 import { FEE_ACCOUNT } from "@/lib/config";
-import { readIssuer } from "@/lib/contract";
+import { readIssuer, readRight } from "@/lib/contract";
 import { reservedAskerReason } from "@/lib/issue-guard";
 import {
   RequestStoreUnavailable,
+  askIsDue,
   expireSealed,
   loadIssuanceRequests,
   parseKeyHash,
@@ -55,7 +56,15 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  let body: { secret_hash?: unknown; owner?: unknown; key_hash?: unknown; public_key?: unknown; sealed_details?: unknown };
+  let body: {
+    secret_hash?: unknown;
+    owner?: unknown;
+    key_hash?: unknown;
+    public_key?: unknown;
+    sealed_details?: unknown;
+    renew_of?: unknown;
+    auto_renew?: unknown;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -106,8 +115,44 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: (error as Error).message }, { status: 400 });
   }
 
+  // A renewal (2026-11-27): only the week's title holder, read from the chain,
+  // renews it. An automatic one waits, hidden from the issuer, until the week
+  // has ended; a manual one is open at once.
+  let renewal: { renew_of: number; auto_renew?: true; open_from?: string } | undefined;
+  if (body.renew_of !== undefined && body.renew_of !== null) {
+    const rightId = Number(body.renew_of);
+    if (!Number.isInteger(rightId) || rightId < 1) {
+      return Response.json({ error: "renew_of must be a right id" }, { status: 400 });
+    }
+    let right: Awaited<ReturnType<typeof readRight>>;
+    try {
+      right = await readRight(rightId);
+    } catch {
+      return Response.json({ error: `there is no week #${rightId} to renew` }, { status: 404 });
+    }
+    if (right.holdings[0]?.holder !== caller) {
+      return Response.json({ error: `only the title holder of week #${rightId} can renew it` }, { status: 403 });
+    }
+    const auto = body.auto_renew === true;
+    const endsAt = new Date(right.period.end * 1000);
+    renewal = {
+      renew_of: rightId,
+      ...(auto ? { auto_renew: true as const } : {}),
+      ...(auto && endsAt.getTime() > Date.now() ? { open_from: endsAt.toISOString() } : {}),
+    };
+  }
+
   try {
     const all = await loadIssuanceRequests();
+    if (renewal) {
+      const already = all.find((r) => r.renew_of === renewal.renew_of && r.status === "open");
+      if (already) {
+        return Response.json(
+          { error: `week #${renewal.renew_of} already has a renewal waiting`, request: already },
+          { status: 409 },
+        );
+      }
+    }
     const duplicate = all.find((r) => r.by === caller && r.status === "open" && r.secret_hash === h.toString());
     if (duplicate) {
       return Response.json(
@@ -134,6 +179,7 @@ export async function POST(request: Request): Promise<Response> {
       ...(keyHash ? { key_hash: keyHash } : {}),
       ...(publicKey ? { public_key: publicKey } : {}),
       ...(sealedDetails ? { sealed_details: sealedDetails } : {}),
+      ...(renewal ?? {}),
       requested_at: new Date().toISOString(),
       status: "open",
     };
@@ -183,7 +229,7 @@ export async function GET(request: Request): Promise<Response> {
     const reserved = { feeAccount: FEE_ACCOUNT, issuer, signIn };
     const requests =
       caller === issuer
-        ? all.filter((r) => r.status === "open" && reservedAskerReason(r.by, reserved) === null)
+        ? all.filter((r) => r.status === "open" && askIsDue(r) && reservedAskerReason(r.by, reserved) === null)
         : all.filter((r) => r.by === caller && !r.direct);
     return Response.json({ requests, as_issuer: caller === issuer });
   } catch (error) {

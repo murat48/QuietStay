@@ -322,6 +322,19 @@ export interface IssuanceRequest {
   declined_at?: string;
   reason?: string;
   /**
+   * A renewal (2026-11-27): the next year's week of right #`renew_of`, asked
+   * by its title holder (checked on chain when asked). The contract cannot
+   * change a right's dates, so a renewal is a new right the issuer issues.
+   */
+  renew_of?: number;
+  /** Renew every year: when this one is issued, the owner's browser files the next. */
+  auto_renew?: boolean;
+  /**
+   * Not shown to the issuer before this time (ISO): an automatic renewal is
+   * filed in advance and opens when the week it renews has ended.
+   */
+  open_from?: string;
+  /**
    * Not an ask: the issuer issued directly, with an h typed in. Recorded only so
    * that h is known to be spent; hidden from every list of requests.
    */
@@ -382,6 +395,11 @@ export async function recordDirectIssuance(issued: {
 }
 
 /** Close an issuance request once its week is on chain. Same read-modify-write caveat as above. */
+/** Whether the issuer may see an ask yet: an automatic renewal waits for its week to end. */
+export function askIsDue(r: IssuanceRequest, now = Date.now()): boolean {
+  return !r.open_from || Date.parse(r.open_from) <= now;
+}
+
 /** Decline an open ask, with an optional reason. `null` when there is no such open ask. */
 export async function markDeclined(requestId: string, reason: string | undefined): Promise<IssuanceRequest | null> {
   const all = await loadIssuanceRequests();

@@ -31,7 +31,7 @@ import {
   validateRecord,
   type OwnershipRecord,
 } from "./record";
-import { RequestStoreUnavailable, loadIssuanceRequests, weekSecuredBy } from "./requests";
+import { RequestStoreUnavailable, askIsDue, loadIssuanceRequests, weekSecuredBy } from "./requests";
 import { serverAccount } from "./sep10";
 
 export interface PreparedIssuance {
@@ -86,6 +86,7 @@ export async function prepareIssuance(
     const ask = (await loadIssuanceRequests()).find((r) => r.id === body.request_id);
     if (!ask) throw new IssuanceRefused("no such issuance request", 404);
     if (ask.status !== "open") throw new IssuanceRefused(`this request was already ${ask.status}`, 409, { request: ask });
+    if (!askIsDue(ask)) throw new IssuanceRefused(`this automatic renewal opens on ${ask.open_from}, when the week it renews ends`, 409);
     if (record.owner.stellar_account !== ask.by) {
       throw new IssuanceRefused(`the record's first holder must be the account that asked, ${ask.by}`, 400);
     }
