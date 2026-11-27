@@ -2301,6 +2301,20 @@ of the spec, the rest at the second review of `def5eb6`.
   the same calendar dates a year later (`nextYearIso`; 29 February becomes
   28 February in a common year). #23 is on chain and keeps its dates.
   Tests: unit 90/90.
+- **2026-11-28, Stop 2: protecting the fee account from being drained.**
+  Already: a call the contract refuses (listing a week one does not hold)
+  fails its simulation and is never sent, so it costs nothing; per IP, per
+  wallet and daily counts. Added in the fee route (`src/lib/sponsor.ts`):
+  - a daily XLM budget, each transaction's fee counted at its cap before it
+    is sent: 5 XLM on mainnet, 100 on testnet. The bound that holds whatever
+    is tried: the account loses at most that in a day;
+  - at most 0.5 XLM a transaction on mainnet (1 on testnet);
+  - passkey wallet creation, open to anyone and the costliest call, limited
+    on its own: 2 per IP and 10 in all a day on mainnet (5 and 100 on
+    testnet), so new wallets do not get round the per-wallet limit;
+  - at most 6 listing changes, rental offers or record requests on one week
+    a day on mainnet (20 on testnet).
+  - Tests: unit 93/93.
 
 ### Step 6 — Mainnet deployment
 - Date:

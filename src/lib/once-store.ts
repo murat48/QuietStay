@@ -45,12 +45,15 @@ export async function claimOnce(key: string, ttlSecs: number): Promise<boolean> 
   });
 }
 
-/** Count one more event under `key` in a window of `ttlSecs`. Returns the count including this one. */
-export async function countInWindow(key: string, ttlSecs: number): Promise<number> {
-  if (kvIsConfigured()) return kvCount(ns(key), ttlSecs);
+/**
+ * Count one more event under `key` in a window of `ttlSecs` (or add `by`, as
+ * for a sum of fees). Returns the total including this one.
+ */
+export async function countInWindow(key: string, ttlSecs: number, by = 1): Promise<number> {
+  if (kvIsConfigured()) return kvCount(ns(key), ttlSecs, by);
   return withFile((s, now) => {
     const e = s[key] ?? { n: 0, until: now + ttlSecs };
-    e.n += 1;
+    e.n += by;
     s[key] = e;
     return e.n;
   });

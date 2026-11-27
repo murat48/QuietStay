@@ -14,7 +14,8 @@
  * mainnet too since D18) and submits it.
  * No session is needed: a wallet is created before it can sign in, and the
  * contract authorizes every call on its own. Each sponsored transaction
- * counts against the rate limits, whatever its outcome.
+ * counts against the rate limits, whatever its outcome, and its fee, at its
+ * most, against the day's XLM budget before it is sent (2026-11-28).
  */
 
 import {
@@ -31,7 +32,7 @@ import { ConfigurationError, FEE_ACCOUNT, NETWORK_PASSPHRASE, feeSecret } from "
 import { explainSimulationFailure, invokedContract, readInventory, readIssuer, server, submit } from "@/lib/contract";
 import { countInWindow } from "@/lib/once-store";
 import { serverAccount } from "@/lib/sep10";
-import { assertFeeKeyIsolated, checkSponsored, LIMITS, MAX_FEE_STROOPS, SponsorRefusal } from "@/lib/sponsor";
+import { assertFeeKeyIsolated, checkSponsored, LIMITS, MAX_FEE_STROOPS, SponsorRefusal, weekActedOn, type Checked } from "@/lib/sponsor";
 
 export const dynamic = "force-dynamic";
 
@@ -74,21 +75,47 @@ function parseBody(body: { xdr?: unknown; func?: unknown; auth?: unknown }): {
   throw new SponsorRefusal("expected { xdr } or { func, auth }", 400);
 }
 
-async function rateLimit(ip: string, wallet: string | null): Promise<void> {
+async function rateLimit(ip: string, checked: Checked): Promise<void> {
+  const wallet = checked.wallet;
+  const creating = checked.kind === "wallet-deployment";
+  const week = weekActedOn(checked.func);
   let counts: number[];
   try {
     counts = await Promise.all([
       countInWindow(`sponsor:ip:${ip}`, 3600),
       countInWindow("sponsor:all", 86_400),
       wallet ? countInWindow(`sponsor:wallet:${wallet}`, 86_400) : Promise.resolve(0),
+      creating ? countInWindow(`sponsor:create:ip:${ip}`, 86_400) : Promise.resolve(0),
+      creating ? countInWindow("sponsor:create:all", 86_400) : Promise.resolve(0),
+      week !== null ? countInWindow(`sponsor:week:${week}`, 86_400) : Promise.resolve(0),
     ]);
   } catch {
     throw new SponsorRefusal("the rate-limit store cannot be reached, so nothing is sponsored", 503);
   }
-  const [perIp, total, perWallet] = counts as [number, number, number];
+  const [perIp, total, perWallet, createIp, createAll, perWeek] = counts as [number, number, number, number, number, number];
   if (perIp > LIMITS.perIpPerHour) throw new SponsorRefusal(`more than ${LIMITS.perIpPerHour} sponsored transactions from this address this hour`, 429);
   if (total > LIMITS.totalPerDay) throw new SponsorRefusal(`the daily limit of ${LIMITS.totalPerDay} sponsored transactions is reached`, 429);
   if (perWallet > LIMITS.perWalletPerDay) throw new SponsorRefusal(`more than ${LIMITS.perWalletPerDay} sponsored transactions for this wallet today`, 429);
+  if (createIp > LIMITS.walletsPerIpPerDay) throw new SponsorRefusal(`more than ${LIMITS.walletsPerIpPerDay} passkey wallets created from this address today`, 429);
+  if (createAll > LIMITS.walletsPerDay) throw new SponsorRefusal(`the daily limit of ${LIMITS.walletsPerDay} new passkey wallets is reached`, 429);
+  if (perWeek > LIMITS.perWeekPerDay) throw new SponsorRefusal(`more than ${LIMITS.perWeekPerDay} listing changes or offers on week #${week} today`, 429);
+}
+
+/**
+ * Count the fee, at its most, against the day's XLM budget before sending
+ * (2026-11-28). Counted at the cap the transaction declares, not what it ends
+ * up charging, so the budget is a bound the fee account cannot pass.
+ */
+async function spendBudget(stroops: bigint): Promise<void> {
+  let spent: number;
+  try {
+    spent = await countInWindow("sponsor:stroops", 86_400, Number(stroops));
+  } catch {
+    throw new SponsorRefusal("the rate-limit store cannot be reached, so nothing is sponsored", 503);
+  }
+  if (spent > LIMITS.stroopsPerDay) {
+    throw new SponsorRefusal(`the fee account's daily budget of ${LIMITS.stroopsPerDay / 10_000_000} XLM is spent; try again tomorrow`, 429);
+  }
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -111,7 +138,7 @@ export async function POST(request: Request): Promise<Response> {
     const { func, auth } = parseBody((await request.json()) as Record<string, unknown>);
     const checked = checkSponsored(func, auth, feeAccount);
     const ip = (request.headers.get("x-forwarded-for") ?? "").split(",")[0]!.trim() || "local";
-    await rateLimit(ip, checked.wallet);
+    await rateLimit(ip, checked);
 
     const account = await server.getAccount(feeAccount);
     const tx = new TransactionBuilder(account, { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
@@ -149,6 +176,7 @@ export async function POST(request: Request): Promise<Response> {
     if (BigInt(assembled.fee) > MAX_FEE_STROOPS) {
       return Response.json({ error: `the fee ${assembled.fee} exceeds the ${MAX_FEE_STROOPS}-stroop cap` }, { status: 403 });
     }
+    await spendBudget(BigInt(assembled.fee));
     assembled.sign(fee);
     const result = await submit(assembled);
     let ledger: number | undefined;

@@ -9,7 +9,7 @@ import { describe, it } from "node:test";
 import { Address, Keypair, nativeToScVal, StrKey, xdr } from "@stellar/stellar-sdk";
 
 import { CONTRACT_ID, SMART_ACCOUNT_WASM_HASH, USDC_CONTRACT_ID } from "./config";
-import { assertFeeKeyIsolated, checkSponsored, SponsorRefusal } from "./sponsor";
+import { assertFeeKeyIsolated, checkSponsored, LIMITS, SponsorRefusal, weekActedOn } from "./sponsor";
 
 const fee = Keypair.random().publicKey();
 const wallet = StrKey.encodeContract(Keypair.random().rawPublicKey());
@@ -132,5 +132,25 @@ describe("the fee route refuses", () => {
     refused(() => assertFeeKeyIsolated(others.signingKey, others), /sign-in key/);
     refused(() => assertFeeKeyIsolated(wallet, others), /holds a right/);
     assert.doesNotThrow(() => assertFeeKeyIsolated(fee, others));
+  });
+});
+
+describe("the fee route's limits against draining it (2026-11-28)", () => {
+  const u64 = (n: number) => nativeToScVal(n, { type: "u64" });
+  const who = new Address(wallet).toScVal();
+  it("names the week of a listing change, an offer or a record request", () => {
+    assert.equal(weekActedOn(call(CONTRACT_ID, "list", [who, u64(23), nativeToScVal(null)])), 23);
+    assert.equal(weekActedOn(call(CONTRACT_ID, "unlist", [who, u64(23)])), 23);
+    assert.equal(weekActedOn(call(CONTRACT_ID, "create_rental_offer", [who, u64(7), u64(1), u64(2)])), 7);
+    assert.equal(weekActedOn(call(CONTRACT_ID, "request_record", [who, u64(9)])), 9);
+  });
+  it("names no week for other calls", () => {
+    assert.equal(weekActedOn(call(CONTRACT_ID, "cancel_offer", [who, u64(17)])), null);
+    assert.equal(weekActedOn(call(CONTRACT_ID, "accept_rental", [who, u64(17)])), null);
+  });
+  it("keeps a daily XLM budget, wallet-creation limits and a per-week limit", () => {
+    assert.ok(LIMITS.stroopsPerDay > 0 && LIMITS.walletsPerIpPerDay > 0 && LIMITS.walletsPerDay > 0 && LIMITS.perWeekPerDay > 0);
+    // A day's budget is spent by no fewer than a handful of the largest transactions.
+    assert.ok(BigInt(LIMITS.stroopsPerDay) >= LIMITS.maxFeeStroops * 10n);
   });
 });

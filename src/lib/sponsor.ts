@@ -30,10 +30,23 @@
  *   did (the route, 2026-11-27): a call that needs one it lacks is refused
  *   before sending, rather than sent to fail on chain at the fee account's
  *   cost, and none can be the fee account's own as the source;
- * - the fee is at most 10,000,000 stroops (1 XLM);
+ * - the fee is at most 1 XLM on testnet, 0.5 XLM on mainnet;
  * - rate limits: 10 per IP per hour, 20 per smart wallet per day, 300 per day
  *   in total on testnet; 10, 10 and 50 on mainnet. Kept in the deployment's store. If the store cannot be reached,
- *   the route refuses rather than run unlimited.
+ *   the route refuses rather than run unlimited;
+ * - and, against someone draining the fee account (2026-11-28):
+ *   - a daily XLM budget: the fees of the day's sponsored transactions,
+ *     counted at their most before each is sent, never pass 5 XLM on
+ *     mainnet (100 on testnet). This is the bound that holds whatever else
+ *     is tried: the account can lose at most that in a day;
+ *   - wallet creation, open to anyone and the costliest call, is limited on
+ *     its own: 2 per IP and 10 in all a day on mainnet (5 and 100 on testnet),
+ *     so making new wallets does not get round the per-wallet limit;
+ *   - listing, unlisting, rental offers and record requests on one week: at
+ *     most 6 a day on mainnet (20 on testnet), so a week cannot be put up and
+ *     taken down over and over. A call the contract would refuse (listing a
+ *     week one does not hold, for one) fails its simulation and is never
+ *     sent, so it costs nothing.
  *
  * The fee key has no other role. `assertFeeKeyIsolated` refuses to run if the
  * fee address is the issuer, the SEP-10/SEP-45 signing key, or a holder of
@@ -45,11 +58,46 @@ import { Address, hash, StrKey, xdr } from "@stellar/stellar-sdk";
 import { CONTRACT_ID, IS_MAINNET, NETWORK_PASSPHRASE, SMART_ACCOUNT_WASM_HASH, USDC_CONTRACT_ID } from "./config";
 
 export const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
-export const MAX_FEE_STROOPS = 10_000_000n;
 /** Lower on mainnet, where the fee account's few XLM are real (D18). */
 export const LIMITS = IS_MAINNET
-  ? ({ perIpPerHour: 10, perWalletPerDay: 10, totalPerDay: 50 } as const)
-  : ({ perIpPerHour: 10, perWalletPerDay: 20, totalPerDay: 300 } as const);
+  ? ({
+      perIpPerHour: 10,
+      perWalletPerDay: 10,
+      totalPerDay: 50,
+      maxFeeStroops: 5_000_000n,
+      stroopsPerDay: 50_000_000,
+      walletsPerIpPerDay: 2,
+      walletsPerDay: 10,
+      perWeekPerDay: 6,
+    } as const)
+  : ({
+      perIpPerHour: 10,
+      perWalletPerDay: 20,
+      totalPerDay: 300,
+      maxFeeStroops: 10_000_000n,
+      stroopsPerDay: 1_000_000_000,
+      walletsPerIpPerDay: 5,
+      walletsPerDay: 100,
+      perWeekPerDay: 20,
+    } as const);
+export const MAX_FEE_STROOPS = LIMITS.maxFeeStroops;
+
+/** The rights-contract functions whose second argument is the week (right id) they act on. */
+const WEEK_CALLS = new Set(["list", "unlist", "create_rental_offer", "request_record"]);
+
+/**
+ * The week a sponsored call acts on, for the per-week limit: `list`, `unlist`,
+ * `create_rental_offer` and `request_record` name it as their second
+ * argument. `null` for any other call.
+ */
+export function weekActedOn(func: xdr.HostFunction): number | null {
+  if (func.switch().name !== "hostFunctionTypeInvokeContract") return null;
+  const c = func.invokeContract();
+  if (!WEEK_CALLS.has(c.functionName().toString())) return null;
+  const id = c.args()[1];
+  if (!id || id.switch().name !== "scvU64") return null;
+  return Number(id.u64().toBigInt());
+}
 
 export class SponsorRefusal extends Error {
   constructor(

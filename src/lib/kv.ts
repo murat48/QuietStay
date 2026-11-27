@@ -152,8 +152,9 @@ export async function kvSetOnce(key: string, value: string, ttlSecs: number): Pr
 }
 
 /** Add one to the counter at `key`, starting its `ttlSecs` window on first use. The new count. */
-export async function kvCount(key: string, ttlSecs: number): Promise<number> {
-  const n = Number(await command(["INCR", key]));
-  if (n === 1) await command(["EXPIRE", key, ttlSecs]);
+export async function kvCount(key: string, ttlSecs: number, by = 1): Promise<number> {
+  const n = Number(await command(by === 1 ? ["INCR", key] : ["INCRBY", key, by]));
+  // The window starts with the first event in it.
+  if (n === by) await command(["EXPIRE", key, ttlSecs]);
   return n;
 }
