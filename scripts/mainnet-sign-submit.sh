@@ -178,7 +178,18 @@ if [ "$RESUME" -eq 0 ]; then
     echo "Refused: set QS_PILOT_ACCOUNTS (every pilot account holding USDC, comma-separated) and QS_RIGHTS_CONTRACT. Nothing was signed." >&2
     exit 1
   fi
-  if ! npx tsx scripts/check-pilot-accounts.ts --network "$NETWORK" --accounts "$QS_PILOT_ACCOUNTS" --contract "$QS_RIGHTS_CONTRACT"; then
+  # QS_PILOT_MAX_TOTAL (testnet only, 2026-11-28): the demo's accounts hold
+  # more test USDC than the pilot's 5, so a testnet rehearsal may raise the
+  # total. On mainnet the 5 USDC limit always applies.
+  MAX_TOTAL=()
+  if [ -n "${QS_PILOT_MAX_TOTAL:-}" ]; then
+    if [ "$NETWORK" != "testnet" ]; then
+      echo "Refused: QS_PILOT_MAX_TOTAL is for the testnet only; on mainnet the pilot total is 5 USDC. Nothing was signed." >&2
+      exit 1
+    fi
+    MAX_TOTAL=(--max-total "$QS_PILOT_MAX_TOTAL")
+  fi
+  if ! npx tsx scripts/check-pilot-accounts.ts --network "$NETWORK" --accounts "$QS_PILOT_ACCOUNTS" --contract "$QS_RIGHTS_CONTRACT" "${MAX_TOTAL[@]}"; then
     echo "Refused: the pilot account check failed (trustline or the 5 USDC total). Nothing was signed." >&2
     exit 1
   fi

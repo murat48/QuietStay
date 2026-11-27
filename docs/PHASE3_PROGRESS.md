@@ -2315,6 +2315,28 @@ of the spec, the rest at the second review of `def5eb6`.
   - at most 6 listing changes, rental offers or record requests on one week
     a day on mainnet (20 on testnet).
   - Tests: unit 93/93.
+- **Item 5, the arbiter routing (2026-11-28).** `arbiter-resolve.sh` keeps its
+  checks (the identity is the contract's arbiter, the escrow is Disputed, the
+  decision file's hash, who is paid how much, the simulation). Instead of
+  sending, it now builds the unsigned envelope with the arbiter's public key
+  (`--build-only`, then `stellar tx simulate` with instruction headroom),
+  saves it as `resolve-escrow-<id>-<network>.xdr` under `--out-dir`,
+  `QS_ENVELOPE_DIR` or `~/quietstay-envelopes` (outside the repository), one
+  per escrow, and hands it to `mainnet-sign-submit.sh`: the review, the
+  protocol and pilot checks, SEND, one signature, the recovery. Run again for
+  the same escrow, it builds nothing new and points to `--resume`. The old
+  direct send stays for the testnet only, as `--direct`.
+  - `mainnet-sign-submit.sh`: `QS_PILOT_MAX_TOTAL` raises the pilot total
+    for a testnet rehearsal (the demo's accounts hold more than 5 test USDC);
+    refused on mainnet.
+  - Testnet run on escrow #4 (week #13, disputed by you from the demo
+    passkey wallet): the first envelope was refused by the review (it
+    declared 2 stroops and 5,216 instructions fewer than the re-simulation
+    needed), so the headroom was added; the second passed the review.
+  - **Then the protocol check stopped it: mainnet is on protocol 30, not
+    29**, the protocol the contracts were tested for. Nothing was signed.
+    Per the checklist, mainnet work stops until the protocol, simulation and
+    cost items are re-run. Escrow #4 is still Disputed.
 
 ### Step 6 — Mainnet deployment
 - Date:
