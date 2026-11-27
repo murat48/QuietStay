@@ -15,7 +15,7 @@
 import Link from "next/link";
 
 import { useWallet } from "@/components/WalletProvider";
-import { formatDate } from "@/lib/format";
+import { formatDate, notYetValid } from "@/lib/format";
 import { ROLE_LABELS, type RightSummary } from "@/lib/roles";
 
 function WeekList({
@@ -38,7 +38,11 @@ function WeekList({
               {formatDate(right.week.start)} → {formatDate(right.week.end)}
             </span>
             <span className="row" style={{ gap: "0.3rem" }}>
-              {!right.active ? <span className="tag bad">expired</span> : null}
+              {right.active ? null : notYetValid(right.validity.from) ? (
+                <span className="tag warn">opens {formatDate(right.validity.from)}</span>
+              ) : (
+                <span className="tag bad">expired</span>
+              )}
               {right.termEnds !== null ? (
                 <span className="tag warn">until {formatDate(right.termEnds)}</span>
               ) : null}

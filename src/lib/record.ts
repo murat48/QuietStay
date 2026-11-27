@@ -166,18 +166,32 @@ export function isoWeekNumber(isoDate: string): number {
  * contract enforces both, and neither reveals anything the listing does not
  * already have to say — the resort, the unit, the deed, and the owner's identity
  * stay in the record.
+ *
+ * A week issued before its use year begins (a renewal for next year, or any
+ * week asked for ahead) opens on the day it is issued instead (2026-11-27).
+ * The contract refuses `list`, offers and swaps outside the validity window,
+ * so a window starting on 1 January left a renewed week unlistable, and shown
+ * as expired, until then. The contract asks only that the window enclose the
+ * week, and the window is not part of the commitment, so this needs no
+ * contract change. `now` is in Unix seconds; it is rounded down to the start
+ * of its UTC day so the preview, the envelope and the server agree.
  */
-export function onChainWindows(record: OwnershipRecord): {
+export function onChainWindows(
+  record: OwnershipRecord,
+  now: number = Math.floor(Date.now() / 1000),
+): {
   period: { start: number; end: number };
   validity: { from: number; until: number };
 } {
+  const yearStart = isoDateToUnix(`${record.week.use_year}-01-01`);
+  const today = now - (now % 86_400);
   return {
     period: {
       start: isoDateToUnix(record.week.check_in),
       end: isoDateToUnix(record.week.check_out),
     },
     validity: {
-      from: isoDateToUnix(`${record.week.use_year}-01-01`),
+      from: Math.min(yearStart, today),
       until: isoDateToUnix(`${record.week.use_year + 1}-01-01`),
     },
   };

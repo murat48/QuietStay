@@ -30,7 +30,7 @@ import { createPortal } from "react-dom";
 import { photosFor, StayCover, StayGallery } from "@/components/StayPhotos";
 import { useWallet } from "@/components/WalletProvider";
 import { ATTESTATIONS, NETWORK_LABEL, explorer } from "@/lib/config";
-import { describeError, formatDate, formatDays, shortAddress, weekIsOver } from "@/lib/format";
+import { describeError, formatDate, formatDays, notYetValid, shortAddress, weekIsOver } from "@/lib/format";
 import { unixToIsoDate } from "@/lib/record";
 import { requestLink } from "@/lib/sealed";
 import { formatUsdc, parseUsdc } from "@/lib/usdc";
@@ -777,7 +777,13 @@ export default function ListScreen() {
                       {right.property ? <span className="muted listing-id"> · Right #{right.id}</span> : null}
                     </h3>
                     <div className="row" style={{ gap: "0.3rem" }}>
-                      {right.active ? null : <span className="tag bad">expired</span>}
+                      {right.active ? null : notYetValid(right.validity.from) ? (
+                        <span className="tag warn" data-testid={`opens-${right.id}`}>
+                          opens {formatDate(right.validity.from)}
+                        </span>
+                      ) : (
+                        <span className="tag bad">expired</span>
+                      )}
                       {right.active && over ? <span className="tag">week over</span> : null}
                       {right.fees !== null && !right.fees.current ? (
                         <span className="tag bad">fees due</span>

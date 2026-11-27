@@ -83,3 +83,13 @@ export function describeError(caught: unknown): string {
 export function weekIsOver(weekEnd: number, nowSecs: number = Date.now() / 1000): boolean {
   return weekEnd <= nowSecs;
 }
+
+/**
+ * A week whose validity window has not begun (2026-11-27): the contract's
+ * `is_active` is false for it as for an expired one, but it is not expired. A
+ * week renewed for next year before renewals opened on the day of issue has
+ * this until 1 January; the contract refuses listing it until then.
+ */
+export function notYetValid(validityFrom: number, nowSecs: number = Date.now() / 1000): boolean {
+  return nowSecs < validityFrom;
+}

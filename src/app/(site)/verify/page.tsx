@@ -63,7 +63,7 @@ import { ATTESTATIONS, CONTRACT_ID, NETWORK_LABEL, NETWORK_PASSPHRASE, explorer 
  */
 const NO_ATTESTATIONS_DETAIL =
   `this ${NETWORK_LABEL} deployment issues no attestations: QuietStay signs none here, so nothing on this page vouches for maintenance fees. The on-chain checks are all there is`;
-import { describeError, formatDate, shortAddress } from "@/lib/format";
+import { describeError, formatDate, notYetValid, shortAddress } from "@/lib/format";
 import { validateRecord, type OwnershipRecord } from "@/lib/record";
 
 interface ProvenTransfer {
@@ -264,7 +264,9 @@ export default function VerifyScreen() {
         ok: input.right.active,
         detail: input.right.active
           ? `use year ${formatDate(input.right.validity.from)} → ${formatDate(input.right.validity.until)}`
-          : "the use year has closed, so this right can no longer be transferred",
+          : notYetValid(input.right.validity.from)
+            ? `its validity window opens on ${formatDate(input.right.validity.from)}; until then it cannot be listed or transferred`
+            : "the use year has closed, so this right can no longer be transferred",
       });
 
       if (input.right.term_ends !== null) {

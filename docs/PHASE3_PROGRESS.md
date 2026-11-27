@@ -2265,6 +2265,20 @@ of the spec, the rest at the second review of `def5eb6`.
     CLI, as you prefer), send it a few XLM, and set its public key as
     `NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT` and its secret as
     `QUIETSTAY_FEE_SECRET` in the mainnet Vercel project.
+- **2026-11-27, Stop 2 finding: a renewed week showed "expired".** The
+  validity window was the use year (from 1 January). A week renewed for 2027
+  in November 2026 was therefore not valid yet, the contract's `is_active`
+  said false, the app showed that as "expired", and the contract refused
+  `list` for it (`RightNotYetValid`) until 1 January.
+  - Fixed without a contract change: a week issued before its use year begins
+    gets a validity window that opens on the day it is issued, start of the
+    UTC day (`onChainWindows`). The contract asks only that the window enclose
+    the week, and the window is not part of the commitment. So a renewal can
+    be listed as soon as it is issued.
+  - A week already issued with the old window cannot be changed (its dates
+    are fixed on chain). It now shows "opens 1 Jan 2027" instead of
+    "expired" (list, account panel, verify) and becomes listable on that day.
+  - Tests: unit 84/84, with `record-windows.test.ts`.
 
 ### Step 6 — Mainnet deployment
 - Date:
