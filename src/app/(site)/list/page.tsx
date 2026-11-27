@@ -1232,6 +1232,7 @@ export default function ListScreen() {
                   {isTitleHolder && address ? (
                     <RenewWeek
                       rightId={right.id}
+                      weekEnd={right.week.end}
                       validityUntil={right.validity.until}
                       listedPrice={
                         right.listing?.asking_price
@@ -1395,8 +1396,8 @@ interface OwnIssuanceAsk {
 /**
  * Renew a week for next year, now or automatically (2026-11-27).
  *
- * Once per week, and a manual renewal only from the week's own use year, so
- * renewals cannot run years ahead. Automatic: filed now, it goes to the issuer
+ * Once per week, and a manual renewal only from the day after the week's
+ * check-out, so renewals cannot run years ahead. Automatic: filed now, it goes to the issuer
  * when this week's use year is over; once that week is issued and in this
  * browser, the next year's is filed the same way (useAutoRenewals). A renewal
  * carries the price to list the new week at; while it waits the owner can
@@ -1405,6 +1406,7 @@ interface OwnIssuanceAsk {
  */
 function RenewWeek(props: {
   rightId: number;
+  weekEnd: number;
   validityUntil: number;
   /** This week's asking price as typed USDC, the default for next year's. */
   listedPrice: string;
@@ -1412,7 +1414,7 @@ function RenewWeek(props: {
   asks: OwnIssuanceAsk[];
   onFiled: () => void;
 }) {
-  const { rightId, validityUntil, listedPrice, address, asks, onFiled } = props;
+  const { rightId, weekEnd, validityUntil, listedPrice, address, asks, onFiled } = props;
   const { authFetch, kind } = useWallet();
   const [hasRecord, setHasRecord] = useState<boolean | null>(null);
   const [busy, setBusy] = useState<"manual" | "auto" | "save" | "cancel" | null>(null);
@@ -1429,12 +1431,12 @@ function RenewWeek(props: {
   const issued = asks.find((a) => a.status === "issued");
   const declined = [...asks].reverse().find((a) => a.status === "declined" || a.status === "cancelled");
   const opensLater = waiting?.open_from && Date.parse(waiting.open_from) > now;
-  // The use year this week belongs to, and when it is over.
+  // When this week's use year is over: when an automatic renewal opens.
   const yearEnd = validityUntil;
-  const year = new Date((yearEnd - 1) * 1000).getUTCFullYear();
-  const yearStart = Date.UTC(year, 0, 1) / 1000;
   const yearOver = yearEnd * 1000 <= now;
-  const manualAllowed = now / 1000 >= yearStart;
+  // By hand from the day after check-out (renewableFrom on the server).
+  const manualFrom = weekEnd + 86_400;
+  const manualAllowed = now / 1000 >= manualFrom;
 
   const typed = price ?? (editing && waiting?.price ? formatUsdc(BigInt(waiting.price)) : listedPrice);
   const typedOk = typed.trim() === "" || typedPrice(typed) !== null;
@@ -1574,7 +1576,7 @@ function RenewWeek(props: {
               <p className="muted" style={{ margin: "0.4rem 0 0" }} data-testid={`renew-when-${rightId}`}>
                 {manualAllowed
                   ? null
-                  : `This week is for ${year}, so it can be renewed by hand from ${formatDate(yearStart)}. `}
+                  : `By hand from ${formatDate(manualFrom)}, the day after check-out. `}
                 {yearOver
                   ? "Automatic: it goes to the issuer now, as this week's year is over."
                   : `Automatic: it goes to the issuer when this week's year is over (${formatDate(yearEnd)}), and each year after.`}

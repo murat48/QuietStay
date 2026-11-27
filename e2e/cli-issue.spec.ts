@@ -153,7 +153,8 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
     record_id: randomUUID(),
     salt: randomBytes(32).toString("hex"),
     owner: { name: ownerName, email: "cli.e2e@example.invalid", stellar_account: owner.publicKey() },
-    week: { check_in: "2026-12-19", check_out: "2026-12-26", use_year: 2026, week_number: 51 },
+    // A week already used, so it can be renewed by hand (from the day after check-out).
+    week: { check_in: "2026-11-14", check_out: "2026-11-21", use_year: 2026, week_number: 46 },
   };
   await I.locator("textarea#record").fill(JSON.stringify(record, null, 2));
   await I.getByTestId("issue-build-envelope").click();
@@ -198,7 +199,7 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   await expect(I.locator('[data-testid^="ask-renews-"]')).toContainText(`renews week #${rightId}`, { timeout: 60_000 });
   await I.getByRole("button", { name: "Issue to this account" }).first().click();
   // The same week, 52 weeks later, from the owner's record.
-  await expect(I.locator("#week_in")).toHaveValue("2027-12-18", { timeout: 60_000 });
+  await expect(I.locator("#week_in")).toHaveValue("2027-11-13", { timeout: 60_000 });
   await expect(I.locator("#owner_name")).toHaveValue(ownerName);
 
   // Declined, so the owner can file an automatic one instead: it waits,

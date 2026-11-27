@@ -2282,9 +2282,10 @@ of the spec, the rest at the second review of `def5eb6`.
 - **2026-11-27, Stop 2 finding: renewals could run years ahead; automatic
   timing; a price for the renewal.**
   - A week is renewed once (an issued renewal blocks another; a declined or
-    cancelled one does not). By hand only from the week's own use year: a
-    2027 week can be renewed by hand from 1 January 2027, not now
-    (`renewalProblem`, checked by the server).
+    cancelled one does not). By hand only from the day after the week's
+    check-out (your rule, the same day): in 21.11.2026, out 27.11.2026, so
+    renewable from 28.11.2026; next year's week only after it is used
+    (`renewalProblem`, `renewableFrom`, checked by the server).
   - Automatic: filed at any time, it goes to the issuer once the use year of
     the week it renews is over (`renewalOpensFrom`, the validity window's
     end), not when the week ends. The chain continues the same way.

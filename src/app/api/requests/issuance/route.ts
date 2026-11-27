@@ -123,13 +123,13 @@ export async function POST(request: Request): Promise<Response> {
   // renews it. An automatic one waits, hidden from the issuer, until the week
   // has ended; a manual one is open at once.
   //
-  // 2026-11-27, amended: once per week, a manual one only from the week's own
-  // use year, and an automatic one opens when the use year is over, not when
+  // 2026-11-27, amended: once per week, a manual one only from the day after
+  // the week's check-out, and an automatic one opens when the use year is over, not when
   // the week ends (renewalProblem). It may carry the price to list the new
   // week at, which the owner can change or cancel while it waits
   // (./renewal/route.ts).
   let renewal:
-    | { renew_of: number; auto_renew?: true; open_from?: string; price?: string; validity_until: number }
+    | { renew_of: number; auto_renew?: true; open_from?: string; price?: string; validity_until: number; week_end: number }
     | undefined;
   if (body.renew_of !== undefined && body.renew_of !== null) {
     const rightId = Number(body.renew_of);
@@ -156,6 +156,7 @@ export async function POST(request: Request): Promise<Response> {
     renewal = {
       renew_of: rightId,
       validity_until: right.validity.until,
+      week_end: right.period.end,
       ...(auto ? { auto_renew: true as const } : {}),
       ...(opensFrom ? { open_from: opensFrom } : {}),
       ...(price ? { price } : {}),
@@ -168,7 +169,7 @@ export async function POST(request: Request): Promise<Response> {
       const problem = renewalProblem({
         renewOf: renewal.renew_of,
         auto: renewal.auto_renew === true,
-        validityUntil: renewal.validity_until,
+        weekEnd: renewal.week_end,
         asks: all,
       });
       if (problem) {
@@ -203,8 +204,9 @@ export async function POST(request: Request): Promise<Response> {
       ...(publicKey ? { public_key: publicKey } : {}),
       ...(sealedDetails ? { sealed_details: sealedDetails } : {}),
       ...(renewal
-        ? (({ validity_until: _until, ...kept }) => {
+        ? (({ validity_until: _until, week_end: _end, ...kept }) => {
             void _until;
+            void _end;
             return kept;
           })(renewal)
         : {}),

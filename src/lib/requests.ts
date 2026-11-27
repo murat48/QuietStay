@@ -419,14 +419,16 @@ export function startOfUseYear(validityUntil: number): number {
  *
  * Once per week: a week already renewed has its next year, and renewing it
  * again would stack a further year on it. A manual renewal only from the
- * week's own use year: a week for next year is renewed next year, not now,
- * so renewals cannot run years ahead. An automatic one may be filed at any
- * time, as it opens only when the use year is over (`renewalOpensFrom`).
+ * day after the week's check-out (`renewableFrom`): a week is renewed once it
+ * has been used, so renewals cannot run years ahead (amended 2026-11-27, it
+ * was the start of the use year). An automatic one may be filed at any time,
+ * as it opens only when the use year is over (`renewalOpensFrom`).
  */
 export function renewalProblem(opts: {
   renewOf: number;
   auto: boolean;
-  validityUntil: number;
+  /** The week's check-out, Unix seconds (the period's end on chain). */
+  weekEnd: number;
   asks: Pick<IssuanceRequest, "renew_of" | "status">[];
   now?: number;
 }): string | null {
@@ -434,12 +436,16 @@ export function renewalProblem(opts: {
   const same = opts.asks.filter((r) => r.renew_of === opts.renewOf);
   if (same.some((r) => r.status === "issued")) return `week #${opts.renewOf} has already been renewed; renew the new week when its year comes`;
   if (same.some((r) => r.status === "open")) return `week #${opts.renewOf} already has a renewal waiting`;
-  if (opts.validityUntil <= now) return null;
-  const opens = startOfUseYear(opts.validityUntil);
+  const opens = renewableFrom(opts.weekEnd);
   if (!opts.auto && now < opens) {
-    return `week #${opts.renewOf} is for ${new Date(opens * 1000).getUTCFullYear()}; it can be renewed from ${new Date(opens * 1000).toISOString().slice(0, 10)}, or now automatically`;
+    return `week #${opts.renewOf} can be renewed by hand from ${new Date(opens * 1000).toISOString().slice(0, 10)}, the day after its check-out, or now automatically`;
   }
   return null;
+}
+
+/** Unix seconds: the day after check-out, from when a week may be renewed by hand. */
+export function renewableFrom(weekEnd: number): number {
+  return weekEnd + 86_400;
 }
 
 /** When an automatic renewal opens to the issuer: when the week's use year is over. `undefined` if it already is. */
