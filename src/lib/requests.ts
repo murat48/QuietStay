@@ -275,7 +275,7 @@ export async function openRequestBy(
   return all.find((r) => r.by === account && r.status === "open") ?? null;
 }
 
-export type IssuanceStatus = "open" | "issued";
+export type IssuanceStatus = "open" | "issued" | "declined";
 
 /** An owner's ask to have a week issued to them. */
 export interface IssuanceRequest {
@@ -315,6 +315,12 @@ export interface IssuanceRequest {
   right_id?: number;
   tx?: string;
   issued_at?: string;
+  /**
+   * Set when the issuer declined it (2026-11-27), with their reason if they
+   * gave one. Its sealed details are dropped then: nobody needs them.
+   */
+  declined_at?: string;
+  reason?: string;
   /**
    * Not an ask: the issuer issued directly, with an h typed in. Recorded only so
    * that h is known to be spent; hidden from every list of requests.
@@ -376,6 +382,23 @@ export async function recordDirectIssuance(issued: {
 }
 
 /** Close an issuance request once its week is on chain. Same read-modify-write caveat as above. */
+/** Decline an open ask, with an optional reason. `null` when there is no such open ask. */
+export async function markDeclined(requestId: string, reason: string | undefined): Promise<IssuanceRequest | null> {
+  const all = await loadIssuanceRequests();
+  const index = all.findIndex((r) => r.id === requestId && r.status === "open" && !r.direct);
+  if (index === -1) return null;
+  const { sealed_details: _dropped, ...rest } = all[index]!;
+  void _dropped;
+  all[index] = {
+    ...rest,
+    status: "declined",
+    declined_at: new Date().toISOString(),
+    ...(reason ? { reason } : {}),
+  };
+  await saveIssuanceRequests(all);
+  return all[index]!;
+}
+
 export async function markIssued(
   requestId: string,
   issued: { right_id: number; tx: string },

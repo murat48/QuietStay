@@ -121,6 +121,24 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   await O.getByRole("button", { name: "Request issuance", exact: true }).click();
   await expect(O.getByTestId("issue-reply-wait")).toBeVisible({ timeout: 60_000 });
 
+  // --- 3b. the issuer opens the ask's details, and declines it with a reason ---
+  // (2026-11-27). The owner sees the reason, and asks again.
+  await settle(I, "/issue");
+  await I.locator('[data-testid^="ask-details-"]').first().click({ timeout: 60_000 });
+  await expect(I.locator('[data-testid^="ask-details-list-"]')).toContainText(ownerName, { timeout: 60_000 });
+  const reason = "The deed reference is missing; please add it and ask again.";
+  await I.locator('[data-testid^="decline-reason-"]').fill(reason);
+  await I.locator('button[data-testid^="decline-"]', { hasText: "Decline this request" }).click();
+  await I.locator('[data-testid^="decline-yes-"]').click();
+  await expect(I.getByTestId("ask-declined-note")).toBeVisible({ timeout: 60_000 });
+  await expect(I.getByRole("button", { name: "Issue to this account" })).toHaveCount(0);
+
+  await settle(O, "/issue");
+  await expect(O.locator('[data-testid^="ask-declined-"]')).toContainText(reason, { timeout: 60_000 });
+  await O.getByTestId("detail-owner_name").fill(ownerName);
+  await O.getByRole("button", { name: "Request issuance", exact: true }).click();
+  await expect(O.getByTestId("issue-reply-wait")).toBeVisible({ timeout: 60_000 });
+
   // --- 4. the envelope, signed and sent with the CLI, then confirmed -----------
   await settle(I, "/issue");
   await I.getByRole("button", { name: "Issue to this account" }).first().click({ timeout: 60_000 });

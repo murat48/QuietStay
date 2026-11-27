@@ -41,7 +41,7 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
 import { RoleGate } from "@/components/RoleGate";
 import { SignInChoice } from "@/components/SignInChoice";
@@ -555,6 +555,29 @@ export default function IssueScreen() {
     };
   }, [isIssuer, authenticated, authFetch]);
 
+  // Which ask's details are open, and declining one (2026-11-27).
+  const [viewing, setViewing] = useState<string | null>(null);
+  const [declinedNote, setDeclinedNote] = useState<string | null>(null);
+  const declineAsk = useCallback(
+    async (ask: IssuanceRequest, reason: string) => {
+      const res = await authFetch("/api/requests/issuance/decline", {
+        method: "POST",
+        body: JSON.stringify({ id: ask.id, reason }),
+      });
+      const body = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(body.error ?? "the request could not be declined");
+      setAsks((current) => current.filter((a) => a.id !== ask.id));
+      setViewing(null);
+      if (selected?.id === ask.id) {
+        setSelected(null);
+        setSecretHash("");
+        setDetailsNote(null);
+      }
+      setDeclinedNote(`Declined the request from ${ask.by.slice(0, 6)}…${ask.by.slice(-4)}. They see it on their screen${reason ? ", with your reason" : ""}.`);
+    },
+    [authFetch, selected],
+  );
+
   // D16: does this browser hold the intake key owners seal their details to?
   useEffect(() => {
     if (!isIssuer || !authenticated || !standing) return;
@@ -725,10 +748,13 @@ export default function IssueScreen() {
         ) : (
           <ul>
             {asks.map((ask) => (
-              <li key={ask.id}>
+              <li key={ask.id} data-testid={`ask-${ask.id}`}>
                 <code>{ask.by}</code>{" "}
                 <span className="muted">· asked {formatDate(Date.parse(ask.requested_at) / 1000)}</span>{" "}
                 {ask.sealed_details ? <span className="tag accent">details sent</span> : null}{" "}
+                <button type="button" onClick={() => setViewing(viewing === ask.id ? null : ask.id)} data-testid={`ask-details-${ask.id}`}>
+                  {viewing === ask.id ? "Hide details" : "Details"}
+                </button>{" "}
                 {selected?.id === ask.id ? (
                   <button type="button" onClick={() => pick(null)}>
                     Deselect
@@ -738,10 +764,16 @@ export default function IssueScreen() {
                     Issue to this account
                   </button>
                 )}
+                {viewing === ask.id ? <AskDetails ask={ask} onDecline={(reason) => declineAsk(ask, reason)} /> : null}
               </li>
             ))}
           </ul>
         )}
+        {declinedNote ? (
+          <div className="note" data-testid="ask-declined-note">
+            {declinedNote}
+          </div>
+        ) : null}
         {detailsNote ? (
           <div className={`note ${detailsNote.ok ? "warn" : "bad"}`} data-testid="issue-details-note">
             {detailsNote.text}
@@ -1399,6 +1431,117 @@ export default function IssueScreen() {
 }
 
 /**
+ * One owner's ask, opened on the issuer's screen (2026-11-27): who asked and
+ * when, the details they sent (opened here with the intake key), and a way to
+ * decline it with a reason the owner will see.
+ */
+function AskDetails({ ask, onDecline }: { ask: IssuanceRequest; onDecline: (reason: string) => Promise<void> }) {
+  const [details, setDetails] = useState<Partial<Record<DetailKey, string>> | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!ask.sealed_details) return;
+    let cancelled = false;
+    void openDetails(ask).then(
+      (d) => {
+        if (!cancelled) setDetails(d);
+      },
+      (e: unknown) => {
+        if (!cancelled) setProblem(describeError(e));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [ask]);
+
+  const filled = details ? DETAIL_FIELDS.filter((f) => details[f.key]) : [];
+  return (
+    <div className="card" style={{ margin: "0.6rem 0" }} data-testid={`ask-panel-${ask.id}`}>
+      <dl className="facts">
+        <dt>Account (the first holder)</dt>
+        <dd>
+          <code>{ask.by}</code>
+        </dd>
+        <dt>Asked</dt>
+        <dd>{new Date(ask.requested_at).toLocaleString()}</dd>
+        <dt>Secret hash h</dt>
+        <dd className="hash">{ask.secret_hash.slice(0, 16)}…</dd>
+        <dt>Record delivery</dt>
+        <dd>{ask.public_key ? "sealed to the owner's browser as soon as you issue" : "by request link (an older ask)"}</dd>
+      </dl>
+      <h4 style={{ marginBottom: "0.3rem" }}>The owner&apos;s details</h4>
+      {!ask.sealed_details ? (
+        <p className="muted">None sent with this ask: get them from the owner another way.</p>
+      ) : problem ? (
+        <p className="note bad">{problem}</p>
+      ) : details === null ? (
+        <p className="muted">Opening them in this browser…</p>
+      ) : filled.length === 0 ? (
+        <p className="muted">The owner left every field empty.</p>
+      ) : (
+        <dl className="facts" data-testid={`ask-details-list-${ask.id}`}>
+          {filled.map((f) => (
+            <Fragment key={f.key}>
+              <dt>{f.label}</dt>
+              <dd>{details[f.key]}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      )}
+      <p className="muted" style={{ marginTop: "0.4rem" }}>
+        Check them against the deed and the resort&apos;s books. They are the owner&apos;s word, not proof.
+      </p>
+
+      <h4 style={{ marginBottom: "0.3rem" }}>Decline</h4>
+      <div className="field">
+        <label htmlFor={`decline-${ask.id}`}>Reason, shown to the owner (optional)</label>
+        <textarea
+          id={`decline-${ask.id}`}
+          value={reason}
+          maxLength={500}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="e.g. the deed reference does not match the resort's registry; please check it and ask again"
+          style={{ minHeight: "3.5rem" }}
+          data-testid={`decline-reason-${ask.id}`}
+        />
+      </div>
+      {confirming ? (
+        <span className="row" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
+          <button
+            className="danger"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              setProblem(null);
+              onDecline(reason.trim()).catch((e: unknown) => {
+                setProblem(describeError(e));
+                setBusy(false);
+              });
+            }}
+            data-testid={`decline-yes-${ask.id}`}
+          >
+            {busy ? "declining…" : "Yes, decline it"}
+          </button>
+          <button onClick={() => setConfirming(false)} disabled={busy}>
+            Cancel
+          </button>
+        </span>
+      ) : (
+        <button onClick={() => setConfirming(true)} data-testid={`decline-${ask.id}`}>
+          Decline this request
+        </button>
+      )}
+      <p className="muted" style={{ marginBottom: 0 }}>
+        Nothing is on chain yet, so declining changes nothing else. The owner can correct and ask again.
+      </p>
+    </div>
+  );
+}
+
+/**
  * The owner's side: ask the issuer to issue a week to the account signed in.
  *
  * The account is the session's — shown, never typed — and the only other thing
@@ -1664,10 +1807,16 @@ function IssuanceAsk() {
                     ) : null}
                     {links[r.id] ? null : <span className="muted"> — ask the issuer for the record file</span>}
                   </>
+                ) : r.status === "declined" ? (
+                  <span data-testid={`ask-declined-${r.id}`}>
+                    <span className="tag bad">declined by the issuer</span>
+                    {r.reason ? <> — &ldquo;{r.reason}&rdquo;</> : <span className="muted"> — no reason given</span>}
+                    <span className="muted"> Correct what is needed and ask again; nothing was put on chain.</span>
+                  </span>
                 ) : (
                   <span className="muted">waiting for the issuer</span>
                 )}
-                {links[r.id] && r.public_key ? (
+                {r.status === "declined" ? null : links[r.id] && r.public_key ? (
                   <>
                     <p className="muted" style={{ margin: "0.4rem 0" }} data-testid="issue-reply-wait">
                       Nothing to do: when the issuer issues this week, its record arrives sealed to

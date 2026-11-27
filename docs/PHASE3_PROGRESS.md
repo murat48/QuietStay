@@ -2171,6 +2171,17 @@ of the spec, the rest at the second review of `def5eb6`.
   - Tests: `cli-issue.spec.ts`, now pasting the terminal's output as shown,
     passed twice in a row (txs `72e7aef4…`, `aea869ae…`); no-leak 2/2, 496
     requests, no leaks (rental `35905f02…`).
+- **Your request (2026-11-27): the issuer sees an ask's details and can
+  decline it.** Each ask in "Requests from owners" has a Details panel: the
+  account, when it asked, h, how the record will be delivered, and the
+  owner's details opened in this browser with the intake key. "Decline this
+  request" takes an optional reason (at most 500 characters) and a second
+  confirmation; `POST /api/requests/issuance/decline` (issuer only, open asks
+  only) marks it `declined` and drops its sealed details. The owner sees
+  "declined by the issuer" with the reason on /issue and can ask again.
+  Nothing is on chain. `cli-issue.spec.ts` now declines the first ask with a
+  reason, checks the owner sees it, and issues the second: passed (tx
+  `ce91b6f8…`). Unit tests 80/80.
 
 ### Step 6 — Mainnet deployment
 - Date:
