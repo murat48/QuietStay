@@ -1,0 +1,23 @@
+{
+  "simulated_at": "2026-11-27T22:01:14.208Z",
+  "network": "mainnet (simulation only; nothing signed or sent)",
+  "rpc": "https://mainnet.sorobanrpc.com",
+  "protocol": 30,
+  "latest_ledger": 65706158,
+  "source_public_key": "GCEF3BTQVDJ473URMW4556VG67YAPS2J5OP77FBXT7T47M2DOIZ7TDAR",
+  "wasm": {
+    "file": "contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm",
+    "bytes": 1547,
+    "sha256": "708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1"
+  },
+  "instructions": 2407726,
+  "disk_read_bytes": 0,
+  "write_bytes": 1648,
+  "footprint": {
+    "read_only": 0,
+    "read_write": 1
+  },
+  "min_resource_fee_stroops": "34403037",
+  "state_changes": 1,
+  "transaction_size_bytes": 1656
+}

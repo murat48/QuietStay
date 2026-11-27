@@ -1,0 +1,23 @@
+{
+  "simulated_at": "2026-11-27T22:01:12.616Z",
+  "network": "mainnet (simulation only; nothing signed or sent)",
+  "rpc": "https://mainnet.sorobanrpc.com",
+  "protocol": 30,
+  "latest_ledger": 65706158,
+  "source_public_key": "GCEF3BTQVDJ473URMW4556VG67YAPS2J5OP77FBXT7T47M2DOIZ7TDAR",
+  "wasm": {
+    "file": "contracts/target/wasm32v1-none/release/quietstay_rights.wasm",
+    "bytes": 71244,
+    "sha256": "76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde"
+  },
+  "instructions": 60999798,
+  "disk_read_bytes": 0,
+  "write_bytes": 71344,
+  "footprint": {
+    "read_only": 0,
+    "read_write": 1
+  },
+  "min_resource_fee_stroops": "694336359",
+  "state_changes": 1,
+  "transaction_size_bytes": 71352
+}

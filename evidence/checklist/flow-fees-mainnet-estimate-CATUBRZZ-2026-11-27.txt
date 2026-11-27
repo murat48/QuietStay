@@ -1,0 +1,45 @@
+
+running 1 test
+rent fee per 1 KB: testnet 1702, mainnet 1000; min TTL persistent 120960 / 2073600, temporary 720 / 17280
+transaction                                                  charged   rent tn  model tn   rent mn mainnet fee  model vs charged rent
+issue week 1                                                   91239     82076    115725   1142542     1151705  +41.00%  MISMATCH
+issue week 2                                                   72765     63596     89965    894605      903774  +41.46%  MISMATCH
+issue week 3                                                   72765     63596     89965    894605      903774  +41.46%  MISMATCH
+issue week 4                                                   72765     63596     89965    894605      903774  +41.46%  MISMATCH
+issue week 5                                                   72765     63596     89965    894605      903774  +41.46%  MISMATCH
+wait rental: rental offer                                      80338     67767     94822    371175      383746  +39.92%  MISMATCH
+wait rental: accept (rental right + escrow)                   511926    457561    648991   1812696     1867061  +41.84%  MISMATCH
+sale: record request                                           53820     44866     62772    364375      373329  +39.91%  MISMATCH
+sale: sale offer                                               81530     65673     91844    300368      316225  +39.85%  MISMATCH
+sale: accept (right and USDC together)                         71297     19799     27098    250153      301651  +36.87%  MISMATCH
+dispute: rental offer                                          58073     45445     63058    283455      296083  +38.76%  MISMATCH
+dispute: accept (rental right + escrow)                       393046    339555    481599   1364758     1418249  +41.83%  MISMATCH
+dispute: problem report (renter)                               23186     18540     26383     60000       64646  +42.30%  MISMATCH
+dispute: evidence (renter)                                     25266     20600     29315     66667       71333  +42.31%  MISMATCH
+dispute: evidence (owner)                                      25284     20600     29314     66667       71351  +42.30%  MISMATCH
+confirm: rental offer                                          58072     45444     63056    283454      296082  +38.76%  MISMATCH
+confirm: accept (rental right + escrow)                       393045    339554    481597   1364758     1418249  +41.83%  MISMATCH
+confirm: the renter releases early                             10555         0         0         0       10555  +0.00%
+sale rejections: offer A record request                        48243     39286     54831    284375      293332  +39.57%  MISMATCH
+sale rejections: offer A sale offer                            64335     48469     67361    285983      301849  +38.98%  MISMATCH
+sale rejections: the buyer lowers the allowance directly        4545         0         0         0        4545  +0.00%
+sale rejections: offer B record request                        48243     39286     54831    284375      293332  +39.57%  MISMATCH
+sale rejections: offer B (expires in 12 ledgers)               18950      2825      1497     24438       40563  -47.01%  MISMATCH
+sale rejections: the buyer moves USDC away                      7244         0         0         0        7244  +0.00%
+sale rejections: the USDC comes back                            7244         0         0         0        7244  +0.00%
+sale rejections: the buyer cancels offer A                      9246         0         0         0        9246  +0.00%
+issue week 1 to the maker                                      72834     63596     89965    894605      903843  +41.46%  MISMATCH
+issue week 2 to the taker                                      72834     63596     89965    894605      903843  +41.46%  MISMATCH
+maker's record request for right #7                            30404     21447     29445    271375      280332  +37.29%  MISMATCH
+taker's record request for right #6                            30419     21462     29444    271375      280332  +37.19%  MISMATCH
+offer_swap (maker)                                             17754      6789      9116     77494       88459  +34.28%  MISMATCH
+accept_swap (taker)                                            20137      4336      4559     14314       30115  +5.14%  MISMATCH
+complete_swap (maker)                                          81232      2637      2675      4431       83026  +1.44%  MISMATCH
+dispute: arbiter resolves (refund renter)                      30121     18539     26383     60000       71582  +42.31%  MISMATCH
+passkey probe: wallet deploy                                  132669    118567    165908   1613549     1627651  +39.93%  MISMATCH
+passkey probe: issue to the wallet                             90425     81211    114401   1129208     1138422  +40.87%  MISMATCH
+passkey probe: passkey-authorized transfer (rental)           292327    249746    352966   1134087     1176668  +41.33%  MISMATCH
+wrote /home/murat/QuietStay/QuietStay/contracts/quietstay-rights/../../evidence/checklist/flow-fees-mainnet-estimate-CATUBRZZ.json; 32 transaction(s) where the model misses testnet's charged rent by more than 1%
+.
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 159 filtered out; finished in 0.01s
+

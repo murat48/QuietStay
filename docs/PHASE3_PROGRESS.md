@@ -2337,6 +2337,37 @@ of the spec, the rest at the second review of `def5eb6`.
     29**, the protocol the contracts were tested for. Nothing was signed.
     Per the checklist, mainnet work stops until the protocol, simulation and
     cost items are re-run. Escrow #4 is still Disputed.
+- **Mainnet moved to protocol 30: the checklist's protocol, simulation and
+  cost items re-run (2026-11-27 UTC, read-only; nothing signed or sent on
+  mainnet).** Evidence in `evidence/checklist/*-2026-11-27*` and
+  `evidence/network-settings-*-2026-11-27.json`.
+  - Protocol: testnet 30, mainnet 30; both RPCs `30.0.1`
+    (`check-protocol-2026-11-27.txt`).
+  - Network settings against 2026-11-21: on mainnet only
+    `contract_cost_params_cpu_instructions` and `_memory_bytes` changed, and
+    they are now identical to testnet's. Every fee rate, the rent settings,
+    the limits and the minimum TTLs are unchanged; testnet's are unchanged.
+    So the instruction counts measured on testnet (protocol 30 all along)
+    now hold for mainnet as they are: `complete_swap`'s 174,763,775 (43.7%
+    of the limit) included.
+  - Upload simulations (`mainnet-simulate-upload.ts`, public key
+    `GCEF…TDAR`): the rights WASM (`76d69e…`, unchanged) and the web-auth
+    WASM (`708cac…`) give the same instructions, resources and fees as on
+    protocol 29, field for field.
+  - WASMs on mainnet: ours not uploaded yet (Step 6); the OpenZeppelin
+    account and verifier still uploaded (~87 and ~65 days left).
+  - Costs (`cargo test -p quietstay-rights mainnet_fees`, settings
+    2026-11-27; new `scripts/soroban-state-size.ts` for the state size,
+    mainnet 1.56 → 1.66 GB): every one of the 37 transactions' mainnet fee
+    is the same as before, 1.92 XLM in all, because mainnet's rent rate is
+    at its floor (1,000 per KB) on both dates. The check that rebuilds
+    testnet's charged rent now misses by about 40%: it prices transactions
+    charged on 2026-11-20/21 with today's testnet state size (4.72 → 4.85
+    GB), which moved testnet's rent rate; it does not touch the mainnet
+    figures. Saved as `flow-fees-mainnet-estimate-CATUBRZZ-2026-11-27.*`;
+    the 2026-11-21 estimate is kept.
+  - The contract needs no change. `check-protocol.ts` still expects 29: it
+    moves to 30 only on your go-ahead.
 
 ### Step 6 — Mainnet deployment
 - Date:

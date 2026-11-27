@@ -1,0 +1,14 @@
+{
+  "testnet": {
+    "ledger": 5958668,
+    "window_len": 30,
+    "average_bytes": "4848471562",
+    "latest_bytes": "4856649073"
+  },
+  "mainnet": {
+    "ledger": 65706181,
+    "window_len": 30,
+    "average_bytes": "1664917593",
+    "latest_bytes": "1675242630"
+  }
+}

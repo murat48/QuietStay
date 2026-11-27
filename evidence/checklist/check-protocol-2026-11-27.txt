@@ -1,0 +1,6 @@
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-protocol.ts
+checked at 2026-11-27T22:00:47.569Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 30  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+FAIL: mainnet is on protocol 30, not 29. Stop mainnet work and re-run the checklist's protocol, simulation and cost items.
