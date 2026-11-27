@@ -198,8 +198,8 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   await settle(I, "/issue");
   await expect(I.locator('[data-testid^="ask-renews-"]')).toContainText(`renews week #${rightId}`, { timeout: 60_000 });
   await I.getByRole("button", { name: "Issue to this account" }).first().click();
-  // The same week, 52 weeks later, from the owner's record.
-  await expect(I.locator("#week_in")).toHaveValue("2027-11-13", { timeout: 60_000 });
+  // The same dates a year later, from the owner's record.
+  await expect(I.locator("#week_in")).toHaveValue("2027-11-14", { timeout: 60_000 });
   await expect(I.locator("#owner_name")).toHaveValue(ownerName);
 
   // Declined, so the owner can file an automatic one instead: it waits,

@@ -2295,6 +2295,12 @@ of the spec, the rest at the second review of `def5eb6`.
     listing form starts from it, and an automatic chain carries it forward.
   - Tests: unit 89/89, with `renewal.test.ts`. `cli-issue.spec.ts` covers
     the price, editing it, cancelling, and a second renewal refused (409).
+- **2026-11-27, Stop 2 finding: a renewal moved the dates.** Week #22
+  (2026-11-23 → 26) was renewed as #23 (2027-11-22 → 25): 52 weeks later
+  keeps the weekday but slips the dates a day each year. A renewal now keeps
+  the same calendar dates a year later (`nextYearIso`; 29 February becomes
+  28 February in a common year). #23 is on chain and keeps its dates.
+  Tests: unit 90/90.
 
 ### Step 6 — Mainnet deployment
 - Date:

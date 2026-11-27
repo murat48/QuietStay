@@ -1546,7 +1546,7 @@ function RenewWeek(props: {
           ) : null}
           <span className="muted">
             A week is one year&apos;s dates, so next year&apos;s is a new week the issuer issues. This browser fills
-            the request in from this week&apos;s record, 52 weeks later.
+            the request in from this week&apos;s record, with the same dates next year.
           </span>
           {kind === "cli" ? null : hasRecord === false ? (
             <p className="muted" style={{ margin: "0.4rem 0 0" }}>
