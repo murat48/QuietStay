@@ -2279,6 +2279,21 @@ of the spec, the rest at the second review of `def5eb6`.
     are fixed on chain). It now shows "opens 1 Jan 2027" instead of
     "expired" (list, account panel, verify) and becomes listable on that day.
   - Tests: unit 84/84, with `record-windows.test.ts`.
+- **2026-11-27, Stop 2 finding: renewals could run years ahead; automatic
+  timing; a price for the renewal.**
+  - A week is renewed once (an issued renewal blocks another; a declined or
+    cancelled one does not). By hand only from the week's own use year: a
+    2027 week can be renewed by hand from 1 January 2027, not now
+    (`renewalProblem`, checked by the server).
+  - Automatic: filed at any time, it goes to the issuer once the use year of
+    the week it renews is over (`renewalOpensFrom`, the validity window's
+    end), not when the week ends. The chain continues the same way.
+  - A renewal carries the asking price for the new week (off chain, capped
+    like a listing's price). While it waits, the owner can edit the price or
+    cancel it (`POST /api/requests/issuance/renewal`). The renewed week's
+    listing form starts from it, and an automatic chain carries it forward.
+  - Tests: unit 89/89, with `renewal.test.ts`. `cli-issue.spec.ts` covers
+    the price, editing it, cancelling, and a second renewal refused (409).
 
 ### Step 6 — Mainnet deployment
 - Date:

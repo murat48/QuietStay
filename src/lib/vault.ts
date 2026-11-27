@@ -172,7 +172,7 @@ export interface PendingIssue {
     key_hash?: string;
     public_key?: string;
     requested_at: string;
-    status: "open" | "issued" | "declined";
+    status: "open" | "issued" | "declined" | "cancelled";
   };
   recordText: string;
   xdr: string;

@@ -1857,10 +1857,12 @@ function IssuanceAsk() {
                     {r.reason ? <> — &ldquo;{r.reason}&rdquo;</> : <span className="muted"> — no reason given</span>}
                     <span className="muted"> Correct what is needed and ask again; nothing was put on chain.</span>
                   </span>
+                ) : r.status === "cancelled" ? (
+                  <span className="tag">renewal cancelled by you</span>
                 ) : (
                   <span className="muted">waiting for the issuer</span>
                 )}
-                {r.status === "declined" ? null : links[r.id] && r.public_key ? (
+                {r.status === "declined" || r.status === "cancelled" ? null : links[r.id] && r.public_key ? (
                   <>
                     <p className="muted" style={{ margin: "0.4rem 0" }} data-testid="issue-reply-wait">
                       Nothing to do: when the issuer issues this week, its record arrives sealed to

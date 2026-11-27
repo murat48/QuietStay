@@ -275,7 +275,7 @@ export async function openRequestBy(
   return all.find((r) => r.by === account && r.status === "open") ?? null;
 }
 
-export type IssuanceStatus = "open" | "issued" | "declined";
+export type IssuanceStatus = "open" | "issued" | "declined" | "cancelled";
 
 /** An owner's ask to have a week issued to them. */
 export interface IssuanceRequest {
@@ -329,6 +329,14 @@ export interface IssuanceRequest {
   renew_of?: number;
   /** Renew every year: when this one is issued, the owner's browser files the next. */
   auto_renew?: boolean;
+  /**
+   * The asking price the owner means to list the renewed week at (2026-11-27),
+   * USDC base units as a decimal string. Off chain, like every asking price;
+   * it fills in the renewed week's listing form. The owner may change it, or
+   * cancel the renewal, while it waits.
+   */
+  price?: string;
+  cancelled_at?: string;
   /**
    * Not shown to the issuer before this time (ISO): an automatic renewal is
    * filed in advance and opens when the week it renews has ended.
@@ -398,6 +406,68 @@ export async function recordDirectIssuance(issued: {
 /** Whether the issuer may see an ask yet: an automatic renewal waits for its week to end. */
 export function askIsDue(r: IssuanceRequest, now = Date.now()): boolean {
   return !r.open_from || Date.parse(r.open_from) <= now;
+}
+
+/** Unix seconds: 1 January of the use year that a validity window ending at `until` belongs to. */
+export function startOfUseYear(validityUntil: number): number {
+  const year = new Date((validityUntil - 1) * 1000).getUTCFullYear();
+  return Date.UTC(year, 0, 1) / 1000;
+}
+
+/**
+ * Why week `renewOf` may not be renewed now, or `null` (2026-11-27).
+ *
+ * Once per week: a week already renewed has its next year, and renewing it
+ * again would stack a further year on it. A manual renewal only from the
+ * week's own use year: a week for next year is renewed next year, not now,
+ * so renewals cannot run years ahead. An automatic one may be filed at any
+ * time, as it opens only when the use year is over (`renewalOpensFrom`).
+ */
+export function renewalProblem(opts: {
+  renewOf: number;
+  auto: boolean;
+  validityUntil: number;
+  asks: Pick<IssuanceRequest, "renew_of" | "status">[];
+  now?: number;
+}): string | null {
+  const now = opts.now ?? Date.now() / 1000;
+  const same = opts.asks.filter((r) => r.renew_of === opts.renewOf);
+  if (same.some((r) => r.status === "issued")) return `week #${opts.renewOf} has already been renewed; renew the new week when its year comes`;
+  if (same.some((r) => r.status === "open")) return `week #${opts.renewOf} already has a renewal waiting`;
+  if (opts.validityUntil <= now) return null;
+  const opens = startOfUseYear(opts.validityUntil);
+  if (!opts.auto && now < opens) {
+    return `week #${opts.renewOf} is for ${new Date(opens * 1000).getUTCFullYear()}; it can be renewed from ${new Date(opens * 1000).toISOString().slice(0, 10)}, or now automatically`;
+  }
+  return null;
+}
+
+/** When an automatic renewal opens to the issuer: when the week's use year is over. `undefined` if it already is. */
+export function renewalOpensFrom(validityUntil: number, now = Date.now() / 1000): string | undefined {
+  return validityUntil > now ? new Date(validityUntil * 1000).toISOString() : undefined;
+}
+
+/**
+ * The owner changes a waiting renewal's price, or cancels it (2026-11-27).
+ * Only their own, only while it waits. `null` when there is no such renewal.
+ */
+export async function changeRenewal(
+  requestId: string,
+  by: string,
+  change: { price: string } | { cancel: true },
+): Promise<IssuanceRequest | null> {
+  const all = await loadIssuanceRequests();
+  const index = all.findIndex((r) => r.id === requestId && r.by === by && r.status === "open" && r.renew_of !== undefined);
+  if (index === -1) return null;
+  if ("cancel" in change) {
+    const { sealed_details: _dropped, ...rest } = all[index]!;
+    void _dropped;
+    all[index] = { ...rest, status: "cancelled", cancelled_at: new Date().toISOString() };
+  } else {
+    all[index] = { ...all[index]!, price: change.price };
+  }
+  await saveIssuanceRequests(all);
+  return all[index]!;
 }
 
 /** Decline an open ask, with an optional reason. `null` when there is no such open ask. */

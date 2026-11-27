@@ -255,6 +255,11 @@ export default function ListScreen() {
   useAutoRenewals();
   // This account's issuance asks, for each week's renewal status (2026-11-27).
   const [myAsks, setMyAsks] = useState<OwnIssuanceAsk[]>([]);
+  // A renewed week starts from the price its renewal carried (2026-11-27).
+  const renewalPriceFor = (rightId: number): string => {
+    const from = myAsks.find((a) => a.status === "issued" && a.right_id === rightId && a.price);
+    return from?.price ? formatUsdc(BigInt(from.price)) : "";
+  };
   const loadMyAsks = useCallback(async () => {
     if (!authenticated) return setMyAsks([]);
     try {
@@ -1227,7 +1232,12 @@ export default function ListScreen() {
                   {isTitleHolder && address ? (
                     <RenewWeek
                       rightId={right.id}
-                      weekEnd={right.week.end}
+                      validityUntil={right.validity.until}
+                      listedPrice={
+                        right.listing?.asking_price
+                          ? formatUsdc(BigInt(right.listing.asking_price))
+                          : renewalPriceFor(right.id)
+                      }
                       address={address}
                       asks={myAsks.filter((a) => a.renew_of === right.id)}
                       onFiled={() => void loadMyAsks()}
@@ -1286,14 +1296,14 @@ export default function ListScreen() {
                               style={{ width: "7rem" }}
                               inputMode="decimal"
                               placeholder="e.g. 1"
-                              value={askPrice[right.id] ?? ""}
+                              value={askPrice[right.id] ?? renewalPriceFor(right.id)}
                               onChange={(e) => setAskPrice({ ...askPrice, [right.id]: e.target.value })}
                               data-testid={`asking-price-${right.id}`}
                             />
                           </label>
                           <button
-                            disabled={busyRight === right.id || !right.active || typedPrice(askPrice[right.id]) === null}
-                            onClick={() => void changeOffer(right.id, "list", null, typedPrice(askPrice[right.id]))}
+                            disabled={busyRight === right.id || !right.active || typedPrice(askPrice[right.id] ?? renewalPriceFor(right.id)) === null}
+                            onClick={() => void changeOffer(right.id, "list", null, typedPrice(askPrice[right.id] ?? renewalPriceFor(right.id)))}
                           >
                             Offer for sale
                           </button>
@@ -1303,13 +1313,13 @@ export default function ListScreen() {
                             such thing as four days of it.
                           */}
                           <button
-                            disabled={busyRight === right.id || !right.active || typedPrice(askPrice[right.id]) === null}
+                            disabled={busyRight === right.id || !right.active || typedPrice(askPrice[right.id] ?? renewalPriceFor(right.id)) === null}
                             onClick={() =>
                               void changeOffer(
                                 right.id,
                                 "list",
                                 right.week.end - right.week.start,
-                                typedPrice(askPrice[right.id]),
+                                typedPrice(askPrice[right.id] ?? renewalPriceFor(right.id)),
                               )
                             }
                           >
@@ -1372,34 +1382,43 @@ export default function ListScreen() {
 /** One of this account's issuance asks, as /api/requests/issuance serves it to the asker. */
 interface OwnIssuanceAsk {
   id: string;
-  status: "open" | "issued" | "declined";
+  status: "open" | "issued" | "declined" | "cancelled";
   requested_at: string;
   renew_of?: number;
   auto_renew?: boolean;
   open_from?: string;
   right_id?: number;
   reason?: string;
+  price?: string;
 }
 
 /**
- * Renew a week for next year, now or automatically each year (2026-11-27).
- * Manual: the ask goes to the issuer at once. Automatic: it is filed now and
- * opens to the issuer when this week ends; once that week is issued and in
- * this browser, the next year's is filed the same way (useAutoRenewals).
- * Either way the issuer checks and issues it: only the issuer can.
+ * Renew a week for next year, now or automatically (2026-11-27).
+ *
+ * Once per week, and a manual renewal only from the week's own use year, so
+ * renewals cannot run years ahead. Automatic: filed now, it goes to the issuer
+ * when this week's use year is over; once that week is issued and in this
+ * browser, the next year's is filed the same way (useAutoRenewals). A renewal
+ * carries the price to list the new week at; while it waits the owner can
+ * change that price or cancel it. Either way the issuer checks and issues it:
+ * only the issuer can.
  */
 function RenewWeek(props: {
   rightId: number;
-  weekEnd: number;
+  validityUntil: number;
+  /** This week's asking price as typed USDC, the default for next year's. */
+  listedPrice: string;
   address: string;
   asks: OwnIssuanceAsk[];
   onFiled: () => void;
 }) {
-  const { rightId, weekEnd, address, asks, onFiled } = props;
+  const { rightId, validityUntil, listedPrice, address, asks, onFiled } = props;
   const { authFetch, kind } = useWallet();
   const [hasRecord, setHasRecord] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState<"manual" | "auto" | null>(null);
+  const [busy, setBusy] = useState<"manual" | "auto" | "save" | "cancel" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  const [price, setPrice] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   // Read once when the card opens: what "ended" and "opens later" are said against.
   const [now] = useState(() => Date.now());
   useEffect(() => {
@@ -1408,8 +1427,17 @@ function RenewWeek(props: {
 
   const waiting = asks.find((a) => a.status === "open");
   const issued = asks.find((a) => a.status === "issued");
-  const declined = asks.find((a) => a.status === "declined");
+  const declined = [...asks].reverse().find((a) => a.status === "declined" || a.status === "cancelled");
   const opensLater = waiting?.open_from && Date.parse(waiting.open_from) > now;
+  // The use year this week belongs to, and when it is over.
+  const yearEnd = validityUntil;
+  const year = new Date((yearEnd - 1) * 1000).getUTCFullYear();
+  const yearStart = Date.UTC(year, 0, 1) / 1000;
+  const yearOver = yearEnd * 1000 <= now;
+  const manualAllowed = now / 1000 >= yearStart;
+
+  const typed = price ?? (editing && waiting?.price ? formatUsdc(BigInt(waiting.price)) : listedPrice);
+  const typedOk = typed.trim() === "" || typedPrice(typed) !== null;
 
   const renew = async (auto: boolean) => {
     setBusy(auto ? "auto" : "manual");
@@ -1417,7 +1445,8 @@ function RenewWeek(props: {
     try {
       const rec = await getRecord(rightId);
       if (!rec) throw new Error("this browser does not hold this week's record, so it cannot fill the renewal in");
-      await fileRenewal({ address, rightId, details: renewalDetails(rec.record), auto, authFetch });
+      await fileRenewal({ address, rightId, details: renewalDetails(rec.record), auto, price: typed.trim() || undefined, authFetch });
+      setPrice(null);
       onFiled();
     } catch (caught) {
       setProblem(describeError(caught));
@@ -1426,27 +1455,91 @@ function RenewWeek(props: {
     }
   };
 
+  const change = async (what: "save" | "cancel") => {
+    if (!waiting) return;
+    setBusy(what);
+    setProblem(null);
+    try {
+      const res = await authFetch("/api/requests/issuance/renewal", {
+        method: "POST",
+        body: JSON.stringify(what === "cancel" ? { id: waiting.id, cancel: true } : { id: waiting.id, price: typed.trim() }),
+      });
+      const body = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(body.error ?? "the renewal was not changed");
+      setEditing(false);
+      setPrice(null);
+      onFiled();
+    } catch (caught) {
+      setProblem(describeError(caught));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const priceInput = (
+    <label className="row" style={{ gap: "0.4rem", alignItems: "center" }}>
+      Asking price for next year (USDC)
+      <input
+        style={{ width: "7rem" }}
+        inputMode="decimal"
+        placeholder="e.g. 1"
+        value={typed}
+        onChange={(e) => setPrice(e.target.value)}
+        data-testid={`renew-price-${rightId}`}
+      />
+    </label>
+  );
+
   return (
     <div className="note" style={{ marginTop: "0.7rem" }} data-testid={`renew-${rightId}`}>
       <strong>Next year&apos;s week</strong>{" "}
       {issued?.right_id !== undefined ? (
         <span data-testid={`renew-issued-${rightId}`}>
           · renewed as week #{issued.right_id}
-          {issued.auto_renew ? " (renews automatically each year)" : ""}.
+          {issued.price ? ` at ${formatUsdc(BigInt(issued.price))} USDC` : ""}
+          {issued.auto_renew ? " (renews automatically each year)" : ""}. Renew that week when its year comes.
         </span>
       ) : waiting ? (
-        <span data-testid={`renew-waiting-${rightId}`}>
-          ·{" "}
-          {opensLater
-            ? `automatic renewal filed: it goes to the issuer on ${formatDate(Date.parse(waiting.open_from!) / 1000)}, when this week ends`
-            : "renewal waiting for the issuer"}
-          .
-        </span>
+        <>
+          <span data-testid={`renew-waiting-${rightId}`}>
+            ·{" "}
+            {opensLater
+              ? `automatic renewal filed: it goes to the issuer on ${formatDate(Date.parse(waiting.open_from!) / 1000)}, when this week's year is over`
+              : "renewal waiting for the issuer"}
+            {waiting.price ? ` · asking ${formatUsdc(BigInt(waiting.price))} USDC` : " · no price set"}.
+          </span>
+          {kind === "cli" ? null : editing ? (
+            <div className="row" style={{ gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+              {priceInput}
+              <button
+                className="primary"
+                disabled={busy !== null || typed.trim() === "" || !typedOk}
+                onClick={() => void change("save")}
+                data-testid={`renew-save-${rightId}`}
+              >
+                {busy === "save" ? "saving…" : "Save price"}
+              </button>
+              <button disabled={busy !== null} onClick={() => (setEditing(false), setPrice(null))}>
+                Back
+              </button>
+            </div>
+          ) : (
+            <div className="row" style={{ gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+              <button disabled={busy !== null} onClick={() => setEditing(true)} data-testid={`renew-edit-${rightId}`}>
+                Edit renewal
+              </button>
+              <button disabled={busy !== null} onClick={() => void change("cancel")} data-testid={`renew-cancel-${rightId}`}>
+                {busy === "cancel" ? "cancelling…" : "Cancel renewal"}
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <>
           {declined ? (
             <span className="muted">
-              · the last renewal was declined{declined.reason ? `: “${declined.reason}”` : ""}.{" "}
+              · the last renewal was {declined.status === "cancelled" ? "cancelled" : "declined"}
+              {declined.reason ? `: “${declined.reason}”` : ""}.{" "}
             </span>
           ) : null}
           <span className="muted">
@@ -1458,19 +1551,35 @@ function RenewWeek(props: {
               This browser does not hold this week&apos;s record, so it cannot renew it from here.
             </p>
           ) : (
-            <div className="row" style={{ gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
-              <button disabled={busy !== null || hasRecord !== true} onClick={() => void renew(false)} data-testid={`renew-now-${rightId}`}>
-                {busy === "manual" ? "asking…" : "Renew for next year"}
-              </button>
-              <button disabled={busy !== null || hasRecord !== true} onClick={() => void renew(true)} data-testid={`renew-auto-${rightId}`}>
-                {busy === "auto" ? "filing…" : "Renew automatically each year"}
-              </button>
-              <span className="muted">
-                {weekEnd * 1000 > now
-                  ? `Automatic: it goes to the issuer when this week ends (${formatDate(weekEnd)}).`
-                  : "Automatic: it goes to the issuer now, as this week has ended."}
-              </span>
-            </div>
+            <>
+              <div className="row" style={{ gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                {priceInput}
+              </div>
+              <div className="row" style={{ gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+                <button
+                  disabled={busy !== null || hasRecord !== true || !manualAllowed || !typedOk}
+                  onClick={() => void renew(false)}
+                  data-testid={`renew-now-${rightId}`}
+                >
+                  {busy === "manual" ? "asking…" : "Renew for next year"}
+                </button>
+                <button
+                  disabled={busy !== null || hasRecord !== true || !typedOk}
+                  onClick={() => void renew(true)}
+                  data-testid={`renew-auto-${rightId}`}
+                >
+                  {busy === "auto" ? "filing…" : "Renew automatically each year"}
+                </button>
+              </div>
+              <p className="muted" style={{ margin: "0.4rem 0 0" }} data-testid={`renew-when-${rightId}`}>
+                {manualAllowed
+                  ? null
+                  : `This week is for ${year}, so it can be renewed by hand from ${formatDate(yearStart)}. `}
+                {yearOver
+                  ? "Automatic: it goes to the issuer now, as this week's year is over."
+                  : `Automatic: it goes to the issuer when this week's year is over (${formatDate(yearEnd)}), and each year after.`}
+              </p>
+            </>
           )}
         </>
       )}

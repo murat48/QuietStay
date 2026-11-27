@@ -188,8 +188,11 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   // --- 6. renewal (2026-11-27): the contract cannot move a week's dates, so the
   // title holder asks for next year's, filled in from the record held here.
   await settle(O, "/list");
-  await O.getByTestId(`renew-now-${rightId}`).click({ timeout: 60_000 });
+  // It carries the price to list next year's week at.
+  await O.getByTestId(`renew-price-${rightId}`).fill("0.5", { timeout: 60_000 });
+  await O.getByTestId(`renew-now-${rightId}`).click();
   await expect(O.getByTestId(`renew-waiting-${rightId}`)).toContainText("waiting for the issuer", { timeout: 60_000 });
+  await expect(O.getByTestId(`renew-waiting-${rightId}`)).toContainText("asking 0.5 USDC");
 
   await settle(I, "/issue");
   await expect(I.locator('[data-testid^="ask-renews-"]')).toContainText(`renews week #${rightId}`, { timeout: 60_000 });
@@ -199,15 +202,37 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   await expect(I.locator("#owner_name")).toHaveValue(ownerName);
 
   // Declined, so the owner can file an automatic one instead: it waits,
-  // hidden from the issuer, until this week ends (2026-12-26).
+  // hidden from the issuer, until this week's use year is over (2027-01-01).
   await I.locator('[data-testid^="ask-decline-"]').first().click();
   await I.locator('[data-testid^="decline-yes-"]').click();
   await expect(I.getByTestId("ask-declined-note")).toBeVisible({ timeout: 60_000 });
   await settle(O, "/list");
   await O.getByTestId(`renew-auto-${rightId}`).click({ timeout: 60_000 });
   await expect(O.getByTestId(`renew-waiting-${rightId}`)).toContainText("automatic renewal filed", { timeout: 60_000 });
+  await expect(O.getByTestId(`renew-waiting-${rightId}`)).toContainText("year is over");
   await settle(I, "/issue");
   await expect(I.getByText("No pending requests.")).toBeVisible({ timeout: 60_000 });
+
+  // While it waits the owner edits its price, and a second renewal of the same week is refused.
+  await settle(O, "/list");
+  await O.getByTestId(`renew-edit-${rightId}`).click({ timeout: 60_000 });
+  await O.getByTestId(`renew-price-${rightId}`).fill("0.7");
+  await O.getByTestId(`renew-save-${rightId}`).click();
+  await expect(O.getByTestId(`renew-waiting-${rightId}`)).toContainText("asking 0.7 USDC", { timeout: 60_000 });
+  const again = await O.evaluate(async (id) => {
+    const token = JSON.parse(localStorage.getItem("quietstay:session") ?? "{}").token as string;
+    const res = await fetch("/api/requests/issuance", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ secret_hash: "12345", renew_of: id, auto_renew: false }),
+    });
+    return { status: res.status, error: ((await res.json()) as { error?: string }).error };
+  }, rightId);
+  expect(again.status).toBe(409);
+  expect(again.error).toContain("already has a renewal waiting");
+  // Cancelled, it can be renewed again.
+  await O.getByTestId(`renew-cancel-${rightId}`).click();
+  await expect(O.getByTestId(`renew-now-${rightId}`)).toBeVisible({ timeout: 60_000 });
 
   // --- 7. the Wallet screen (2026-11-27): the address to copy, and balances ----
   await settle(O, "/wallet");

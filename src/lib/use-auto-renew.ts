@@ -7,7 +7,7 @@
  * picked up and checked), the next year's renewal is filed for it, so the
  * chain continues each year with only the issuer's approval. It runs where
  * the owner's browser picks records up and shows their weeks (/stays, /list);
- * the new ask waits, hidden from the issuer, until the new week has ended.
+ * the new ask waits, hidden from the issuer, until the new week's use year is over.
  */
 
 import { useEffect } from "react";
@@ -15,6 +15,7 @@ import { useEffect } from "react";
 import { useWallet } from "@/components/WalletProvider";
 import { fileRenewal } from "./issuance-ask";
 import { renewalDetails } from "./issuer-key";
+import { formatUsdc } from "./usdc";
 import { getRecord } from "./vault";
 
 interface OwnAsk {
@@ -22,6 +23,7 @@ interface OwnAsk {
   right_id?: number;
   renew_of?: number;
   auto_renew?: boolean;
+  price?: string;
 }
 
 export function useAutoRenewals(): void {
@@ -42,7 +44,11 @@ export function useAutoRenewals(): void {
           if (requests.some((x) => x.renew_of === next)) continue;
           const rec = await getRecord(next);
           if (!rec) continue;
-          await fileRenewal({ address, rightId: next, details: renewalDetails(rec.record), auto: true, authFetch }).catch(() => undefined);
+          // The same price carries on to the next year; the owner can change it while it waits.
+          const price = r.price ? formatUsdc(BigInt(r.price)) : undefined;
+          await fileRenewal({ address, rightId: next, details: renewalDetails(rec.record), auto: true, price, authFetch }).catch(
+            () => undefined,
+          );
         }
       } catch {
         // Tried again on the next visit.

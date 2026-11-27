@@ -39,11 +39,14 @@ import {
   loadIssuanceRequests,
   parseKeyHash,
   parseSealedBlob,
+  renewalOpensFrom,
+  renewalProblem,
   saveIssuanceRequests,
   type IssuanceRequest,
 } from "@/lib/requests";
 import { checkedAskPublicKey } from "@/lib/sealed";
 import { authenticatedAccount, serverAccount } from "@/lib/sep10";
+import { renewalPriceFrom } from "@/lib/renewal-price";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +67,7 @@ export async function POST(request: Request): Promise<Response> {
     sealed_details?: unknown;
     renew_of?: unknown;
     auto_renew?: unknown;
+    price?: unknown;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -118,7 +122,15 @@ export async function POST(request: Request): Promise<Response> {
   // A renewal (2026-11-27): only the week's title holder, read from the chain,
   // renews it. An automatic one waits, hidden from the issuer, until the week
   // has ended; a manual one is open at once.
-  let renewal: { renew_of: number; auto_renew?: true; open_from?: string } | undefined;
+  //
+  // 2026-11-27, amended: once per week, a manual one only from the week's own
+  // use year, and an automatic one opens when the use year is over, not when
+  // the week ends (renewalProblem). It may carry the price to list the new
+  // week at, which the owner can change or cancel while it waits
+  // (./renewal/route.ts).
+  let renewal:
+    | { renew_of: number; auto_renew?: true; open_from?: string; price?: string; validity_until: number }
+    | undefined;
   if (body.renew_of !== undefined && body.renew_of !== null) {
     const rightId = Number(body.renew_of);
     if (!Number.isInteger(rightId) || rightId < 1) {
@@ -134,23 +146,34 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: `only the title holder of week #${rightId} can renew it` }, { status: 403 });
     }
     const auto = body.auto_renew === true;
-    const endsAt = new Date(right.period.end * 1000);
+    let price: string | undefined;
+    try {
+      price = await renewalPriceFrom(body.price);
+    } catch (error) {
+      return Response.json({ error: `price: ${(error as Error).message}` }, { status: 400 });
+    }
+    const opensFrom = auto ? renewalOpensFrom(right.validity.until) : undefined;
     renewal = {
       renew_of: rightId,
+      validity_until: right.validity.until,
       ...(auto ? { auto_renew: true as const } : {}),
-      ...(auto && endsAt.getTime() > Date.now() ? { open_from: endsAt.toISOString() } : {}),
+      ...(opensFrom ? { open_from: opensFrom } : {}),
+      ...(price ? { price } : {}),
     };
   }
 
   try {
     const all = await loadIssuanceRequests();
     if (renewal) {
-      const already = all.find((r) => r.renew_of === renewal.renew_of && r.status === "open");
-      if (already) {
-        return Response.json(
-          { error: `week #${renewal.renew_of} already has a renewal waiting`, request: already },
-          { status: 409 },
-        );
+      const problem = renewalProblem({
+        renewOf: renewal.renew_of,
+        auto: renewal.auto_renew === true,
+        validityUntil: renewal.validity_until,
+        asks: all,
+      });
+      if (problem) {
+        const request = all.find((r) => r.renew_of === renewal.renew_of && (r.status === "open" || r.status === "issued"));
+        return Response.json({ error: problem, ...(request ? { request } : {}) }, { status: 409 });
       }
     }
     const duplicate = all.find((r) => r.by === caller && r.status === "open" && r.secret_hash === h.toString());
@@ -179,7 +202,12 @@ export async function POST(request: Request): Promise<Response> {
       ...(keyHash ? { key_hash: keyHash } : {}),
       ...(publicKey ? { public_key: publicKey } : {}),
       ...(sealedDetails ? { sealed_details: sealedDetails } : {}),
-      ...(renewal ?? {}),
+      ...(renewal
+        ? (({ validity_until: _until, ...kept }) => {
+            void _until;
+            return kept;
+          })(renewal)
+        : {}),
       requested_at: new Date().toISOString(),
       status: "open",
     };

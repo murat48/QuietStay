@@ -19,6 +19,8 @@ export async function fileRenewal(opts: {
   rightId: number;
   details: OwnerDetails;
   auto: boolean;
+  /** The asking price for the renewed week, typed as USDC ("1.5"), if any. */
+  price?: string;
   authFetch: AuthFetch;
 }): Promise<void> {
   const intake = await verifiedIntakeKey();
@@ -38,6 +40,7 @@ export async function fileRenewal(opts: {
       sealed_details: sealed,
       renew_of: opts.rightId,
       auto_renew: opts.auto,
+      ...(opts.price ? { price: opts.price } : {}),
     }),
   });
   const body = (await res.json()) as { error?: string };
