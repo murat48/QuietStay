@@ -2156,6 +2156,21 @@ of the spec, the rest at the second review of `def5eb6`.
     no-leak test in the same run: 2/2, 518 requests, no leaks (sale
     `0db50a2f…`, rental `4c0f838a…`). Unit tests 80/80.
   - Next: item 4, the two passkey fee envelopes.
+  - **Your first try on the demo (2026-11-27): the signed challenge would
+    not take.** The challenge and your signature were right: the same
+    challenge, signed with `qs-issuer` here, was accepted by the demo (200).
+    The panel was the problem: it sat in the header, so the paste box was out
+    of sight, and the terminal shows the command (with the unsigned
+    challenge), an info line and the signed one, so pasting all of it sent
+    the unsigned one. The panel now opens over the page with numbered steps
+    and the time left; it takes the signed line out of whatever is pasted,
+    and says so if the unsigned challenge is pasted.
+  - Found by the test's repeats: on load, any failure of the session check
+    (not only the server's refusal) wiped the saved session. Now only a 401
+    ends it; other failures are asked again, and the session is kept.
+  - Tests: `cli-issue.spec.ts`, now pasting the terminal's output as shown,
+    passed twice in a row (txs `72e7aef4…`, `aea869ae…`); no-leak 2/2, 496
+    requests, no leaks (rental `35905f02…`).
 
 ### Step 6 — Mainnet deployment
 - Date:

@@ -34,6 +34,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 import {
   NetworkMismatch,
@@ -243,8 +244,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       headers: { authorization: `Bearer ${sessionToken}` },
       cache: "no-store",
     });
-    const body = (await response.json()) as StandingResponse;
-    if (!response.ok) throw new Error(body.error ?? "could not read your standing");
+    const body = (await response.json().catch(() => ({}))) as StandingResponse;
+    if (!response.ok) {
+      throw Object.assign(new Error(body.error ?? "could not read your standing"), { status: response.status });
+    }
 
     setReadOnly(body.read_only === true);
     setCanRequest(body.can_request !== false);
@@ -266,12 +269,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setKind(walletKind);
       const saved = savedSession();
       if (!saved || saved.address !== wallet || saved.kind !== walletKind) return saveSession(null);
-      try {
-        await loadStanding(saved.token);
-        setToken(saved.token);
-      } catch {
-        // refused (expired, or the server's signing key changed): sign in again
-        saveSession(null);
+      // Only the server's refusal (401: expired, or its signing key changed)
+      // ends the saved session. Anything else, a network error or a server
+      // still starting, is asked again, and the session is kept if it goes on
+      // failing: wiping it then made a reload ask to sign in again (found in
+      // the CLI test, 2026-11-27).
+      for (const wait of [0, 800, 2500]) {
+        if (wait) await new Promise((r) => setTimeout(r, wait));
+        try {
+          await loadStanding(saved.token);
+          setToken(saved.token);
+          return;
+        } catch (caught) {
+          if ((caught as { status?: number }).status === 401) return saveSession(null);
+        }
       }
     };
     void (async () => {
@@ -618,16 +629,22 @@ export function WalletButton() {
   const [choosing, setChoosing] = useState(false);
   const [cli, setCli] = useState(false);
 
-  if (cli) {
-    return (
-      <div className="wallet">
-        <CliSignIn account={kind === "cli" ? address : null} onDone={() => setCli(false)} />
-      </div>
-    );
-  }
+  // In its own window over the page: inside the header bar the paste box was
+  // out of sight (found on the testnet demo, 2026-11-27).
+  const cliPanel = cli
+    ? createPortal(
+        <div className="lightbox" onClick={() => setCli(false)}>
+          <div className="lightbox-frame" style={{ width: "min(640px, 100%)" }} onClick={(e) => e.stopPropagation()}>
+            <CliSignIn account={kind === "cli" ? address : null} onDone={() => setCli(false)} />
+          </div>
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
     <div className="wallet">
+      {cliPanel}
       {restoring && !authenticated ? (
         <span className="tag" data-testid="session-resuming">
           resuming your session…
@@ -711,70 +728,111 @@ export function WalletButton() {
  * the account and sends nothing. The command below only signs; it prints the
  * signed challenge, which goes back here.
  */
+/** The signed challenge out of whatever was pasted: the CLI also prints an "ℹ️ Signing transaction" line. */
+export function signedChallengeFrom(pasted: string): string {
+  const tokens = pasted.split(/\s+/).filter((t) => /^[A-Za-z0-9+/]+={0,2}$/.test(t) && t.length >= 100);
+  return tokens.sort((x, y) => y.length - x.length)[0] ?? "";
+}
+
+/** As the server issues it (CHALLENGE_TIMEOUT_SECONDS in src/lib/sep10.ts). */
+const CHALLENGE_SECONDS = 300;
+
 export function CliSignIn({ account, onDone }: { account: string | null; onDone: () => void }) {
   const { busy, cliChallenge, connectCli } = useWallet();
   const [who, setWho] = useState(account ?? "");
   const [identity, setIdentity] = useState(IS_MAINNET ? "qs-main-issuer" : "qs-issuer");
-  const [challenge, setChallenge] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<{ xdr: string; until: number } | null>(null);
   const [signed, setSigned] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!challenge) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [challenge]);
+  const left = challenge ? Math.max(0, Math.round((challenge.until - now) / 1000)) : 0;
   const command = challenge
-    ? `stellar tx sign --sign-with-key ${identity || "<identity>"} --network ${IS_MAINNET ? "mainnet" : "testnet"} ${challenge}`
+    ? `stellar tx sign --sign-with-key ${identity || "<identity>"} --network ${IS_MAINNET ? "mainnet" : "testnet"} ${challenge.xdr}`
     : "";
+  const extracted = signedChallengeFrom(signed);
+  const getChallenge = () => {
+    setProblem(null);
+    setSigned("");
+    cliChallenge(who).then(
+      (xdr) => {
+        setChallenge({ xdr, until: Date.now() + CHALLENGE_SECONDS * 1000 });
+        setNow(Date.now());
+      },
+      (e: unknown) => setProblem(describeError(e)),
+    );
+  };
 
   return (
-    <span className="passkey-choice" data-testid="cli-sign-in" style={{ display: "grid", gap: "0.4rem", minWidth: "min(100%, 28rem)" }}>
-      {challenge === null ? (
-        <>
-          <label>
-            Account (G…)
-            <input className="mono" value={who} onChange={(e) => setWho(e.target.value.trim())} spellCheck={false} data-testid="cli-account" />
-          </label>
-          <button
-            className="primary"
-            disabled={!/^G[A-Z2-7]{55}$/.test(who)}
-            onClick={() => {
-              setProblem(null);
-              cliChallenge(who).then(setChallenge, (e: unknown) => setProblem(describeError(e)));
-            }}
-            data-testid="cli-get-challenge"
-          >
-            Get the sign-in challenge
-          </button>
-        </>
+    <div className="card" data-testid="cli-sign-in" style={{ display: "grid", gap: "0.6rem", margin: 0, textAlign: "left" }}>
+      <h3 style={{ margin: 0 }}>Sign in with the Stellar CLI</h3>
+      <p className="muted" style={{ margin: 0 }}>
+        For an account whose key is only in the CLI keystore, such as the issuer. The challenge is a
+        transaction with sequence number 0: signing it proves the account is yours, and it can never be
+        sent.
+      </p>
+      <label>
+        <strong>1.</strong> The account (G…)
+        <input className="mono" value={who} onChange={(e) => setWho(e.target.value.trim())} spellCheck={false} data-testid="cli-account" />
+      </label>
+      {challenge === null || left === 0 ? (
+        <button className="primary" disabled={!/^G[A-Z2-7]{55}$/.test(who)} onClick={getChallenge} data-testid="cli-get-challenge">
+          {challenge ? "The challenge expired: get a new one" : "Get the sign-in challenge"}
+        </button>
       ) : (
         <>
           <label>
-            CLI identity
+            <strong>2.</strong> Your CLI identity for that account
             <input className="mono" value={identity} onChange={(e) => setIdentity(e.target.value.trim())} spellCheck={false} />
           </label>
-          <span className="muted">
-            Run this in your terminal. It only signs: the challenge has sequence 0 and can never be sent. Paste
-            what it prints below. Valid for a few minutes.
-          </span>
-          <textarea readOnly className="mono" value={command} style={{ minHeight: "5rem" }} data-testid="cli-command" />
-          <button onClick={() => void navigator.clipboard?.writeText(command)}>Copy the command</button>
+          <div>
+            <strong>3.</strong> Run this in your terminal ({Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")} left):
+            <textarea readOnly className="mono" value={command} style={{ minHeight: "5rem", width: "100%" }} data-testid="cli-command" onFocus={(e) => e.currentTarget.select()} />
+            <button onClick={() => void navigator.clipboard?.writeText(command)}>Copy the command</button>
+          </div>
           <label>
-            The signed challenge
-            <textarea className="mono" value={signed} onChange={(e) => setSigned(e.target.value)} style={{ minHeight: "4rem" }} data-testid="cli-signed" />
+            <strong>4.</strong> Paste what it printed <em>here</em> (the long line starting with <code>AAAA</code>; the
+            &quot;Signing transaction&quot; line is ignored)
+            <textarea
+              className="mono"
+              value={signed}
+              onChange={(e) => setSigned(e.target.value)}
+              style={{ minHeight: "5rem", width: "100%" }}
+              placeholder="AAAAAgAAAA…"
+              data-testid="cli-signed"
+            />
           </label>
+          {signed.trim() !== "" && extracted === "" ? (
+            <span className="note warn" style={{ margin: 0 }}>
+              That does not look like a signed challenge: it should be one long line of letters, digits, + and /.
+            </span>
+          ) : null}
+          {extracted !== "" && extracted === challenge.xdr ? (
+            <span className="note warn" style={{ margin: 0 }}>
+              That is the challenge itself, not yet signed: paste what the command printed.
+            </span>
+          ) : null}
           <button
             className="primary"
-            disabled={busy || signed.trim() === ""}
+            disabled={busy || extracted === "" || extracted === challenge.xdr}
             onClick={() => {
               setProblem(null);
-              connectCli(signed).then(onDone, (e: unknown) => setProblem(describeError(e)));
+              connectCli(extracted).then(onDone, (e: unknown) => setProblem(describeError(e)));
             }}
             data-testid="cli-sign-in-submit"
           >
-            {busy ? "signing in…" : "Sign in"}
+            {busy ? "signing in…" : "5. Sign in"}
           </button>
         </>
       )}
       {problem ? <span className="note bad" style={{ margin: 0 }}>{problem}</span> : null}
       <button onClick={onDone} disabled={busy}>
-        Back
+        Close
       </button>
-    </span>
+    </div>
   );
 }

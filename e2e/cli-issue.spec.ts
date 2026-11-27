@@ -90,7 +90,8 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   await I.getByTestId("cli-get-challenge").click();
   const command = await I.getByTestId("cli-command").inputValue({ timeout: 30_000 });
   expect(command).toContain("stellar tx sign --sign-with-key qs-issuer --network testnet ");
-  await I.getByTestId("cli-signed").fill(cliSignTx(command.split(" ").pop()!));
+  // Pasted as the terminal shows it: the CLI's info line, then the signed challenge.
+  await I.getByTestId("cli-signed").fill(`ℹ️  Signing transaction: ${"ab".repeat(32)}\n${cliSignTx(command.split(" ").pop()!)}\n`);
   await I.getByTestId("cli-sign-in-submit").click();
   await expect(I.locator(".wallet .addr")).toBeVisible({ timeout: 60_000 });
   await expect(I.locator(".wallet .tag", { hasText: "Issuer" })).toBeVisible({ timeout: 60_000 });
@@ -154,6 +155,10 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   await expect(I.getByTestId("issue-delivered")).toBeVisible({ timeout: 60_000 });
 
   // --- 5. the owner's browser picks the record up -------------------------------
+  // Logged so a failure here says whether the session check itself failed.
+  O.on("response", (r) => {
+    if (r.url().includes("/api/me")) console.log(`owner /api/me ${r.status()}`);
+  });
   await settle(O, "/stays");
   await expect(O.getByTestId("inbox-received")).toBeVisible({ timeout: 60_000 });
 });
