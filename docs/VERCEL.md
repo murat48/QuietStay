@@ -111,7 +111,7 @@ Phase 3 adds, for passkey smart wallets on testnet:
 
 | Variable | Value |
 | --- | --- |
-| `QUIETSTAY_TESTNET_FEE_SECRET` | `qs-fee-testnet`'s seed (you set it). Only `/api/tx/sponsor` reads it, and it refuses on any network but testnet. Without it, passkey wallets cannot be created or approve transactions; everything else works |
+| `QUIETSTAY_TESTNET_FEE_SECRET` | `qs-fee-testnet`'s seed (you set it). The older name of `QUIETSTAY_FEE_SECRET`, still read on this testnet demo. Only `/api/tx/sponsor` reads it. Without a fee key, passkey wallets cannot be created or approve transactions; everything else works |
 | `NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT` | optional; defaults to `qs-fee-testnet`'s public address `GCGDZWCL…L77Z` |
 | `NEXT_PUBLIC_QUIETSTAY_WEB_AUTH_CONTRACT_ID` | optional; defaults to the testnet SEP-45 web-auth contract `CBCDSOZP…5KGM` |
 
@@ -325,12 +325,13 @@ A second Vercel project, on the free plan, from the same repository.
 | Variable | Value | Why |
 | --- | --- | --- |
 | `NEXT_PUBLIC_QUIETSTAY_NETWORK` | `testnet` | the network. On the mainnet project it will be `mainnet` |
-| `NEXT_PUBLIC_QUIETSTAY_SIGNING` | `cli` | no issuer or fee key on the server; issuing and passkey fees are CLI envelopes; no attestations. Mainnet is always `cli` |
+| `NEXT_PUBLIC_QUIETSTAY_SIGNING` | `cli` | no issuer key on the server: issuing is a CLI envelope; no attestations. Mainnet is always `cli`. Passkey fees are paid by the limited fee key below (D18) |
 | `NEXT_PUBLIC_QUIETSTAY_CONTRACT_ID` | `CC7W4OGPTTKUQNUFORFP5NXRTBV2L2VOX65X4Y5JV4ZXPRPVCPQ77ZRP` | in `cli` mode there are no defaults: every id is set |
 | `QUIETSTAY_CONTRACT_ID` | the same | the server-side name; kept equal |
 | `NEXT_PUBLIC_QUIETSTAY_WEB_AUTH_CONTRACT_ID` | `CDJJSKRIS2CUKSPNO37Q56SY7QJBEOYOLTLLSKDUWGEF4EPR5BTIF5SN` | SEP-45 sign-in for passkey wallets |
 | `NEXT_PUBLIC_QUIETSTAY_WEBAUTHN_VERIFIER_ID` | `CBZKYQIQ335HWKC55NFKOUKDIGDR6MHFWSLM6IITIXHQL2Z4GLXPSEHS` | our own verifier instance |
-| `NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT` | `GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z` | `qs-fee-testnet`'s **public** key. A passkey envelope names it as source, and you sign with `qs-fee-testnet` in the CLI. On mainnet: `qs-main-fee`'s public key |
+| `NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT` | `GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z` | the fee account's **public** key: passkey transactions name it as source. On mainnet: the mainnet fee account's. The fee route refuses to run if `QUIETSTAY_FEE_SECRET` is another account's key |
+| `QUIETSTAY_FEE_SECRET` | that account's `S…`, **set by you, in Vercel only** | D18 (2026-11-27): the server pays passkey users' network fees, on mainnet too. The account holds only a few XLM (top it up on the Wallet screen, signed in as the issuer, or by sending XLM to its address); the route pays for QuietStay calls and passkey wallet creation only, at most 1 XLM each, within daily limits (mainnet: 10 per IP an hour, 10 per wallet and 50 in all a day). Never in a file |
 | `QUIETSTAY_SEP10_SERVER_SECRET` | a testnet sign-in key's `S…` | signs the sign-in challenges. Use the demo's testnet sign-in key (`GDC2YUKY…`, already on testnet), or a new testnet key you fund with Friendbot. On mainnet this is `mainnet-test`'s secret, set only in Vercel |
 | `QUIETSTAY_SESSION_SECRET` | 32+ random characters, e.g. `openssl rand -base64 48` | signs session cookies. Make a new one; don't copy the demo's |
 | `QUIETSTAY_HOME_DOMAIN` | the rehearsal host, e.g. `quietstay-rehearsal.vercel.app` | the SEP-10/SEP-45 home domain. Set it after the first deploy (step 4) |
@@ -339,7 +340,9 @@ A second Vercel project, on the free plan, from the same repository.
 
 **Do not set** these on the rehearsal or the mainnet project:
 - `QUIETSTAY_ISSUER_SECRET` and `QUIETSTAY_TESTNET_FEE_SECRET`. A `cli` build
-  ignores them anyway, and `/api/network` shows `issuer_key_on_server: false`;
+  ignores them anyway, and `/api/network` shows `issuer_key_on_server: false`.
+  The fee key goes under `QUIETSTAY_FEE_SECRET` only, and `/api/network`
+  then shows `fee_route: true`;
 - `NEXT_PUBLIC_QS_E2E_WALLET` (test builds only);
 - `QUIETSTAY_DATA_DIR`.
 

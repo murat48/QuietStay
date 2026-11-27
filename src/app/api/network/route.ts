@@ -22,6 +22,7 @@ import {
   USDC_CONTRACT_ID,
   WEB_AUTH_CONTRACT_ID,
   WEBAUTHN_VERIFIER_ID,
+  hasFeeKey,
   hasIssuerSecret,
   missingConfiguration,
 } from "@/lib/config";
@@ -44,8 +45,8 @@ export function GET(): Response {
       fee_account: FEE_ACCOUNT,
     },
     missing: missingConfiguration(),
-    // The fee route runs only on a testnet deployment in `server` mode.
-    fee_route: NETWORK === "testnet" && SIGNING === "server",
+    // The fee route runs wherever a fee key is set, mainnet too (D18).
+    fee_route: hasFeeKey(),
     issuer_key_on_server: hasIssuerSecret(),
   });
 }

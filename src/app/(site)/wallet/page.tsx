@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useWallet } from "@/components/WalletProvider";
-import { IS_MAINNET, NETWORK_LABEL, explorer } from "@/lib/config";
+import { FEE_ACCOUNT, IS_MAINNET, NETWORK_LABEL, explorer } from "@/lib/config";
 import { describeError } from "@/lib/format";
 import {
   MAINNET_MAX_USDC_HELD,
@@ -30,7 +30,7 @@ import { connectWallet, signWithWallet } from "@/lib/wallet-kit";
 type Balances = Record<TokenName, bigint | null>;
 
 export default function WalletScreen() {
-  const { address, kind, authenticated, restoring } = useWallet();
+  const { address, kind, authenticated, restoring, standing } = useWallet();
   const [balances, setBalances] = useState<Balances | null>(null);
   const [readError, setReadError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -109,13 +109,38 @@ export default function WalletScreen() {
         <button onClick={() => void load()}>Refresh</button>
       </div>
 
-      {isPasskey ? <FundPasskey to={address} balances={balances} onSent={() => void load()} /> : null}
+      {isPasskey ? (
+        <FundPasskey
+          to={address}
+          tokens={["USDC", "XLM"]}
+          balances={balances}
+          onSent={() => void load()}
+          title="Fund this wallet"
+          intro="Send USDC to it from a regular wallet you hold, such as Freighter. Your wallet opens for this one transfer, signs it and pays its own small fee; you stay signed in here with your passkey. You can also send to the address above from any wallet that can send to a contract address (C…)."
+        />
+      ) : null}
+
+      {standing?.isIssuer && FEE_ACCOUNT ? <FeeAccount /> : null}
     </>
   );
 }
 
-function FundPasskey({ to, balances, onSent }: { to: string; balances: Balances | null; onSent: () => void }) {
-  const [token, setToken] = useState<TokenName>("USDC");
+function FundPasskey({
+  to,
+  tokens,
+  balances,
+  onSent,
+  title,
+  intro,
+}: {
+  to: string;
+  tokens: TokenName[];
+  balances: Balances | null;
+  onSent: () => void;
+  title: string;
+  intro: string;
+}) {
+  const [token, setToken] = useState<TokenName>(tokens[0]!);
   const [amount, setAmount] = useState("1");
   const [step, setStep] = useState<string | null>(null);
   const [done, setDone] = useState<{ hash: string; text: string } | null>(null);
@@ -144,7 +169,7 @@ function FundPasskey({ to, balances, onSent }: { to: string; balances: Balances 
       const signed = await signWithWallet(xdr, from);
       setStep("sending…");
       const hash = await sendSigned(signed);
-      setDone({ hash, text: `Sent ${formatUsdc(units)} ${token} from ${from.slice(0, 6)}…${from.slice(-4)} to this passkey wallet.` });
+      setDone({ hash, text: `Sent ${formatUsdc(units)} ${token} from ${from.slice(0, 6)}…${from.slice(-4)} to ${to.slice(0, 6)}…${to.slice(-4)}.` });
       onSent();
     } catch (caught) {
       setError(describeError(caught));
@@ -154,19 +179,15 @@ function FundPasskey({ to, balances, onSent }: { to: string; balances: Balances 
   };
 
   return (
-    <div className="card" data-testid="wallet-fund">
-      <h3 style={{ marginTop: 0 }}>Fund this wallet</h3>
-      <p className="muted">
-        Send USDC to it from a regular wallet you hold, such as Freighter. Your wallet opens for this one
-        transfer, signs it and pays its own small fee; you stay signed in here with your passkey. You can also
-        send to the address above from any wallet that can send to a contract address (C…).
-      </p>
+    <div className="card" data-testid={tokens.includes("USDC") ? "wallet-fund" : "fee-fund"}>
+      <h3 style={{ marginTop: 0 }}>{title}</h3>
+      <p className="muted">{intro}</p>
       <div className="row" style={{ gap: "0.5rem", alignItems: "end", flexWrap: "wrap" }}>
         <label>
           Token
           <select value={token} onChange={(e) => setToken(e.target.value as TokenName)} data-testid="fund-token">
-            <option value="USDC">USDC (pays for stays)</option>
-            <option value="XLM">XLM (not needed)</option>
+            {tokens.includes("USDC") ? <option value="USDC">USDC (pays for stays)</option> : null}
+            {tokens.includes("XLM") ? <option value="XLM">{tokens.includes("USDC") ? "XLM (not needed)" : "XLM"}</option> : null}
           </select>
         </label>
         <label>
@@ -178,7 +199,7 @@ function FundPasskey({ to, balances, onSent }: { to: string; balances: Balances 
         </button>
       </div>
       {problem ? <p className="muted" data-testid="fund-problem">{problem}</p> : null}
-      {IS_MAINNET ? (
+      {!tokens.includes("USDC") ? null : IS_MAINNET ? (
         <p className="muted">
           Pilot limits on {NETWORK_LABEL}: at most 1 USDC in one payment, and at most{" "}
           {formatUsdc(MAINNET_MAX_USDC_HELD)} USDC held.
@@ -203,5 +224,81 @@ function FundPasskey({ to, balances, onSent }: { to: string; balances: Balances 
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Below this, the fee account warns: about a few dozen passkey transactions are left. */
+const FEE_LOW_STROOPS = 30_000_000n;
+
+/**
+ * The fee account (D18, 2026-11-27), shown to the issuer: the `G…` account
+ * whose key is on the server and pays passkey users' network fees. It holds
+ * only a few XLM; it is topped up by sending XLM to its address, from
+ * Freighter here, from an exchange or from any wallet. No CLI.
+ */
+function FeeAccount() {
+  const [xlm, setXlm] = useState<bigint | null | undefined>(undefined);
+  const [copied, setCopied] = useState(false);
+  const load = useCallback(async () => {
+    try {
+      setXlm(await readTokenBalance("XLM", FEE_ACCOUNT));
+    } catch {
+      setXlm(null);
+    }
+  }, []);
+  useEffect(() => {
+    void Promise.resolve().then(load);
+  }, [load]);
+  const low = typeof xlm === "bigint" && xlm < FEE_LOW_STROOPS;
+  return (
+    <>
+      <div className="card" data-testid="fee-account">
+        <h3 style={{ marginTop: 0 }}>Fee account</h3>
+        <p className="muted">
+          Pays the network fee of every passkey user&apos;s transaction, so they never need XLM. Its key is on the
+          server (set in Vercel), it holds only a few XLM, and it pays for nothing but QuietStay calls, within daily
+          limits. Top it up by sending XLM to this address, from here or from any wallet or exchange.
+        </p>
+        <div className="row" style={{ gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <code className="mono" style={{ wordBreak: "break-all" }} data-testid="fee-address">
+            {FEE_ACCOUNT}
+          </code>
+          <button
+            onClick={() =>
+              void navigator.clipboard?.writeText(FEE_ACCOUNT).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              })
+            }
+          >
+            {copied ? "Copied ✓" : "Copy address"}
+          </button>
+          <a href={explorer.account(FEE_ACCOUNT)} target="_blank" rel="noreferrer">
+            View on Stellar ↗
+          </a>
+        </div>
+        <dl className="facts">
+          <dt>XLM</dt>
+          <dd data-testid="fee-xlm">
+            {xlm === undefined ? "reading…" : xlm === null ? "the account does not exist yet: send it XLM to create it" : `${formatUsdc(xlm)} XLM`}
+          </dd>
+        </dl>
+        {low ? (
+          <div className="note warn" data-testid="fee-low">
+            Running low: below {formatUsdc(FEE_LOW_STROOPS)} XLM. Passkey users&apos; transactions stop when it cannot
+            pay. Top it up.
+          </div>
+        ) : null}
+        <button onClick={() => void load()}>Refresh</button>
+      </div>
+      <FundPasskey
+        to={FEE_ACCOUNT}
+        tokens={["XLM"]}
+        balances={null}
+        onSent={() => void load()}
+        title="Top up the fee account"
+        intro="Send XLM from a regular wallet you hold, such as Freighter: it opens for this one transfer, signs it and pays its own fee."
+      />
+    </>
   );
 }

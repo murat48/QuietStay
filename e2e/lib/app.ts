@@ -50,6 +50,8 @@ export async function startApp(opts: {
     QUIETSTAY_DATA_DIR: mkdtempSync(join(tmpdir(), "qs-e2e-")),
     NEXT_PUBLIC_QS_E2E_WALLET: "1",
     QUIETSTAY_TESTNET_FEE_SECRET: opts.fee?.secret() ?? "",
+    // D18: the fee key's own name, read on mainnet and in `cli` mode too.
+    QUIETSTAY_FEE_SECRET: opts.fee?.secret() ?? "",
     NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT: opts.fee?.publicKey() ?? "",
     UPSTASH_REDIS_REST_URL: "",
     UPSTASH_REDIS_REST_TOKEN: "",

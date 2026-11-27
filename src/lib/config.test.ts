@@ -64,21 +64,23 @@ describe("the network setting", () => {
 
   it("CLI signing never uses an issuer or fee key, even one set by mistake", () => {
     const env = { NEXT_PUBLIC_QUIETSTAY_SIGNING: "cli", QUIETSTAY_ISSUER_SECRET: "not-a-key", QUIETSTAY_TESTNET_FEE_SECRET: "not-a-key" };
+    // The fee key is read only under its own name there (D18): the testnet name does not count.
     const r = configUnder(env, `({ has: c.hasIssuerSecret(), a: c.ATTESTATIONS, n: c.NETWORK, m: c.missingConfiguration().length })`);
     assert.ok(r.ok, r.out);
     // Like mainnet, the rehearsal takes no testnet defaults: all four ids must be set.
     assert.deepEqual(JSON.parse(r.out), { has: false, a: false, n: "testnet", m: 4 });
     assert.match(configUnder(env, "c.issuerSecret()").out, /holds no issuer key/);
-    assert.match(configUnder(env, "c.testnetFeeSecret()").out, /holds no fee key/);
+    assert.match(configUnder(env, "c.feeSecret()").out, /QUIETSTAY_FEE_SECRET/);
   });
 
-  it("the fee route refuses in a CLI deployment", () => {
-    const r = configUnder(
-      { NEXT_PUBLIC_QUIETSTAY_SIGNING: "cli" },
-      `(() => { try { sp.checkSponsored(null, [], "G"); return "accepted"; } catch (e) { return e.message; } })()`,
-    );
-    assert.ok(r.ok, r.out);
-    assert.match(JSON.parse(r.out), /no fee route/);
+  it("a fee key is used on mainnet and in a CLI deployment when set as QUIETSTAY_FEE_SECRET (D18)", () => {
+    const has = (env: Record<string, string>) => JSON.parse(configUnder(env, "c.hasFeeKey()").out) as boolean;
+    assert.equal(has({ NEXT_PUBLIC_QUIETSTAY_SIGNING: "cli" }), false);
+    assert.equal(has({ NEXT_PUBLIC_QUIETSTAY_SIGNING: "cli", QUIETSTAY_FEE_SECRET: "S-placeholder" }), true);
+    assert.equal(has({ NEXT_PUBLIC_QUIETSTAY_NETWORK: "mainnet", QUIETSTAY_TESTNET_FEE_SECRET: "S-placeholder" }), false);
+    assert.equal(has({ NEXT_PUBLIC_QUIETSTAY_NETWORK: "mainnet", QUIETSTAY_FEE_SECRET: "S-placeholder" }), true);
+    // The issuer key stays out of a CLI deployment all the same.
+    assert.equal(JSON.parse(configUnder({ NEXT_PUBLIC_QUIETSTAY_SIGNING: "cli", QUIETSTAY_ISSUER_SECRET: "x" }, "c.hasIssuerSecret()").out), false);
   });
 
   it("the store prefix defaults to quietstay, and refuses anything but lowercase, digits and dashes", () => {

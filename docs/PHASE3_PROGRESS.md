@@ -2224,12 +2224,47 @@ of the spec, the rest at the second review of `def5eb6`.
     stays, and nothing goes through this app's server
     (`src/lib/token-client.ts`). On mainnet it keeps to the pilot limits
     (1 USDC a payment, 5 USDC held).
+  - (see D18 below for the fee account card on the same screen)
   - Checked: the page's own functions topped up the demo's passkey wallet
     `CBZNDVWA…` with 0.01 test USDC from `qs-buyer`, signed by the testnet
     CLI (tx `b75f989f…`): 17 → 17.01 USDC. `cli-issue.spec.ts` checks the
     screen for a regular wallet (address, XLM, "no USDC trustline", no fund
     card): passed. The fund button with a passkey session in a browser is
     for you to try at Stop 2.
+- **Your decision (2026-11-27, D18): passkey fees on mainnet are paid by a
+  limited fee key on the server, not CLI envelopes, and the fee account is
+  topped up by sending to its address, not with the CLI.** It replaces plan
+  item 4 as planned on 2026-11-23.
+  - `QUIETSTAY_FEE_SECRET` (any network, either mode; set by you in Vercel
+    only) is the fee route's key; the demo's older name still works there.
+    The route refuses if the key is not `NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT`'s.
+    Its rules are unchanged; the network check is now "this deployment's
+    network"; mainnet limits are lower (10 per IP an hour, 10 per wallet and
+    50 in all a day). The issuer and arbiter keys stay out of a `cli` server.
+    `/api/network` reports `fee_route` from the key; `check-app-config`
+    expects it on in `cli` mode.
+  - Wallet screen, signed in as the issuer: a Fee account card (address,
+    copy, XLM, a warning below 3 XLM) and "Top up the fee account" (XLM from
+    Freighter or any wallet in the picker). Or send XLM to the address from
+    anywhere.
+  - **Found while testing it, and fixed (it predates D18):** a request
+    carrying no authorization for a call that needs one was simulated in
+    recording mode, assembled with the missing authorization added, and sent:
+    it could only fail on chain, but the fee account paid its fee. Now the
+    transaction sent must carry exactly the authorizations the request did,
+    or nothing is sent (403). Real passkey requests carry signed ones, which
+    the SDK keeps as they are, so they are unaffected.
+  - Tests: unit 81/81 (`hasFeeKey` on mainnet and in `cli` mode, the network
+    check). `cli-issue.spec.ts`, now with a fee key in `cli` mode:
+    `/api/network` shows `fee_route: true` and no issuer key; the issuer's
+    Wallet shows the fee account and its top-up; an unauthorized `list`
+    through the route is refused with 403 and nothing sent: passed (tx
+    `3bfb962b…`). A passkey transaction through the route in a browser is
+    for Stop 2 (`passkey-app.spec.ts` is still the stale one).
+  - Yours, before mainnet: make the mainnet fee account (in Freighter or the
+    CLI, as you prefer), send it a few XLM, and set its public key as
+    `NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT` and its secret as
+    `QUIETSTAY_FEE_SECRET` in the mainnet Vercel project.
 
 ### Step 6 — Mainnet deployment
 - Date:

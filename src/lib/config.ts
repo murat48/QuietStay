@@ -315,14 +315,32 @@ export const FEE_ACCOUNT = perNetwork(
   "GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z",
 );
 
-/** Server-only: the testnet fee key, for /api/tx/sponsor and nothing else (`server` mode on testnet only). */
-export function testnetFeeSecret(): string {
-  if (CLI_SIGNING || IS_MAINNET) {
-    throw new ConfigurationError("this deployment pays fees with the CLI fee identity: the server holds no fee key.");
-  }
-  const secret = process.env.QUIETSTAY_TESTNET_FEE_SECRET;
-  if (!secret) throw missing("QUIETSTAY_TESTNET_FEE_SECRET", "the testnet fee key (qs-fee-testnet).");
+/**
+ * Server-only: the fee key, for /api/tx/sponsor and nothing else.
+ *
+ * D18 (2026-11-27): on mainnet too, so a passkey user never waits for anyone.
+ * `QUIETSTAY_FEE_SECRET` is the one setting, on any network and in either
+ * signing mode; you set it in Vercel, it is never in a file. Its account
+ * holds only a few XLM, and the fee route's rules and limits bound what it
+ * pays. The issuer and arbiter keys stay out of the server in `cli` mode.
+ * `QUIETSTAY_TESTNET_FEE_SECRET`, the older name, is still read on a testnet
+ * `server` deployment (the demo).
+ */
+export function feeSecret(): string {
+  const secret =
+    process.env.QUIETSTAY_FEE_SECRET ||
+    (!IS_MAINNET && !CLI_SIGNING ? process.env.QUIETSTAY_TESTNET_FEE_SECRET : undefined);
+  if (!secret) throw missing("QUIETSTAY_FEE_SECRET", "the fee key that pays passkey fees (D18).");
   return secret;
+}
+
+/** Whether this deployment can pay passkey fees (see `feeSecret`). */
+export function hasFeeKey(): boolean {
+  try {
+    return feeSecret().length > 0;
+  } catch {
+    return false;
+  }
 }
 
 /**

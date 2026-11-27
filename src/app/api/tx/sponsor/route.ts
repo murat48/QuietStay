@@ -10,7 +10,8 @@
  * Only the host function and its authorization entries are taken from the
  * request. The route builds a new transaction from the fee account, checks
  * it against src/lib/sponsor.ts, simulates it with the signatures in place,
- * adds headroom, signs it with `QUIETSTAY_TESTNET_FEE_SECRET` and submits it.
+ * adds headroom, signs it with the fee key (`QUIETSTAY_FEE_SECRET`; on
+ * mainnet too since D18) and submits it.
  * No session is needed: a wallet is created before it can sign in, and the
  * contract authorizes every call on its own. Each sponsored transaction
  * counts against the rate limits, whatever its outcome.
@@ -26,7 +27,7 @@ import {
   type Transaction,
 } from "@stellar/stellar-sdk";
 
-import { ConfigurationError, NETWORK_PASSPHRASE, testnetFeeSecret } from "@/lib/config";
+import { ConfigurationError, FEE_ACCOUNT, NETWORK_PASSPHRASE, feeSecret } from "@/lib/config";
 import { explainSimulationFailure, invokedContract, readInventory, readIssuer, server, submit } from "@/lib/contract";
 import { countInWindow } from "@/lib/once-store";
 import { serverAccount } from "@/lib/sep10";
@@ -37,12 +38,19 @@ export const dynamic = "force-dynamic";
 let isolated: Promise<void> | null = null;
 
 function feeKeypair(): Keypair {
+  let kp: Keypair;
   try {
-    return Keypair.fromSecret(testnetFeeSecret());
+    kp = Keypair.fromSecret(feeSecret());
   } catch (error) {
     if (error instanceof ConfigurationError) throw error;
-    throw new ConfigurationError("QUIETSTAY_TESTNET_FEE_SECRET is not a Stellar secret seed");
+    throw new ConfigurationError("QUIETSTAY_FEE_SECRET is not a Stellar secret seed");
   }
+  // The browser builds passkey transactions with the public fee account as
+  // their source: a key for another account would pay for nothing it built.
+  if (FEE_ACCOUNT && kp.publicKey() !== FEE_ACCOUNT) {
+    throw new ConfigurationError("QUIETSTAY_FEE_SECRET is not the key of NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT");
+  }
+  return kp;
 }
 
 function parseBody(body: { xdr?: unknown; func?: unknown; auth?: unknown }): {
@@ -126,6 +134,18 @@ export async function POST(request: Request): Promise<Response> {
     const assembled = rpc
       .assembleTransaction(tx, { ...ok, minResourceFee: resourceFee.toString(), transactionData: new SorobanDataBuilder(data) })
       .build();
+    // Only the authorizations the request carried, already signed. Assembling
+    // from a simulation adds the ones a call still needs (found 2026-11-27: a
+    // call with none was sent, to fail on chain at the fee account's cost),
+    // and one for the source would be the fee account itself authorizing.
+    const sent = (assembled.operations[0] as Operation.InvokeHostFunction).auth ?? [];
+    const carried = checked.auth.map((a) => a.toXDR("base64"));
+    if (sent.length !== carried.length || sent.some((a, i) => a.toXDR("base64") !== carried[i])) {
+      return Response.json(
+        { error: "this call needs authorizations the request does not carry (signed by the wallet); nothing was sent" },
+        { status: 403 },
+      );
+    }
     if (BigInt(assembled.fee) > MAX_FEE_STROOPS) {
       return Response.json({ error: `the fee ${assembled.fee} exceeds the ${MAX_FEE_STROOPS}-stroop cap` }, { status: 403 });
     }

@@ -11,8 +11,8 @@
  * neither the source nor the fee nor the time bounds.
  *
  * Refused, unless every rule holds:
- * - testnet only: on any other network passphrase the route does not run,
- *   and not in a `cli` deployment (NEXT_PUBLIC_QUIETSTAY_SIGNING=cli);
+ * - the deployment's own network only (testnet, or mainnet since D18,
+ *   2026-11-27), and only where a fee key is set (`QUIETSTAY_FEE_SECRET`);
  * - the host function is either
  *   - a call to the QuietStay rights contract (any function: the contract
  *     does its own authorization), or
@@ -26,9 +26,13 @@
  *   spender, and no USDC call at the top of a tree;
  * - the fee account appears nowhere but as source: not as an authorizing
  *   address, and not in any argument;
+ * - the transaction sent carries exactly the authorizations the request
+ *   did (the route, 2026-11-27): a call that needs one it lacks is refused
+ *   before sending, rather than sent to fail on chain at the fee account's
+ *   cost, and none can be the fee account's own as the source;
  * - the fee is at most 10,000,000 stroops (1 XLM);
  * - rate limits: 10 per IP per hour, 20 per smart wallet per day, 300 per day
- *   in total, kept in the deployment's store. If the store cannot be reached,
+ *   in total on testnet; 10, 10 and 50 on mainnet. Kept in the deployment's store. If the store cannot be reached,
  *   the route refuses rather than run unlimited.
  *
  * The fee key has no other role. `assertFeeKeyIsolated` refuses to run if the
@@ -38,15 +42,14 @@
 
 import { Address, hash, StrKey, xdr } from "@stellar/stellar-sdk";
 
-import { CLI_SIGNING, CONTRACT_ID, NETWORK_PASSPHRASE, SMART_ACCOUNT_WASM_HASH, USDC_CONTRACT_ID } from "./config";
+import { CONTRACT_ID, IS_MAINNET, NETWORK_PASSPHRASE, SMART_ACCOUNT_WASM_HASH, USDC_CONTRACT_ID } from "./config";
 
 export const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 export const MAX_FEE_STROOPS = 10_000_000n;
-export const LIMITS = {
-  perIpPerHour: 10,
-  perWalletPerDay: 20,
-  totalPerDay: 300,
-} as const;
+/** Lower on mainnet, where the fee account's few XLM are real (D18). */
+export const LIMITS = IS_MAINNET
+  ? ({ perIpPerHour: 10, perWalletPerDay: 10, totalPerDay: 50 } as const)
+  : ({ perIpPerHour: 10, perWalletPerDay: 20, totalPerDay: 300 } as const);
 
 export class SponsorRefusal extends Error {
   constructor(
@@ -153,10 +156,8 @@ export function checkSponsored(
   feeAccount: string,
   networkPassphrase: string = NETWORK_PASSPHRASE,
 ): Checked {
-  if (networkPassphrase !== TESTNET_PASSPHRASE) throw new SponsorRefusal("the fee route runs on testnet only", 404);
-  // A `cli` deployment (the mainnet-like rehearsal) has no fee key: the passkey
-  // fee is an envelope signed with the CLI fee identity instead.
-  if (CLI_SIGNING) throw new SponsorRefusal("this deployment has no fee route: the passkey fee is signed with the CLI", 404);
+  // Only the deployment's own network: a transaction for another can never be paid here.
+  if (networkPassphrase !== NETWORK_PASSPHRASE) throw new SponsorRefusal("the fee route pays on this deployment's network only", 404);
 
   let kind: SponsoredKind;
   let wallet: string | null = null;

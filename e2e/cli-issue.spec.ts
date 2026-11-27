@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { randomBytes, randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
-import { Keypair, Networks, TransactionBuilder, hash, rpc } from "@stellar/stellar-sdk";
+import { Address, Contract, Keypair, Networks, TransactionBuilder, hash, nativeToScVal, rpc } from "@stellar/stellar-sdk";
 
 import { startApp, type App } from "./lib/app";
 import { deployRightsStep4, fund, server } from "./lib/testnet";
@@ -32,16 +32,18 @@ let contract: string;
 const issuer = Keypair.random();
 const sep10 = Keypair.random();
 const owner = Keypair.random();
+// D18: the limited fee key, on the server in `cli` mode as on mainnet.
+const feeKey = Keypair.random();
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(15 * 60_000);
 
 test.beforeAll(async () => {
   test.setTimeout(10 * 60_000);
-  await Promise.all([issuer, owner].map(fund));
+  await Promise.all([issuer, owner, feeKey].map(fund));
   contract = await deployRightsStep4(issuer, Keypair.random());
   console.log(`e2e contract ${contract}`);
-  app = await startApp({ contract, issuer, sep10, port: PORT, cli: true });
+  app = await startApp({ contract, issuer, sep10, port: PORT, cli: true, fee: feeKey });
 });
 
 test.afterAll(async () => {
@@ -214,4 +216,33 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   await expect(O.getByTestId("wallet-usdc")).toContainText("no USDC trustline");
   // Funding is offered to a passkey wallet only.
   await expect(O.getByTestId("wallet-fund")).toHaveCount(0);
+  await expect(O.getByTestId("fee-account")).toHaveCount(0);
+
+  // --- 8. D18: the fee route is on in `cli` mode, and the issuer sees the fee account
+  const net = (await (await fetch(`${app.url}/api/network`)).json()) as { signing: string; fee_route: boolean; issuer_key_on_server: boolean };
+  expect(net).toMatchObject({ signing: "cli", fee_route: true, issuer_key_on_server: false });
+  await settle(I, "/wallet");
+  await expect(I.getByTestId("fee-address")).toHaveText(feeKey.publicKey(), { timeout: 60_000 });
+  await expect(I.getByTestId("fee-xlm")).toContainText("XLM", { timeout: 60_000 });
+  await expect(I.getByTestId("fee-fund")).toBeVisible();
+
+  // The route itself runs in `cli` mode: it loads the key, applies its rules,
+  // and builds and simulates the call. A `list` that carries no authorization
+  // is refused before anything is sent, so the fee account pays nothing
+  // (found here 2026-11-27: it used to be sent, to fail on chain).
+  const listCall = new Contract(contract)
+    .call("list", new Address(owner.publicKey()).toScVal(), nativeToScVal(rightId, { type: "u64" }), nativeToScVal(null))
+    .body()
+    .invokeHostFunctionOp()
+    .hostFunction()
+    .toXDR("base64");
+  const sponsored = await fetch(`${app.url}/api/tx/sponsor`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ func: listCall, auth: [] }),
+  });
+  const sponsoredBody = (await sponsored.json()) as { error?: string };
+  console.log(`fee route: ${sponsored.status} ${sponsoredBody.error ?? ""}`);
+  expect(sponsored.status).toBe(403);
+  expect(sponsoredBody.error).toContain("needs authorizations the request does not carry");
 });

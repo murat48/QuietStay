@@ -83,8 +83,8 @@ const approveArgs = (spender: string) => [
 ];
 
 describe("the fee route refuses", () => {
-  it("any network but testnet", () =>
-    refused(() => checkSponsored(call(CONTRACT_ID, "list", []), [], fee, "Public Global Stellar Network ; September 2015"), /testnet only/));
+  it("any network but the deployment's own", () =>
+    refused(() => checkSponsored(call(CONTRACT_ID, "list", []), [], fee, "Public Global Stellar Network ; September 2015"), /this deployment's network only/));
   it("a call to any other contract", () => refused(() => checkSponsored(call(other, "transfer", []), [], fee), /only calls to the QuietStay/));
   it("a contract of any other WASM", () => refused(() => checkSponsored(walletCreation("00".repeat(32)), [], fee), /only smart wallets/));
   it("an authorization that reaches another contract", () =>

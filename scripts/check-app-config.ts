@@ -56,7 +56,9 @@ async function main() {
   check(n.signing === a.signing, `signing = ${n.signing} (expected ${a.signing})`);
   if (a.signing === "cli") {
     check(n.attestations === false, `attestations off (${n.attestations})`);
-    check(n.fee_route === false, `no fee route on the server (${n.fee_route})`);
+    // D18 (2026-11-27): the fee route runs on mainnet too, with the limited
+    // fee key. Required where the deployment is meant to pay passkey fees.
+    check(n.fee_route === true, `the fee route is on: QUIETSTAY_FEE_SECRET is set (${n.fee_route})`);
     check(n.issuer_key_on_server === false, `no issuer key on the server (${n.issuer_key_on_server})`);
   }
   check(n.ids.rights === a.rights, `rights contract ${n.ids.rights}`);
