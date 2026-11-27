@@ -41,7 +41,7 @@
  */
 
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { RoleGate } from "@/components/RoleGate";
 import { SignInChoice } from "@/components/SignInChoice";
@@ -557,6 +557,8 @@ export default function IssueScreen() {
 
   // Which ask's details are open, and declining one (2026-11-27).
   const [viewing, setViewing] = useState<string | null>(null);
+  // Opened from the row's Decline button: the panel goes straight to declining.
+  const [declineFirst, setDeclineFirst] = useState<string | null>(null);
   const [declinedNote, setDeclinedNote] = useState<string | null>(null);
   const declineAsk = useCallback(
     async (ask: IssuanceRequest, reason: string) => {
@@ -752,7 +754,11 @@ export default function IssueScreen() {
                 <code>{ask.by}</code>{" "}
                 <span className="muted">· asked {formatDate(Date.parse(ask.requested_at) / 1000)}</span>{" "}
                 {ask.sealed_details ? <span className="tag accent">details sent</span> : null}{" "}
-                <button type="button" onClick={() => setViewing(viewing === ask.id ? null : ask.id)} data-testid={`ask-details-${ask.id}`}>
+                <button type="button" onClick={() => {
+                    setViewing(viewing === ask.id ? null : ask.id);
+                    setDeclineFirst(null);
+                  }}
+                  data-testid={`ask-details-${ask.id}`}>
                   {viewing === ask.id ? "Hide details" : "Details"}
                 </button>{" "}
                 {selected?.id === ask.id ? (
@@ -763,8 +769,27 @@ export default function IssueScreen() {
                   <button type="button" onClick={() => pick(ask)}>
                     Issue to this account
                   </button>
-                )}
-                {viewing === ask.id ? <AskDetails ask={ask} onDecline={(reason) => declineAsk(ask, reason)} /> : null}
+                )}{" "}
+                {/* In the row itself, not only inside Details (found on the demo, 2026-11-27). */}
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={() => {
+                    setViewing(ask.id);
+                    setDeclineFirst(ask.id);
+                  }}
+                  data-testid={`ask-decline-${ask.id}`}
+                >
+                  Decline
+                </button>
+                {viewing === ask.id ? (
+                  <AskDetails
+                    key={`${ask.id}-${declineFirst === ask.id ? "decline" : "view"}`}
+                    ask={ask}
+                    declineFirst={declineFirst === ask.id}
+                    onDecline={(reason) => declineAsk(ask, reason)}
+                  />
+                ) : null}
               </li>
             ))}
           </ul>
@@ -1435,12 +1460,24 @@ export default function IssueScreen() {
  * when, the details they sent (opened here with the intake key), and a way to
  * decline it with a reason the owner will see.
  */
-function AskDetails({ ask, onDecline }: { ask: IssuanceRequest; onDecline: (reason: string) => Promise<void> }) {
+function AskDetails({
+  ask,
+  declineFirst = false,
+  onDecline,
+}: {
+  ask: IssuanceRequest;
+  declineFirst?: boolean;
+  onDecline: (reason: string) => Promise<void>;
+}) {
   const [details, setDetails] = useState<Partial<Record<DetailKey, string>> | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [reason, setReason] = useState("");
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState(declineFirst);
   const [busy, setBusy] = useState(false);
+  const declineBox = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    if (declineFirst) declineBox.current?.focus();
+  }, [declineFirst]);
   useEffect(() => {
     if (!ask.sealed_details) return;
     let cancelled = false;
@@ -1500,6 +1537,7 @@ function AskDetails({ ask, onDecline }: { ask: IssuanceRequest; onDecline: (reas
         <label htmlFor={`decline-${ask.id}`}>Reason, shown to the owner (optional)</label>
         <textarea
           id={`decline-${ask.id}`}
+          ref={declineBox}
           value={reason}
           maxLength={500}
           onChange={(e) => setReason(e.target.value)}

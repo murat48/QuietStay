@@ -127,8 +127,9 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   await I.locator('[data-testid^="ask-details-"]').first().click({ timeout: 60_000 });
   await expect(I.locator('[data-testid^="ask-details-list-"]')).toContainText(ownerName, { timeout: 60_000 });
   const reason = "The deed reference is missing; please add it and ask again.";
+  // Declined from the row's own button, which opens the panel ready to decline.
+  await I.locator('[data-testid^="ask-decline-"]').first().click();
   await I.locator('[data-testid^="decline-reason-"]').fill(reason);
-  await I.locator('button[data-testid^="decline-"]', { hasText: "Decline this request" }).click();
   await I.locator('[data-testid^="decline-yes-"]').click();
   await expect(I.getByTestId("ask-declined-note")).toBeVisible({ timeout: 60_000 });
   await expect(I.getByRole("button", { name: "Issue to this account" })).toHaveCount(0);

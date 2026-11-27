@@ -2182,6 +2182,10 @@ of the spec, the rest at the second review of `def5eb6`.
   Nothing is on chain. `cli-issue.spec.ts` now declines the first ask with a
   reason, checks the owner sees it, and issues the second: passed (tx
   `ce91b6f8…`). Unit tests 80/80.
+  - Your report the same day: no decline on the demo. It was there, but only
+    inside Details. Each row now has its own Decline button, which opens the
+    panel ready to decline (reason box focused, the confirmation shown). The
+    test declines from that button: passed (tx `79040a4f…`).
 
 ### Step 6 — Mainnet deployment
 - Date:
