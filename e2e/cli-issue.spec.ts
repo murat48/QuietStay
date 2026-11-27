@@ -206,4 +206,12 @@ test("the issuer signs in and issues with the CLI; the owner's browser gets the 
   await expect(O.getByTestId(`renew-waiting-${rightId}`)).toContainText("automatic renewal filed", { timeout: 60_000 });
   await settle(I, "/issue");
   await expect(I.getByText("No pending requests.")).toBeVisible({ timeout: 60_000 });
+
+  // --- 7. the Wallet screen (2026-11-27): the address to copy, and balances ----
+  await settle(O, "/wallet");
+  await expect(O.getByTestId("wallet-address")).toHaveText(owner.publicKey(), { timeout: 60_000 });
+  await expect(O.getByTestId("wallet-xlm")).toContainText("XLM", { timeout: 60_000 });
+  await expect(O.getByTestId("wallet-usdc")).toContainText("no USDC trustline");
+  // Funding is offered to a passkey wallet only.
+  await expect(O.getByTestId("wallet-fund")).toHaveCount(0);
 });

@@ -2211,6 +2211,25 @@ of the spec, the rest at the second review of `def5eb6`.
     `c490f977…`). The automatic chain itself (filing the next year once a
     renewed week is picked up) needs a week that has ended, so it is not run
     by a test. No-leak 2/2, 489 requests, no leaks.
+- **Your request (2026-11-27): a Wallet screen, to copy the address, see the
+  balances and fund a passkey wallet.** New `/wallet`, in the menu when
+  signed in:
+  - the address with a copy button and its explorer link;
+  - USDC and XLM, read through their asset contracts from the browser (a
+    `G…` without the USDC trustline reads as such; a passkey wallet is told
+    it needs no XLM, since its fees are paid);
+  - for a passkey wallet, "Fund this wallet": a USDC or XLM transfer from a
+    regular wallet chosen in the kit's picker (Freighter, …) for that one
+    transfer. That wallet signs it and pays its own fee, the passkey session
+    stays, and nothing goes through this app's server
+    (`src/lib/token-client.ts`). On mainnet it keeps to the pilot limits
+    (1 USDC a payment, 5 USDC held).
+  - Checked: the page's own functions topped up the demo's passkey wallet
+    `CBZNDVWA…` with 0.01 test USDC from `qs-buyer`, signed by the testnet
+    CLI (tx `b75f989f…`): 17 → 17.01 USDC. `cli-issue.spec.ts` checks the
+    screen for a regular wallet (address, XLM, "no USDC trustline", no fund
+    card): passed. The fund button with a passkey session in a browser is
+    for you to try at Stop 2.
 
 ### Step 6 — Mainnet deployment
 - Date:

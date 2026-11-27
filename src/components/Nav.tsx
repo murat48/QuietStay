@@ -52,6 +52,8 @@ export function Nav() {
     { href: "/issue", label: issueLabel },
     // Paid offers and escrows (Phase 3): for anyone signed in.
     ...(signedIn ? [{ href: "/stays", label: "Offers & stays" }, { href: "/swap", label: "Swap" }] : []),
+    // The account's address and balances, and funding a passkey wallet (2026-11-27).
+    ...(signedIn ? [{ href: "/wallet", label: "Wallet" }] : []),
     ...(showTransfer ? [{ href: "/transfer", label: "Transfer", badge: awaiting }] : []),
   ];
 
