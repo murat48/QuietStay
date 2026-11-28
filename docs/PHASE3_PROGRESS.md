@@ -2379,6 +2379,33 @@ of the spec, the rest at the second review of `def5eb6`.
   back: escrow #4 Refunded with decision hash `d55f0ef5…4009`; the passkey
   wallet's USDC 16.01 → 17.01. Run again, the script refuses (Refunded) and
   sends nothing. Item 5 is done.
+- **Item 6, part 1 (2026-11-28): the two stale browser tests rewritten, the
+  runbooks revised.**
+  - `e2e/passkey-app.spec.ts`: two passkey wallets rent a week through the
+    app as it is now: intake open, the owner's passkey wallet asks with
+    details, issued and delivered with no link; listed for rent at a price;
+    the renter's passkey wallet funded on the Wallet screen from a regular
+    wallet (the bridge for Freighter); a USDC rental offer and its allowance
+    approved with the passkey; a cancelled prompt at acceptance moves
+    nothing; the owner proves and accepts, escrow funded; every fee through
+    the fee route. Passed 2/2 (3.3 min), privacy record
+    `2026-11-28-passkey-app-76c9e571.txt`.
+  - `e2e/swap.spec.ts`: issuing with the owner's details and delivery, the
+    shared sign-in (`e2e/lib/sign-in.ts`); the swap steps as before (offer,
+    accept, withdraw, a stale complete refused, accept again, complete), then
+    the trustline and collect notices. Passed (4.4 min), complete
+    `2174bf01…7e33`, privacy records `2026-11-28-swap-e2e-2174bf01.txt` and
+    `…-collect-notice-2497e656.txt`.
+  - `MAINNET_SETUP.md` revised for the 2026-11-23 decisions, D18, protocol 30
+    and item 5: no `qsmain` (run as yourself, Claude closed); issuer, arbiter
+    and fee keys in the CLI, owner/buyer/renter in Freighter; the fee account
+    funded with 5 XLM (115 XLM from you); trustlines and USDC from Freighter;
+    Part 6 the mainnet app's settings with the fee key typed into Vercel;
+    Part 7 the arbiter's command. `check-mainnet-setup.ts`: the fee account's
+    plan 5 XLM, the trustline limit printed, not required.
+  - `MAINNET_REHEARSAL.md`: the same, its CLI flows marked optional, and the
+    arbiter part. `PRELAUNCH_CHECKLIST.md`: a close-out of what changed since
+    the review, and the before-GO list updated.
 
 ### Step 6 — Mainnet deployment
 - Date:
