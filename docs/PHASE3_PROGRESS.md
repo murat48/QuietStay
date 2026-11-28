@@ -2406,6 +2406,38 @@ of the spec, the rest at the second review of `def5eb6`.
   - `MAINNET_REHEARSAL.md`: the same, its CLI flows marked optional, and the
     arbiter part. `PRELAUNCH_CHECKLIST.md`: a close-out of what changed since
     the review, and the before-GO list updated.
+- **Item 6, the dry run (2026-11-28): MAINNET_REHEARSAL.md as revised, on
+  testnet, with my testnet identities in place of `qs-rehearsal-`** (none
+  created; your go-ahead "her şeyi sen yap, sadece mainnet deploy yapma").
+  Evidence `evidence/checklist/rehearsal-2026-11-28-part{0-4,5,6}.txt`.
+  - Part 0.1: protocol PASS on 30. 0.2 (the key store test) not run: it
+    makes an identity.
+  - Parts 1–4, the checks over the existing identities: every structural
+    check passes (distinct keys, master key the only signer, no flags, no
+    sponsorship, the fee account 5 XLM plan, no USDC line on issuer,
+    arbiter, fee or sign-in key, the trustline limits printed). The FAILs are
+    the expected ones: the keys are not new, the owner holds USDC before
+    Part 4, and they hold 32.19 test USDC against the 5 USDC plan.
+  - Part 5, the Step 6 deploy through `mainnet-sign-submit.sh`, each review,
+    protocol and pilot check passed, SEND, one signature: 5/5 SUCCESS.
+    Rights `CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O`,
+    web-auth `CDTDDZAB3GBO7NQP4CU5WDJOLRGJFTHG426ABJRPYDEBGK3DVOZJBJBP`,
+    verifier `CBMZP6Q574XG2B6CYL4I7BL2W37JBY2YPNSYOMCST27EVP6ZNLDIX47P`.
+    Check 5 all passed (pinned WASMs, issuer, arbiter, USDC, cap, the
+    verification key field by field, web-auth not upgradable, every TTL).
+    The pilot check ran over the real pilot accounts, with
+    `QS_PILOT_MAX_TOTAL` (testnet only).
+  - Part 6, the CLI flows: issue A and B, the record request, the sale
+    offer, the one-step sale, the rental offer: 6/6 SUCCESS; week A now the
+    buyer's, 1 USDC paid to the owner, the rental offer open. Privacy check
+    over all six passes (`evidence/privacy/2026-11-28-rehearsal-pilot-testnet-CD3GUZ57.txt`).
+  - Part 7 (the arbiter): rehearsed earlier today on the demo, escrow #4.
+  - Part 6 of the mainnet runbook (the app's settings): its
+    `check-app-config` command was wrong in the runbook (positional URL);
+    fixed to the script's named options. `quietstay-rehearsal.vercel.app`
+    reports `signing: server` and the demo contract `CATUBRZZ…`, so it is
+    the demo, not the `cli` rehearsal project VERCEL.md describes
+    (`CC7W4OGP…`); open question for you.
 
 ### Step 6 — Mainnet deployment
 - Date:

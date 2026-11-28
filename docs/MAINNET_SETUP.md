@@ -379,8 +379,17 @@ settings only, never in a file:
   warning below 3 XLM and a top-up from Freighter. Or send it XLM from
   anywhere.
 
-After deploying, `npx tsx scripts/check-app-config.ts <the mainnet URL>`
-must show `signing: cli`, `fee_route: true` and no issuer key.
+After deploying, check it (read-only: the app's public `/api/network` and
+`stellar.toml`, and the chain), and paste the output:
+
+```sh
+npx tsx scripts/check-app-config.ts --url https://<the mainnet host> --network mainnet --signing cli \
+  --rights "$QS_RIGHTS_CONTRACT" --web-auth "$WEB_AUTH_ID" --verifier "$VERIFIER_ID" \
+  --fee-account "$QS_MAIN_FEE" --issuer "$QS_MAIN_ISSUER" --arbiter "$QS_MAIN_ARBITER"
+```
+
+It must pass with `signing: cli`, `fee_route: true` and no issuer key on the
+server.
 
 ## Part 7 — Deciding a dispute (the arbiter)
 

@@ -1,0 +1,203 @@
+Part 0.1 (2026-11-28T06:58:51Z)
+checked at 2026-11-28T06:58:52.374Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 30  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 30
+
+Parts 1-4: the checks over the existing identities (they already exist and hold
+more than the plan, so Part 1's 'new key' and the plan amounts are expected to fail)
+--- part 1
+  PASS  QS_REHEARSAL_SIGNIN is a public key (G…): GDC2YUKYIPDETC6M7QVOL4222SJF6MVYCW5ZOOVFQEZQQPYIENPLRRGQ
+check-mainnet-setup part 1, testnet Horizon, read-only, 2026-11-28T06:58:55.586Z
+USDC route: dex (--usdc dex|exchange)
+  PASS  QS_REHEARSAL_ISSUER is a public key (G…): GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+  PASS  QS_REHEARSAL_ARBITER is a public key (G…): GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC
+  PASS  QS_REHEARSAL_FEE is a public key (G…): GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z
+  PASS  QS_REHEARSAL_OWNER is a public key (G…): GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR
+  PASS  QS_REHEARSAL_BUYER is a public key (G…): GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ
+  PASS  QS_REHEARSAL_RENTER is a public key (G…): GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN
+  PASS  the six keys and the sign-in key are all different
+  PASS  the arbiter is not the issuer (the constructor refuses that too)
+  FAIL  issuer: not a testnet identity (it is qs-issuer (testnet))
+  FAIL  issuer: not on testnet yet (a new key) — it already exists: is this key new?
+  FAIL  arbiter: not a testnet identity (it is qs-arbiter (testnet))
+  FAIL  arbiter: not on testnet yet (a new key) — it already exists: is this key new?
+  FAIL  fee: not a testnet identity (it is qs-fee-testnet)
+  FAIL  fee: not on testnet yet (a new key) — it already exists: is this key new?
+  FAIL  owner: not a testnet identity (it is qs-owner (testnet))
+  FAIL  owner: not on testnet yet (a new key) — it already exists: is this key new?
+  FAIL  buyer: not a testnet identity (it is qs-buyer (testnet))
+  FAIL  buyer: not on testnet yet (a new key) — it already exists: is this key new?
+  FAIL  renter: not a testnet identity (it is qs-renter (testnet))
+  FAIL  renter: not on testnet yet (a new key) — it already exists: is this key new?
+
+12 check(s) FAILED
+(exit 1)
+--- part 2
+  PASS  QS_REHEARSAL_SIGNIN is a public key (G…): GDC2YUKYIPDETC6M7QVOL4222SJF6MVYCW5ZOOVFQEZQQPYIENPLRRGQ
+check-mainnet-setup part 2, testnet Horizon, read-only, 2026-11-28T06:58:58.992Z
+USDC route: dex (--usdc dex|exchange)
+  PASS  QS_REHEARSAL_ISSUER is a public key (G…): GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+  PASS  QS_REHEARSAL_ARBITER is a public key (G…): GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC
+  PASS  QS_REHEARSAL_FEE is a public key (G…): GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z
+  PASS  QS_REHEARSAL_OWNER is a public key (G…): GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR
+  PASS  QS_REHEARSAL_BUYER is a public key (G…): GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ
+  PASS  QS_REHEARSAL_RENTER is a public key (G…): GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN
+  PASS  issuer: 9723.6350317 XLM ≥ planned 74.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  issuer: the only signer is its own master key, weight 1
+  PASS  issuer: thresholds 0/0/0 (unchanged)
+  PASS  issuer: no flags, home domain or data entries
+  PASS  issuer: sponsors nothing and is sponsored by nothing
+  PASS  issuer: holds XLM only
+  PASS  arbiter: 9999.9458100 XLM ≥ planned 1.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  arbiter: the only signer is its own master key, weight 1
+  PASS  arbiter: thresholds 0/0/0 (unchanged)
+  PASS  arbiter: no flags, home domain or data entries
+  PASS  arbiter: sponsors nothing and is sponsored by nothing
+  PASS  arbiter: holds XLM only
+  PASS  fee: 10000.1583561 XLM ≥ planned 4.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  fee: the only signer is its own master key, weight 1
+  PASS  fee: thresholds 0/0/0 (unchanged)
+  PASS  fee: no flags, home domain or data entries
+  PASS  fee: sponsors nothing and is sponsored by nothing
+  PASS  fee: holds XLM only
+  PASS  owner: 9997.9548850 XLM ≥ planned 2.9900000 (minimum balance 1.5000000, 1 subentries)
+  PASS  owner: the only signer is its own master key, weight 1
+  PASS  owner: thresholds 0/0/0 (unchanged)
+  PASS  owner: no flags, home domain or data entries
+  PASS  owner: sponsors nothing and is sponsored by nothing
+  FAIL  owner: holds XLM only
+  PASS  buyer: 9999.8352074 XLM ≥ planned 18.9900000 (minimum balance 1.5000000, 1 subentries)
+  PASS  buyer: the only signer is its own master key, weight 1
+  PASS  buyer: thresholds 0/0/0 (unchanged)
+  PASS  buyer: no flags, home domain or data entries
+  PASS  buyer: sponsors nothing and is sponsored by nothing
+  FAIL  buyer: holds XLM only
+  PASS  renter: 9999.7925905 XLM ≥ planned 18.9900000 (minimum balance 1.5000000, 1 subentries)
+  PASS  renter: the only signer is its own master key, weight 1
+  PASS  renter: thresholds 0/0/0 (unchanged)
+  PASS  renter: no flags, home domain or data entries
+  PASS  renter: sponsors nothing and is sponsored by nothing
+  FAIL  renter: holds XLM only
+
+3 check(s) FAILED
+(exit 1)
+--- part 3
+  PASS  QS_REHEARSAL_SIGNIN is a public key (G…): GDC2YUKYIPDETC6M7QVOL4222SJF6MVYCW5ZOOVFQEZQQPYIENPLRRGQ
+check-mainnet-setup part 3, testnet Horizon, read-only, 2026-11-28T06:59:02.981Z
+USDC route: dex (--usdc dex|exchange)
+  PASS  QS_REHEARSAL_ISSUER is a public key (G…): GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+  PASS  QS_REHEARSAL_ARBITER is a public key (G…): GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC
+  PASS  QS_REHEARSAL_FEE is a public key (G…): GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z
+  PASS  QS_REHEARSAL_OWNER is a public key (G…): GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR
+  PASS  QS_REHEARSAL_BUYER is a public key (G…): GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ
+  PASS  QS_REHEARSAL_RENTER is a public key (G…): GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN
+  PASS  issuer: 9723.6350317 XLM ≥ planned 74.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  issuer: the only signer is its own master key, weight 1
+  PASS  issuer: thresholds 0/0/0 (unchanged)
+  PASS  issuer: no flags, home domain or data entries
+  PASS  issuer: sponsors nothing and is sponsored by nothing
+  PASS  issuer: holds XLM only
+  PASS  arbiter: 9999.9458100 XLM ≥ planned 1.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  arbiter: the only signer is its own master key, weight 1
+  PASS  arbiter: thresholds 0/0/0 (unchanged)
+  PASS  arbiter: no flags, home domain or data entries
+  PASS  arbiter: sponsors nothing and is sponsored by nothing
+  PASS  arbiter: holds XLM only
+  PASS  fee: 10000.1583561 XLM ≥ planned 4.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  fee: the only signer is its own master key, weight 1
+  PASS  fee: thresholds 0/0/0 (unchanged)
+  PASS  fee: no flags, home domain or data entries
+  PASS  fee: sponsors nothing and is sponsored by nothing
+  PASS  fee: holds XLM only
+  PASS  owner: 9997.9548850 XLM ≥ planned 2.9900000 (minimum balance 1.5000000, 1 subentries)
+  PASS  owner: the only signer is its own master key, weight 1
+  PASS  owner: thresholds 0/0/0 (unchanged)
+  PASS  owner: no flags, home domain or data entries
+  PASS  owner: sponsors nothing and is sponsored by nothing
+  FAIL  owner: holds XLM only
+  PASS  buyer: 9999.8352074 XLM ≥ planned 18.9900000 (minimum balance 1.5000000, 1 subentries)
+  PASS  buyer: the only signer is its own master key, weight 1
+  PASS  buyer: thresholds 0/0/0 (unchanged)
+  PASS  buyer: no flags, home domain or data entries
+  PASS  buyer: sponsors nothing and is sponsored by nothing
+  FAIL  buyer: holds XLM only
+  PASS  renter: 9999.7925905 XLM ≥ planned 18.9900000 (minimum balance 1.5000000, 1 subentries)
+  PASS  renter: the only signer is its own master key, weight 1
+  PASS  renter: thresholds 0/0/0 (unchanged)
+  PASS  renter: no flags, home domain or data entries
+  PASS  renter: sponsors nothing and is sponsored by nothing
+  FAIL  renter: holds XLM only
+  PASS  the rehearsal sign-in key: 0 subentries (0)
+  FAIL  the rehearsal sign-in key: 10000.0000000 XLM = the minimum balance 1.0000000
+  PASS  the rehearsal sign-in key: the only signer is its own master key, weight 1
+  PASS  the rehearsal sign-in key: thresholds 0/0/0 (unchanged)
+  PASS  the rehearsal sign-in key: no flags, home domain or data entries
+  PASS  the rehearsal sign-in key: sponsors nothing and is sponsored by nothing
+  FAIL  the rehearsal sign-in key's last payment went to the deployer: create_account 10000.0000000 XLM, tx 26c517503c4e47a78bd68a7d065be22b9cca4367192189521373110d4ada7441, 2026-08-15T21:17:06Z
+
+5 check(s) FAILED
+(exit 1)
+--- part 4
+  PASS  QS_REHEARSAL_SIGNIN is a public key (G…): GDC2YUKYIPDETC6M7QVOL4222SJF6MVYCW5ZOOVFQEZQQPYIENPLRRGQ
+check-mainnet-setup part 4, testnet Horizon, read-only, 2026-11-28T06:59:07.930Z
+USDC route: dex (--usdc dex|exchange)
+  PASS  QS_REHEARSAL_ISSUER is a public key (G…): GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+  PASS  QS_REHEARSAL_ARBITER is a public key (G…): GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC
+  PASS  QS_REHEARSAL_FEE is a public key (G…): GCGDZWCLYUC5DLB5TWV5U4MRS4LVR36T5JP5IB6PIYAZKYNVVQGRL77Z
+  PASS  QS_REHEARSAL_OWNER is a public key (G…): GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR
+  PASS  QS_REHEARSAL_BUYER is a public key (G…): GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ
+  PASS  QS_REHEARSAL_RENTER is a public key (G…): GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN
+  PASS  issuer: 9723.6350317 XLM ≥ planned 74.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  issuer: the only signer is its own master key, weight 1
+  PASS  issuer: thresholds 0/0/0 (unchanged)
+  PASS  issuer: no flags, home domain or data entries
+  PASS  issuer: sponsors nothing and is sponsored by nothing
+  PASS  arbiter: 9999.9458100 XLM ≥ planned 1.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  arbiter: the only signer is its own master key, weight 1
+  PASS  arbiter: thresholds 0/0/0 (unchanged)
+  PASS  arbiter: no flags, home domain or data entries
+  PASS  arbiter: sponsors nothing and is sponsored by nothing
+  PASS  fee: 10000.1583561 XLM ≥ planned 4.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  fee: the only signer is its own master key, weight 1
+  PASS  fee: thresholds 0/0/0 (unchanged)
+  PASS  fee: no flags, home domain or data entries
+  PASS  fee: sponsors nothing and is sponsored by nothing
+  PASS  owner: 9997.9548850 XLM ≥ planned 2.9900000 (minimum balance 1.5000000, 1 subentries)
+  PASS  owner: the only signer is its own master key, weight 1
+  PASS  owner: thresholds 0/0/0 (unchanged)
+  PASS  owner: no flags, home domain or data entries
+  PASS  owner: sponsors nothing and is sponsored by nothing
+  PASS  buyer: 9999.8352074 XLM ≥ planned 2.5000000 (minimum balance 1.5000000, 1 subentries)
+  PASS  buyer: the only signer is its own master key, weight 1
+  PASS  buyer: thresholds 0/0/0 (unchanged)
+  PASS  buyer: no flags, home domain or data entries
+  PASS  buyer: sponsors nothing and is sponsored by nothing
+  PASS  renter: 9999.7925905 XLM ≥ planned 2.5000000 (minimum balance 1.5000000, 1 subentries)
+  PASS  renter: the only signer is its own master key, weight 1
+  PASS  renter: thresholds 0/0/0 (unchanged)
+  PASS  renter: no flags, home domain or data entries
+  PASS  renter: sponsors nothing and is sponsored by nothing
+  PASS  issuer: no USDC trustline, so it can hold no USDC
+  PASS  issuer: no other asset or trustline
+  PASS  arbiter: no USDC trustline, so it can hold no USDC
+  PASS  arbiter: no other asset or trustline
+  PASS  fee: no USDC trustline, so it can hold no USDC
+  PASS  fee: no other asset or trustline
+  PASS  owner: has a USDC trustline to Circle's issuer
+  · owner: trustline limit 922337203685.4775807 (no 5 USDC limit; the total is checked)
+  FAIL  owner: holds 7.0000000 USDC (planned 0.0000000)
+  PASS  owner: no other asset or trustline
+  PASS  buyer: has a USDC trustline to Circle's issuer
+  · buyer: trustline limit 922337203685.4775807 (no 5 USDC limit; the total is checked)
+  FAIL  buyer: holds 15.1900000 USDC (planned 2.0000000)
+  PASS  buyer: no other asset or trustline
+  PASS  renter: has a USDC trustline to Circle's issuer
+  · renter: trustline limit 922337203685.4775807 (no 5 USDC limit; the total is checked)
+  FAIL  renter: holds 10.0000000 USDC (planned 2.0000000)
+  PASS  renter: no other asset or trustline
+  PASS  the rehearsal sign-in key: no USDC trustline
+  FAIL  total USDC across the pilot accounts: 32.1900000 ≤ 5.0000000 (D7)
+
+4 check(s) FAILED
+(exit 1)

@@ -67,6 +67,7 @@ review, each recorded in PHASE3_PROGRESS.md:
   passkey wallet, the fee account). The rights contract and its WASM are
   unchanged.
 - **Tests:** see §7's 2026-11-28 line.
+- **Dry run (2026-11-28):** the revised rehearsal on testnet with my testnet identities: the Step 6 deploy 5/5 and Check 5 all passed (rights `CD3GUZ57…KB6O`), the CLI flows 6/6 with a passing privacy check, the arbiter rehearsed on escrow #4 (PHASE3_PROGRESS.md).
 
 Status words: **PASS** (checked, with evidence below); **OPEN — yours** (needs
 the owner's action or decision before GO); **Step 6** (can only be done once

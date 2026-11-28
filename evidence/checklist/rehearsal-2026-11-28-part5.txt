@@ -1,0 +1,301 @@
+contracts/target/wasm32v1-none/release/quietstay_rights.wasm: OK
+contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm: OK
+/tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/oz-verifier.wasm: OK
+predicted: rights CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O web-auth CDTDDZAB3GBO7NQP4CU5WDJOLRGJFTHG426ABJRPYDEBGK3DVOZJBJBP verifier CBMZP6Q574XG2B6CYL4I7BL2W37JBY2YPNSYOMCST27EVP6ZNLDIX47P
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/tx-review.ts --xdr-file /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/01-upload-rights.xdr --network testnet --source GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Rights       CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          195365 stroops (declared, including resources)
+Sequence     17686881483358459
+Latest ledger 5965102
+Operation 1: invokeHostFunction
+  upload     71244 bytes, sha256 76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde
+             = QuietStay rights (the tested final WASM)
+Re-simulating with the signed authorization entries in place…
+  resource fee 195265 stroops
+  instructions 63531345, read 0 bytes, write 0 bytes
+  declared     resource fee 195265 stroops, 63531345 instructions
+
+No reason to refuse.
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-protocol.ts
+checked at 2026-11-28T06:59:18.737Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 30  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 30
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-pilot-accounts.ts --network testnet --accounts GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR,GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ,GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN --contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O --max-total 100000000000
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-28T06:59:20.473Z
+  ✓ GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR: USDC trustline, balance 7.0000000
+  ✓ GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ: USDC trustline, balance 15.1900000
+  ✓ GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN: USDC trustline, balance 10.0000000
+  · rights contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O: 0.0000000 USDC held in escrow
+  ✓ total 32.1900000 USDC (321900000 units), limit 10000.0000000 (100000000000)
+PASS
+
+ℹ️  Signing transaction: fdd3257c1e81f7026430d147e85f8a5c8b9095cd9f3553825da267cdc48800f6
+
+Signed: fdd3257c1e81f7026430d147e85f8a5c8b9095cd9f3553825da267cdc48800f6 (kept in /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/01-upload-rights.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: fdd3257c1e81f7026430d147e85f8a5c8b9095cd9f3553825da267cdc48800f6
+      https://stellar.expert/explorer/testnet/tx/fdd3257c1e81f7026430d147e85f8a5c8b9095cd9f3553825da267cdc48800f6
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/tx-review.ts --xdr-file /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/02-upload-web-auth.xdr --network testnet --source GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Rights       CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          10265 stroops (declared, including resources)
+Sequence     17686881483358460
+Latest ledger 5965104
+Operation 1: invokeHostFunction
+  upload     1547 bytes, sha256 708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1
+             = SEP-45 web-auth (Anchor Platform @ dc5817fb, pinned build)
+Re-simulating with the signed authorization entries in place…
+  resource fee 10165 stroops
+  instructions 2461568, read 0 bytes, write 0 bytes
+  declared     resource fee 10165 stroops, 2461568 instructions
+
+No reason to refuse.
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-protocol.ts
+checked at 2026-11-28T06:59:30.541Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 30  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 30
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-pilot-accounts.ts --network testnet --accounts GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR,GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ,GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN --contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O --max-total 100000000000
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-28T06:59:32.351Z
+  ✓ GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR: USDC trustline, balance 7.0000000
+  ✓ GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ: USDC trustline, balance 15.1900000
+  ✓ GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN: USDC trustline, balance 10.0000000
+  · rights contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O: 0.0000000 USDC held in escrow
+  ✓ total 32.1900000 USDC (321900000 units), limit 10000.0000000 (100000000000)
+PASS
+
+ℹ️  Signing transaction: 54f5fbd410c1ae9b5a71dd64039c47c9fb876f0eba9424018584f5487d5d628e
+
+Signed: 54f5fbd410c1ae9b5a71dd64039c47c9fb876f0eba9424018584f5487d5d628e (kept in /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/02-upload-web-auth.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: 54f5fbd410c1ae9b5a71dd64039c47c9fb876f0eba9424018584f5487d5d628e
+      https://stellar.expert/explorer/testnet/tx/54f5fbd410c1ae9b5a71dd64039c47c9fb876f0eba9424018584f5487d5d628e
+ℹ️  Deploying contract using wasm hash 76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde
+✅ Transaction built!
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/tx-review.ts --xdr-file /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/03-deploy-rights.xdr --network testnet --source GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Rights       CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          557668 stroops (declared, including resources)
+Sequence     17686881483358461
+Latest ledger 5965106
+Operation 1: invokeHostFunction
+  deployer   GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE, salt f8ea006d3ddf4cfa24994dab161d2e3c548649d90aea57e1b1c6d592103dd8bf
+  creates    CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O
+  from WASM  76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde = QuietStay rights (the tested final WASM)
+  ctor 0     "GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE"
+  ctor 1     "GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC"
+  ctor 2     "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+  ctor 3     "QuietStay Usage Rights"
+  ctor 4     "QSTAY"
+  ctor 5     {"alpha":"0x0005f4690b19028a844c1fcf5b0d558e360b165e0ac2bafe34d9cb0f1a7854781ab2bc605470fc38195dd43fc079c01a0a437b7c8fa3a7487d6d79f1805d7d47d1a2ccbd817b0ae758020851dba52ed4f4284b0d42213b490eb1cd964f7db531","beta":"0x04effea83febb10a3ae055f2100ceaf67b8ee4455eaa5b9b642e36789b527f24b18b5959e3fd87474b3ea1a0f843647112f9fd1cf67a72d4997a07d788562afe05b34d32d0e3c49dad83167d8ec169f3841f237937219fac9913720c
+  ctor 6     "10000000"
+  VK hash    55ce858fea2e86e56917a114aba2dc3cdec17270c534ab9b3941743b01aeb1de = the committed key
+  max_payment 10000000 (cap 1000000000)
+  auth       the source account's own signature
+    sorobanAuthorizedFunctionTypeCreateContractV2HostFn
+Re-simulating with the signed authorization entries in place…
+  resource fee 557568 stroops
+  instructions 1814836, read 0 bytes, write 2560 bytes
+  declared     resource fee 557568 stroops, 1814836 instructions
+
+No reason to refuse.
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-protocol.ts
+checked at 2026-11-28T06:59:39.225Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 30  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 30
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-pilot-accounts.ts --network testnet --accounts GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR,GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ,GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN --contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O --max-total 100000000000
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-28T06:59:41.687Z
+  ✓ GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR: USDC trustline, balance 7.0000000
+  ✓ GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ: USDC trustline, balance 15.1900000
+  ✓ GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN: USDC trustline, balance 10.0000000
+  · rights contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O: 0.0000000 USDC held in escrow
+  ✓ total 32.1900000 USDC (321900000 units), limit 10000.0000000 (100000000000)
+PASS
+
+ℹ️  Signing transaction: 890fa94ae6b0ca220f2818d17358a2ab4ee0d03405bd3ca2c7e7d49964365a4d
+
+Signed: 890fa94ae6b0ca220f2818d17358a2ab4ee0d03405bd3ca2c7e7d49964365a4d (kept in /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/03-deploy-rights.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: 890fa94ae6b0ca220f2818d17358a2ab4ee0d03405bd3ca2c7e7d49964365a4d
+      https://stellar.expert/explorer/testnet/tx/890fa94ae6b0ca220f2818d17358a2ab4ee0d03405bd3ca2c7e7d49964365a4d
+ℹ️  Deploying contract using wasm hash 708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1
+✅ Transaction built!
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/tx-review.ts --xdr-file /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/04-deploy-web-auth.xdr --network testnet --source GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Rights       CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          46834 stroops (declared, including resources)
+Sequence     17686881483358462
+Latest ledger 5965108
+Operation 1: invokeHostFunction
+  deployer   GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE, salt 1b34aabf112e7f3b1d73286597cbdc7177788a87135bad884fed21c90fbf0dcc
+  creates    CDTDDZAB3GBO7NQP4CU5WDJOLRGJFTHG426ABJRPYDEBGK3DVOZJBJBP
+  from WASM  708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1 = SEP-45 web-auth (Anchor Platform @ dc5817fb, pinned build)
+  ctor 0     "CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2"
+  admin      the unauthorizable CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2 (no upgrade possible)
+  auth       the source account's own signature
+    sorobanAuthorizedFunctionTypeCreateContractV2HostFn
+Re-simulating with the signed authorization entries in place…
+  resource fee 46734 stroops
+  instructions 710403, read 0 bytes, write 176 bytes
+  declared     resource fee 46734 stroops, 710403 instructions
+
+No reason to refuse.
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-protocol.ts
+checked at 2026-11-28T06:59:50.108Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 30  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 30
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-pilot-accounts.ts --network testnet --accounts GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR,GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ,GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN --contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O --max-total 100000000000
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-28T06:59:51.811Z
+  ✓ GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR: USDC trustline, balance 7.0000000
+  ✓ GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ: USDC trustline, balance 15.1900000
+  ✓ GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN: USDC trustline, balance 10.0000000
+  · rights contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O: 0.0000000 USDC held in escrow
+  ✓ total 32.1900000 USDC (321900000 units), limit 10000.0000000 (100000000000)
+PASS
+
+ℹ️  Signing transaction: a0f4309caa5a06f1df3b562ee4a43838d94cd186ff6246c12819a7ae16cec1d5
+
+Signed: a0f4309caa5a06f1df3b562ee4a43838d94cd186ff6246c12819a7ae16cec1d5 (kept in /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/04-deploy-web-auth.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: a0f4309caa5a06f1df3b562ee4a43838d94cd186ff6246c12819a7ae16cec1d5
+      https://stellar.expert/explorer/testnet/tx/a0f4309caa5a06f1df3b562ee4a43838d94cd186ff6246c12819a7ae16cec1d5
+ℹ️  Deploying contract using wasm hash e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76
+✅ Transaction built!
+Identity     qs-issuer (GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE)
+
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/tx-review.ts --xdr-file /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/05-deploy-verifier.xdr --network testnet --source GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Rights       CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O (QS_RIGHTS_CONTRACT)
+Network      testnet (Test SDF Network ; September 2015)
+Source       GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+Fee          31552 stroops (declared, including resources)
+Sequence     17686881483358463
+Latest ledger 5965111
+Operation 1: invokeHostFunction
+  deployer   GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE, salt 6f68b223a41aaf689f4b367f1220ab34b5c82abfb3ec2dc7c0d380810618487f
+  creates    CBMZP6Q574XG2B6CYL4I7BL2W37JBY2YPNSYOMCST27EVP6ZNLDIX47P
+  from WASM  e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76 = OpenZeppelin WebAuthn verifier (uploaded by OpenZeppelin; our own instance)
+  auth       the source account's own signature
+    sorobanAuthorizedFunctionTypeCreateContractV2HostFn
+Re-simulating with the signed authorization entries in place…
+  resource fee 31452 stroops
+  instructions 776129, read 0 bytes, write 104 bytes
+  declared     resource fee 31452 stroops, 776129 instructions
+
+No reason to refuse.
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-protocol.ts
+checked at 2026-11-28T07:00:04.092Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 30  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 30
+npm notice run quietstay@0.1.0 npx
+npm notice run 'tsx' scripts/check-pilot-accounts.ts --network testnet --accounts GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR,GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ,GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN --contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O --max-total 100000000000
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-28T07:00:05.864Z
+  ✓ GBCETLZR2XY5S3DBCWUJRNS7ITYYMOJGTQVLNNQ77P2TLRKDUHLR4AYR: USDC trustline, balance 7.0000000
+  ✓ GB3VDHPHD27MVDMQAN5JD3EUGWTX76W7SJWHKG4EPITK2WOOAPX5UWVQ: USDC trustline, balance 15.1900000
+  ✓ GBNDVZTDK7IOUFEAZH4ZBJ25WT2FXJ4IZPXWADAD4BEQPDD5FDQNZAXN: USDC trustline, balance 10.0000000
+  · rights contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O: 0.0000000 USDC held in escrow
+  ✓ total 32.1900000 USDC (321900000 units), limit 10000.0000000 (100000000000)
+PASS
+
+ℹ️  Signing transaction: b85cc2aa13afc4da6de779a71fc7ce222811afd2907e2c58f7e203cc058c9f0f
+
+Signed: b85cc2aa13afc4da6de779a71fc7ce222811afd2907e2c58f7e203cc058c9f0f (kept in /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal/step6/05-deploy-verifier.xdr.submission)
+Send 1 of at most 3: sent
+Looking it up by hash…
+Status: SUCCESS
+
+On chain, successful: b85cc2aa13afc4da6de779a71fc7ce222811afd2907e2c58f7e203cc058c9f0f
+      https://stellar.expert/explorer/testnet/tx/b85cc2aa13afc4da6de779a71fc7ce222811afd2907e2c58f7e203cc058c9f0f
+
+=== Check 5
+check-deployment on testnet, 2026-11-28T07:00:11.969Z (read only; nothing signed or sent)
+  PASS  rights CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O runs 76d69e790aba28131d25188c3ea7a63ed8eb8faaa75e34d9b0038300244dddde
+  PASS  verifier CBMZP6Q574XG2B6CYL4I7BL2W37JBY2YPNSYOMCST27EVP6ZNLDIX47P runs e63a030d0f1a1481e36059a4837c433083b33e704c1f9625b7314795b6d72b76 (OZ WebAuthn verifier, our own instance)
+  PASS  issuer() = GBNBWXSCEGJWGMNZ2GAOFG2RBZOCTGTI6SIJH3ZSU2AEPZWCFUA7YUBE
+  PASS  arbiter() = GACLONYVHKPB4BG3QUWMKG4LAKTRYKM4CFLBF4VTBAF5773X4UYZEEZC (not the issuer)
+  PASS  usdc() = CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (testnet's Circle USDC)
+  PASS  max_payment() = 10000000 (expected 10000000)
+
+verification key: npx tsx scripts/check-vk.ts --network testnet --contract CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O
+network          testnet (ledger 5965113)
+contract         CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O
+on-chain VK hash 55ce858fea2e86e56917a114aba2dc3cdec17270c534ab9b3941743b01aeb1de (1824 bytes, 12 IC points)
+committed VK     55ce858fea2e86e56917a114aba2dc3cdec17270c534ab9b3941743b01aeb1de (circuits/keys/verification_key.soroban.json)
+PASS: the on-chain key equals the committed key, field by field
+  PASS  verification key
+
+web-auth cannot be upgraded: npx tsx scripts/check-web-auth.ts --network testnet --id CDTDDZAB3GBO7NQP4CU5WDJOLRGJFTHG426ABJRPYDEBGK3DVOZJBJBP
+testnet web-auth contract CDTDDZAB3GBO7NQP4CU5WDJOLRGJFTHG426ABJRPYDEBGK3DVOZJBJBP (2026-11-28T07:00:15.102Z)
+  ✓ WASM 708cacdcb458f9790bb27da0c706aefe40f299e25cd97798e24547792ef4cbc1 = the pinned build
+  ✓ stored Admin CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2 = the unauthorizable CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2
+  ✓ no contract instance at CDA2IFOTJJMMIKRIP33B4KOUZQMU7FR6SEYNBHY3LQQCBXYJB73C33G2
+upgrade() can never be authorized.
+  PASS  web-auth cannot be upgraded
+
+every entry live: npx tsx scripts/check-ttl.ts --network testnet --rights CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O --web-auth CDTDDZAB3GBO7NQP4CU5WDJOLRGJFTHG426ABJRPYDEBGK3DVOZJBJBP --verifier CBMZP6Q574XG2B6CYL4I7BL2W37JBY2YPNSYOMCST27EVP6ZNLDIX47P
+testnet, latest ledger 5965114, read 2026-11-28T07:00:16.807Z (read only; nothing signed or sent)
+  PASS  rights WASM 76d69e79…              live until 8980356 (3015242 ledgers, ~2027-05-21)
+  PASS  web-auth WASM 708cacdc…            live until 8980357 (3015243 ledgers, ~2027-05-21)
+  PASS  OZ account WASM c514d35e…          live until 8980358 (3015244 ledgers, ~2027-05-21)
+  PASS  OZ verifier WASM e63a030d…         live until 8980359 (3015245 ledgers, ~2027-05-21)
+  PASS  rights instance CD3GUZ57…          live until 6086067 (120953 ledgers, ~2026-12-05)
+  PASS  web-auth instance CDTDDZAB…        live until 6086070 (120956 ledgers, ~2026-12-05)
+  PASS  verifier instance CBMZP6Q5…        live until 6086072 (120958 ledgers, ~2026-12-05)
+
+all entries live
+  PASS  every entry live
+
+all checks passed
+testnet, latest ledger 5965114, read 2026-11-28T07:00:18.209Z (read only; nothing signed or sent)
+  PASS  rights WASM 76d69e79…              live until 8980356 (3015242 ledgers, ~2027-05-21)
+  PASS  web-auth WASM 708cacdc…            live until 8980357 (3015243 ledgers, ~2027-05-21)
+  PASS  OZ account WASM c514d35e…          live until 8980358 (3015244 ledgers, ~2027-05-21)
+  PASS  OZ verifier WASM e63a030d…         live until 8980359 (3015245 ledgers, ~2027-05-21)
+  PASS  rights instance CD3GUZ57…          live until 6086067 (120953 ledgers, ~2026-12-05)
+  PASS  web-auth instance CDTDDZAB…        live until 6086070 (120956 ledgers, ~2026-12-05)
+  PASS  verifier instance CBMZP6Q5…        live until 6086072 (120958 ledgers, ~2026-12-05)
+
+all entries live
+RIGHTS=CD3GUZ57D4UMHSMDH3PNMOYE3YPVRLAH6XHR4HPOJ3FPGIEPL4AAKB6O WEB_AUTH=CDTDDZAB3GBO7NQP4CU5WDJOLRGJFTHG426ABJRPYDEBGK3DVOZJBJBP VERIFIER=CBMZP6Q574XG2B6CYL4I7BL2W37JBY2YPNSYOMCST27EVP6ZNLDIX47P
