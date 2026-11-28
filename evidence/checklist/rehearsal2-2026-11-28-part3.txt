@@ -1,0 +1,58 @@
+=== Part 3: the sign-in key to its minimum
+sign-in key funded by Friendbot
+balance 10000.0000000 XLM; sending 99989999900 stroops (balance - 1.0000100)
+ℹ️  Signing transaction: e68ac15d5c3af0addb95e8f936818d580d0d37df9ec598185d101b2a8c55f6d4
+  PASS  QS_REHEARSAL_SIGNIN is a public key (G…): GCXVIKWXYZ2KB4V6HNRQ6OGP4SIM4PCZSQORVLP7XKCT5FGGMEDETXX6
+check-mainnet-setup part 3, testnet Horizon, read-only, 2026-11-28T14:00:43.009Z
+USDC route: dex (--usdc dex|exchange)
+  PASS  QS_REHEARSAL_ISSUER is a public key (G…): GBIQXPCJQLARHW3DXZZETP7IVCDOXCNE7ZWZXSHWVIATQSSN35CL3X4A
+  PASS  QS_REHEARSAL_ARBITER is a public key (G…): GBLTUKAFHX3576FGO36HRXZSKWUFFHTIKVMJHPQ2CFMGJSTCPGB6AXUF
+  PASS  QS_REHEARSAL_FEE is a public key (G…): GA57IV4SNHTM3AV3T6S44LD6KBRDUOOAV6R7RVKF2ATFO5342D62X5HN
+  PASS  QS_REHEARSAL_OWNER is a public key (G…): GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43
+  PASS  QS_REHEARSAL_BUYER is a public key (G…): GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH
+  PASS  QS_REHEARSAL_RENTER is a public key (G…): GCWXGCO3ODUQAXWD4UIC3OOHQ7TQ4UUJKZFEPRRS5D7TERZMATOOC3MJ
+  PASS  issuer: 19944.9999400 XLM ≥ planned 74.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  issuer: the only signer is its own master key, weight 1
+  PASS  issuer: thresholds 0/0/0 (unchanged)
+  PASS  issuer: no flags, home domain or data entries
+  PASS  issuer: sponsors nothing and is sponsored by nothing
+  PASS  issuer: holds XLM only
+  PASS  arbiter: 2.0000000 XLM ≥ planned 1.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  arbiter: the only signer is its own master key, weight 1
+  PASS  arbiter: thresholds 0/0/0 (unchanged)
+  PASS  arbiter: no flags, home domain or data entries
+  PASS  arbiter: sponsors nothing and is sponsored by nothing
+  PASS  arbiter: holds XLM only
+  PASS  fee: 5.0000000 XLM ≥ planned 4.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  fee: the only signer is its own master key, weight 1
+  PASS  fee: thresholds 0/0/0 (unchanged)
+  PASS  fee: no flags, home domain or data entries
+  PASS  fee: sponsors nothing and is sponsored by nothing
+  PASS  fee: holds XLM only
+  PASS  owner: 3.0000000 XLM ≥ planned 2.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  owner: the only signer is its own master key, weight 1
+  PASS  owner: thresholds 0/0/0 (unchanged)
+  PASS  owner: no flags, home domain or data entries
+  PASS  owner: sponsors nothing and is sponsored by nothing
+  PASS  owner: holds XLM only
+  PASS  buyer: 22.0000000 XLM ≥ planned 21.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  buyer: the only signer is its own master key, weight 1
+  PASS  buyer: thresholds 0/0/0 (unchanged)
+  PASS  buyer: no flags, home domain or data entries
+  PASS  buyer: sponsors nothing and is sponsored by nothing
+  PASS  buyer: holds XLM only
+  PASS  renter: 22.0000000 XLM ≥ planned 21.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  renter: the only signer is its own master key, weight 1
+  PASS  renter: thresholds 0/0/0 (unchanged)
+  PASS  renter: no flags, home domain or data entries
+  PASS  renter: sponsors nothing and is sponsored by nothing
+  PASS  renter: holds XLM only
+  PASS  the rehearsal sign-in key: 0 subentries (0)
+  PASS  the rehearsal sign-in key: 1.0000000 XLM = the minimum balance 1.0000000
+  PASS  the rehearsal sign-in key: the only signer is its own master key, weight 1
+  PASS  the rehearsal sign-in key: thresholds 0/0/0 (unchanged)
+  PASS  the rehearsal sign-in key: no flags, home domain or data entries
+  PASS  the rehearsal sign-in key: sponsors nothing and is sponsored by nothing
+  PASS  the rehearsal sign-in key's last payment went to the deployer: payment 9998.9999900 XLM, tx e68ac15d5c3af0addb95e8f936818d580d0d37df9ec598185d101b2a8c55f6d4, 2026-11-28T14:00:39Z
+
+all checks passed

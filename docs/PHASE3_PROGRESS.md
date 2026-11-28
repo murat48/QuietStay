@@ -2438,6 +2438,32 @@ of the spec, the rest at the second review of `def5eb6`.
     reports `signing: server` and the demo contract `CATUBRZZ…`, so it is
     the demo, not the `cli` rehearsal project VERCEL.md describes
     (`CC7W4OGP…`); open question for you.
+- **The rehearsal with new identities (2026-11-28; your go-ahead to create
+  the `qs-rehearsal-` testnet identities for it).** MAINNET_REHEARSAL.md
+  Parts 0–6 as revised, run by me; evidence
+  `evidence/checklist/rehearsal2-2026-11-28-part{0..6}.txt`. Every check of
+  every part passed, none failed:
+  - Part 0: protocol 30. The key store is the CLI's file store (the
+    secure-store test needs a WSL restart).
+  - Part 1: eight new identities; the six roles distinct, new, none a known
+    testnet identity or the sign-in key.
+  - Part 2: Friendbot to the deployer, which created the other five with the
+    revised budget (fee 5 XLM, buyer and renter 22).
+  - Part 3: the stand-in sign-in key at exactly its 1 XLM minimum, its last
+    payment to the deployer.
+  - Part 4: trustlines (5 USDC limit, CLI accounts here), 4 test USDC through
+    the funder (from `qs-buyer`, in place of Circle's faucet): 0/2/2, total
+    4 ≤ 5. The pilot check passed **without** `QS_PILOT_MAX_TOTAL`, as on
+    mainnet.
+  - Part 5: the deploy through `mainnet-sign-submit.sh`, 5/5 SUCCESS, Check 5
+    all passed: rights `CBMEE7YYZDVR43Y7IWMZBQFXWVCUHN66ROVKPXIRG767G3QUVLXFC7XZ`,
+    web-auth `CC4NS5IHY6BLSZIGX6YE7TDC6YI4YOWPYNL25LF5NQ7VXXCWFOMOBFL5`,
+    verifier `CAZKSF62BJOIAKTWNHRVBJVUAXDHBWIAUQZRXFCV76QSFEKS6TGKIYQ7`.
+  - Part 6: the CLI flows 6/6 SUCCESS: week A sold to the buyer for 1 USDC,
+    the renter's 1 USDC rental offer open; privacy check passes
+    (`evidence/privacy/2026-11-28-rehearsal2-pilot-testnet-CBMEE7YY.txt`).
+  - Not rehearsed here: Freighter's screens (I cannot use Freighter) and the
+    arbiter (rehearsed this morning on escrow #4).
 
 ### Step 6 — Mainnet deployment
 - Date:

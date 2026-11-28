@@ -1,0 +1,6 @@
+=== Part 0.1
+checked at 2026-11-28T13:59:54.532Z
+testnet  protocol 30  passphrase ok  rpc https://soroban-testnet.stellar.org (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+mainnet  protocol 30  passphrase ok  rpc https://mainnet.sorobanrpc.com (30.0.1-6b6ec60c8bde5a93984b6290065d3882d384b25d)
+PASS: mainnet is on protocol 30
+0.2: the CLI file store (QS_KEY_STORE empty); the secure-store test needs a WSL restart, not possible here

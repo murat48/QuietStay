@@ -1,0 +1,42 @@
+=== Part 1: identities
+✅ Key saved with alias qs-rehearsal-issuer in "/home/murat/.config/stellar/identity/qs-rehearsal-issuer.toml"
+✅ Key saved with alias qs-rehearsal-arbiter in "/home/murat/.config/stellar/identity/qs-rehearsal-arbiter.toml"
+✅ Key saved with alias qs-rehearsal-fee in "/home/murat/.config/stellar/identity/qs-rehearsal-fee.toml"
+✅ Key saved with alias qs-rehearsal-owner in "/home/murat/.config/stellar/identity/qs-rehearsal-owner.toml"
+✅ Key saved with alias qs-rehearsal-buyer in "/home/murat/.config/stellar/identity/qs-rehearsal-buyer.toml"
+✅ Key saved with alias qs-rehearsal-renter in "/home/murat/.config/stellar/identity/qs-rehearsal-renter.toml"
+✅ Key saved with alias qs-rehearsal-signin in "/home/murat/.config/stellar/identity/qs-rehearsal-signin.toml"
+✅ Key saved with alias qs-rehearsal-funder in "/home/murat/.config/stellar/identity/qs-rehearsal-funder.toml"
+QS_REHEARSAL_ISSUER=GBIQXPCJQLARHW3DXZZETP7IVCDOXCNE7ZWZXSHWVIATQSSN35CL3X4A
+QS_REHEARSAL_ARBITER=GBLTUKAFHX3576FGO36HRXZSKWUFFHTIKVMJHPQ2CFMGJSTCPGB6AXUF
+QS_REHEARSAL_FEE=GA57IV4SNHTM3AV3T6S44LD6KBRDUOOAV6R7RVKF2ATFO5342D62X5HN
+QS_REHEARSAL_OWNER=GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43
+QS_REHEARSAL_BUYER=GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH
+QS_REHEARSAL_RENTER=GCWXGCO3ODUQAXWD4UIC3OOHQ7TQ4UUJKZFEPRRS5D7TERZMATOOC3MJ
+QS_REHEARSAL_SIGNIN=GCXVIKWXYZ2KB4V6HNRQ6OGP4SIM4PCZSQORVLP7XKCT5FGGMEDETXX6
+QS_REHEARSAL_FUNDER=GBB2FXL54X6BQHGZ3APJA5DXES7L2EHWQQEAKBTQFKRA4GGW3OZLITYB
+  PASS  QS_REHEARSAL_SIGNIN is a public key (G…): GCXVIKWXYZ2KB4V6HNRQ6OGP4SIM4PCZSQORVLP7XKCT5FGGMEDETXX6
+check-mainnet-setup part 1, testnet Horizon, read-only, 2026-11-28T13:59:57.708Z
+USDC route: dex (--usdc dex|exchange)
+  PASS  QS_REHEARSAL_ISSUER is a public key (G…): GBIQXPCJQLARHW3DXZZETP7IVCDOXCNE7ZWZXSHWVIATQSSN35CL3X4A
+  PASS  QS_REHEARSAL_ARBITER is a public key (G…): GBLTUKAFHX3576FGO36HRXZSKWUFFHTIKVMJHPQ2CFMGJSTCPGB6AXUF
+  PASS  QS_REHEARSAL_FEE is a public key (G…): GA57IV4SNHTM3AV3T6S44LD6KBRDUOOAV6R7RVKF2ATFO5342D62X5HN
+  PASS  QS_REHEARSAL_OWNER is a public key (G…): GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43
+  PASS  QS_REHEARSAL_BUYER is a public key (G…): GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH
+  PASS  QS_REHEARSAL_RENTER is a public key (G…): GCWXGCO3ODUQAXWD4UIC3OOHQ7TQ4UUJKZFEPRRS5D7TERZMATOOC3MJ
+  PASS  the six keys and the sign-in key are all different
+  PASS  the arbiter is not the issuer (the constructor refuses that too)
+  PASS  issuer: not a testnet identity
+  PASS  issuer: not on testnet yet (a new key)
+  PASS  arbiter: not a testnet identity
+  PASS  arbiter: not on testnet yet (a new key)
+  PASS  fee: not a testnet identity
+  PASS  fee: not on testnet yet (a new key)
+  PASS  owner: not a testnet identity
+  PASS  owner: not on testnet yet (a new key)
+  PASS  buyer: not a testnet identity
+  PASS  buyer: not on testnet yet (a new key)
+  PASS  renter: not a testnet identity
+  PASS  renter: not on testnet yet (a new key)
+
+all checks passed

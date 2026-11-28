@@ -1,0 +1,77 @@
+=== Part 4: trustlines, then 4 USDC
+ℹ️  Signing transaction: 674edb5965a4c9a7d93a14078faa50060d7f4a9f54ffc812e30a5fcbcc477d5a
+ℹ️  Signing transaction: f26dfae229a32758f80857e0f645993450117a1f3200515f2a91d1aac5bc8774
+ℹ️  Signing transaction: 0c5cbc5df6fcaa45553bc5656494b3bab40b350cf6e5b43790e5e3fffca9d1f8
+funder funded by Friendbot
+ℹ️  Signing transaction: 75a246a447dfd6aa9802b007a4962bf54b38f6d20c1084744c79a6230acbbd5b
+in place of Circle's faucet: 4 test USDC from qs-buyer to the funder
+ℹ️  Signing transaction: 9f92456f74bcc9b8a3d361dd59b4e85b4c69c1ba361a8c602caf671705f36a84
+ℹ️  Signing transaction: cf5ac948430045d73b2c2a25e5b6c10d2af26d87cd1fc04374dcf27577f277a7
+ℹ️  Signing transaction: f3d8a91d9df2034c8a3df8b96babbe3a6832f670c78637f6b4d4de6088399eb3
+  PASS  QS_REHEARSAL_SIGNIN is a public key (G…): GCXVIKWXYZ2KB4V6HNRQ6OGP4SIM4PCZSQORVLP7XKCT5FGGMEDETXX6
+check-mainnet-setup part 4, testnet Horizon, read-only, 2026-11-28T14:01:28.761Z
+USDC route: dex (--usdc dex|exchange)
+  PASS  QS_REHEARSAL_ISSUER is a public key (G…): GBIQXPCJQLARHW3DXZZETP7IVCDOXCNE7ZWZXSHWVIATQSSN35CL3X4A
+  PASS  QS_REHEARSAL_ARBITER is a public key (G…): GBLTUKAFHX3576FGO36HRXZSKWUFFHTIKVMJHPQ2CFMGJSTCPGB6AXUF
+  PASS  QS_REHEARSAL_FEE is a public key (G…): GA57IV4SNHTM3AV3T6S44LD6KBRDUOOAV6R7RVKF2ATFO5342D62X5HN
+  PASS  QS_REHEARSAL_OWNER is a public key (G…): GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43
+  PASS  QS_REHEARSAL_BUYER is a public key (G…): GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH
+  PASS  QS_REHEARSAL_RENTER is a public key (G…): GCWXGCO3ODUQAXWD4UIC3OOHQ7TQ4UUJKZFEPRRS5D7TERZMATOOC3MJ
+  PASS  issuer: 19944.9999400 XLM ≥ planned 74.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  issuer: the only signer is its own master key, weight 1
+  PASS  issuer: thresholds 0/0/0 (unchanged)
+  PASS  issuer: no flags, home domain or data entries
+  PASS  issuer: sponsors nothing and is sponsored by nothing
+  PASS  arbiter: 2.0000000 XLM ≥ planned 1.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  arbiter: the only signer is its own master key, weight 1
+  PASS  arbiter: thresholds 0/0/0 (unchanged)
+  PASS  arbiter: no flags, home domain or data entries
+  PASS  arbiter: sponsors nothing and is sponsored by nothing
+  PASS  fee: 5.0000000 XLM ≥ planned 4.9900000 (minimum balance 1.0000000, 0 subentries)
+  PASS  fee: the only signer is its own master key, weight 1
+  PASS  fee: thresholds 0/0/0 (unchanged)
+  PASS  fee: no flags, home domain or data entries
+  PASS  fee: sponsors nothing and is sponsored by nothing
+  PASS  owner: 2.9999900 XLM ≥ planned 2.9900000 (minimum balance 1.5000000, 1 subentries)
+  PASS  owner: the only signer is its own master key, weight 1
+  PASS  owner: thresholds 0/0/0 (unchanged)
+  PASS  owner: no flags, home domain or data entries
+  PASS  owner: sponsors nothing and is sponsored by nothing
+  PASS  buyer: 21.9999900 XLM ≥ planned 2.5000000 (minimum balance 1.5000000, 1 subentries)
+  PASS  buyer: the only signer is its own master key, weight 1
+  PASS  buyer: thresholds 0/0/0 (unchanged)
+  PASS  buyer: no flags, home domain or data entries
+  PASS  buyer: sponsors nothing and is sponsored by nothing
+  PASS  renter: 21.9999900 XLM ≥ planned 2.5000000 (minimum balance 1.5000000, 1 subentries)
+  PASS  renter: the only signer is its own master key, weight 1
+  PASS  renter: thresholds 0/0/0 (unchanged)
+  PASS  renter: no flags, home domain or data entries
+  PASS  renter: sponsors nothing and is sponsored by nothing
+  PASS  issuer: no USDC trustline, so it can hold no USDC
+  PASS  issuer: no other asset or trustline
+  PASS  arbiter: no USDC trustline, so it can hold no USDC
+  PASS  arbiter: no other asset or trustline
+  PASS  fee: no USDC trustline, so it can hold no USDC
+  PASS  fee: no other asset or trustline
+  PASS  owner: has a USDC trustline to Circle's issuer
+  · owner: trustline limit 5.0000000 (5 USDC)
+  PASS  owner: holds 0.0000000 USDC (planned 0.0000000)
+  PASS  owner: no other asset or trustline
+  PASS  buyer: has a USDC trustline to Circle's issuer
+  · buyer: trustline limit 5.0000000 (5 USDC)
+  PASS  buyer: holds 2.0000000 USDC (planned 2.0000000)
+  PASS  buyer: no other asset or trustline
+  PASS  renter: has a USDC trustline to Circle's issuer
+  · renter: trustline limit 5.0000000 (5 USDC)
+  PASS  renter: holds 2.0000000 USDC (planned 2.0000000)
+  PASS  renter: no other asset or trustline
+  PASS  the rehearsal sign-in key: no USDC trustline
+  PASS  total USDC across the pilot accounts: 4.0000000 ≤ 5.0000000 (D7)
+
+all checks passed
+testnet, USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA (issuer GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5), 2026-11-28T14:01:32.069Z
+  ✓ GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43: USDC trustline, balance 0.0000000
+  ✓ GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH: USDC trustline, balance 2.0000000
+  ✓ GCWXGCO3ODUQAXWD4UIC3OOHQ7TQ4UUJKZFEPRRS5D7TERZMATOOC3MJ: USDC trustline, balance 2.0000000
+  ✓ total 4.0000000 USDC (40000000 units), limit 5.0000000 (50000000)
+PASS

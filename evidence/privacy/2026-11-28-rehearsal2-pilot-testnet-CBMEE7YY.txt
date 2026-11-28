@@ -1,0 +1,98 @@
+  run 2026-11-28T14:04:11.080Z · network testnet · command: npm run check-privacy -- --network testnet --out /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/flows/privacy-2026-11-28-pilot-testnet-CBMEE7YY.txt --tx issue-a=bf90ee966db748614c0f4d3795fc38a4cbfd788a14a231320e843e9b6a3be8cc --tx issue-b=c6719bff565a73cb76bd321b3811e57718ede70571f6f218a00fe8f10a3f7cdc --tx sale-request=997bc5a57f75645a67b0bda369544536b87a2369cbbca331b116163c8a4612f1 --tx sale-offer=ec7d73ef0b47ae39d02a6f10a44544227481895a2d4721c3d8fd8da5637b4c79 --tx sale-accept=459b4757c2f5a25040f07ce87f07632103eb5b87634e871cd04d4aa40a6bd964 --tx rental-offer=98813f6dc2fde9a0736204c2ca985b6db30271607396ae1a7c3dfe7277732784 --record /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/state/CBMEE7YY/pilot-testnet/week-a-record.json --secret /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/state/CBMEE7YY/pilot-testnet/week-a-owner-secret.json --record /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/state/CBMEE7YY/pilot-testnet/week-b-record.json --secret /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/state/CBMEE7YY/pilot-testnet/week-b-owner-secret.json --next-secret /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/state/CBMEE7YY/pilot-testnet/buyer-next-secret-71c08d78.json
+
+Checking on-chain exposure
+  6 transactions, 69 forbidden values
+  contract the contracts these testnet transactions call
+
+issue-a — bf90ee966db748614c0f4d3795fc38a4cbfd788a14a231320e843e9b6a3be8cc
+  ✓ no record contents in 3 layers (10116 bytes: envelope, result, meta)
+  call        issue(
+                "GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43",
+                {"end":"1796428800","start":"1795824000"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x1b5417539cb0cb1bb456262bac6f43d09d3ba9a04ee6ba3fce16ed54d73b36cd",
+              )
+  event topics ["issue","GBIQXPCJQLARHW3DXZZETP7IVCDOXCNE7ZWZXSHWVIATQSSN35CL3X4A","GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43"]
+  event data   {"commitment":"0x1b5417539cb0cb1bb456262bac6f43d09d3ba9a04ee6ba3fce16ed54d73b36cd","right_id":"1"}
+
+issue-b — c6719bff565a73cb76bd321b3811e57718ede70571f6f218a00fe8f10a3f7cdc
+  ✓ no record contents in 3 layers (10216 bytes: envelope, result, meta)
+  call        issue(
+                "GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43",
+                {"end":"1796428800","start":"1795824000"},
+                {"from":"1767225600","until":"1798761600"},
+                "0x0fac78944e1536b0570f8a6eada9a0e5c3624c6506451dbefcf0f1b545845e92",
+              )
+  event topics ["issue","GBIQXPCJQLARHW3DXZZETP7IVCDOXCNE7ZWZXSHWVIATQSSN35CL3X4A","GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43"]
+  event data   {"commitment":"0x0fac78944e1536b0570f8a6eada9a0e5c3624c6506451dbefcf0f1b545845e92","right_id":"2"}
+
+sale-request — 997bc5a57f75645a67b0bda369544536b87a2369cbbca331b116163c8a4612f1
+  ✓ no record contents in 3 layers (9784 bytes: envelope, result, meta)
+  call        request_record(
+                "GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH",
+                "1",
+                "0x843951dbd1bffcd9415817a8ac2bce383cf2eeec29340067b2c0b7622185ad9a",
+                6091148,
+              )
+  event topics ["rec_req","GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH"]
+  event data   {"expires_ledger":6091148,"key_hash":"0x843951dbd1bffcd9415817a8ac2bce383cf2eeec29340067b2c0b7622185ad9a","request_id":"1","right_id":"1"}
+
+sale-offer — ec7d73ef0b47ae39d02a6f10a44544227481895a2d4721c3d8fd8da5637b4c79
+  ✓ no record contents in 3 layers (13396 bytes: envelope, result, meta)
+  call        create_sale_offer(
+                "GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH",
+                "1",
+                "10000000",
+                "24047048166594828864498178054139975833552642286823047637854780532699659612973",
+                6091151,
+              )
+  event topics ["approve","GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH","CBMEE7YYZDVR43Y7IWMZBQFXWVCUHN66ROVKPXIRG767G3QUVLXFC7XZ","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["10000000",6091151]
+  event topics ["allow","GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH"]
+  event data   {"amount":"10000000","expiration_ledger":6091151}
+  event topics ["sale_off","GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH"]
+  event data   {"expires_ledger":6091151,"key_hash":"0x843951dbd1bffcd9415817a8ac2bce383cf2eeec29340067b2c0b7622185ad9a","next_secret_hash":"24047048166594828864498178054139975833552642286823047637854780532699659612973","offer_id":"1","price":"10000000","right_id":"1"}
+
+sale-accept — 459b4757c2f5a25040f07ce87f07632103eb5b87634e871cd04d4aa40a6bd964
+  ✓ no record contents in 3 layers (13400 bytes: envelope, result, meta)
+  call        accept_sale(
+                "GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43",
+                "1",
+                "10000000",
+                {"a":"0x0c15e671fe6df6d9…75700b38 (96 bytes)","b":"0x153dba32c3f8395e…85523af5 (192 bytes)","c":"0x0e05c65dce02a041…1c393d28 (96 bytes)"},
+                ["12361023059532572409378587495683729263247755124291251620232235479314657392333","31129187949965419256358381940825088691811139661178805051581534561522113431005","1","268740087489971104338128276377640044402","253549112267296413551865407288597203859","155130950003297394049912525678930918031","284537828923366953030958205761351003265","0","5970554","24047048166594828864498178054139975833552642286823047637854780532699659612973","54785487903066830772010505242295912064585510044855233762868379529260465592"],
+              )
+  event topics ["transfer","GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH","GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   "10000000"
+  event topics ["transfer","GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43","GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH"]
+  event data   {"commitment":"0x001f01eaafde3a2a48183786618f4d1f85a1f16e0adcd7c32fd1790eb2127db8","expires_at":null,"right_id":"1"}
+  event topics ["sale","GDFC25KK7P2IYNFA4JJDDGCXA5ZL5P6IMOE6FIMHIIUFQQ4XHLFZHL43","GB2LKIS2LO6KMJLWKQE2JWT5PKH5MD76CS2KWRLQW57NA3JQM4WIDDIH"]
+  event data   {"commitment":"0x001f01eaafde3a2a48183786618f4d1f85a1f16e0adcd7c32fd1790eb2127db8","offer_id":"1","price":"10000000","right_id":"1"}
+
+rental-offer — 98813f6dc2fde9a0736204c2ca985b6db30271607396ae1a7c3dfe7277732784
+  ✓ no record contents in 3 layers (12152 bytes: envelope, result, meta)
+  call        create_rental_offer(
+                "GCWXGCO3ODUQAXWD4UIC3OOHQ7TQ4UUJKZFEPRRS5D7TERZMATOOC3MJ",
+                "2",
+                "10000000",
+                "1796428800",
+                "1795878229",
+                6091157,
+              )
+  event topics ["approve","GCWXGCO3ODUQAXWD4UIC3OOHQ7TQ4UUJKZFEPRRS5D7TERZMATOOC3MJ","CBMEE7YYZDVR43Y7IWMZBQFXWVCUHN66ROVKPXIRG767G3QUVLXFC7XZ","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   ["10000000",6091157]
+  event topics ["allow","GCWXGCO3ODUQAXWD4UIC3OOHQ7TQ4UUJKZFEPRRS5D7TERZMATOOC3MJ"]
+  event data   {"amount":"10000000","expiration_ledger":6091157}
+  event topics ["rent_off","GCWXGCO3ODUQAXWD4UIC3OOHQ7TQ4UUJKZFEPRRS5D7TERZMATOOC3MJ"]
+  event data   {"check_in":"1795878229","expires_at":"1796428800","expires_ledger":6091157,"offer_id":"2","price":"10000000","right_id":"2"}
+
+Result
+  ✓ No inventory record value appears in any of these 6 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 2 record(s) given, or s and h of 2 holder secret(s) given, or s' of 1 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/state/CBMEE7YY/pilot-testnet/week-a-record.json
+    • /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/state/CBMEE7YY/pilot-testnet/week-b-record.json
+    • /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/state/CBMEE7YY/pilot-testnet/week-a-owner-secret.json
+    • /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/state/CBMEE7YY/pilot-testnet/week-b-owner-secret.json
+    • /tmp/claude-1000/-home-murat-QuietStay-QuietStay/ca50fce8-c8b9-484e-875b-d73b94494ebf/scratchpad/rehearsal2/state/CBMEE7YY/pilot-testnet/buyer-next-secret-71c08d78.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.
