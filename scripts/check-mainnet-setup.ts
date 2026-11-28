@@ -23,7 +23,8 @@
  * - Part 3 (mainnet-test): the sign-in key holds exactly the minimum balance
  *   (1 XLM, 0 subentries), and its last payment went to the deployer.
  * - Part 4 (USDC): owner, buyer and renter have a USDC trustline to Circle's
- *   issuer with a 5 USDC limit; issuer, arbiter, fee and sign-in key have
+ *   issuer (any limit since decision 3, 2026-11-23: added in Freighter, and
+ *   the limit is printed); issuer, arbiter, fee and sign-in key have
  *   none (so they can hold no USDC); the total is at most 5 USDC.
  *   `--quote` prints the live DEX cost of the planned USDC and the exact
  *   path-payment commands, with a send-max 3% above the quote.
@@ -71,7 +72,8 @@ const SURPLUS = 80_000_900n; // 9.0001000 − 1 − 0.0000100 XLM, from mainnet-
 const PLAN_DEX: Record<Role, bigint> = {
   issuer: 750_000_000n,
   arbiter: 20_000_000n,
-  fee: 30_000_000n,
+  // D18 (2026-11-27): the fee account pays every passkey transaction, within a 5 XLM daily budget.
+  fee: 50_000_000n,
   owner: 30_000_000n,
   buyer: 190_000_000n,
   renter: 190_000_000n,
@@ -248,7 +250,9 @@ async function main() {
       if (receives) {
         check(!!line, `${r}: has a USDC trustline to Circle's issuer`);
         if (line) {
-          check(units(line.limit!) === TRUSTLINE_LIMIT, `${r}: trustline limit ${line.limit} = 5.0000000 USDC`);
+          // Decision 3 (2026-11-23): trustlines come from Freighter's own
+          // screens, with no 5 USDC limit; the total below is the hard rule.
+          console.log(`  · ${r}: trustline limit ${line.limit}${units(line.limit!) === TRUSTLINE_LIMIT ? " (5 USDC)" : " (no 5 USDC limit; the total is checked)"}`);
           const held = units(line.balance);
           total += held;
           const want = USDC_PLAN[r] ?? 0n;

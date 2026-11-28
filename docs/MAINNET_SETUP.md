@@ -8,21 +8,29 @@ chain; it runs nothing on mainnet that signs or sends, and no command on a
 Parts 0–4 cover only the accounts: identities, XLM, the sign-in key's
 balance, trustlines and USDC. **Part 5, the Step 6 deploy, is here so that the
 commands you rehearse are the ones you will run, but it waits for your
-GO.**
+GO.** Part 6 is the mainnet app's settings, and Part 7 how a dispute is
+decided.
 
 **Rehearse it first on testnet:** [MAINNET_REHEARSAL.md](MAINNET_REHEARSAL.md)
 has the same commands. Only the network, the `qs-rehearsal-` names and the
 funding source differ.
 
-- Prepared 2026-11-21. Every amount comes from a command run that day (see the
-  budget's sources). The DEX price moves, so Part 4 re-quotes it live.
+- Prepared 2026-11-21, **revised 2026-11-28** for the pilot-plan decisions of
+  2026-11-23 (no `qsmain` user; the pilot accounts in Freighter, their
+  trustlines and USDC from Freighter's screens; the flows in the browser),
+  D18 (the fee account's key in Vercel), mainnet's move to protocol 30, and
+  plan item 5 (the arbiter through `mainnet-sign-submit.sh`).
+- Every amount comes from a command run on 2026-11-21, re-checked on
+  protocol 30 on 2026-11-27: uploads and every flow's fee are unchanged
+  (PHASE3_PROGRESS.md).
 - **After each part, run its check and paste the output back.** Every check
   reads only public data from mainnet Horizon: `npx tsx
   scripts/check-mainnet-setup.ts --part N`. It exits non-zero if anything
   fails.
 - **Never paste a secret key or seed phrase anywhere**: not in the chat, not
   in a file in this repo, not in a shell history you share. Public keys (`G…`)
-  are fine to paste.
+  are fine to paste. The one secret that leaves your keystore is the fee
+  account's, typed by you into Vercel's settings (Part 6).
 - **If a command errors after it may have sent something, do not run it
   again.** Run the part's check first, or look the transaction up by the hash
   the CLI printed (`stellar tx fetch result --hash <hash> --network mainnet`).
@@ -31,12 +39,18 @@ funding source differ.
 - Amounts in the commands are in stroops: 1 XLM = 10,000,000, and 1 USDC =
   10,000,000 (7 decimals).
 
-**Run everything as `qsmain`, from the read-only snapshot** (Part 0.0):
+**Run everything as yourself, from the repository, with Claude's session
+closed** (decision 6, 2026-11-23: there is no `qsmain` user). The `qs-main-`
+keys live in your own Stellar CLI keystore. Before each sitting:
 
 ```sh
-sudo -iu qsmain
-cd /opt/quietstay
+cd ~/QuietStay/QuietStay
+git status --short          # nothing: the tree is exactly the commit
+git log --oneline -1        # the commit Claude reported for the runbook
 ```
+
+Close the Claude session (the VS Code panel or terminal) before the first
+mainnet command and open it again only after the last, then paste the outputs.
 
 ## Budget
 
@@ -49,12 +63,12 @@ Mainnet, 2026-11-21: base reserve 0.5 XLM, so the minimum balance is
 | --- | ---: | --- | --- | ---: | ---: |
 | `qs-main-issuer`: issuer and deployer | 1 | rights upload: **69.4336 declared**, 60.3800 charged, 9.0536 refunded. Web-auth upload: 3.4403 declared, 2.9917 charged. Rights deploy: ~0.49 declared, ~0.43 charged. Web-auth deploy: ~0.03. Our own WebAuthn verifier instance (approved; §5.4): ~0.03 | about 6 `issue` calls at ≤ 0.12 each: ~0.6. 5 `create-account`s: 0.0005 | **75** | ~10.5 |
 | `qs-main-arbiter` | 1 | — | `resolve` ~0.007 | **2** | ~2.0 |
-| `qs-main-fee`: fee identity for the passkey wallet's transactions (spec §13) | 1 | **the mainnet smart wallet's creation: 0.163** (the wallet is a contract and has no reserve of its own) | up to ~5 passkey-approved calls at ≤ 0.19: ≤ 1 | **3** | ≥ 1.8 |
+| `qs-main-fee`: the fee account (D18): pays every passkey user's network fee, its key in Vercel (Part 6) | 1 | **each passkey wallet's creation: 0.163** (a wallet is a contract and has no reserve of its own) | the pilot's passkey calls at ≤ 0.19, within the route's 5 XLM daily budget: ~1–2 | **5** | ≥ 2.5 |
 | `qs-main-owner` | 1 + **0.5 trustline** | — | offers, record requests, evidence, swap, collect: ~0.3 | **3** | ~2.7 |
 | `qs-main-buyer` | 1 + **0.5 trustline** | **2 USDC on the DEX: ~15.5 XLM** (quote 2026-11-21; the send-max allows 3% more) | accept, record request, swap: ~0.1 | **19** (3 if the USDC comes from an exchange) | ~3.4, plus 2 USDC |
 | `qs-main-renter` | 1 + **0.5 trustline** | **2 USDC on the DEX: ~15.5 XLM** | two `accept_rental`s at ~0.19, report, evidence, release: ~0.4 | **19** (3 if the USDC comes from an exchange) | ~3.1, plus 2 USDC |
 | `mainnet-test`: the SEP-10/SEP-45 sign-in key | 1 | — | none (it signs challenges, and pays no fees) | **stays at exactly 1**. Its other 8.0000900 XLM go to the deployer (Part 3) | 1 |
-| **Total** | | | | **121 XLM**: 113 from you plus 8.0000900 from `mainnet-test`. **89 XLM** (81 from you) if the USDC comes from an exchange | |
+| **Total** | | | | **123 XLM**: 115 from you plus 8.0000900 from `mainnet-test`. **91 XLM** (83 from you) if the USDC comes from an exchange | |
 
 - **The deployer must hold the declared 69.43 XLM at the moment it uploads.**
   The network reserves the declared fee and refunds the margin after. That is
@@ -66,172 +80,35 @@ Mainnet, 2026-11-21: base reserve 0.5 XLM, so the minimum balance is
 - **USDC:** 2 to the buyer and 2 to the renter, **4 in total, under the 5 USDC
   cap** (D7). That covers the pilot's payments: a sale of ≤ 1, two rentals of
   ≤ 1 each, one of them disputed, and a passkey-approved flow funded from the
-  buyer. Each USDC trustline gets a 5 USDC limit, so no single account can
-  ever hold more than 5.
+  buyer. The trustlines come from Freighter with no limit (decision 3), so
+  the 5 USDC total is held by the checks: Part 4's, and the pilot-account
+  check before every mainnet signature.
 
 ## Part 0 — Before you start
 
-If you did 0.0 for the rehearsal, it is already in place: check 0.0.5, and
-if the commit has changed since, refresh the snapshot with 0.0.4. Then do 0.1
-and 0.2 for the mainnet keys.
-
-### 0.0 A separate Linux user, `qsmain`, for every mainnet and rehearsal key
-
-All `qs-main-` keys, and in the rehearsal all `qs-rehearsal-` keys, live only
-in the keystore of a separate Linux user, `qsmain`. You use them only from a
-`sudo -iu qsmain` shell.
-
-Claude's session runs as `murat` and can type into anything `murat` runs,
-SEND included. So the keys must be in a place `murat` cannot read. That place
-must also run only code `murat` cannot change: `qsmain` runs a root-owned,
-read-only snapshot of the repo at a commit you have checked, and tools from
-the official releases.
-
-**You run every command in this part yourself. Claude never runs anything as
-`qsmain` or with `sudo`.** Steps 0.0.1–0.0.4 run as `murat`, in your terminal;
-`sudo` asks for your password.
-
-**0.0.1 Close the three ways around a second user.** Without these, a
-process running as `murat`, Claude's included, could still reach
-`qsmain`'s files.
-
-```sh
-# (a) sudo must ask for murat's password, every time.
-sudo -k; if sudo -n true 2>/dev/null; then echo "PASSWORDLESS sudo: stop, and fix it before going on"; else echo "sudo asks for a password: good"; fi
-echo 'Defaults:murat timestamp_timeout=0' | sudo tee /etc/sudoers.d/90-murat-no-sudo-cache > /dev/null
-sudo chmod 0440 /etc/sudoers.d/90-murat-no-sudo-cache && sudo visudo -c
-
-# (b) The docker group is root-equivalent: murat is in it and Docker is running.
-sudo gpasswd -d murat docker
-
-# (c) WSL interop lets any WSL process start wsl.exe -u root.
-printf '\n[interop]\nenabled=false\nappendWindowsPath=false\n' | sudo tee -a /etc/wsl.conf > /dev/null
-cat /etc/wsl.conf
-```
-
-Then, in **Windows PowerShell**: `wsl --shutdown`, and open a new WSL terminal.
-Check, as `murat`:
-
-```sh
-id                                                    # no "docker" in the list
-ls /proc/sys/fs/binfmt_misc/ | grep -c WSLInterop     # 0
-sudo -n true 2>/dev/null && echo "PASSWORDLESS" || echo "password required: good"
-```
-
-- Docker still works with `sudo docker …`.
-- With interop off, WSL can no longer start Windows programs: `code .`,
-  `explorer.exe`, and the Windows tools on your PATH. VS Code still
-  connects to WSL from the Windows side.
-- If you need interop back, turn it back on. While it is on, the keys are
-  reachable from `murat` again.
-- If (a) printed PASSWORDLESS: give `murat` a password (`sudo passwd
-  murat`), and remove any `NOPASSWD` line for it (`sudo visudo`, and the files
-  in `/etc/sudoers.d/`). Then check again.
-
-**0.0.2 Create `qsmain`.** It has no password, so it cannot log in; you
-reach it only through `sudo -iu qsmain`. Its home is closed to every other
-user.
-
-```sh
-sudo adduser --disabled-password --gecos "" qsmain
-sudo chmod 700 /home/qsmain
-ls /home/qsmain     # as murat: "Permission denied"
-```
-
-**0.0.3 The tools, from the official releases** (not the copies in
-`murat`'s home, which `murat` could change):
-
-```sh
-sudo install -d -m 0755 /opt/qs-dl
-sudo curl -fsSL -o /opt/qs-dl/stellar-cli-30.0.1.tar.gz \
-  https://github.com/stellar/stellar-cli/releases/download/v30.0.1/stellar-cli-30.0.1-x86_64-unknown-linux-gnu.tar.gz
-echo "48c70074020e09af0a3ebbd2bf62d53c9aec47935e49a112d3cd90fb4e37658f  /opt/qs-dl/stellar-cli-30.0.1.tar.gz" | sha256sum -c
-sudo tar -xzf /opt/qs-dl/stellar-cli-30.0.1.tar.gz -C /opt/qs-dl stellar
-sudo install -m 0755 -o root -g root /opt/qs-dl/stellar /usr/local/bin/stellar
-
-sudo curl -fsSL -o /opt/qs-dl/node-v24.17.0-linux-x64.tar.xz https://nodejs.org/dist/v24.17.0/node-v24.17.0-linux-x64.tar.xz
-curl -fsSL https://nodejs.org/dist/v24.17.0/SHASUMS256.txt | grep " node-v24.17.0-linux-x64.tar.xz$"
-echo "ab343a1b747c7cbf3630dfd7dbf818c5423fab2eb4f5ad1afc896f6bd121a917  /opt/qs-dl/node-v24.17.0-linux-x64.tar.xz" | sha256sum -c
-sudo tar -xJf /opt/qs-dl/node-v24.17.0-linux-x64.tar.xz -C /opt
-for b in node npm npx; do sudo ln -sf /opt/node-v24.17.0-linux-x64/bin/$b /usr/local/bin/$b; done
-```
-
-- The Stellar CLI digest is the one GitHub publishes for that asset. It is
-  shown on the release page, and in `api.github.com/repos/stellar/stellar-cli/releases/tags/v30.0.1`,
-  read 2026-11-22.
-- The Node line printed by `grep` must show the same hash as the `echo`.
-- Your own `murat` shell keeps using its nvm Node and `~/.cargo/bin/stellar`.
-
-**0.0.4 The repo, as a root-owned read-only snapshot at a commit you have
-checked.**
-- `qsmain` never runs the working tree in `/home/murat`, which Claude edits.
-- The snapshot holds no `.env.local` and no `.secrets/`.
-- `COMMIT` is the commit Claude reports for the runbook. Compare it with `git
-  log` before you go on.
-
-```sh
-COMMIT=<the commit hash Claude reported>
-git -C ~/QuietStay/QuietStay log --oneline -1 "$COMMIT"
-git -C ~/QuietStay/QuietStay bundle create /tmp/quietstay.bundle phase3
-sudo rm -rf /opt/quietstay
-sudo git clone --branch phase3 /tmp/quietstay.bundle /opt/quietstay
-sudo git -C /opt/quietstay checkout --detach "$COMMIT"
-sudo git -C /opt/quietstay rev-parse HEAD        # must print $COMMIT exactly
-cd /opt/quietstay && sudo env PATH=/usr/local/bin:/usr/bin:/bin npm ci --ignore-scripts && cd -
-# The two built WASMs are not in git; Part 5 checks their sha256 before any upload.
-sudo install -D -m 0644 ~/QuietStay/QuietStay/contracts/target/wasm32v1-none/release/quietstay_rights.wasm \
-  /opt/quietstay/contracts/target/wasm32v1-none/release/quietstay_rights.wasm
-sudo install -D -m 0644 ~/QuietStay/QuietStay/contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm \
-  /opt/quietstay/contracts/vendor/anchor-web-auth/target/wasm32v1-none/release/web_auth.wasm
-sudo chown -R root:root /opt/quietstay && sudo chmod -R go-w /opt/quietstay
-```
-
-- The bundle comes from `murat`'s repo. That is fine, because `rev-parse`
-  proves the snapshot is exactly the commit you checked.
-- `--ignore-scripts` keeps package install scripts from running as root.
-- If a later step fails because a package needs its install script, run
-  `sudo env PATH=/usr/local/bin:/usr/bin:/bin npm ci` in `/opt/quietstay`, and
-  tell Claude which package it was.
-- **To update the snapshot** after a fix, run 0.0.4 again with the new
-  commit.
-
-**0.0.5 Switch to `qsmain` and check that the setup holds.** From here on,
-every command in this runbook runs in this shell:
-
-```sh
-sudo -iu qsmain
-cd /opt/quietstay
-stellar --version        # stellar 30.0.1 (f2a7b74175c34585f3b30a1abf42a2d41cbcc390)
-node --version           # v24.17.0
-touch /opt/quietstay/x   # must fail: Permission denied (read-only)
-ls /home/murat           # must fail: Permission denied
-npx tsx scripts/check-ttl.ts --network testnet   # all entries live
-```
-
-Paste the output of 0.0.1's checks and of 0.0.5. To leave the `qsmain`
-shell, type `exit`.
-
-**0.1 Give `qsmain`'s CLI a mainnet RPC** (as `qsmain`). The built-in `mainnet` network has none,
-which was the Low issue. This is a local setting and sends nothing:
+**0.1 Give your CLI a mainnet RPC.** The built-in `mainnet` network has none.
+This is a local setting and sends nothing:
 
 ```sh
 stellar network add mainnet \
   --rpc-url https://mainnet.sorobanrpc.com \
   --network-passphrase "Public Global Stellar Network ; September 2015"
-stellar ledger latest --network mainnet     # expect: Protocol Version: 29
+stellar ledger latest --network mainnet     # expect: Protocol Version: 30
+npx tsx scripts/check-protocol.ts           # PASS: mainnet is on protocol 30
 ```
 
-**0.2 Choose where `qsmain` keeps its keys.** As `qsmain`, test whether the
-OS secure store keeps a key across a WSL restart. A `sudo -iu` shell may have
-no Secret Service, in which case the test fails:
+If the protocol is no longer 30, stop: the checklist's protocol, simulation
+and cost items are re-run first, as they were for 29 → 30.
+
+**0.2 Choose where your mainnet keys are kept.** Test whether the OS secure
+store keeps a key across a WSL restart:
 
 ```sh
 stellar keys generate qs-main-storetest --secure-store
 stellar keys address qs-main-storetest
 ```
 
-Then `exit`, and in Windows PowerShell `wsl --shutdown`. Open a new terminal,
-and `sudo -iu qsmain` again:
+Then in Windows PowerShell `wsl --shutdown`, open a new terminal, and:
 
 ```sh
 stellar keys address qs-main-storetest     # the same G… address?
@@ -239,52 +116,52 @@ stellar keys rm qs-main-storetest
 ```
 
 - **If it printed the same address**, use the secure store:
-  `export QS_KEY_STORE=--secure-store`.
-- **If it failed**, use the CLI's file store: `export QS_KEY_STORE=`. The
-  seed phrase is then in `/home/qsmain/.config/stellar/identity/<name>.toml`.
-  - Only `qsmain` and root can read it: the home is mode 700, and 0.0.1 took
-    away `murat`'s ways around that.
-  - That is why the separate user makes the file store acceptable here,
-    which it was not under `murat`.
-- Either way, put the choice in `qsmain`'s profile, so every later shell has
-  it:
-  `echo "export QS_KEY_STORE=$QS_KEY_STORE" >> ~/.profile`.
+  `echo 'export QS_KEY_STORE=--secure-store' >> ~/.profile`.
+- **If it failed**, the CLI's file store is the fallback (`export
+  QS_KEY_STORE=`): the seed phrase is then in
+  `~/.config/stellar/identity/<name>.toml`, readable by any process you run.
+  That is why the Claude session is closed whenever a mainnet command runs
+  (decision 6), and why the keys hold only what the pilot needs.
 
-## Part 1 — Create the mainnet identities
+## Part 1 — Create the mainnet accounts
 
-Six new keys, each used for one role. The arbiter is separate from the issuer,
-as the constructor requires. No `--fund` (that is Friendbot, testnet only).
+Three keys in your CLI keystore, each used for one role. The arbiter is
+separate from the issuer, as the constructor requires. No `--fund` (that is
+Friendbot, testnet only).
 
 ```sh
 stellar keys generate qs-main-issuer  $QS_KEY_STORE   # issuer and deployer
 stellar keys generate qs-main-arbiter $QS_KEY_STORE   # resolves disputes only
-stellar keys generate qs-main-fee     $QS_KEY_STORE   # pays the passkey wallet's transactions
-stellar keys generate qs-main-owner   $QS_KEY_STORE   # pilot owner (receives USDC)
-stellar keys generate qs-main-buyer   $QS_KEY_STORE   # pilot buyer (pays USDC)
-stellar keys generate qs-main-renter  $QS_KEY_STORE   # pilot renter (pays USDC, gets refunds)
+stellar keys generate qs-main-fee     $QS_KEY_STORE   # the fee account (D18): pays passkey users' fees
 ```
 
-**Back up each key offline** before funding it, for example on paper or in a
-password manager that is not on this machine:
+**The three pilot accounts are in Freighter** (decision 1): the flows run in
+the browser, so the owner, the buyer and the renter sign there. In Freighter
+(set to Mainnet), create three new accounts, named for example "QS owner",
+"QS buyer" and "QS renter", and copy each one's `G…` address.
 
-```sh
-stellar keys secret qs-main-issuer     # shown on your screen only; never paste it anywhere
-```
+**Back up every key offline** before funding it, on paper or in a password
+manager that is not on this machine:
 
-Repeat for each of the six. Then save the **public** keys in a file outside
-the repository, and load them:
+- the three CLI keys: `stellar keys secret qs-main-issuer` (and `-arbiter`,
+  `-fee`), shown on your screen only; never paste them anywhere;
+- Freighter's recovery phrase, from its settings.
+
+Then save the **public** keys in a file outside the repository, and load them:
 
 ```sh
 cat > ~/qs-main-public-keys.env <<EOF
 export QS_MAIN_ISSUER=$(stellar keys address qs-main-issuer)
 export QS_MAIN_ARBITER=$(stellar keys address qs-main-arbiter)
 export QS_MAIN_FEE=$(stellar keys address qs-main-fee)
-export QS_MAIN_OWNER=$(stellar keys address qs-main-owner)
-export QS_MAIN_BUYER=$(stellar keys address qs-main-buyer)
-export QS_MAIN_RENTER=$(stellar keys address qs-main-renter)
+export QS_MAIN_OWNER=<the owner's G… from Freighter>
+export QS_MAIN_BUYER=<the buyer's G… from Freighter>
+export QS_MAIN_RENTER=<the renter's G… from Freighter>
 EOF
 source ~/qs-main-public-keys.env      # repeat in every new terminal
 ```
+
+Edit the three Freighter lines with their real addresses before `source`.
 
 **Check 1** (paste the output). It needs six valid, distinct keys, none of
 them a testnet identity or the sign-in key, and none already on mainnet:
@@ -297,8 +174,8 @@ npx tsx scripts/check-mainnet-setup.ts --part 1
 
 **2.1 From your exchange to the deployer.** Withdraw XLM on the Stellar
 network to `$QS_MAIN_ISSUER` (`echo $QS_MAIN_ISSUER`), no memo needed.
-- **At least 113 XLM must arrive** on the DEX route. On the exchange-USDC
-  route, at least 81 XLM.
+- **At least 115 XLM must arrive** on the DEX route. On the exchange-USDC
+  route, at least 83 XLM.
 - The withdrawal creates the account. If your exchange cannot send to an
   account that does not exist yet, do Part 3 first, using its "create"
   variant; then the withdrawal goes to an existing account.
@@ -308,7 +185,7 @@ the deployer's key and sends one `create_account`:
 
 ```sh
 stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_ARBITER" --starting-balance 20000000    #  2 XLM
-stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_FEE"     --starting-balance 30000000    #  3 XLM
+stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_FEE"     --starting-balance 50000000    #  5 XLM
 stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_OWNER"   --starting-balance 30000000    #  3 XLM
 stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_BUYER"   --starting-balance 190000000   # 19 XLM (30000000 on the exchange-USDC route)
 stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_RENTER"  --starting-balance 190000000   # 19 XLM (30000000 on the exchange-USDC route)
@@ -362,68 +239,40 @@ npx tsx scripts/check-mainnet-setup.ts --part 3
 
 ## Part 4 — USDC trustlines, then at most 5 USDC
 
-**4.1 Trustlines** on the three G accounts that receive USDC. Each locks
-0.5 XLM of reserve. The limit, 50,000,000 = 5 USDC, means no single account
-can ever hold more than the pilot cap. The issuer, arbiter, fee identity and
-`mainnet-test` get no trustline, so they cannot hold USDC at all.
+**From Freighter's own screens** (decision 3, 2026-11-23). The issuer,
+arbiter, fee account and `mainnet-test` get no trustline, so they cannot hold
+USDC at all.
 
 USDC is Circle's mainnet issuer
 `GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN`; its contract is
 `CCW67TSZ…MI75` (`evidence/checklist/usdc-addresses-2026-11-21.txt`).
 
-```sh
-stellar tx new change-trust --source-account qs-main-owner  --network mainnet --line USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN --limit 50000000
-stellar tx new change-trust --source-account qs-main-buyer  --network mainnet --line USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN --limit 50000000
-stellar tx new change-trust --source-account qs-main-renter --network mainnet --line USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN --limit 50000000
-```
+**4.1 Trustlines** on the owner, the buyer and the renter. In Freighter, for
+each of the three accounts: Manage assets → Add an asset → USDC, and check
+that the issuer shown is `GA5Z…KZVN` (Circle) before you confirm. Each locks
+0.5 XLM of reserve. Freighter sets no limit; the 5 USDC total is checked
+below and before every mainnet signature.
 
-**4.2 USDC: 2 to the buyer, 2 to the renter.** Choose one route.
+**4.2 USDC: 2 to the buyer, 2 to the renter.** Either route:
 
-**Route A, the Stellar DEX (recommended: the amount is exact).** Each account
-buys exactly 2.0000000 USDC with its own XLM, in the direct XLM/USDC order
-book. First get a live quote. This only reads Horizon, and prints the two
-commands with your keys and a send-max 3% above the quote:
+- **Route A, swap in Freighter:** in the buyer's account, swap XLM for
+  exactly 2 USDC (Freighter's swap, on the Stellar DEX); the same in the
+  renter's. Check the received amount on the confirmation screen.
+- **Route B, an exchange withdrawal:** withdraw USDC on the Stellar network,
+  2 to `$QS_MAIN_BUYER` and 2 to `$QS_MAIN_RENTER`. If the exchange's minimum
+  is above 2 but at most 4, withdraw it all to the buyer and send 2 on to the
+  renter from Freighter.
 
-```sh
-npx tsx scripts/check-mainnet-setup.ts --part 4 --quote
-```
+**No more than 5 USDC may arrive in total**: that cap (D7) is the hard rule.
+An exchange fee taken from the amount leaves less than 2, which the check
+reports and we look at together.
 
-The commands it prints look like this, with today's numbers (2026-11-21:
-15.4734 XLM for 2 USDC; send-max 15.9376 XLM):
-
-```sh
-stellar tx new path-payment-strict-receive --source-account qs-main-buyer --network mainnet \
-  --send-asset native --send-max 159376113 \
-  --destination "$QS_MAIN_BUYER" --dest-asset USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN --dest-amount 20000000
-```
-
-- **Run the two printed commands, not this example.** The price moves.
-- `--dest-amount 20000000` is exactly 2 USDC received.
-- `--send-max` caps the XLM spent. If the price has moved more than 3%, the
-  transaction fails (`op_over_source_max`), nothing is traded, and you
-  re-quote.
-- Do not add a `--path`. The quote uses only the direct XLM/USDC book, with no
-  trade through any other asset.
-
-**Route B, an exchange withdrawal.** Withdraw USDC on the Stellar network:
-2 USDC to `$QS_MAIN_BUYER` and 2 USDC to `$QS_MAIN_RENTER`.
-- **No more than 5 USDC may arrive in total.**
-- If the exchange's minimum withdrawal is above 2 but at most 4, withdraw it
-  all to the buyer, and pass 2 USDC on:
-
-  ```sh
-  stellar tx new payment --source-account qs-main-buyer --network mainnet \
-    --destination "$QS_MAIN_RENTER" --asset USDC:GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN --amount 20000000
-  ```
-
-- If its minimum is above 4, use route A.
-- An exchange fee taken from the amount leaves less than 2 USDC. The check
-  then reports a difference from the plan, which I look at with you. The cap
-  is the hard rule.
+`npx tsx scripts/check-mainnet-setup.ts --part 4 --quote` still prints the
+live DEX price of 2 USDC, as a reference for the swap.
 
 **Check 4** (paste both outputs). The first needs:
-- the three trustlines, each with a 5 USDC limit;
-- no USDC trustline on the issuer, arbiter, fee identity or `mainnet-test`;
+- the three trustlines (their limits are printed);
+- no USDC trustline on the issuer, arbiter, fee account or `mainnet-test`;
 - 2/2/0 USDC held;
 - a total ≤ 5.
 
@@ -508,6 +357,55 @@ After that, the remaining Step 6 gates (checklist §10) are prepared from the
 deployed ids. Among them is the `complete_swap` simulation before any swap
 transaction.
 
+## Part 6 — The mainnet app's settings (Vercel)
+
+The mainnet Vercel project is configured as [VERCEL.md](VERCEL.md) lists for
+`cli` mode on mainnet: `NEXT_PUBLIC_QUIETSTAY_NETWORK=mainnet`, signing
+`cli`, no issuer or arbiter key on the server, and the contract ids from
+Part 5. Two settings carry the fee account (D18), set by you in Vercel's
+settings only, never in a file:
+
+| Setting | Value |
+| --- | --- |
+| `NEXT_PUBLIC_QUIETSTAY_FEE_ACCOUNT` | `$QS_MAIN_FEE` (public) |
+| `QUIETSTAY_FEE_SECRET` | its `S…`, shown by `stellar keys secret qs-main-fee` on your screen and typed or pasted only into Vercel's value field (Sensitive) |
+
+- The fee route refuses unless the secret is that account's key.
+- It pays only QuietStay calls and passkey wallet creation, at most 0.5 XLM a
+  transaction and **5 XLM a day in all**, with per-IP, per-wallet, per-week
+  and wallet-creation limits (PHASE3_SPEC.md D18). So the account loses at
+  most 5 XLM a day whatever is tried, and holds only what Part 2 gave it.
+- Its balance is on the Wallet screen, signed in as the issuer, with a
+  warning below 3 XLM and a top-up from Freighter. Or send it XLM from
+  anywhere.
+
+After deploying, `npx tsx scripts/check-app-config.ts <the mainnet URL>`
+must show `signing: cli`, `fee_route: true` and no issuer key.
+
+## Part 7 — Deciding a dispute (the arbiter)
+
+The arbiter acts only on a Disputed escrow and can only pay its own owner or
+refund its own renter its own amount. There is no screen: one command, which
+builds the unsigned envelope with the arbiter's public key and hands it to
+`mainnet-sign-submit.sh`, like every other mainnet transaction (plan item 5,
+rehearsed on testnet 2026-11-28):
+
+```sh
+QS_PILOT_ACCOUNTS="$QS_MAIN_OWNER,$QS_MAIN_BUYER,$QS_MAIN_RENTER" \
+scripts/arbiter-resolve.sh --network mainnet --contract "$QS_RIGHTS_CONTRACT" \
+  --escrow <id> --outcome pay-owner|refund-renter --decision <decision file> --arbiter qs-main-arbiter
+```
+
+- It checks that `qs-main-arbiter` is the contract's arbiter and that the
+  escrow is Disputed, prints the escrow, the evidence hashes and exactly who
+  is paid how much, and hashes the decision file (only the hash goes on
+  chain; keep the file).
+- The envelope is saved as `~/quietstay-envelopes/resolve-escrow-<id>-mainnet.xdr`.
+  Then the review, the protocol and pilot checks, **SEND**, one signature,
+  and the submission recovery.
+- Run again for the same escrow, it builds nothing new: if it was signed, it
+  prints the `--resume` command.
+
 ## After the runbook
 
 - I check each pasted output against the chain myself, with the same reads.
@@ -515,5 +413,6 @@ transaction.
   (Addresses).
 - **Then you give GO.** Step 6 starts with Part 5, run by you, like the
   other parts.
-- The mainnet smart wallet (passkey) is created in Step 6, from the app on
-  your device. The fee identity pays for it, which is in its budget.
+- A passkey wallet is created in Step 6 from the app on your device. The fee
+  account pays for its creation and for its transactions, through the fee
+  route, within the limits above.

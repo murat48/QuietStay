@@ -34,6 +34,40 @@ calls that nothing signed.
   a mainnet identity or on `--network mainnet`, and never loads `.env.local`
   or any secret (PHASE3_PROMPT.md, hard constraints).
 
+**Step 5 close-out (2026-11-28; still not GO).** What changed since the
+review, each recorded in PHASE3_PROGRESS.md:
+- **The pilot plan of 2026-11-23** (your decisions): the flows in the browser
+  with Freighter; no attestation on mainnet; trustlines and USDC from
+  Freighter's screens, the 5 USDC total held by the checks; **no `qsmain`
+  user** (the keys in your own keystore, the Claude session closed while you
+  run a mainnet command); a mainnet-like rehearsal app on testnet. The
+  runbooks follow it (revised 2026-11-28).
+- **Issuing through unsigned envelopes** (plan item 3): the issuer signs
+  `issue` with the CLI through `mainnet-sign-submit.sh`, and the app confirms
+  it from the chain. CLI sign-in beside Freighter.
+- **D18, passkey fees:** the fee route runs on mainnet with a limited key set
+  in Vercel. Against draining it (2026-11-28): a 5 XLM daily budget counted at
+  each fee's cap, 0.5 XLM a transaction, wallet-creation limits, a per-week
+  limit; a call the contract refuses is never sent. It now sends only the
+  authorizations a request carries (a call missing one used to be sent, to
+  fail at the fee account's cost).
+- **The arbiter** (plan item 5): `arbiter-resolve.sh` builds the unsigned
+  envelope and hands it to `mainnet-sign-submit.sh`. Rehearsed on testnet:
+  escrow #4 refunded, tx `63d7c6a4…a75b`.
+- **Mainnet moved to protocol 30.** The protocol, simulation and cost items
+  were re-run (2026-11-27, read-only): both uploads and all 37 flow fees are
+  unchanged, mainnet's cost parameters now equal testnet's (so §5.2's
+  instruction counts hold as measured), and no contract change is needed.
+  `check-protocol` expects 30 since your go-ahead (2026-11-28).
+- **App changes from the Stop 2 trials** (D14–D17): asking prices, the
+  owner's details sealed to the issuer, decline with a reason, renewals (by
+  hand from the day after check-out, automatic once the use year is over,
+  once per week, the same dates a year later, a price that can be edited),
+  a renewed week listable at once, the Wallet screen (balances, funding a
+  passkey wallet, the fee account). The rights contract and its WASM are
+  unchanged.
+- **Tests:** see §7's 2026-11-28 line.
+
 Status words: **PASS** (checked, with evidence below); **OPEN — yours** (needs
 the owner's action or decision before GO); **Step 6** (can only be done once
 the mainnet contracts exist, and is a gate inside Step 6 before the first
@@ -682,13 +716,17 @@ closed, and the deploy cost is accepted in principle.
 
 1. **Run [MAINNET_SETUP.md](MAINNET_SETUP.md)** in your own terminal, and
    paste me the read-only check after each part. It covers:
-   - the six `qs-main-` identities (issuer/deployer, arbiter, fee, owner,
-     buyer, renter), created by you. I create none;
-   - funding in order, from the budget (113 XLM from you on the DEX route);
+   - the issuer/deployer, arbiter and fee keys in your CLI keystore, and the
+     owner, buyer and renter in Freighter (revised 2026-11-28), all created
+     by you. I create none;
+   - funding in order, from the budget (115 XLM from you on the DEX route; the
+     fee account gets 5);
    - `mainnet-test` down to its 1 XLM minimum, with the rest going to the
      deployer;
-   - USDC trustlines (limit 5 USDC) on owner, buyer and renter, and 4 USDC in
-     total into the buyer and renter.
+   - USDC trustlines from Freighter on owner, buyer and renter, and 4 USDC in
+     total into the buyer and renter;
+   - the mainnet app's settings, with the fee account's key typed by you into
+     Vercel (Part 6).
 
    I check each pasted output against the chain. GO comes after that.
 2. **Decisions taken (2026-11-22):**
@@ -711,11 +749,9 @@ closed, and the deploy cost is accepted in principle.
      The late problem report was refused with #49, tx `a29d267e…fce1`. The
      refusal before the window was #48, `396deb7b…`. Every flow has now
      landed on the final WASM.
-   - **Testnet note:** the final WASM's code entry on testnet is live until
-     ledger 5,959,276, about 2026-11-27 (`scripts/check-mainnet-wasm.ts
-     --network testnet`). The collect is well before that. A testnet
-     rehearsal after that date needs a `stellar contract extend` of the code
-     first. That is a testnet transaction, which I can run.
+   - **Testnet note:** the code entries and instances were extended on
+     2026-11-22 (§4.2); read again on 2026-11-28, all live until about
+     2027-05-21 (`scripts/check-ttl.ts --network testnet`).
 
 **Step 6 gates**, before the first flow on mainnet:
 - the upload and the deploy, each simulated before it is sent;

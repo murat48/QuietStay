@@ -1,19 +1,30 @@
 /**
- * The passkey screens, through the app itself (Phase 3, Step 2 review).
+ * The passkey screens, through the app itself (Phase 3; rewritten 2026-11-28
+ * for the app as it is now: USDC offers and escrow on /stays, the record
+ * delivered to the owner's browser, the Wallet screen, D18's fee route).
  *
  *   npx playwright test e2e/passkey-app.spec.ts
  *
- * Testnet, throwaway accounts and contract, the app on `next dev`. The owner
- * uses a passkey smart wallet (Chromium's CDP virtual authenticator); the
- * issuer and the renter use regular wallets (the test wallet bridge).
+ * Testnet, throwaway accounts and contract, the app on `next dev` with a
+ * throwaway fee key. The owner and the renter each use a passkey smart wallet
+ * (Chromium's CDP virtual authenticator, one per browser context); the issuer
+ * and the renter's funding wallet are regular wallets (the test wallet
+ * bridge). Every passkey transaction goes through /api/tx/sponsor, which pays
+ * its fee; neither passkey wallet ever holds XLM.
  *
- *   1. the owner creates a passkey wallet from the header (/api/tx/sponsor pays)
- *      and is signed in by SEP-45;
- *   2. the owner asks for a week; the issuer issues and seals; the owner imports;
- *   3. the owner offers it for rent (passkey-signed, sponsored);
- *   4. a renter asks; the owner proves in the browser and approves with the
- *      passkey (sponsored);
- *   5. a cancelled passkey prompt at approval moves nothing and says so;
+ *   1. the issuer opens the owners' details intake; the owner creates a
+ *      passkey wallet from the header (SEP-45 signs it in), asks for a week
+ *      with its details, and the issuer issues; the record reaches the owner's
+ *      browser with no link opened;
+ *   2. the owner lists the week for rent at an asking price, approved with
+ *      the passkey;
+ *   3. the renter creates a passkey wallet and funds it on the Wallet screen
+ *      from a regular wallet (the bridge standing in for Freighter);
+ *   4. the renter makes a USDC rental offer, approved with the passkey: the
+ *      offer and its USDC allowance in one passkey-signed call;
+ *   5. at the owner's acceptance a cancelled passkey prompt moves nothing and
+ *      says so; then the owner proves in the browser and accepts: the week is
+ *      rented, the USDC is in escrow;
  *   6. a browser without WebAuthn is told to use a regular wallet.
  */
 
@@ -25,27 +36,35 @@ import { Keypair } from "@stellar/stellar-sdk";
 import { startApp, type App } from "./lib/app";
 import { captureFailures, reportFailures, type FailedResponse } from "./lib/failures";
 import { checkPendingPrivacy, evidenceLanded, hashOf } from "./lib/privacy";
-import { deployRightsStep4, fund } from "./lib/testnet";
+import { signIn, visit } from "./lib/sign-in";
+import { addUsdcTrustline, deployRightsStep4, fund, sendTestnetUsdc } from "./lib/testnet";
 import { attachWallet } from "./lib/wallet";
+
+const PORT = 4323;
+/** 0.1 USDC: the rental's price. The renter's wallet is funded with 0.2. */
+const PRICE = "0.1";
 
 let app: App;
 let contract: string;
 const issuer = Keypair.random();
 const sep10 = Keypair.random();
 const fee = Keypair.random();
-const renter = Keypair.random();
-const renter2 = Keypair.random();
+/** The renter's regular wallet, which funds the renter's passkey wallet. */
+const funder = Keypair.random();
 const failures: FailedResponse[] = [];
 
 test.describe.configure({ mode: "serial" });
-test.setTimeout(15 * 60_000);
+test.setTimeout(25 * 60_000);
+test.use({ actionTimeout: 180_000 });
 
 test.beforeAll(async () => {
   test.setTimeout(10 * 60_000);
-  await Promise.all([issuer, sep10, fee, renter, renter2].map(fund));
+  await Promise.all([issuer, sep10, fee, funder].map(fund));
+  await addUsdcTrustline(funder);
+  sendTestnetUsdc(funder.publicKey(), 2_000_000n);
   contract = await deployRightsStep4(issuer, Keypair.random()); // the final WASM (76d69e79…), as on the final testnet deployment
   console.log(`e2e contract ${contract}`);
-  app = await startApp({ contract, issuer, sep10, fee, port: 4323 });
+  app = await startApp({ contract, issuer, sep10, fee, port: PORT });
 });
 
 // The privacy check runs here too, so it runs even when the test fails after
@@ -62,19 +81,8 @@ test.afterAll(async () => {
   await app?.stop();
 });
 
-async function signIn(page: Page, path: string) {
-  await page.goto(path);
-  await page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
-  try {
-    await expect(page.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0, { timeout: 90_000 });
-  } catch (e) {
-    const why = await page.getByTestId("wallet-error").getAttribute("title").catch(() => null);
-    throw new Error(`sign-in did not complete: ${why ?? "no error shown"}`, { cause: e });
-  }
-}
-
-/** A browser context with a virtual platform passkey. */
-async function passkeyContext(c: BrowserContext, page: Page): Promise<{ cdp: CDPSession; authenticatorId: string }> {
+/** A virtual platform passkey for one browser context. */
+async function addPasskey(c: BrowserContext, page: Page): Promise<{ cdp: CDPSession; authenticatorId: string }> {
   const cdp = await c.newCDPSession(page);
   await cdp.send("WebAuthn.enable");
   const { authenticatorId } = await cdp.send("WebAuthn.addVirtualAuthenticator", {
@@ -83,90 +91,22 @@ async function passkeyContext(c: BrowserContext, page: Page): Promise<{ cdp: CDP
   return { cdp, authenticatorId };
 }
 
-test("a passkey owner gets a week, offers it, and rents it out, approving with the passkey", async ({ browser }) => {
-  const oc = await browser.newContext({ baseURL: app.url });
-  await oc.addInitScript({ content: "globalThis.__name = (f) => f;" });
-  captureFailures("owner (passkey)", oc, failures);
-  const O = await oc.newPage();
-  const { cdp, authenticatorId } = await passkeyContext(oc, O);
-
-  const ic = await browser.newContext({ baseURL: app.url });
-  await attachWallet(ic, issuer);
-  captureFailures("issuer", ic, failures);
-  const I = await ic.newPage();
-  const rc = await browser.newContext({ baseURL: app.url });
-  await attachWallet(rc, renter);
-  captureFailures("renter", rc, failures);
-  const R = await rc.newPage();
-
-  // 1. create the passkey wallet; SEP-45 signs it in
-  await O.goto("/issue");
-  await O.locator(".wallet").getByRole("button", { name: "Use a passkey" }).click();
-  await O.getByRole("button", { name: "Create a passkey wallet" }).click();
-  await expect(O.locator(".wallet .addr")).toContainText("🔑", { timeout: 120_000 });
-  await expect(O.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0, { timeout: 120_000 });
-  const wallet = (await O.locator(".wallet .addr").getAttribute("title"))!;
+/** Create a passkey wallet from the header; SEP-45 signs it in. Returns its C… address. */
+async function createPasskeyWallet(page: Page, path: string): Promise<string> {
+  await page.goto(path);
+  await page.waitForLoadState("networkidle");
+  await page.locator(".wallet").getByRole("button", { name: "Use a passkey" }).click();
+  await page.getByRole("button", { name: "Create a passkey wallet" }).click();
+  await expect(page.locator(".wallet .addr")).toContainText("🔑", { timeout: 180_000 });
+  await expect(page.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0, { timeout: 120_000 });
+  const wallet = (await page.locator(".wallet .addr").getAttribute("title"))!;
   expect(wallet).toMatch(/^C[A-Z2-7]{55}$/);
+  return wallet;
+}
 
-  // 2. ask, issue, seal, import
-  await O.getByRole("button", { name: "Request issuance", exact: true }).click();
-  const ownerLink = await O.getByTestId("issue-request-link").inputValue({ timeout: 60_000 });
-  await signIn(I, "/issue");
-  await I.getByRole("button", { name: "Issue to this account" }).first().click();
-  await I.locator("#tab-json").click();
-  const sample = JSON.parse(readFileSync("inventory/records/week-01.json", "utf8"));
-  const theRecord = {
-    ...sample,
-    record_id: randomUUID(),
-    salt: randomBytes(32).toString("hex"),
-    owner: { name: "Passkey Owner", email: "passkey.e2e@example.invalid", stellar_account: wallet },
-    week: { check_in: "2026-12-05", check_out: "2026-12-12", use_year: 2026, week_number: 49 },
-  };
-  await I.locator("textarea#record").fill(JSON.stringify(theRecord, null, 2));
-  await I.getByRole("button", { name: "Issue on testnet" }).click();
-  await expect(I.getByText(/Right #\d+/).first()).toBeVisible({ timeout: 120_000 });
-  await I.goto(ownerLink.replace(/^https?:\/\/[^/]+/, ""));
-  await I.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
-  await I.getByRole("button", { name: "Seal the record" }).click({ timeout: 60_000 });
-  const reply = await I.getByTestId("reply-link").inputValue();
-  await O.goto(reply.replace(/^https?:\/\/[^/]+/, ""));
-  await expect(O.getByTestId("record-received")).toBeVisible({ timeout: 60_000 });
-
-  // Back on the site layout (a full load): sign in again with the passkey.
-  const passkeySignIn = async (path: string) => {
-    await O.goto(path);
-    await O.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(O.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0, { timeout: 90_000 });
-  };
-
-  // 3. offer for rent, approved with the passkey, paid by the fee route
-  await passkeySignIn("/list");
-  await O.getByRole("button", { name: /^Offer for rent/ }).click();
-  await expect(O.getByRole("button", { name: "Withdraw offer" })).toBeVisible({ timeout: 120_000 });
-
-  // 4. a renter asks
-  await signIn(R, "/list");
-  await R.getByRole("button", { name: /^Ask to rent it for/ }).click();
-  await expect(R.getByText("you asked for this")).toBeVisible({ timeout: 60_000 });
-
-  // 5. first, a cancelled passkey prompt at approval: nothing moves
-  await passkeySignIn("/transfer");
-  await cdp.send("WebAuthn.setUserVerified", { authenticatorId, isUserVerified: false });
-  await O.getByRole("button", { name: "Prove and rent out" }).click({ timeout: 60_000 });
-  await expect(O.locator(".note.bad", { hasText: "cancelled or failed" })).toBeVisible({ timeout: 120_000 });
-  await cdp.send("WebAuthn.setUserVerified", { authenticatorId, isUserVerified: true });
-  const holderAfterCancel = await (await fetch(`${app.url}/api/right/1`)).json();
-  expect(holderAfterCancel.effective_holder).toBe(wallet);
-
-  // 4, continued: the real approval
-  await O.getByRole("button", { name: "Prove and rent out" }).click();
-  await expect(O.getByTestId("transfer-outcome")).toContainText("Rented out", { timeout: 180_000 });
-  const rentalTx = await O.getByTestId("transfer-outcome").locator("a").getAttribute("href");
-
-  // Registered the moment it lands, before anything below can fail: the
-  // ledger must hold neither the record nor the owner's secret, which is read
-  // back from the owner's browser vault.
-  const secrets = await O.evaluate(
+/** The secrets in a browser's vault. */
+async function vaultSecrets(page: Page): Promise<string[]> {
+  return page.evaluate(
     () =>
       new Promise<string[]>((ok) => {
         const req = indexedDB.open("quietstay-vault");
@@ -176,6 +116,114 @@ test("a passkey owner gets a week, offers it, and rents it out, approving with t
         };
       }),
   );
+}
+
+async function right(rightId: number): Promise<{ title_holder: string | null; effective_holder: string }> {
+  return (await fetch(`${app.url}/api/right/${rightId}`)).json();
+}
+
+test("two passkey users rent a week through the app, each fee paid by the fee route", async ({ browser }) => {
+  const oc = await browser.newContext({ baseURL: app.url });
+  await oc.addInitScript({ content: "globalThis.__name = (f) => f;" });
+  captureFailures("owner (passkey)", oc, failures);
+  const O = await oc.newPage();
+  const ownerKey = await addPasskey(oc, O);
+
+  const ic = await browser.newContext({ baseURL: app.url });
+  await attachWallet(ic, issuer);
+  captureFailures("issuer", ic, failures);
+  const I = await ic.newPage();
+
+  // The renter's context has a passkey and, for the one funding transfer, the
+  // regular wallet the bridge stands in for.
+  const rc = await browser.newContext({ baseURL: app.url });
+  await attachWallet(rc, funder);
+  captureFailures("renter (passkey)", rc, failures);
+  const R = await rc.newPage();
+  await addPasskey(rc, R);
+
+  // --- 1. intake open; the owner's passkey wallet asks; issued and delivered ---
+  await signIn(I, "/issue");
+  await I.getByTestId("intake-publish").click({ timeout: 60_000 });
+  await expect(I.getByTestId("intake-ready")).toBeVisible({ timeout: 60_000 });
+
+  const ownerWallet = await createPasskeyWallet(O, "/issue");
+  console.log(`owner's passkey wallet ${ownerWallet}`);
+  const ownerName = "Passkey Owner";
+  await expect(O.getByTestId("detail-owner_name")).toBeEnabled({ timeout: 60_000 });
+  await O.getByTestId("detail-owner_name").fill(ownerName);
+  await O.getByTestId("detail-week_check_in").fill("2026-12-19");
+  await O.getByRole("button", { name: "Request issuance", exact: true }).click();
+  await expect(O.getByTestId("issue-reply-wait")).toBeVisible({ timeout: 60_000 });
+
+  await signIn(I, "/issue");
+  await I.getByRole("button", { name: "Issue to this account" }).first().click();
+  await expect(I.locator("#owner_name")).toHaveValue(ownerName, { timeout: 60_000 });
+  await I.locator("#tab-json").click();
+  const sample = JSON.parse(readFileSync("inventory/records/week-01.json", "utf8"));
+  const theRecord = {
+    ...sample,
+    record_id: randomUUID(),
+    salt: randomBytes(32).toString("hex"),
+    owner: { name: ownerName, email: "passkey.e2e@example.invalid", stellar_account: ownerWallet },
+    week: { check_in: "2026-12-19", check_out: "2026-12-26", use_year: 2026, week_number: 51 },
+    title: { ...sample.title, deed_reference: `E2E-PK-${randomBytes(4).toString("hex")}` },
+  };
+  await I.locator("textarea#record").fill(JSON.stringify(theRecord, null, 2));
+  await I.getByRole("button", { name: "Issue on testnet" }).click();
+  const issued = I.getByText(/Right #\d+/).first();
+  await expect(issued).toBeVisible({ timeout: 120_000 });
+  // Read at once: a dev-server reload later in the test clears this result.
+  const rightId = Number(/Right #(\d+)/.exec((await issued.textContent()) ?? "")![1]);
+  await expect(I.getByTestId("issue-delivered")).toBeVisible({ timeout: 60_000 });
+
+  // No link: signed in, the owner's browser picks the record up.
+  await visit(O, "/stays");
+  await expect(O.getByTestId("inbox-received")).toBeVisible({ timeout: 60_000 });
+
+  // --- 2. listed for rent at an asking price, approved with the passkey --------
+  await visit(O, "/list");
+  await O.getByTestId(`asking-price-${rightId}`).fill(PRICE, { timeout: 60_000 });
+  await O.getByRole("button", { name: /^Offer for rent/ }).click();
+  await expect(O.getByRole("button", { name: "Withdraw offer" })).toBeVisible({ timeout: 180_000 });
+
+  // --- 3. the renter's passkey wallet, funded on the Wallet screen ------------
+  const renterWallet = await createPasskeyWallet(R, "/wallet");
+  console.log(`renter's passkey wallet ${renterWallet}`);
+  await expect(R.getByTestId("wallet-address")).toHaveText(renterWallet, { timeout: 60_000 });
+  await expect(R.getByTestId("wallet-usdc")).toContainText("0 USDC", { timeout: 60_000 });
+  await R.getByTestId("fund-amount").fill("0.2");
+  await R.getByTestId("fund-send").click();
+  await expect(R.getByTestId("fund-done")).toContainText("Sent 0.2 USDC", { timeout: 180_000 });
+  await expect(R.getByTestId("wallet-usdc")).toContainText("0.2 USDC", { timeout: 60_000 });
+  // The session is still the passkey's.
+  await expect(R.locator(".wallet .addr")).toContainText("🔑");
+
+  // --- 4. a USDC rental offer, approved with the passkey -----------------------
+  await visit(R, `/stays?right=${rightId}&kind=rent`);
+  await expect(R.getByTestId("offer-price")).toHaveValue(PRICE, { timeout: 60_000 });
+  await R.getByTestId("offer-rent").click({ timeout: 60_000 });
+  await expect(R.getByTestId("stays-outcome")).toContainText("Offer made", { timeout: 180_000 });
+
+  // --- 5. a cancelled prompt moves nothing; then proved and accepted -----------
+  await visit(O, "/stays");
+  const accept = O.locator('[data-testid^="accept-offer-"]').first();
+  await expect(accept).toBeEnabled({ timeout: 60_000 });
+  await ownerKey.cdp.send("WebAuthn.setUserVerified", { authenticatorId: ownerKey.authenticatorId, isUserVerified: false });
+  await accept.click();
+  await expect(O.locator(".note.bad", { hasText: "cancelled or failed" }).first()).toBeVisible({ timeout: 180_000 });
+  await ownerKey.cdp.send("WebAuthn.setUserVerified", { authenticatorId: ownerKey.authenticatorId, isUserVerified: true });
+  expect((await right(rightId)).effective_holder).toBe(ownerWallet);
+
+  await visit(O, "/stays");
+  await O.locator('[data-testid^="accept-offer-"]').first().click({ timeout: 60_000 });
+  await expect(O.getByTestId("stays-outcome")).toContainText("Rented out", { timeout: 180_000 });
+  const rentalTx = await O.getByTestId("stays-outcome").locator("a").getAttribute("href");
+
+  // Registered the moment it lands: the ledger holds neither the record nor
+  // the owner's secret, read back from the owner's browser vault.
+  const secrets = await vaultSecrets(O);
+  expect(secrets.length).toBeGreaterThan(0);
   evidenceLanded({
     txs: { "passkey-app-rental": hashOf(rentalTx) },
     records: [theRecord],
@@ -183,18 +231,31 @@ test("a passkey owner gets a week, offers it, and rents it out, approving with t
     out: `evidence/privacy/${new Date().toISOString().slice(0, 10)}-passkey-app-${hashOf(rentalTx).slice(0, 8)}.txt`,
   });
 
-  const after = await (await fetch(`${app.url}/api/right/1`)).json();
-  expect(after.effective_holder).toBe(renter.publicKey());
-  expect(after.title_holder).toBe(wallet);
-  console.log(`passkey wallet ${wallet}\npasskey-approved rental ${rentalTx}`);
-
-  expect(secrets.length).toBeGreaterThan(0);
+  const after = await right(rightId);
+  expect(after.title_holder).toBe(ownerWallet);
+  expect(after.effective_holder).toBe(renterWallet);
+  // The rent is in escrow: 0.1 of the renter's 0.2 left their wallet.
+  await visit(R, "/wallet");
+  await expect(R.getByTestId("wallet-usdc")).toContainText("0.1 USDC", { timeout: 60_000 });
+  console.log(`passkey-approved rental ${rentalTx}`);
   checkPendingPrivacy();
 
   mkdirSync("e2e/results", { recursive: true });
   writeFileSync(
     `e2e/results/passkey-app-${new Date().toISOString().slice(0, 10)}.json`,
-    JSON.stringify({ date: new Date().toISOString(), command: "npx playwright test e2e/passkey-app.spec.ts", contract, wallet, rental_tx: rentalTx, fee_account: "throwaway (Keypair.random)" }, null, 2) + "\n",
+    JSON.stringify(
+      {
+        date: new Date().toISOString(),
+        command: "npx playwright test e2e/passkey-app.spec.ts",
+        contract,
+        owner_wallet: ownerWallet,
+        renter_wallet: renterWallet,
+        rental_tx: rentalTx,
+        fee_account: "throwaway (Keypair.random)",
+      },
+      null,
+      2,
+    ) + "\n",
   );
   for (const c of [oc, ic, rc]) await c.close();
 });

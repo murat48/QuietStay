@@ -6,7 +6,9 @@
  *
  * On testnet, with throwaway accounts and a fresh Step 4 rights contract,
  * through the app's own screens. Two owners, the maker and the taker, each
- * get a week through the issue flow, then:
+ * get a week through the issue flow as it is since 2026-11-26 (the owner's
+ * details sealed to the issuer, the record delivered to the owner's browser
+ * with no link opened; rewritten 2026-11-28), then:
  *
  *   1. the maker asks on chain for the taker's week's record; the taker seals
  *      it at /receive; the maker opens and checks it, and offers the swap;
@@ -46,6 +48,7 @@ import { startApp, type App } from "./lib/app";
 import { addUsdcTrustline, deployRightsStep4, fund, invokeAs, removeUsdcTrustline, server, USDC_SAC } from "./lib/testnet";
 import { captureFailures, reportFailures, type FailedResponse } from "./lib/failures";
 import { checkPendingPrivacy, evidenceLanded, hashOf } from "./lib/privacy";
+import { signIn } from "./lib/sign-in";
 import { attachWallet } from "./lib/wallet";
 
 const PORT = 4323;
@@ -94,25 +97,6 @@ test.afterAll(async () => {
   await app?.stop();
 });
 
-/**
- * Sign in, and wait for a sign of being signed in (the nav's "Offers & stays"
- * link, shown only then), not merely for the warning to vanish: during a page
- * reload it vanishes too. Tried twice.
- */
-async function signIn(page: Page, path: string) {
-  for (let attempt = 1; ; attempt += 1) {
-    await page.goto(path);
-    await page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
-    try {
-      await expect(page.getByRole("link", { name: "Offers & stays" })).toBeVisible({ timeout: 60_000 });
-      await expect(page.locator(".wallet .tag.warn", { hasText: "not verified" })).toHaveCount(0);
-      return;
-    } catch (e) {
-      if (attempt >= 2) throw e;
-    }
-  }
-}
-
 const local = (link: string) => link.replace(/^https?:\/\/[^/]+/, "");
 
 /**
@@ -160,18 +144,27 @@ test("two owners swap weeks through the swap screen, with the records exchanged 
   // --- each owner gets a week ---------------------------------------------------
   const sample = JSON.parse(readFileSync("inventory/records/week-01.json", "utf8"));
   const records: unknown[] = [];
+  // The issuer lets owners send their details (D16).
+  await signIn(I.page, "/issue");
+  await I.page.getByTestId("intake-publish").click({ timeout: 60_000 });
+  await expect(I.page.getByTestId("intake-ready")).toBeVisible({ timeout: 60_000 });
   const issueTo = async (owner: { page: Page }, kp: Keypair, week: { check_in: string; check_out: string; week_number: number }) => {
+    const name = `E2E Swap ${kp.publicKey().slice(0, 4)}`;
     await signIn(owner.page, "/issue");
+    await expect(owner.page.getByTestId("detail-owner_name")).toBeEnabled({ timeout: 60_000 });
+    await owner.page.getByTestId("detail-owner_name").fill(name);
+    await owner.page.getByTestId("detail-week_check_in").fill(week.check_in);
     await owner.page.getByRole("button", { name: "Request issuance", exact: true }).click();
-    const askLink = await owner.page.getByTestId("issue-request-link").inputValue({ timeout: 60_000 });
+    await expect(owner.page.getByTestId("issue-reply-wait")).toBeVisible({ timeout: 60_000 });
     await signIn(I.page, "/issue");
     await I.page.getByRole("button", { name: "Issue to this account" }).first().click();
+    await expect(I.page.locator("#owner_name")).toHaveValue(name, { timeout: 60_000 });
     await I.page.locator("#tab-json").click();
     const rec = {
       ...sample,
       record_id: randomUUID(),
       salt: randomBytes(32).toString("hex"),
-      owner: { name: `E2E Swap ${kp.publicKey().slice(0, 4)}`, email: `swap.${randomBytes(3).toString("hex")}@example.invalid`, stellar_account: kp.publicKey() },
+      owner: { name, email: `swap.${randomBytes(3).toString("hex")}@example.invalid`, stellar_account: kp.publicKey() },
       week: { ...week, use_year: 2026 },
       title: { ...sample.title, deed_reference: `E2E-SWAP-${randomBytes(4).toString("hex")}` },
     };
@@ -180,13 +173,13 @@ test("two owners swap weeks through the swap screen, with the records exchanged 
     await I.page.getByRole("button", { name: "Issue on testnet" }).click();
     const issued = I.page.getByText(/Right #\d+/).first();
     await expect(issued).toBeVisible({ timeout: 120_000 });
+    // Read at once: a dev-server reload later clears this result.
     const rightId = Number(/Right #(\d+)/.exec((await issued.textContent()) ?? "")![1]);
-    await openLink(I.page, askLink);
-    await I.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
-    await I.page.getByRole("button", { name: "Seal the record" }).click({ timeout: 60_000 });
-    const reply = await I.page.getByTestId("reply-link").inputValue();
-    await openLink(owner.page, reply);
-    await expect(owner.page.getByTestId("record-received")).toBeVisible({ timeout: 60_000 });
+    // Sealed in the issuer's browser and left with the ask; the owner's
+    // browser picks it up on /stays, with no link opened.
+    await expect(I.page.getByTestId("issue-delivered")).toBeVisible({ timeout: 60_000 });
+    await signIn(owner.page, "/stays");
+    await expect(owner.page.getByTestId("inbox-received")).toBeVisible({ timeout: 60_000 });
     return rightId;
   };
   const give = await issueTo(M, maker, { check_in: "2026-12-12", check_out: "2026-12-19", week_number: 50 });
@@ -205,8 +198,9 @@ test("two owners swap weeks through the swap screen, with the records exchanged 
   await M.page.getByTestId("swap-want").selectOption(String(want));
   await M.page.getByTestId("swap-want-record-ask").click();
   const makerAsk = await M.page.getByTestId("swap-want-record-link").inputValue({ timeout: 120_000 });
-  await openLink(T.page, makerAsk);
-  await T.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
+  // A full load (from a blank page, as the link differs only in its fragment); the session carries over.
+  await T.page.goto("about:blank");
+  await signIn(T.page, local(makerAsk));
   await T.page.getByRole("button", { name: "Seal the record" }).click({ timeout: 60_000 });
   const takerReply = await T.page.getByTestId("reply-link").inputValue();
   await openLink(M.page, takerReply);
@@ -227,8 +221,9 @@ test("two owners swap weeks through the swap screen, with the records exchanged 
   await expect(T.page.getByTestId(`accept-swap-${swapId}`)).toBeDisabled();
   await T.page.getByTestId(`swap-${swapId}-record-ask`).click();
   const takerAsk = await T.page.getByTestId(`swap-${swapId}-record-link`).inputValue({ timeout: 120_000 });
-  await openLink(M.page, takerAsk);
-  await M.page.locator(".wallet").getByRole("button", { name: "Sign in", exact: true }).click();
+  // A full load (from a blank page, as the link differs only in its fragment); the session carries over.
+  await M.page.goto("about:blank");
+  await signIn(M.page, local(takerAsk));
   await M.page.getByRole("button", { name: "Seal the record" }).click({ timeout: 60_000 });
   const makerReply = await M.page.getByTestId("reply-link").inputValue();
   await openLink(T.page, makerReply);
@@ -302,7 +297,7 @@ test("two owners swap weeks through the swap screen, with the records exchanged 
   await expect(M.page.getByTestId("usdc-balance")).toContainText("no USDC trustline");
 
   await addUsdcTrustline(maker);
-  // A reload drops the in-memory session, so sign in again.
+  // Read again on a fresh load; the session is kept.
   await signIn(M.page, "/stays");
   await expect(M.page.getByTestId(`accept-offer-${offerId}`)).toBeVisible({ timeout: 60_000 });
   await expect(M.page.getByTestId(`no-trustline-${offerId}`)).toHaveCount(0);

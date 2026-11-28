@@ -1,0 +1,32 @@
+  run 2026-11-28T06:34:45.341Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-28-collect-notice-2497e656.txt --tx collect-notice-rental-accept=2497e656fa1a2ebc1e18c891550d9ade4bb052ad5e7c038b76c77afed538b575 --record /tmp/qs-privacy-xPd4MB/record-0.json --record /tmp/qs-privacy-xPd4MB/record-1.json --secret /tmp/qs-privacy-xPd4MB/secret-0.json --secret /tmp/qs-privacy-xPd4MB/secret-1.json --next-secret /tmp/qs-privacy-xPd4MB/next-secret-0.json
+
+Checking on-chain exposure
+  1 transactions, 69 forbidden values
+  contract the contracts these testnet transactions call
+
+collect-notice-rental-accept — 2497e656fa1a2ebc1e18c891550d9ade4bb052ad5e7c038b76c77afed538b575
+  ✓ no record contents in 3 layers (19352 bytes: envelope, result, meta)
+  call        accept_rental(
+                "GCPCWKB3HAXQPHE6LYJCXMF6XLEF3T576U2WSJYEPKRPBFT5UBXNJOQV",
+                "1",
+                "10000000",
+                {"a":"0x04b74b0f3b63631f…58a247af (96 bytes)","b":"0x138742f36e70bb9f…bca3f3a7 (192 bytes)","c":"0x06c7afd5d8385857…deff8f80 (96 bytes)"},
+                ["10708845918429004209064876284955742748857874470197245900723722619491663634962","24152132281698467190093423013770342064281887584766270313414096925646526220306","2","210242108087167455924427448266262493896","124696902425377825949481076554240913108","80943803131212896797733259393029066529","323508410995487954839685472558900354765","1798243200","5965163","0","32908743239941685771274714882720639168923041045381729837978766385820232702642"],
+              )
+  event topics ["transfer","GA6OKNM46ZAF2D3IH647JEALJ4Q7GYLUD4OLQXBMWO2UVS6QQSPM3V23","CBIIQ6VXFKF7SS6WXLX3WMX4WDFT2CZFOQUGKIRFTXOQMJ2HZAQLY5PT","USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"]
+  event data   "10000000"
+  event topics ["transfer","GCPCWKB3HAXQPHE6LYJCXMF6XLEF3T576U2WSJYEPKRPBFT5UBXNJOQV","GA6OKNM46ZAF2D3IH647JEALJ4Q7GYLUD4OLQXBMWO2UVS6QQSPM3V23"]
+  event data   {"commitment":"0x17acfdf379588e49f3090027e15f1e2380442bf117ac873e4fce88ace34e6212","expires_at":"1798243200","right_id":"2"}
+  event topics ["funded","GCPCWKB3HAXQPHE6LYJCXMF6XLEF3T576U2WSJYEPKRPBFT5UBXNJOQV","GA6OKNM46ZAF2D3IH647JEALJ4Q7GYLUD4OLQXBMWO2UVS6QQSPM3V23"]
+  event data   {"amount":"10000000","check_in":"1797638400","escrow_id":"1","expires_at":"1798243200","offer_id":"1","right_id":"2"}
+
+Result
+  ✓ No inventory record value appears in any of these 1 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 2 record(s) given, or s and h of 2 holder secret(s) given, or s' of 1 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /tmp/qs-privacy-xPd4MB/record-0.json
+    • /tmp/qs-privacy-xPd4MB/record-1.json
+    • /tmp/qs-privacy-xPd4MB/secret-0.json
+    • /tmp/qs-privacy-xPd4MB/secret-1.json
+    • /tmp/qs-privacy-xPd4MB/next-secret-0.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.
