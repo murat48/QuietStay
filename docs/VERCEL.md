@@ -267,7 +267,74 @@ attestation, and is stuck. The check now runs first, and it actually pings the
 store rather than trusting that credentials which are present are credentials
 that work.
 
+## The two apps: testnet and mainnet (decided 2026-11-28)
+
+One repository, two Vercel projects, each with its own domain and its own
+variables. The `NEXT_PUBLIC_` values are built into each app, so one build
+can never switch networks; that is why there are two projects.
+
+| | Testnet | Mainnet |
+| --- | --- | --- |
+| Host | `quietstay-rehearsal.vercel.app` | `quietstay.app` |
+| Project | the existing demo project | a new project from the same repository, Production Branch `phase3` (later `main`) |
+| `NEXT_PUBLIC_QUIETSTAY_NETWORK` | `testnet` | `mainnet` |
+| `NEXT_PUBLIC_QUIETSTAY_SIGNING` | `server` (the demo: issuer key on the server, attestations) | `cli` (always on mainnet; a mainnet `server` build fails) |
+| Rights contract | `CATUBRZZG47HJDHFK3R7Y3TS3RM2LQ5ROCBY4ISDWSW4PR62DZGXFVLM` | from Step 6 (`$QS_RIGHTS_CONTRACT`) |
+| Web-auth, verifier | the demo's | from Step 6 (`$WEB_AUTH_ID`, `$VERIFIER_ID`) |
+| `QUIETSTAY_HOME_DOMAIN` | `quietstay-rehearsal.vercel.app` | `quietstay.app` |
+| Sign-in key (`QUIETSTAY_SEP10_SERVER_SECRET`) | the testnet sign-in key | `mainnet-test`'s secret, set by you |
+| Fee account | `qs-fee-testnet` (`GCGD…L77Z`) | `qs-main-fee` (`$QS_MAIN_FEE`), its secret set by you |
+| Store | the shared Upstash database, default prefix | the same database with `QUIETSTAY_KV_PREFIX=qs-mainnet`, or a database of its own |
+
+**The host is not a detail on mainnet:**
+- **Passkey wallets are bound to the host.** The smart-account kit uses the
+  page's hostname as the WebAuthn relying party (`rpId`), so a passkey made
+  on `quietstay.app` signs only on `quietstay.app`. If the host changed
+  after the pilot began, those wallets' funds would stay on chain but their
+  passkeys could no longer sign from the new host. So `quietstay.app` is
+  fixed before the first passkey wallet is made.
+- **Sign-in challenges name the home domain** (SEP-10, SEP-45) and the app
+  serves `/.well-known/stellar.toml` on it. `QUIETSTAY_HOME_DOMAIN` must be
+  exactly `quietstay.app`, with no scheme and no `www.`.
+- Use one host only: if `www.quietstay.app` is added, make it redirect to
+  `quietstay.app` (Vercel → Domains → Redirect), so nobody signs in or
+  makes a passkey on the other.
+
+**`quietstay.app` is taken today, by the earlier app.** Read on 2026-11-28,
+it serves the Phase 1/2 testnet MVP ("Stellar testnet demo · no payments",
+rights contract `CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD`)
+from an existing Vercel project. Moving the domain to the mainnet app takes
+that app off it:
+- Do it at Step 6, after GO and after Part 5's deploy, not before: until
+  then `quietstay.app` keeps showing the earlier app.
+- Anyone sent to `quietstay.app` for the testnet MVP lands on mainnet from
+  then on; the testnet app is `quietstay-rehearsal.vercel.app`. Update any
+  link you gave out (the SOW, reviewers, the survey) that means testnet.
+- Either repurpose the existing project as the mainnet one (change every
+  variable to the mainnet list and redeploy), or make a new project and move
+  the domain to it (remove it from the old project's Domains, then add it to
+  the new one). A new project is cleaner: no testnet setting can linger.
+
+**Setting up `quietstay.app`:**
+1. In the mainnet project: Settings → Domains → Add `quietstay.app` (after
+   removing it from the earlier project, above).
+2. At the domain's registrar, add the DNS records Vercel shows there, and
+   wait for Vercel to mark the domain valid. Vercel issues the HTTPS
+   certificate; `.app` domains work only over HTTPS, which Vercel provides.
+3. Set the variables (the table above, then the `cli` list in the section
+   below with mainnet values), and deploy.
+4. Check it: [MAINNET_SETUP.md](MAINNET_SETUP.md) Part 6
+   (`check-app-config --url https://quietstay.app --network mainnet …`).
+
+**The testnet app stays the demo**, in `server` mode, for reviewers: issuing
+on the server and attestations. The `cli` path that mainnet uses is tested
+by the `cli-issue` browser spec and was dry-run on testnet on 2026-11-28
+(PHASE3_PROGRESS.md). The separate `cli` rehearsal project described below
+is optional now.
+
 ## The mainnet-like rehearsal project (Phase 3, Step 5)
+
+*Optional since 2026-11-28: the testnet app is the demo at `quietstay-rehearsal.vercel.app` (above).*
 
 A second Vercel project, on the free plan, from the same repository.
 - It is testnet, configured exactly as mainnet will be: `cli` signing, so

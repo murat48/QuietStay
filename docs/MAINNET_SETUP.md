@@ -359,8 +359,8 @@ transaction.
 
 ## Part 6 — The mainnet app's settings (Vercel)
 
-The mainnet Vercel project is configured as [VERCEL.md](VERCEL.md) lists for
-`cli` mode on mainnet: `NEXT_PUBLIC_QUIETSTAY_NETWORK=mainnet`, signing
+The mainnet app is **`quietstay.app`**, its own Vercel project, configured as
+[VERCEL.md](VERCEL.md) lists ("The two apps"): `QUIETSTAY_HOME_DOMAIN=quietstay.app`, `NEXT_PUBLIC_QUIETSTAY_NETWORK=mainnet`, signing
 `cli`, no issuer or arbiter key on the server, and the contract ids from
 Part 5. Two settings carry the fee account (D18), set by you in Vercel's
 settings only, never in a file:
@@ -378,12 +378,14 @@ settings only, never in a file:
 - Its balance is on the Wallet screen, signed in as the issuer, with a
   warning below 3 XLM and a top-up from Freighter. Or send it XLM from
   anywhere.
+- **Fix the host before the first passkey wallet**: passkeys are bound to
+  `quietstay.app` (VERCEL.md, "The two apps").
 
 After deploying, check it (read-only: the app's public `/api/network` and
 `stellar.toml`, and the chain), and paste the output:
 
 ```sh
-npx tsx scripts/check-app-config.ts --url https://<the mainnet host> --network mainnet --signing cli \
+npx tsx scripts/check-app-config.ts --url https://quietstay.app --network mainnet --signing cli \
   --rights "$QS_RIGHTS_CONTRACT" --web-auth "$WEB_AUTH_ID" --verifier "$VERIFIER_ID" \
   --fee-account "$QS_MAIN_FEE" --issuer "$QS_MAIN_ISSUER" --arbiter "$QS_MAIN_ARBITER"
 ```
