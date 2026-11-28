@@ -631,6 +631,20 @@ right. It acts through `scripts/arbiter-resolve.sh`, never a screen. A
 refunded renter keeps the rental right until it lapses, because nothing can
 touch a right (a stated limitation).
 
+**Future design: paying out without the owner's click (planned for a later
+SCF phase, 2026-11-28).** Today nothing pays out by itself: a contract runs
+only when called, and `collect` needs the owner's signature, so after
+check-in + 24 h the owner presses Collect (or the renter releases earlier).
+A later version could let anyone trigger the payout once the window has
+passed, with the money still going only to the escrow's own owner, and a
+small scheduled job (a keeper) calling it for every escrow that is due. That
+is a contract change, and it relaxes this pilot's rule that no outside
+account can move USDC without a builder-controlled account's action, so it
+needs its own review; the alternative without a contract change, the owner
+pre-signing the collect when accepting, keeps signed authorizations on a
+server and lasts at most about six months (the longest TTL). This pilot
+keeps the approved design: the owner collects.
+
 ### Swaps (built in Step 4)
 
 The design is [PHASE3_SPEC.md §7](./PHASE3_SPEC.md#7-swap) (decision D5); the
