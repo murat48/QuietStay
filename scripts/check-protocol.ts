@@ -1,7 +1,10 @@
 /**
  * The pinned protocol check (docs/PHASE3_SPEC.md §14): prints both networks'
- * protocol versions and fails unless mainnet is on protocol 29, the protocol
- * the contracts were built and tested for.
+ * protocol versions and fails unless mainnet is on protocol 30, the protocol
+ * the contracts were tested for. It was 29 until mainnet moved to 30; the
+ * checklist's protocol, simulation and cost items were re-run then and found
+ * nothing changed for this contract (2026-11-27, docs/PHASE3_PROGRESS.md),
+ * and 30 was set on your go-ahead (2026-11-28).
  *
  *   npx tsx scripts/check-protocol.ts
  *
@@ -11,7 +14,7 @@
  * simulation and cost items are re-run first.
  */
 
-const EXPECTED_MAINNET = 29;
+const EXPECTED_MAINNET = 30;
 const NETWORKS = [
   { name: "testnet", rpc: "https://soroban-testnet.stellar.org", passphrase: "Test SDF Network ; September 2015" },
   { name: "mainnet", rpc: "https://mainnet.sorobanrpc.com", passphrase: "Public Global Stellar Network ; September 2015" },

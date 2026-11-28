@@ -2368,6 +2368,17 @@ of the spec, the rest at the second review of `def5eb6`.
     the 2026-11-21 estimate is kept.
   - The contract needs no change. `check-protocol.ts` still expects 29: it
     moves to 30 only on your go-ahead.
+  - **Your go-ahead (2026-11-28): `check-protocol.ts` expects 30.** It
+    passes on both networks.
+- **Item 5 rehearsed end to end on testnet (2026-11-28).** Escrow #4 (week
+  #13, disputed from the demo passkey wallet) resolved RefundRenter through
+  the envelope path, signed once by `qs-arbiter` from the keystore: review
+  "no reason to refuse", protocol PASS on 30, pilot accounts PASS (testnet
+  total raised with `QS_PILOT_MAX_TOTAL`), SEND, one send, SUCCESS by hash:
+  `63d7c6a4082bc9eafee96b229136e5ed8dd72349a7b385c7488864d7e274a75b`. Read
+  back: escrow #4 Refunded with decision hash `d55f0ef5…4009`; the passkey
+  wallet's USDC 16.01 → 17.01. Run again, the script refuses (Refunded) and
+  sends nothing. Item 5 is done.
 
 ### Step 6 — Mainnet deployment
 - Date:
