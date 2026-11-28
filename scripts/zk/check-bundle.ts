@@ -42,6 +42,13 @@ import { fatal } from "../lib/cli";
  * only: Next.js never sends it to a browser, and no other module can import it.
  */
 const SERVER_ONLY = ["src/app/api/issue/route.ts"];
+/**
+ * Server modules allowed to import GPL code (2026-11-28): the issuance checks
+ * and the commitment, moved out of /api/issue for plan item 3 and shared with
+ * /api/issue/confirm. Allowed only while every module importing them is a
+ * route handler under src/app/api/, so no page can pull them in.
+ */
+const SERVER_LIBS = ["src/lib/issuance.ts"];
 
 let failed = 0;
 const report = (ok: boolean, label: string) => {
@@ -99,12 +106,12 @@ function main() {
       (s) => /(^|\/)(circuits|scripts)\//.test(s) || gplPackages.some((g) => s === g || s.startsWith(g + "/")),
     ),
   );
-  const serverOnly = new Set(SERVER_ONLY.map((f) => resolve(f)));
+  const serverOnly = new Set([...SERVER_ONLY, ...SERVER_LIBS].map((f) => resolve(f)));
   const offenders = importers.filter((f) => !serverOnly.has(f));
   report(
     offenders.length === 0,
     `${sources.length} files under src/ import nothing from circuits/, scripts/, or ${gplPackages.join(", ") || "a GPL package"}, ` +
-      `except ${SERVER_ONLY.join(", ")}`,
+      `except ${[...SERVER_ONLY, ...SERVER_LIBS].join(", ")}`,
   );
   for (const f of offenders) console.log(`      ${f}`);
   const notRoutes = SERVER_ONLY.filter((f) => !/^src\/app\/api\/.+\/route\.ts$/.test(f) || !existsSync(f));
@@ -116,6 +123,20 @@ function main() {
     "those are route handlers under src/app/api/, and no module imports them",
   );
   for (const f of [...notRoutes, ...importedBy]) console.log(`      ${f}`);
+  // Each server module is imported only by route handlers.
+  const libImporters = SERVER_LIBS.flatMap((lib) => {
+    const name = lib.replace(/^src\//, "@/").replace(/\.tsx?$/, "");
+    return sources
+      .filter((f) => specifiersOf(f).some((s) => s === name || s.endsWith("/" + lib.split("/").pop()!.replace(/\.tsx?$/, ""))))
+      .filter((f) => resolve(f) !== resolve(lib))
+      .map((f) => ({ lib, f }));
+  });
+  const badLib = libImporters.filter(({ f }) => !/\/src\/app\/api\/.+\/route\.ts$/.test(f));
+  report(
+    badLib.length === 0 && SERVER_LIBS.every((l) => existsSync(l)),
+    `${SERVER_LIBS.join(", ")}: imported only by route handlers (${libImporters.map(({ f }) => f.replace(root + "/", "")).join(", ") || "none"})`,
+  );
+  for (const { lib, f } of badLib) console.log(`      ${f} imports ${lib}`);
 
   const staticDir = resolve(".next/static");
   if (!existsSync(staticDir)) throw new Error("no .next/static — run `npm run build` first");

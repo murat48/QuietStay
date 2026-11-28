@@ -1,0 +1,33 @@
+Run 2026-11-28T06:35:44Z on phase3 @ b8957ba
+== cargo-test: exit 0 (6 s)  bash -c cd contracts && cargo test 2>&1
+   test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+   test test_payments::a_failed_rental_acceptance_neither_grants_nor_funds ... ok
+   test result: ok. 158 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 4.32s
+   test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+== cargo-clippy: exit 0 (3 s)  bash -c cd contracts && cargo clippy --all-targets 2>&1
+== test-app: exit 0 (7 s)  npm run -s test:app
+     ✔ reads the codes under fetch failed's AggregateError (6.191765ms)
+   ℹ tests 93
+   ℹ pass 93
+   ℹ fail 0
+== zk-test: exit 0 (7 s)  npm run -s zk:test
+   ℹ tests 29
+   ℹ pass 29
+   ℹ fail 0
+== tsc: exit 0 (3 s)  npx tsc --noEmit -p .
+== zk-check-bundle: exit 1 (2 s)  npm run -s zk:check-bundle
+== check-privacy: exit 0 (4 s)  npm run -s check-privacy
+== check-privacy-phase2: exit 0 (5 s)  npm run -s check-privacy -- --phase2
+== lint: exit 1 (8 s)  npm run -s lint
+   ✖ 6 problems (6 errors, 0 warnings)
+== playwright: exit 0 (756 s)  npx playwright test --reporter=line
+   [8/17] [chromium] › e2e/passkey.spec.ts:233:1 › a cancelled or failed passkey prompt signs nothing, and nothing moves
+   [chromium] › e2e/passkey.spec.ts:233:1 › a cancelled or failed passkey prompt signs nothing, and nothing moves
+     17 passed (12.8m)
+== next-build: exit 0 (55 s)  npx next build --webpack
+   ⚠ Compiled with warnings in 26.0s
+   ⚠ Compiled with warnings in 3.1s
+   ✓ Compiled successfully in 29.2s
+done
+== zk-check-bundle, after the fix (SERVER_LIBS: src/lib/issuance.ts, imported only by route handlers; a probe page importing it was caught): exit 0
+== lint: the 6 errors are all react-hooks/set-state-in-effect, the Low issue from before Step 2 (7 on 2026-11-21): issue/page.tsx 247, 1658; list/page.tsx 317, 321, 401; verify/page.tsx 312
