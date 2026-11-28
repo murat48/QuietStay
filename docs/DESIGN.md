@@ -645,6 +645,19 @@ pre-signing the collect when accepting, keeps signed authorizations on a
 server and lasts at most about six months (the longest TTL). This pilot
 keeps the approved design: the owner collects.
 
+**Future design: suspending a listing (planned for a later SCF phase,
+2026-11-28).** In this pilot nobody but a week's holder can take its listing
+down: the issuer's only power on chain is `issue`, and the contract has no
+admin or upgrade function, which is what lets anyone check that the issuer
+has no part in transfers. A public launch will need a way to stop a listing
+when something is wrong (fraud, a disputed title, a legal request). The
+planned shape is narrow: the issuer may pause one week's listing and new
+offers on it for a bounded time, with the reason's hash on chain, the pause
+lifting by itself when the time is up, and no power to move a right or any
+USDC. It is a contract change, so it comes with the next contract version
+and its review, not in this pilot, where every transaction that moves money
+or a right is made by builder-controlled accounts.
+
 ### Swaps (built in Step 4)
 
 The design is [PHASE3_SPEC.md §7](./PHASE3_SPEC.md#7-swap) (decision D5); the
