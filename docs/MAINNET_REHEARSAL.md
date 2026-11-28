@@ -101,8 +101,8 @@ commands, with `--network testnet`:
 stellar tx new create-account --source-account qs-rehearsal-issuer --network testnet --destination "$QS_REHEARSAL_ARBITER" --starting-balance 20000000    #  2 XLM
 stellar tx new create-account --source-account qs-rehearsal-issuer --network testnet --destination "$QS_REHEARSAL_FEE"     --starting-balance 50000000    #  5 XLM
 stellar tx new create-account --source-account qs-rehearsal-issuer --network testnet --destination "$QS_REHEARSAL_OWNER"   --starting-balance 30000000    #  3 XLM
-stellar tx new create-account --source-account qs-rehearsal-issuer --network testnet --destination "$QS_REHEARSAL_BUYER"   --starting-balance 190000000   # 19 XLM
-stellar tx new create-account --source-account qs-rehearsal-issuer --network testnet --destination "$QS_REHEARSAL_RENTER"  --starting-balance 190000000   # 19 XLM
+stellar tx new create-account --source-account qs-rehearsal-issuer --network testnet --destination "$QS_REHEARSAL_BUYER"   --starting-balance 220000000   # 22 XLM
+stellar tx new create-account --source-account qs-rehearsal-issuer --network testnet --destination "$QS_REHEARSAL_RENTER"  --starting-balance 220000000   # 22 XLM
 ```
 
 **Check 2:**

@@ -722,7 +722,7 @@ closed, and the deploy cost is accepted in principle.
    - the issuer/deployer, arbiter and fee keys in your CLI keystore, and the
      owner, buyer and renter in Freighter (revised 2026-11-28), all created
      by you. I create none;
-   - funding in order, from the budget (115 XLM from you on the DEX route; the
+   - funding in order, from the budget (121 XLM from you on the DEX route; the
      fee account gets 5);
    - `mainnet-test` down to its 1 XLM minimum, with the rest going to the
      deployer;

@@ -75,8 +75,9 @@ const PLAN_DEX: Record<Role, bigint> = {
   // D18 (2026-11-27): the fee account pays every passkey transaction, within a 5 XLM daily budget.
   fee: 50_000_000n,
   owner: 30_000_000n,
-  buyer: 190_000_000n,
-  renter: 190_000_000n,
+  // 22 XLM since 2026-11-28: 2 USDC rose to ~16.2 XLM on the DEX.
+  buyer: 220_000_000n,
+  renter: 220_000_000n,
 };
 const PLAN_EXCHANGE_USDC: Record<Role, bigint> = { ...PLAN_DEX, buyer: 30_000_000n, renter: 30_000_000n };
 /** The planned USDC, in 7-decimal units: 2 + 2 = 4, under the 5 USDC cap (D7). */

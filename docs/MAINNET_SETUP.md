@@ -20,6 +20,9 @@ funding source differ.
   trustlines and USDC from Freighter's screens; the flows in the browser),
   D18 (the fee account's key in Vercel), mainnet's move to protocol 30, and
   plan item 5 (the arbiter through `mainnet-sign-submit.sh`).
+- The buyer and renter get 22 XLM, not 19 (2026-11-28): the DEX price of 2
+  USDC rose from 15.47 to 16.18 XLM since 2026-11-21, which left 19 too
+  close to the reserve.
 - Every amount comes from a command run on 2026-11-21, re-checked on
   protocol 30 on 2026-11-27: uploads and every flow's fee are unchanged
   (PHASE3_PROGRESS.md).
@@ -65,10 +68,10 @@ Mainnet, 2026-11-21: base reserve 0.5 XLM, so the minimum balance is
 | `qs-main-arbiter` | 1 | — | `resolve` ~0.007 | **2** | ~2.0 |
 | `qs-main-fee`: the fee account (D18): pays every passkey user's network fee, its key in Vercel (Part 6) | 1 | **each passkey wallet's creation: 0.163** (a wallet is a contract and has no reserve of its own) | the pilot's passkey calls at ≤ 0.19, within the route's 5 XLM daily budget: ~1–2 | **5** | ≥ 2.5 |
 | `qs-main-owner` | 1 + **0.5 trustline** | — | offers, record requests, evidence, swap, collect: ~0.3 | **3** | ~2.7 |
-| `qs-main-buyer` | 1 + **0.5 trustline** | **2 USDC on the DEX: ~15.5 XLM** (quote 2026-11-21; the send-max allows 3% more) | accept, record request, swap: ~0.1 | **19** (3 if the USDC comes from an exchange) | ~3.4, plus 2 USDC |
-| `qs-main-renter` | 1 + **0.5 trustline** | **2 USDC on the DEX: ~15.5 XLM** | two `accept_rental`s at ~0.19, report, evidence, release: ~0.4 | **19** (3 if the USDC comes from an exchange) | ~3.1, plus 2 USDC |
+| `qs-main-buyer` | 1 + **0.5 trustline** | **2 USDC on the DEX: ~15.5 XLM** (quote 2026-11-21; the send-max allows 3% more) | accept, record request, swap: ~0.1 | **22** (3 if the USDC comes from an exchange) | ~3.4, plus 2 USDC |
+| `qs-main-renter` | 1 + **0.5 trustline** | **2 USDC on the DEX: ~15.5 XLM** | two `accept_rental`s at ~0.19, report, evidence, release: ~0.4 | **22** (3 if the USDC comes from an exchange) | ~3.1, plus 2 USDC |
 | `mainnet-test`: the SEP-10/SEP-45 sign-in key | 1 | — | none (it signs challenges, and pays no fees) | **stays at exactly 1**. Its other 8.0000900 XLM go to the deployer (Part 3) | 1 |
-| **Total** | | | | **123 XLM**: 115 from you plus 8.0000900 from `mainnet-test`. **91 XLM** (83 from you) if the USDC comes from an exchange | |
+| **Total** | | | | **129 XLM**: 121 from you plus 8.0000900 from `mainnet-test`. **91 XLM** (83 from you) if the USDC comes from an exchange | |
 
 - **The deployer must hold the declared 69.43 XLM at the moment it uploads.**
   The network reserves the declared fee and refunds the margin after. That is
@@ -174,7 +177,7 @@ npx tsx scripts/check-mainnet-setup.ts --part 1
 
 **2.1 From your exchange to the deployer.** Withdraw XLM on the Stellar
 network to `$QS_MAIN_ISSUER` (`echo $QS_MAIN_ISSUER`), no memo needed.
-- **At least 115 XLM must arrive** on the DEX route. On the exchange-USDC
+- **At least 121 XLM must arrive** on the DEX route. On the exchange-USDC
   route, at least 83 XLM.
 - The withdrawal creates the account. If your exchange cannot send to an
   account that does not exist yet, do Part 3 first, using its "create"
@@ -187,8 +190,8 @@ the deployer's key and sends one `create_account`:
 stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_ARBITER" --starting-balance 20000000    #  2 XLM
 stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_FEE"     --starting-balance 50000000    #  5 XLM
 stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_OWNER"   --starting-balance 30000000    #  3 XLM
-stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_BUYER"   --starting-balance 190000000   # 19 XLM (30000000 on the exchange-USDC route)
-stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_RENTER"  --starting-balance 190000000   # 19 XLM (30000000 on the exchange-USDC route)
+stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_BUYER"   --starting-balance 220000000   # 22 XLM (30000000 on the exchange-USDC route)
+stellar tx new create-account --source-account qs-main-issuer --network mainnet --destination "$QS_MAIN_RENTER"  --starting-balance 220000000   # 22 XLM (30000000 on the exchange-USDC route)
 ```
 
 Afterwards the deployer holds about 67 XLM. Part 3 brings it to 75.
