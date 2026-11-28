@@ -1,0 +1,81 @@
+  run 2026-11-28T06:48:03.838Z · network testnet · command: npm run check-privacy -- --network testnet --out evidence/privacy/2026-11-28-swap-e2e-8e76dabd.txt --tx swap-offer=ce68a2269a97b3e54567de3567050781d2794d51318dd38a0f47cd8b43f16ea6 --tx swap-accept-1=11787181020bd39d7b9b43d389605027b7b76d86844c18d4406d555a83e3911f --tx swap-withdraw=189063674d9469b1b6cd56cda6d0ddf7fc4b03dd962d47d024e2bfd16bf821ea --tx swap-accept-2=85247934ffc59f9e068d6a051b80871b1b3a86500fc378df1f3f3749d4344ecb --tx swap-complete=8e76dabd97b5b46eef6aaf883c07f60e0bb59017e29456809e298eabc3059931 --record /tmp/qs-privacy-nfaRmI/record-0.json --record /tmp/qs-privacy-nfaRmI/record-1.json --secret /tmp/qs-privacy-nfaRmI/secret-0.json --secret /tmp/qs-privacy-nfaRmI/secret-1.json --next-secret /tmp/qs-privacy-nfaRmI/next-secret-0.json --next-secret /tmp/qs-privacy-nfaRmI/next-secret-1.json --next-secret /tmp/qs-privacy-nfaRmI/next-secret-2.json
+
+Checking on-chain exposure
+  5 transactions, 73 forbidden values
+  contract the contracts these testnet transactions call
+
+swap-offer — ce68a2269a97b3e54567de3567050781d2794d51318dd38a0f47cd8b43f16ea6
+  ✓ no record contents in 3 layers (11052 bytes: envelope, result, meta)
+  call        offer_swap(
+                "GAGZZFF2VQY5D3F4KEO2AYPQ3PMGHWT2RBKQE6X2FDAYVF6FPBHJTQ2R",
+                "1",
+                "2",
+                "17284390758192591732005561375353609600134902813741387581970885619305423359964",
+                "1",
+                6085910,
+              )
+  event topics ["swap_off","GAGZZFF2VQY5D3F4KEO2AYPQ3PMGHWT2RBKQE6X2FDAYVF6FPBHJTQ2R"]
+  event data   {"expires_ledger":6085910,"give_right":"1","maker_key_hash":"0x3cf71073bd2dbc21ebd56356b803f93ac7365489f9e5fdff9f1dc20406d081c2","maker_next_secret_hash":"17284390758192591732005561375353609600134902813741387581970885619305423359964","swap_id":"1","want_right":"2"}
+
+swap-accept-1 — 11787181020bd39d7b9b43d389605027b7b76d86844c18d4406d555a83e3911f
+  ✓ no record contents in 3 layers (9696 bytes: envelope, result, meta)
+  call        accept_swap(
+                "GCJ3QGTERNTAD4L22WRZLSS5QW24RLUSUEDERRQQABT23SQOOCKMHPEQ",
+                "1",
+                "13478716539809872636200765916398400047473013877991068394433059329380804639665",
+                "2",
+                {"a":"0x0d73f08b47977ee0…7077347e (96 bytes)","b":"0x08af1142b0d7c93d…fbee7e99 (192 bytes)","c":"0x137ba053eea55a31…8708d42e (96 bytes)"},
+                ["43714356477732064209267164027512656376197809399299575316654634974560103588386","15820047614469624735596825281068182278796682039193040324727031346260784229921","2","196352433310960723946024653037334529461","266752032799849420570246987364588098755","18092978841486557954218435331813858264","132727977553178235714025450894697975449","18446744073709551617","5965315","17284390758192591732005561375353609600134902813741387581970885619305423359964","35537310290625281609932252052290629706995495983857104493482816128509855980649"],
+              )
+  event topics ["swap_acc","GCJ3QGTERNTAD4L22WRZLSS5QW24RLUSUEDERRQQABT23SQOOCKMHPEQ"]
+  event data   {"expiry_ledger":5965315,"swap_id":"1","taker_key_hash":"0x6fdc9d25e5a6e776d0ddeb7d6762086a73aa1ddb6d1590fc526ecdb179f8391e","taker_next_secret_hash":"13478716539809872636200765916398400047473013877991068394433059329380804639665"}
+
+swap-withdraw — 189063674d9469b1b6cd56cda6d0ddf7fc4b03dd962d47d024e2bfd16bf821ea
+  ✓ no record contents in 3 layers (5792 bytes: envelope, result, meta)
+  call        withdraw_swap_acceptance(
+                "GCJ3QGTERNTAD4L22WRZLSS5QW24RLUSUEDERRQQABT23SQOOCKMHPEQ",
+                "1",
+              )
+  event topics ["swap_wd","GCJ3QGTERNTAD4L22WRZLSS5QW24RLUSUEDERRQQABT23SQOOCKMHPEQ"]
+  event data   {"swap_id":"1"}
+
+swap-accept-2 — 85247934ffc59f9e068d6a051b80871b1b3a86500fc378df1f3f3749d4344ecb
+  ✓ no record contents in 3 layers (9696 bytes: envelope, result, meta)
+  call        accept_swap(
+                "GCJ3QGTERNTAD4L22WRZLSS5QW24RLUSUEDERRQQABT23SQOOCKMHPEQ",
+                "1",
+                "22449266329150869225093122993318939650353568110500175537770791944134670438912",
+                "3",
+                {"a":"0x0ac003a43b56b816…d1ad9d5e (96 bytes)","b":"0x191ab0ecc0d3c786…365b4bfe (192 bytes)","c":"0x014fa4eda95815c2…dbf34bdf (96 bytes)"},
+                ["43714356477732064209267164027512656376197809399299575316654634974560103588386","25590201415675425468602917017721298930472525203864474296031678654924414360194","2","196352433310960723946024653037334529461","266752032799849420570246987364588098755","18092978841486557954218435331813858264","132727977553178235714025450894697975449","18446744073709551617","5965323","17284390758192591732005561375353609600134902813741387581970885619305423359964","35537310290625281609932252052290629706995495983857104493482816128509855980649"],
+              )
+  event topics ["swap_acc","GCJ3QGTERNTAD4L22WRZLSS5QW24RLUSUEDERRQQABT23SQOOCKMHPEQ"]
+  event data   {"expiry_ledger":5965323,"swap_id":"1","taker_key_hash":"0x15c8a9a0cded28e70f9d86458339d5979b56ac2d4545734f1ba5cbf5d597a9fd","taker_next_secret_hash":"22449266329150869225093122993318939650353568110500175537770791944134670438912"}
+
+swap-complete — 8e76dabd97b5b46eef6aaf883c07f60e0bb59017e29456809e298eabc3059931
+  ✓ no record contents in 3 layers (14596 bytes: envelope, result, meta)
+  call        complete_swap(
+                "GAGZZFF2VQY5D3F4KEO2AYPQ3PMGHWT2RBKQE6X2FDAYVF6FPBHJTQ2R",
+                "1",
+                {"a":"0x146e4bbd22a359d6…3343f1ff (96 bytes)","b":"0x12ce6377045f4d41…74cdd007 (192 bytes)","c":"0x1446225f03921d51…41e8c662 (96 bytes)"},
+                ["47493761818631701551140128767714843445700683922719928037586934331110768168565","36018258667967435165997699197135239339024770618363217814727342002992280078285","1","18092978841486557954218435331813858264","132727977553178235714025450894697975449","196352433310960723946024653037334529461","266752032799849420570246987364588098755","18446744073709551618","5965326","22449266329150869225093122993318939650353568110500175537770791944134670438912","43654967087836838741046328268354907858954000753970695435443588608793313711657"],
+              )
+  event topics ["transfer","GCJ3QGTERNTAD4L22WRZLSS5QW24RLUSUEDERRQQABT23SQOOCKMHPEQ","GAGZZFF2VQY5D3F4KEO2AYPQ3PMGHWT2RBKQE6X2FDAYVF6FPBHJTQ2R"]
+  event data   {"commitment":"0x4e9167a316b81dbd3c4bc2660150c305d7980ea3ce2e3f6d743a7c4cf570dc69","expires_at":null,"right_id":"2"}
+  event topics ["transfer","GAGZZFF2VQY5D3F4KEO2AYPQ3PMGHWT2RBKQE6X2FDAYVF6FPBHJTQ2R","GCJ3QGTERNTAD4L22WRZLSS5QW24RLUSUEDERRQQABT23SQOOCKMHPEQ"]
+  event data   {"commitment":"0x6083d5f44d7814200ec6699bf4a64483b11715dfa915095ca9385d3d900e9629","expires_at":null,"right_id":"1"}
+  event topics ["swap","GAGZZFF2VQY5D3F4KEO2AYPQ3PMGHWT2RBKQE6X2FDAYVF6FPBHJTQ2R","GCJ3QGTERNTAD4L22WRZLSS5QW24RLUSUEDERRQQABT23SQOOCKMHPEQ"]
+  event data   {"give_commitment":"0x6083d5f44d7814200ec6699bf4a64483b11715dfa915095ca9385d3d900e9629","give_right":"1","swap_id":"1","want_commitment":"0x4e9167a316b81dbd3c4bc2660150c305d7980ea3ce2e3f6d743a7c4cf570dc69","want_right":"2"}
+
+Result
+  ✓ No inventory record value appears in any of these 5 testnet transactions, at any layer scanned.
+  ✓ Nor does the digest d (hex, bytes, d_hi, d_lo) of 2 record(s) given, or s and h of 2 holder secret(s) given, or s' of 3 buyer next secret(s) given (whose h' a sale publishes by design).
+  Records and secrets searched for (by file, never printed):
+    • /tmp/qs-privacy-nfaRmI/record-0.json
+    • /tmp/qs-privacy-nfaRmI/record-1.json
+    • /tmp/qs-privacy-nfaRmI/secret-0.json
+    • /tmp/qs-privacy-nfaRmI/secret-1.json
+    • /tmp/qs-privacy-nfaRmI/next-secret-0.json
+    • /tmp/qs-privacy-nfaRmI/next-secret-1.json
+    • /tmp/qs-privacy-nfaRmI/next-secret-2.json
+  A transaction whose record or secret is not listed above was checked against the inventory values only.
