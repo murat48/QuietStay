@@ -68,8 +68,8 @@ Mainnet, 2026-11-21: base reserve 0.5 XLM, so the minimum balance is
 | `qs-main-arbiter` | 1 | — | `resolve` ~0.007 | **2** | ~2.0 |
 | `qs-main-fee`: the fee account (D18): pays every passkey user's network fee, its key in Vercel (Part 6) | 1 | **each passkey wallet's creation: 0.163** (a wallet is a contract and has no reserve of its own) | the pilot's passkey calls at ≤ 0.19, within the route's 5 XLM daily budget: ~1–2 | **5** | ≥ 2.5 |
 | `qs-main-owner` | 1 + **0.5 trustline** | — | offers, record requests, evidence, swap, collect: ~0.3 | **3** | ~2.7 |
-| `qs-main-buyer` | 1 + **0.5 trustline** | **2 USDC on the DEX: ~15.5 XLM** (quote 2026-11-21; the send-max allows 3% more) | accept, record request, swap: ~0.1 | **22** (3 if the USDC comes from an exchange) | ~3.4, plus 2 USDC |
-| `qs-main-renter` | 1 + **0.5 trustline** | **2 USDC on the DEX: ~15.5 XLM** | two `accept_rental`s at ~0.19, report, evidence, release: ~0.4 | **22** (3 if the USDC comes from an exchange) | ~3.1, plus 2 USDC |
+| `qs-main-buyer` | 1 + **0.5 trustline** | **2 USDC on the DEX: ~16.2 XLM** (quote 2026-11-28; it was 15.5 on 2026-11-21) | accept, record request, swap: ~0.1 | **22** (3 if the USDC comes from an exchange) | ~5.7, plus 2 USDC |
+| `qs-main-renter` | 1 + **0.5 trustline** | **2 USDC on the DEX: ~16.2 XLM** | two `accept_rental`s at ~0.19, report, evidence, release: ~0.4 | **22** (3 if the USDC comes from an exchange) | ~5.4, plus 2 USDC |
 | `mainnet-test`: the SEP-10/SEP-45 sign-in key | 1 | — | none (it signs challenges, and pays no fees) | **stays at exactly 1**. Its other 8.0000900 XLM go to the deployer (Part 3) | 1 |
 | **Total** | | | | **129 XLM**: 121 from you plus 8.0000900 from `mainnet-test`. **91 XLM** (83 from you) if the USDC comes from an exchange | |
 
