@@ -257,7 +257,10 @@ async function main() {
           const held = units(line.balance);
           total += held;
           const want = USDC_PLAN[r] ?? 0n;
-          check(held === want, `${r}: holds ${fmt(held)} USDC (planned ${fmt(want)})`);
+          // A DEX swap in Freighter can deliver a little more than asked
+          // (2.0331300 on 2026-11-28); at least the plan is enough, and the
+          // 5 USDC total below stays the hard rule (D7).
+          check(want === 0n ? held === 0n : held >= want, `${r}: holds ${fmt(held)} USDC (planned ${want === 0n ? "0" : `at least ${fmt(want)}`})`);
         }
       } else {
         check(!line, `${r}: no USDC trustline, so it can hold no USDC`);
