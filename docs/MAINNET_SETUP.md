@@ -378,14 +378,18 @@ settings only, never in a file:
 - Its balance is on the Wallet screen, signed in as the issuer, with a
   warning below 3 XLM and a top-up from Freighter. Or send it XLM from
   anywhere.
-- **Fix the host before the first passkey wallet**: passkeys are bound to
-  `quietstay.app` (VERCEL.md, "The two apps").
+- **The host:** until every test is done the mainnet app runs on its
+  temporary Vercel host, and `quietstay.app` moves to it last (your
+  decision, 2026-11-28). Set `QUIETSTAY_HOME_DOMAIN` and the `--url` below to
+  the host in use. Passkeys are bound to the host: a passkey wallet made on
+  the temporary host stays there, so empty it before the move (VERCEL.md,
+  "The two apps").
 
 After deploying, check it (read-only: the app's public `/api/network` and
 `stellar.toml`, and the chain), and paste the output:
 
 ```sh
-npx tsx scripts/check-app-config.ts --url https://quietstay.app --network mainnet --signing cli \
+npx tsx scripts/check-app-config.ts --url https://<the host in use: the temporary one, then quietstay.app> --network mainnet --signing cli \
   --rights "$QS_RIGHTS_CONTRACT" --web-auth "$WEB_AUTH_ID" --verifier "$VERIFIER_ID" \
   --fee-account "$QS_MAIN_FEE" --issuer "$QS_MAIN_ISSUER" --arbiter "$QS_MAIN_ARBITER"
 ```

@@ -305,8 +305,16 @@ it serves the Phase 1/2 testnet MVP ("Stellar testnet demo · no payments",
 rights contract `CCSQRSLC34HLAXB5NSOF7AQFLD6ESSC6PG3JNZKMANZR67YCE7GDF6YD`)
 from an existing Vercel project. Moving the domain to the mainnet app takes
 that app off it:
-- Do it at Step 6, after GO and after Part 5's deploy, not before: until
-  then `quietstay.app` keeps showing the earlier app.
+- **Your decision (2026-11-28): last, once every test is done.** Until
+  then `quietstay.app` keeps showing the earlier app, and the mainnet app
+  runs on its project's own Vercel host (for example
+  `quietstay-mainnet.vercel.app`), with `QUIETSTAY_HOME_DOMAIN` set to that
+  host; at the move, it becomes `quietstay.app`.
+- **Passkey wallets made before the move stay on the temporary host**: they
+  cannot sign on `quietstay.app`. So the pilot's passkey wallets are test
+  wallets: before the move, send their USDC back out (Wallet screen, or any
+  transfer they sign on the temporary host), and make the real ones on
+  `quietstay.app` after it. Freighter accounts are not affected.
 - Anyone sent to `quietstay.app` for the testnet MVP lands on mainnet from
   then on; the testnet app is `quietstay-rehearsal.vercel.app`. Update any
   link you gave out (the SOW, reviewers, the survey) that means testnet.
